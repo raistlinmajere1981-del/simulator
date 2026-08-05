@@ -538,6 +538,39 @@ export function AppNext(): React.JSX.Element {
     }
   };
 
+  const exportExperiment = async (saved: SavedExperiment): Promise<void> => {
+    try {
+      const result = await window.simulatorDesktop.exportExperiment(saved.id);
+      setStorageMessage(result.message);
+    } catch (error) {
+      setStorageMessage(error instanceof Error ? error.message : 'Deney dışa aktarılamadı.');
+    }
+  };
+
+  const importExperiment = async (): Promise<void> => {
+    try {
+      const result = await window.simulatorDesktop.importExperiment();
+      setStorageMessage(result.message);
+      if (result.status !== 'success' || !result.experiment) return;
+
+      setSavedExperiments((current) => [
+        result.experiment as SavedExperiment,
+        ...current.filter((item) => item.id !== result.experiment?.id)
+      ]);
+    } catch (error) {
+      setStorageMessage(error instanceof Error ? error.message : 'Deney içe aktarılamadı.');
+    }
+  };
+
+  const exportReport = async (saved: SavedExperiment): Promise<void> => {
+    try {
+      const result = await window.simulatorDesktop.exportExperimentReport(saved.id);
+      setStorageMessage(result.message);
+    } catch (error) {
+      setStorageMessage(error instanceof Error ? error.message : 'Deney raporu oluşturulamadı.');
+    }
+  };
+
   const selectedRun = runs.find((run) => run.metadata.id === traceModelId);
 
   return (
@@ -619,7 +652,10 @@ export function AppNext(): React.JSX.Element {
         open={dataManagerOpen}
         onClose={() => setDataManagerOpen(false)}
         onDelete={deleteExperiment}
+        onExport={exportExperiment}
+        onImport={importExperiment}
         onLoad={loadExperiment}
+        onReport={exportReport}
       />
       <TraceDialog
         metadata={selectedRun?.metadata}

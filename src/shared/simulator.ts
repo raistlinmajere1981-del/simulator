@@ -30,10 +30,25 @@ export interface SavedExperiment {
   predictions: ModelPrediction[];
 }
 
+export interface FileOperationResult {
+  status: 'success' | 'cancelled';
+  message: string;
+  filePath?: string;
+}
+
+export interface ImportExperimentResult extends FileOperationResult {
+  experiment?: SavedExperiment;
+  migrated?: boolean;
+  sourceVersion?: number;
+}
+
 export interface SimulatorDesktopApi {
   version: string;
   platform: string;
   listExperiments(): Promise<SavedExperiment[]>;
   saveExperiment(experiment: SavedExperiment): Promise<SavedExperiment>;
   deleteExperiment(id: string): Promise<boolean>;
+  exportExperiment(id: string): Promise<FileOperationResult>;
+  importExperiment(): Promise<ImportExperimentResult>;
+  exportExperimentReport(id: string): Promise<FileOperationResult>;
 }

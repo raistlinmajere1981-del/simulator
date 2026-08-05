@@ -29,7 +29,7 @@ Durum: tamamlandı
 
 ## Aşama 2 — Deney kaydetme ve izlenebilirlik
 
-Durum: çalışan ilk sürüm tamamlandı, yerel kullanım doğrulaması bekliyor
+Durum: tamamlandı
 
 - Deneyleri Electron kullanıcı veri klasöründe JSON olarak saklama
 - Kayıt oluşturma, güncelleme, yeniden açma ve silme
@@ -38,18 +38,35 @@ Durum: çalışan ilk sürüm tamamlandı, yerel kullanım doğrulaması bekliyo
 - Model varsayımları görünümü
 - Hesap izi kimliği
 - Azimutal projeksiyon için eksik fiziksel kuralların izde açıklanması
+- Linux/KDE üzerinde kayıt, yeniden açma, güncelleme ve silme doğrulaması
 
-Kalan işler:
+## Aşama 2.1 — Taşınabilir deneyler ve raporlar
 
-- Kayıt ve yeniden açma akışının Linux/KDE üzerinde doğrulanması
-- JSON dışa aktarma ve içe aktarma
-- İnsan tarafından okunabilir sonuç raporu
-- Kayıt şeması sürümü ve eski kayıt taşıma mekanizması
+Durum: tamamlandı
+
+- Sürüm numaralı `.ggl.json` dışa aktarma ve içe aktarma
+- Eski yerel kayıt dizisinin otomatik taşınması
+- Derin çalışma zamanı doğrulaması
+- Bozuk ve desteklenmeyen dosyaların güvenli biçimde reddedilmesi
+- Kimlik çakışmasında güvenli yeni kayıt oluşturulması
+- Çevrimdışı, yazdırılabilir HTML deney raporu
+- Raporda girdiler, model sürümleri, sonuçlar, varsayımlar, uyarılar ve hesap izleri
+- Rapor sayılarında birime uygun okunabilir hassasiyet
+- Linux/KDE üzerinde dışa aktarma, yeniden içe aktarma ve rapor görünümü doğrulaması
+- Şema taşıma ve HTML güvenlik testleri
 
 ## Aşama 3 — Gerçek konum ve arazi
 
-- Koordinatlardan mesafe hesabı
-- WGS84 elipsoid modeli
+Sıradaki kilometre taşı:
+
+- Gözlemci ve hedef için enlem/boylam girdileri
+- WGS84 elipsoid üzerinde jeodezik yüzey mesafesi
+- Başlangıç ve varış azimutları
+- Koordinattan hesaplanan mesafe ile elle girilen mesafe arasında seçim
+- Koordinat doğrulaması ve hesap izi
+
+Sonraki işler:
+
 - Sayısal yükseklik modeli entegrasyonu
 - Deniz seviyesi ve arazi engelleri
 
