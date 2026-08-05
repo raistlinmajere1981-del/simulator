@@ -55,20 +55,39 @@ Durum: tamamlandı
 - Linux/KDE üzerinde dışa aktarma, yeniden içe aktarma ve rapor görünümü doğrulaması
 - Şema taşıma ve HTML güvenlik testleri
 
-## Aşama 3 — Gerçek konum ve arazi
+## Aşama 3.1 — WGS84 gerçek konum girdileri
 
-Sıradaki kilometre taşı:
+Durum: çalışan ilk sürüm tamamlandı, yerel görsel doğrulama bekliyor
 
 - Gözlemci ve hedef için enlem/boylam girdileri
-- WGS84 elipsoid üzerinde jeodezik yüzey mesafesi
+- Manuel ve koordinattan hesaplanan mesafe arasında seçim
+- WGS84 elipsoidi üzerinde Vincenty ters jeodezik çözümü
+- Elipsoidal yüzey mesafesi
 - Başlangıç ve varış azimutları
-- Koordinattan hesaplanan mesafe ile elle girilen mesafe arasında seçim
-- Koordinat doğrulaması ve hesap izi
+- Koordinat aralığı doğrulaması
+- Çakışan noktaların açık ele alınması
+- Yakın-antipodal yakınsama sorununda işaretli küresel yedek çözüm
+- Jeodezik varsayım, formül, iterasyon ve sonuç hesap izi
+- Koordinat ve jeodezik anlık görüntüsünün yerel kayda eklenmesi
+- Taşınabilir ve yerel kayıt şemalarının sürüm 2’ye taşınması
+- Sürüm 1 kayıtların manuel mesafe modunda geriye dönük açılması
+- HTML raporunda koordinat ve WGS84 jeodezik bölümü
+- Referans, sınır ve taşıma testleri
 
-Sonraki işler:
+Kalan doğrulama:
 
+- Linux/KDE üzerinde manuel/koordinat geçişi
+- Koordinat değişiminde canlı model güncellemesi
+- Jeodezik hesap izi görünümü
+- Koordinatlı kayıt, yeniden açma, JSON ve HTML raporu
+
+## Aşama 3.2 — Gerçek arazi
+
+- Gözlemci ve hedef zemin kotları
 - Sayısal yükseklik modeli entegrasyonu
+- Görüş hattı boyunca arazi örneklemesi
 - Deniz seviyesi ve arazi engelleri
+- Arazi veri kaynağı ve çözünürlük izlenebilirliği
 
 ## Aşama 4 — Gelişmiş atmosfer
 
