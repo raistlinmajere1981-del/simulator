@@ -61,6 +61,21 @@ export interface PredictionMetric {
   uncertainty?: number;
 }
 
+export interface CalculationTraceStep {
+  id: string;
+  title: string;
+  formula: string;
+  substitution: string;
+  result: string;
+  note?: string;
+}
+
+export interface CalculationTrace {
+  summary: string;
+  assumptions: string[];
+  steps: CalculationTraceStep[];
+}
+
 export interface ModelPrediction {
   modelId: string;
   experimentId: string;
@@ -68,4 +83,5 @@ export interface ModelPrediction {
   metrics: PredictionMetric[];
   warnings: string[];
   traceId: string;
+  trace: CalculationTrace;
 }
