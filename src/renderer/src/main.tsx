@@ -5,6 +5,7 @@ import './styles.css';
 import './simulation.css';
 import './dialogs.css';
 import './portable.css';
+import './geodesy.css';
 
 const root = document.getElementById('root');
 

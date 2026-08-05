@@ -17,13 +17,17 @@ Kullanıcının bir gözlem veya deney tanımlamasını, seçilen modellerin bu 
 
 ## Çalışan hedef görünürlüğü laboratuvarı
 
-İlk etkileşimli hedef görünürlüğü deneyi şu yeteneklere sahiptir:
+Hedef görünürlüğü deneyi şu yeteneklere sahiptir:
 
 - İdeal küre modeli
 - Tanımlı, engelsiz düzlem modeli
 - Azimutal projeksiyonun fiziksel model olmadığını belirten `unsupported` sonucu
 - Gözlemci ve hedef yüksekliği
-- Yüzey mesafesi
+- Manuel yüzey mesafesi
+- Gözlemci ve hedef enlem-boylamı
+- WGS84 elipsoidi üzerinde koordinattan yüzey mesafesi
+- Başlangıç ve varış azimutları
+- Manuel ve koordinat mesafesi arasında seçim
 - Gözlenen görünürlük ve belirsizlik
 - Atmosfer kapalı veya standart kırılma
 - Düzenlenebilir kırılma katsayısı
@@ -31,9 +35,11 @@ Kullanıcının bir gözlem veya deney tanımlamasını, seçilen modellerin bu 
 - Ufuk mesafesi
 - Hedef tepe görüş açısı
 - Gözlem ile tahmin arasındaki fark
-- Her model için varsayım, formül, yerine koyma ve sonuç adımlarını gösteren hesap izi
+- Model ve jeodezik çözüm için yeniden üretilebilir hesap izleri
 
-Standart kırılma, bu aşamada etkin yarıçap yaklaşımıyla hesaplanır. Arazi, dalga yüksekliği ve gelişmiş atmosfer profili henüz dahil değildir.
+Koordinat modu WGS84 ters jeodezik problemini Vincenty iterasyonuyla çözer. Yakın-antipodal durumda iterasyon yakınsamazsa sonuç sessizce elipsoidal sonuç gibi sunulmaz; ortalama Dünya yarıçaplı küresel yedek çözüm açık uyarıyla işaretlenir.
+
+Standart kırılma bu aşamada etkin yarıçap yaklaşımıyla hesaplanır. Arazi, dalga yüksekliği ve gelişmiş atmosfer profili henüz dahil değildir.
 
 ## Deney kayıtları
 
@@ -43,17 +49,18 @@ Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama şu işlemle
 - uygulama kapatıldıktan sonra kayıtları koruma,
 - kayıtları yeniden açma,
 - kayıt silme,
+- koordinat ve jeodezik hesap anlık görüntüsünü saklama,
 - model sürümleri ve sonuç anlık görüntülerini saklama.
 
 ## Taşınabilir dosyalar ve raporlar
 
-`0.3.0` geliştirme sürümünde:
+`0.4.0` geliştirme sürümünde:
 
 - deneyler sürümlemeli `.ggl.json` dosyası olarak dışa aktarılabilir,
 - taşınabilir deney dosyaları doğrulanarak içe aktarılabilir,
-- eski ham deney JSON kayıtları güncel yapıya taşınabilir,
+- sürüm 1 kayıtlar koordinat alanları eklenerek manuel mesafe moduna taşınabilir,
 - kimlik çakışmaları güvenli yeni kayıt oluşturarak çözülür,
-- girdiler, sonuçlar, varsayımlar ve hesap izleri çevrimdışı HTML raporuna dönüştürülebilir.
+- girdiler, koordinatlar, jeodezik sonuçlar, model sonuçları ve hesap izleri çevrimdışı HTML raporuna dönüştürülebilir.
 
 HTML raporu okunabilir/yazdırılabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı `.ggl.json` dosyasıdır.
 
@@ -89,9 +96,10 @@ Aynı kontroller pull request'lerde GitHub Actions üzerinde otomatik çalışı
 - [`docs/experiment-system.md`](docs/experiment-system.md)
 - [`docs/model-contract.md`](docs/model-contract.md)
 - [`docs/ui-design.md`](docs/ui-design.md)
+- [`docs/geodesy.md`](docs/geodesy.md)
 - [`docs/portable-format.md`](docs/portable-format.md)
 - [`docs/roadmap.md`](docs/roadmap.md)
 
 ## Durum
 
-Hedef görünürlüğü motoru, yerel kayıtlar ve hesap izlenebilirliği `main` dalındadır. Taşınabilir deney dosyaları ile çevrimdışı raporlama `agent/portable-experiments-and-reports` dalında yerel doğrulama aşamasındadır.
+Hedef görünürlüğü motoru, yerel kayıtlar, taşınabilir dosyalar ve çevrimdışı raporlama `main` dalındadır. WGS84 koordinat girdileri `agent/wgs84-geodesic-inputs` dalında otomatik ve yerel doğrulama aşamasındadır.

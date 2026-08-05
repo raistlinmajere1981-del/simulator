@@ -5,21 +5,26 @@ import type {
   PredictionMetric,
   ResultStatus
 } from './domain';
-import type { SavedExperiment, SimulatorInputs } from './simulator';
+import {
+  DEFAULT_SIMULATOR_INPUTS,
+  type SavedExperiment,
+  type SavedGeodesicCalculation,
+  type SimulatorInputs
+} from './simulator';
 
 export const PORTABLE_EXPERIMENT_SCHEMA =
   'geometric-observation-laboratory/portable-experiment';
-export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 1;
+export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 2;
 export const LOCAL_EXPERIMENT_STORE_SCHEMA =
   'geometric-observation-laboratory/local-experiment-store';
-export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 1;
+export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 2;
 
 export interface PortableApplicationInfo {
   name: 'Geometrik Gözlem Laboratuvarı';
   version: string;
 }
 
-export interface PortableExperimentFileV1 {
+export interface PortableExperimentFileV2 {
   schema: typeof PORTABLE_EXPERIMENT_SCHEMA;
   schemaVersion: typeof PORTABLE_EXPERIMENT_SCHEMA_VERSION;
   exportedAtIso: string;
@@ -27,7 +32,7 @@ export interface PortableExperimentFileV1 {
   experiment: SavedExperiment;
 }
 
-export interface LocalExperimentStoreV1 {
+export interface LocalExperimentStoreV2 {
   schema: typeof LOCAL_EXPERIMENT_STORE_SCHEMA;
   schemaVersion: typeof LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION;
   updatedAtIso: string;
@@ -41,7 +46,7 @@ export interface ParsedPortableExperiment {
 }
 
 export interface ParsedLocalExperimentStore {
-  store: LocalExperimentStoreV1;
+  store: LocalExperimentStoreV2;
   migrated: boolean;
   ignoredRecordCount: number;
 }
@@ -66,124 +71,157 @@ function isNonEmptyString(value: unknown): value is string {
 }
 
 function isIsoDate(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    !Number.isNaN(Date.parse(value))
-  );
+  return typeof value === 'string' && value.length > 0 && !Number.isNaN(Date.parse(value));
 }
 
 function isResultStatus(value: unknown): value is ResultStatus {
-  return (
-    value === 'compatible' ||
-    value === 'incompatible' ||
-    value === 'indeterminate' ||
-    value === 'unsupported'
-  );
+  return value === 'compatible' || value === 'incompatible' ||
+    value === 'indeterminate' || value === 'unsupported';
 }
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
-export function isSimulatorInputs(value: unknown): value is SimulatorInputs {
-  if (!isRecord(value)) return false;
+function inRange(value: unknown, min: number, max: number): value is number {
+  return isFiniteNumber(value) && value >= min && value <= max;
+}
 
-  return (
-    isFiniteNumber(value.observerHeightM) &&
-    value.observerHeightM >= 0 &&
-    isFiniteNumber(value.targetHeightM) &&
-    value.targetHeightM > 0 &&
-    isFiniteNumber(value.surfaceDistanceKm) &&
-    value.surfaceDistanceKm >= 0 &&
-    isFiniteNumber(value.observedVisiblePercent) &&
-    value.observedVisiblePercent >= 0 &&
-    value.observedVisiblePercent <= 100 &&
-    isFiniteNumber(value.observationUncertaintyPercent) &&
-    value.observationUncertaintyPercent >= 0 &&
-    value.observationUncertaintyPercent <= 100 &&
+function parseSimulatorInputs(
+  value: unknown,
+  allowLegacyFields: boolean
+): SimulatorInputs | null {
+  if (!isRecord(value)) return null;
+
+  const commonValid =
+    isFiniteNumber(value.observerHeightM) && value.observerHeightM >= 0 &&
+    isFiniteNumber(value.targetHeightM) && value.targetHeightM > 0 &&
+    isFiniteNumber(value.surfaceDistanceKm) && value.surfaceDistanceKm >= 0 &&
+    inRange(value.observedVisiblePercent, 0, 100) &&
+    inRange(value.observationUncertaintyPercent, 0, 100) &&
     typeof value.useStandardRefraction === 'boolean' &&
-    isFiniteNumber(value.refractionCoefficient) &&
-    value.refractionCoefficient < 1
-  );
+    isFiniteNumber(value.refractionCoefficient) && value.refractionCoefficient < 1;
+  if (!commonValid) return null;
+
+  const hasCoordinateFields =
+    (value.distanceSource === 'manual' || value.distanceSource === 'coordinates') &&
+    inRange(value.observerLatitudeDeg, -90, 90) &&
+    inRange(value.observerLongitudeDeg, -180, 180) &&
+    inRange(value.targetLatitudeDeg, -90, 90) &&
+    inRange(value.targetLongitudeDeg, -180, 180);
+
+  if (!hasCoordinateFields && !allowLegacyFields) return null;
+
+  return {
+    observerHeightM: value.observerHeightM as number,
+    targetHeightM: value.targetHeightM as number,
+    distanceSource: hasCoordinateFields
+      ? value.distanceSource as SimulatorInputs['distanceSource']
+      : 'manual',
+    surfaceDistanceKm: value.surfaceDistanceKm as number,
+    observerLatitudeDeg: hasCoordinateFields
+      ? value.observerLatitudeDeg as number
+      : DEFAULT_SIMULATOR_INPUTS.observerLatitudeDeg,
+    observerLongitudeDeg: hasCoordinateFields
+      ? value.observerLongitudeDeg as number
+      : DEFAULT_SIMULATOR_INPUTS.observerLongitudeDeg,
+    targetLatitudeDeg: hasCoordinateFields
+      ? value.targetLatitudeDeg as number
+      : DEFAULT_SIMULATOR_INPUTS.targetLatitudeDeg,
+    targetLongitudeDeg: hasCoordinateFields
+      ? value.targetLongitudeDeg as number
+      : DEFAULT_SIMULATOR_INPUTS.targetLongitudeDeg,
+    observedVisiblePercent: value.observedVisiblePercent as number,
+    observationUncertaintyPercent: value.observationUncertaintyPercent as number,
+    useStandardRefraction: value.useStandardRefraction as boolean,
+    refractionCoefficient: value.refractionCoefficient as number
+  };
+}
+
+export function isSimulatorInputs(value: unknown): value is SimulatorInputs {
+  return parseSimulatorInputs(value, false) !== null;
 }
 
 function isPredictionMetric(value: unknown): value is PredictionMetric {
   if (!isRecord(value)) return false;
-
-  return (
-    isNonEmptyString(value.key) &&
-    isNonEmptyString(value.label) &&
+  return isNonEmptyString(value.key) && isNonEmptyString(value.label) &&
     (value.value === null || isFiniteNumber(value.value)) &&
     isNonEmptyString(value.unit) &&
-    (value.uncertainty === undefined || isFiniteNumber(value.uncertainty))
-  );
+    (value.uncertainty === undefined || isFiniteNumber(value.uncertainty));
 }
 
 function isCalculationTraceStep(value: unknown): value is CalculationTraceStep {
   if (!isRecord(value)) return false;
-
-  return (
-    isNonEmptyString(value.id) &&
-    isNonEmptyString(value.title) &&
-    typeof value.formula === 'string' &&
-    typeof value.substitution === 'string' &&
+  return isNonEmptyString(value.id) && isNonEmptyString(value.title) &&
+    typeof value.formula === 'string' && typeof value.substitution === 'string' &&
     typeof value.result === 'string' &&
-    (value.note === undefined || typeof value.note === 'string')
-  );
+    (value.note === undefined || typeof value.note === 'string');
 }
 
 function isCalculationTrace(value: unknown): value is CalculationTrace {
   if (!isRecord(value)) return false;
-
-  return (
-    typeof value.summary === 'string' &&
-    isStringArray(value.assumptions) &&
-    Array.isArray(value.steps) &&
-    value.steps.every(isCalculationTraceStep)
-  );
+  return typeof value.summary === 'string' && isStringArray(value.assumptions) &&
+    Array.isArray(value.steps) && value.steps.every(isCalculationTraceStep);
 }
 
 export function isModelPrediction(value: unknown): value is ModelPrediction {
   if (!isRecord(value)) return false;
-
-  return (
-    isNonEmptyString(value.modelId) &&
-    isNonEmptyString(value.experimentId) &&
-    isResultStatus(value.status) &&
-    Array.isArray(value.metrics) &&
-    value.metrics.every(isPredictionMetric) &&
-    isStringArray(value.warnings) &&
-    isNonEmptyString(value.traceId) &&
-    isCalculationTrace(value.trace)
-  );
+  return isNonEmptyString(value.modelId) && isNonEmptyString(value.experimentId) &&
+    isResultStatus(value.status) && Array.isArray(value.metrics) &&
+    value.metrics.every(isPredictionMetric) && isStringArray(value.warnings) &&
+    isNonEmptyString(value.traceId) && isCalculationTrace(value.trace);
 }
 
-export function isSavedExperiment(value: unknown): value is SavedExperiment {
+function isSavedGeodesic(value: unknown): value is SavedGeodesicCalculation {
   if (!isRecord(value)) return false;
-
-  return (
-    isNonEmptyString(value.id) &&
-    isNonEmptyString(value.name) &&
-    isIsoDate(value.createdAtIso) &&
-    isIsoDate(value.updatedAtIso) &&
-    isSimulatorInputs(value.inputs) &&
-    isRecord(value.modelVersions) &&
-    Object.values(value.modelVersions).every(
-      (version) => typeof version === 'string'
-    ) &&
-    Array.isArray(value.predictions) &&
-    value.predictions.every(isModelPrediction)
-  );
+  return (value.method === 'vincenty' || value.method === 'spherical-fallback') &&
+    typeof value.converged === 'boolean' &&
+    Number.isInteger(value.iterations) && (value.iterations as number) >= 0 &&
+    isFiniteNumber(value.distanceM) && value.distanceM >= 0 &&
+    inRange(value.initialBearingDeg, 0, 360) &&
+    inRange(value.finalBearingDeg, 0, 360) &&
+    isStringArray(value.warnings) && isNonEmptyString(value.traceId) &&
+    isCalculationTrace(value.trace);
 }
 
-function normalizeExperiment(experiment: SavedExperiment): SavedExperiment {
+function normalizeGeodesic(value: SavedGeodesicCalculation): SavedGeodesicCalculation {
   return {
-    ...experiment,
-    name: experiment.name.trim(),
-    inputs: { ...experiment.inputs },
-    modelVersions: { ...experiment.modelVersions },
-    predictions: experiment.predictions.map((prediction) => ({
+    ...value,
+    warnings: [...value.warnings],
+    trace: {
+      ...value.trace,
+      assumptions: [...value.trace.assumptions],
+      steps: value.trace.steps.map((step) => ({ ...step }))
+    }
+  };
+}
+
+function parseSavedExperiment(
+  value: unknown,
+  allowLegacyInputs: boolean
+): SavedExperiment | null {
+  if (!isRecord(value)) return null;
+  const inputs = parseSimulatorInputs(value.inputs, allowLegacyInputs);
+  if (!inputs || !isNonEmptyString(value.id) || !isNonEmptyString(value.name) ||
+    !isIsoDate(value.createdAtIso) || !isIsoDate(value.updatedAtIso) ||
+    !isRecord(value.modelVersions) ||
+    !Object.values(value.modelVersions).every((version) => typeof version === 'string') ||
+    !Array.isArray(value.predictions) || !value.predictions.every(isModelPrediction) ||
+    (value.geodesic !== undefined && !isSavedGeodesic(value.geodesic))) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    name: value.name.trim(),
+    createdAtIso: value.createdAtIso,
+    updatedAtIso: value.updatedAtIso,
+    inputs,
+    geodesic: value.geodesic === undefined
+      ? undefined
+      : normalizeGeodesic(value.geodesic),
+    modelVersions: { ...value.modelVersions } as Record<string, string>,
+    predictions: value.predictions.map((prediction) => ({
       ...prediction,
       metrics: prediction.metrics.map((metric) => ({ ...metric })),
       warnings: [...prediction.warnings],
@@ -196,17 +234,23 @@ function normalizeExperiment(experiment: SavedExperiment): SavedExperiment {
   };
 }
 
+export function isSavedExperiment(value: unknown): value is SavedExperiment {
+  return parseSavedExperiment(value, false) !== null;
+}
+
+function normalizeExperiment(experiment: SavedExperiment): SavedExperiment {
+  const normalized = parseSavedExperiment(experiment, false);
+  if (!normalized) {
+    throw new PortableFormatError('Deney kayıt şemasına uymuyor.');
+  }
+  return normalized;
+}
+
 export function createPortableExperimentFile(
   experiment: SavedExperiment,
   applicationVersion: string,
   exportedAtIso = new Date().toISOString()
-): PortableExperimentFileV1 {
-  if (!isSavedExperiment(experiment)) {
-    throw new PortableFormatError(
-      'Dışa aktarılmak istenen deney kayıt şemasına uymuyor.'
-    );
-  }
-
+): PortableExperimentFileV2 {
   return {
     schema: PORTABLE_EXPERIMENT_SCHEMA,
     schemaVersion: PORTABLE_EXPERIMENT_SCHEMA_VERSION,
@@ -219,54 +263,47 @@ export function createPortableExperimentFile(
   };
 }
 
-export function parsePortableExperimentFile(
-  value: unknown
-): ParsedPortableExperiment {
-  if (isSavedExperiment(value)) {
-    return {
-      experiment: normalizeExperiment(value),
-      sourceVersion: 0,
-      migrated: true
-    };
+export function parsePortableExperimentFile(value: unknown): ParsedPortableExperiment {
+  const rawCurrent = parseSavedExperiment(value, false);
+  if (rawCurrent) {
+    return { experiment: rawCurrent, sourceVersion: 0, migrated: true };
   }
-
+  const rawLegacy = parseSavedExperiment(value, true);
+  if (rawLegacy) {
+    return { experiment: rawLegacy, sourceVersion: 0, migrated: true };
+  }
   if (!isRecord(value)) {
     throw new PortableFormatError('Dosya geçerli bir JSON nesnesi değil.');
   }
-
   if (value.schema !== PORTABLE_EXPERIMENT_SCHEMA) {
+    throw new PortableFormatError('Dosya Geometrik Gözlem Laboratuvarı deney dosyası değil.');
+  }
+
+  const version = value.schemaVersion;
+  if (version !== 1 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
     throw new PortableFormatError(
-      'Dosya Geometrik Gözlem Laboratuvarı deney dosyası değil.'
+      `Deney dosyası şema sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
   }
 
-  if (value.schemaVersion !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
-    const version =
-      typeof value.schemaVersion === 'number'
-        ? value.schemaVersion
-        : 'bilinmeyen';
-    throw new PortableFormatError(
-      `Deney dosyası şema sürümü desteklenmiyor: ${version}.`
-    );
-  }
-
-  if (!isSavedExperiment(value.experiment)) {
+  const experiment = parseSavedExperiment(value.experiment, version === 1);
+  if (!experiment) {
     throw new PortableFormatError(
       'Dosyadaki deney verisi eksik, bozuk veya beklenen aralıkların dışında.'
     );
   }
 
   return {
-    experiment: normalizeExperiment(value.experiment),
-    sourceVersion: PORTABLE_EXPERIMENT_SCHEMA_VERSION,
-    migrated: false
+    experiment,
+    sourceVersion: version,
+    migrated: version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION
   };
 }
 
 export function createLocalExperimentStore(
   experiments: SavedExperiment[],
   updatedAtIso = new Date().toISOString()
-): LocalExperimentStoreV1 {
+): LocalExperimentStoreV2 {
   return {
     schema: LOCAL_EXPERIMENT_STORE_SCHEMA,
     schemaVersion: LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
@@ -275,43 +312,36 @@ export function createLocalExperimentStore(
   };
 }
 
-export function parseLocalExperimentStore(
-  value: unknown
-): ParsedLocalExperimentStore {
+export function parseLocalExperimentStore(value: unknown): ParsedLocalExperimentStore {
   if (Array.isArray(value)) {
-    const experiments = value.filter(isSavedExperiment).map(normalizeExperiment);
+    const experiments = value
+      .map((item) => parseSavedExperiment(item, true))
+      .filter((item): item is SavedExperiment => item !== null);
     return {
       store: createLocalExperimentStore(experiments),
       migrated: true,
       ignoredRecordCount: value.length - experiments.length
     };
   }
-
   if (!isRecord(value)) {
     throw new PortableFormatError('Yerel deney deposu geçerli bir nesne değil.');
   }
-
   if (value.schema !== LOCAL_EXPERIMENT_STORE_SCHEMA) {
     throw new PortableFormatError('Yerel deney deposunun şema kimliği tanınmıyor.');
   }
-
-  if (value.schemaVersion !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
-    const version =
-      typeof value.schemaVersion === 'number'
-        ? value.schemaVersion
-        : 'bilinmeyen';
+  const version = value.schemaVersion;
+  if (version !== 1 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
     throw new PortableFormatError(
-      `Yerel deney deposu sürümü desteklenmiyor: ${version}.`
+      `Yerel deney deposu sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
   }
-
   if (!Array.isArray(value.experiments)) {
     throw new PortableFormatError('Yerel deney deposunda kayıt dizisi bulunamadı.');
   }
 
   const experiments = value.experiments
-    .filter(isSavedExperiment)
-    .map(normalizeExperiment);
+    .map((item) => parseSavedExperiment(item, version === 1))
+    .filter((item): item is SavedExperiment => item !== null);
 
   return {
     store: {
@@ -322,7 +352,7 @@ export function parseLocalExperimentStore(
         : new Date().toISOString(),
       experiments
     },
-    migrated: false,
+    migrated: version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
     ignoredRecordCount: value.experiments.length - experiments.length
   };
 }

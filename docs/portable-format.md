@@ -2,7 +2,7 @@
 
 ## Amaç
 
-Taşınabilir deney dosyası, bir deneyin yalnızca form girdilerini değil; kaydedildiği andaki model sürümlerini, sonuç anlık görüntülerini, uyarıları, varsayımları ve hesap izlerini de tek JSON belgesinde taşır.
+Taşınabilir deney dosyası, bir deneyin form girdilerini, koordinatlarını, jeodezik hesap anlık görüntüsünü, model sürümlerini, sonuçları, uyarıları, varsayımları ve hesap izlerini tek JSON belgesinde taşır.
 
 Bu sayede bir deney:
 
@@ -32,7 +32,7 @@ geometric-observation-laboratory/portable-experiment
 Güncel şema sürümü:
 
 ```text
-1
+2
 ```
 
 Üst düzey yapı:
@@ -40,11 +40,11 @@ Güncel şema sürümü:
 ```json
 {
   "schema": "geometric-observation-laboratory/portable-experiment",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "exportedAtIso": "2026-08-05T15:00:00.000Z",
   "application": {
     "name": "Geometrik Gözlem Laboratuvarı",
-    "version": "0.3.0"
+    "version": "0.4.0"
   },
   "experiment": {
     "id": "...",
@@ -52,35 +52,55 @@ Güncel şema sürümü:
     "createdAtIso": "...",
     "updatedAtIso": "...",
     "inputs": {},
+    "geodesic": {},
     "modelVersions": {},
     "predictions": []
   }
 }
 ```
 
-## İçerik ilkeleri
+`geodesic` yalnız koordinat modunda bir hesap anlık görüntüsü üretildiğinde bulunur.
 
-### Girdiler
+## Girdiler
 
 `inputs` alanı şunları içerir:
 
 - gözlemci yüksekliği,
 - hedef yüksekliği,
-- yüzey mesafesi,
+- `manual` veya `coordinates` mesafe kaynağı,
+- manuel yüzey mesafesi,
+- gözlemci enlem ve boylamı,
+- hedef enlem ve boylamı,
 - gözlenen görünürlük,
 - gözlem belirsizliği,
 - standart kırılma seçimi,
 - kırılma katsayısı.
 
-Sayılar uygulamanın izin verdiği aralıklarla doğrulanır.
+Enlemler `-90…90°`, boylamlar `-180…180°` aralığında doğrulanır. Bütün sayısal alanlar sonlu olmalıdır.
 
-### Model sürümleri
+## Jeodezik anlık görüntü
 
-`modelVersions`, kayıt anında kullanılan her model kimliğini sürüm numarasıyla eşler. Bu bilgi, daha sonraki bir uygulama sürümünün farklı sonuç üretmesi durumunda eski kaydın hangi model sürümüne ait olduğunu gösterir.
+Koordinat modundaki `geodesic` alanı kayıt anındaki:
 
-### Sonuç anlık görüntüsü
+- çözüm yöntemini (`vincenty` veya `spherical-fallback`),
+- yakınsama durumunu,
+- iterasyon sayısını,
+- yüzey mesafesini,
+- başlangıç azimutunu,
+- varış azimutunu,
+- uyarıları,
+- hesap izi kimliğini,
+- varsayım ve hesap adımlarını
 
-`predictions`, her modelin kayıt anındaki:
+saklar.
+
+Bu alanın amacı, gelecekte jeodezik motor değişse bile kayıt anındaki sonucun denetlenebilmesidir.
+
+## Model sürümleri ve sonuçlar
+
+`modelVersions`, kayıt anında kullanılan fiziksel model ve yardımcı hesap motoru kimliklerini sürüm numarasıyla eşler.
+
+`predictions`, her fiziksel modelin kayıt anındaki:
 
 - durumunu,
 - metriklerini,
@@ -91,7 +111,7 @@ Sayılar uygulamanın izin verdiği aralıklarla doğrulanır.
 
 saklar.
 
-Dışa aktarılan dosya açıldığında sonuç otomatik olarak yeni model sürümüyle değiştirilmez. Kullanıcı girdileri yükleyip güncel motorla yeniden hesaplama yapabilir; dosyadaki anlık görüntü ise tarihsel kayıt olarak korunur.
+Dosyadaki sonuç anlık görüntüsü yeni uygulama sürümü tarafından sessizce değiştirilmez. Kullanıcı girdileri yükleyip güncel motorla yeniden hesaplama yapabilir; kaydedilmiş anlık görüntü tarihsel kayıt olarak korunur.
 
 ## Doğrulama ve güvenlik
 
@@ -101,17 +121,29 @@ Dışa aktarılan dosya açıldığında sonuç otomatik olarak yeni model sür�
 2. Şema kimliği kontrol edilir.
 3. Şema sürümünün desteklendiği doğrulanır.
 4. Deney kimliği, tarihler ve ad kontrol edilir.
-5. Bütün sayısal girdiler sonlu ve izin verilen aralıkta olmalıdır.
-6. Model sonuçları, metrikler ve hesap izi adımları doğrulanır.
-7. Hatalı dosya yerel kayıt deposunu değiştirmeden reddedilir.
+5. Sayısal girdiler ve koordinatlar izin verilen aralıklarda olmalıdır.
+6. Varsa jeodezik anlık görüntü bütün alanlarıyla doğrulanır.
+7. Model sonuçları, metrikler ve hesap izi adımları doğrulanır.
+8. Hatalı dosya yerel kayıt deposunu değiştirmeden reddedilir.
 
 İçe aktarılan deney kimliği yerel bir kayıtla çakışırsa yeni bir kimlik üretilir ve kayıt adına `İçe aktarıldı` açıklaması eklenir.
 
 ## Eski dosya desteği
 
-Şema kapsayıcısı bulunmayan, doğrudan tek bir geçerli `SavedExperiment` nesnesi içeren eski JSON dosyaları sürüm `0` kabul edilerek güncel yapıya taşınabilir.
+### Sürüm 1 → sürüm 2
 
-Desteklenmeyen gelecekteki şema sürümleri sessizce yorumlanmaz; açık hata ile reddedilir. Yeni sürümler için ayrı taşıma fonksiyonu yazılması gerekir.
+Sürüm 1 dosyalarında koordinat ve mesafe kaynağı alanları yoktur. Taşıma sırasında:
+
+- `distanceSource` değeri `manual` olur,
+- önceki `surfaceDistanceKm` değeri korunur,
+- koordinat alanları güvenli örnek varsayılanlarla tamamlanır,
+- jeodezik anlık görüntü oluşturulmaz.
+
+Böylece eski deney sonucu değişmeden açılır; kullanıcı daha sonra koordinat modunu bilinçli olarak seçebilir.
+
+Şema kapsayıcısı bulunmayan tek bir geçerli eski deney nesnesi sürüm `0` kabul edilerek aynı kurallarla taşınabilir.
+
+Desteklenmeyen gelecekteki şema sürümleri sessizce yorumlanmaz; açık hata ile reddedilir.
 
 ## Yerel kayıt deposu
 
@@ -126,10 +158,10 @@ geometric-observation-laboratory/local-experiment-store
 Güncel sürüm:
 
 ```text
-1
+2
 ```
 
-Önceki sürümde kullanılan düz JSON dizisi ilk okumada otomatik olarak bu kapsayıcıya taşınır ve atomik yazımla kaydedilir.
+Sürüm 1 kapsayıcıları ve daha eski düz JSON dizileri ilk okumada sürüm 2 yapısına taşınır ve atomik yazımla kaydedilir. Doğrulanamayan kayıtlar yüklenmez ve sayıları taşıma sonucunda raporlanır.
 
 ## HTML raporu
 
@@ -140,5 +172,7 @@ HTML raporu taşınabilir veri dosyasının yerine geçmez. Rapor:
 - tarayıcıdan yazdırılmak veya PDF'e dönüştürülmek
 
 için üretilir.
+
+Koordinat modunda rapor; iki koordinatı, WGS84 mesafesini, azimutları, çözüm yöntemini ve jeodezik hesap izini ayrı bölümde gösterir.
 
 Rapor verileri HTML içine güvenli biçimde kaçırılır. JSON dosyası yeniden içe aktarılabilir veri kaynağıdır; HTML raporu salt okunur sunum çıktısıdır.
