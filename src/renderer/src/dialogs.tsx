@@ -79,7 +79,10 @@ interface DataManagerDialogProps {
   open: boolean;
   onClose(): void;
   onDelete(experiment: SavedExperiment): Promise<void>;
+  onExport(experiment: SavedExperiment): Promise<void>;
+  onImport(): Promise<void>;
   onLoad(experiment: SavedExperiment): void;
+  onReport(experiment: SavedExperiment): Promise<void>;
 }
 
 function formatDate(iso: string): string {
@@ -96,9 +99,31 @@ export function DataManagerDialog({
   open,
   onClose,
   onDelete,
-  onLoad
+  onExport,
+  onImport,
+  onLoad,
+  onReport
 }: DataManagerDialogProps): React.JSX.Element | null {
+  const [busyAction, setBusyAction] = useState<string>();
+
+  useEffect(() => {
+    if (!open) setBusyAction(undefined);
+  }, [open]);
+
   if (!open) return null;
+
+  const runAction = async (
+    actionId: string,
+    action: () => Promise<void>
+  ): Promise<void> => {
+    if (busyAction) return;
+    setBusyAction(actionId);
+    try {
+      await action();
+    } finally {
+      setBusyAction(undefined);
+    }
+  };
 
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
@@ -109,16 +134,33 @@ export function DataManagerDialog({
       >
         <header>
           <div>
-            <span className="eyebrow">Yerel veri yöneticisi</span>
+            <span className="eyebrow">Yerel ve taşınabilir veri yöneticisi</span>
             <h2>Kaydedilen Deneyler</h2>
           </div>
-          <button className="dialog-close" type="button" onClick={onClose}>×</button>
+          <div className="dialog-header-actions">
+            <button
+              className="primary-button"
+              disabled={Boolean(busyAction)}
+              type="button"
+              onClick={() => void runAction('import', onImport)}
+            >
+              {busyAction === 'import' ? 'İçe aktarılıyor…' : 'JSON İçe Aktar'}
+            </button>
+            <button className="dialog-close" type="button" onClick={onClose}>×</button>
+          </div>
         </header>
+
+        <div className="portable-info">
+          <strong>Sürümlemeli deney dosyaları</strong>
+          <span>
+            JSON dosyaları girdileri, model sürümlerini, sonuç anlık görüntülerini ve hesap izlerini birlikte taşır. HTML raporları çevrimdışı açılabilir ve yazdırılabilir.
+          </span>
+        </div>
 
         {experiments.length === 0 ? (
           <div className="empty-state">
             <strong>Henüz kayıt yok</strong>
-            <span>Aktif deneydeki “Deneyi Kaydet” düğmesini kullanın.</span>
+            <span>Aktif deneyi kaydedin veya taşınabilir bir JSON deney dosyası içe aktarın.</span>
           </div>
         ) : (
           <div className="experiment-list">
@@ -133,9 +175,10 @@ export function DataManagerDialog({
                     {' '}{experiment.predictions.length} çıktı
                   </small>
                 </div>
-                <div className="record-actions">
+                <div className="record-actions portable-actions">
                   <button
                     className="secondary-button"
+                    disabled={Boolean(busyAction)}
                     type="button"
                     onClick={() => {
                       onLoad(experiment);
@@ -145,11 +188,37 @@ export function DataManagerDialog({
                     Aç
                   </button>
                   <button
-                    className="danger-button"
+                    className="secondary-button"
+                    disabled={Boolean(busyAction)}
                     type="button"
-                    onClick={() => void onDelete(experiment)}
+                    onClick={() => void runAction(
+                      `export:${experiment.id}`,
+                      () => onExport(experiment)
+                    )}
                   >
-                    Sil
+                    {busyAction === `export:${experiment.id}` ? 'Kaydediliyor…' : 'JSON'}
+                  </button>
+                  <button
+                    className="report-button"
+                    disabled={Boolean(busyAction)}
+                    type="button"
+                    onClick={() => void runAction(
+                      `report:${experiment.id}`,
+                      () => onReport(experiment)
+                    )}
+                  >
+                    {busyAction === `report:${experiment.id}` ? 'Üretiliyor…' : 'Rapor'}
+                  </button>
+                  <button
+                    className="danger-button"
+                    disabled={Boolean(busyAction)}
+                    type="button"
+                    onClick={() => void runAction(
+                      `delete:${experiment.id}`,
+                      () => onDelete(experiment)
+                    )}
+                  >
+                    {busyAction === `delete:${experiment.id}` ? 'Siliniyor…' : 'Sil'}
                   </button>
                 </div>
               </article>
