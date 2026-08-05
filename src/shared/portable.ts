@@ -148,20 +148,6 @@ function parseSimulatorInputs(value: unknown, allowLegacyFields: boolean): Simul
     isFiniteNumber(value.terrainIntermediateElevationM);
   if (!hasTerrainFields && !allowLegacyFields) return null;
 
-  const parsedManualPoints = parseManualTerrainPoints(value.manualTerrainPoints);
-  if (!parsedManualPoints && !allowLegacyFields) return null;
-
-  const legacyDistancePercent = hasTerrainFields
-    ? value.terrainIntermediateDistancePercent as number
-    : DEFAULT_SIMULATOR_INPUTS.terrainIntermediateDistancePercent;
-  const legacyElevationM = hasTerrainFields
-    ? value.terrainIntermediateElevationM as number
-    : DEFAULT_SIMULATOR_INPUTS.terrainIntermediateElevationM;
-  const manualTerrainPoints = parsedManualPoints ?? migrateLegacyManualTerrainPoint(
-    legacyDistancePercent,
-    legacyElevationM
-  );
-
   return {
     observerHeightM: value.observerHeightM as number,
     targetHeightM: value.targetHeightM as number,
@@ -180,9 +166,12 @@ function parseSimulatorInputs(value: unknown, allowLegacyFields: boolean): Simul
     terrainMode: hasTerrainFields
       ? value.terrainMode as SimulatorInputs['terrainMode']
       : DEFAULT_SIMULATOR_INPUTS.terrainMode,
-    terrainIntermediateDistancePercent: legacyDistancePercent,
-    terrainIntermediateElevationM: legacyElevationM,
-    manualTerrainPoints,
+    terrainIntermediateDistancePercent: hasTerrainFields
+      ? value.terrainIntermediateDistancePercent as number
+      : DEFAULT_SIMULATOR_INPUTS.terrainIntermediateDistancePercent,
+    terrainIntermediateElevationM: hasTerrainFields
+      ? value.terrainIntermediateElevationM as number
+      : DEFAULT_SIMULATOR_INPUTS.terrainIntermediateElevationM,
     distanceSource: hasCoordinateFields
       ? value.distanceSource as SimulatorInputs['distanceSource']
       : DEFAULT_SIMULATOR_INPUTS.distanceSource,
@@ -259,6 +248,13 @@ function normalizeGeodesic(value: SavedGeodesicCalculation): SavedGeodesicCalcul
   return { ...value, warnings: [...value.warnings], trace: cloneTrace(value.trace) };
 }
 
+function deriveLegacyManualPoints(inputs: SimulatorInputs): ManualTerrainPoint[] {
+  return migrateLegacyManualTerrainPoint(
+    inputs.terrainIntermediateDistancePercent,
+    inputs.terrainIntermediateElevationM
+  );
+}
+
 function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): SavedExperiment | null {
   if (!isRecord(value)) return null;
   const inputs = parseSimulatorInputs(value.inputs, allowLegacyInputs);
@@ -271,12 +267,18 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     return null;
   }
 
+  const manualTerrainPoints = value.manualTerrainPoints === undefined
+    ? deriveLegacyManualPoints(inputs)
+    : parseManualTerrainPoints(value.manualTerrainPoints);
+  if (!manualTerrainPoints) return null;
+
   return {
     id: value.id,
     name: value.name.trim(),
     createdAtIso: value.createdAtIso,
     updatedAtIso: value.updatedAtIso,
     inputs,
+    manualTerrainPoints,
     geodesic: value.geodesic === undefined ? undefined : normalizeGeodesic(value.geodesic),
     modelVersions: { ...value.modelVersions } as Record<string, string>,
     predictions: value.predictions.map((prediction) => ({
@@ -329,7 +331,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
       `Deney dosyası şema sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
   }
-  const experiment = parseSavedExperiment(value.experiment, version < 4);
+  const experiment = parseSavedExperiment(value.experiment, version < 3);
   if (!experiment) {
     throw new PortableFormatError('Dosyadaki deney verisi eksik, bozuk veya beklenen aralıkların dışında.');
   }
@@ -379,7 +381,7 @@ export function parseLocalExperimentStore(value: unknown): ParsedLocalExperiment
   }
 
   const experiments = value.experiments
-    .map((item) => parseSavedExperiment(item, version < 4))
+    .map((item) => parseSavedExperiment(item, version < 3))
     .filter((item): item is SavedExperiment => item !== null);
   return {
     store: {
