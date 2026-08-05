@@ -12,7 +12,7 @@ Durum: tamamlandı
 
 ## Aşama 1 — Hedef görünürlüğü motoru
 
-Durum: ilk çalışan sürüm tamamlandı
+Durum: tamamlandı
 
 - İdeal küre modeli
 - Tanımlı düzlem modeli
@@ -23,21 +23,28 @@ Durum: ilk çalışan sürüm tamamlandı
 - Atmosfer kapalı ve standart kırılma seçenekleri
 - Gözlem farkı ve belirsizlik değerlendirmesi
 - Etkileşimli arayüz girdileri
+- Windows masaüstünde 1920×1080 görsel doğrulama
+- Girdi sınırlandırması ve uygulanmayan kontrollerin açık işaretlenmesi
 - Birim testleri ve üretim derlemesi
-
-Kalan doğrulama:
-
-- Yerel masaüstü görsel kontrolü
-- Form alanlarının farklı ekran boyutlarında denenmesi
-- Aşırı ve geçersiz girdiler için kullanıcı mesajları
 
 ## Aşama 2 — Deney kaydetme ve izlenebilirlik
 
-- Deneyi JSON olarak kaydetme ve açma
-- Formül ve ara değer izleri
+Durum: çalışan ilk sürüm tamamlandı, yerel kullanım doğrulaması bekliyor
+
+- Deneyleri Electron kullanıcı veri klasöründe JSON olarak saklama
+- Kayıt oluşturma, güncelleme, yeniden açma ve silme
+- Model sürümleri ile sonuç anlık görüntüsünü kaydetme
+- Her model için formül, sayısal yerine koyma ve sonuç adımları
 - Model varsayımları görünümü
-- Sonuç raporu
-- Tekrarlanabilir deney kimliği
+- Hesap izi kimliği
+- Azimutal projeksiyon için eksik fiziksel kuralların izde açıklanması
+
+Kalan işler:
+
+- Kayıt ve yeniden açma akışının Windows üzerinde doğrulanması
+- JSON dışa aktarma ve içe aktarma
+- İnsan tarafından okunabilir sonuç raporu
+- Kayıt şeması sürümü ve eski kayıt taşıma mekanizması
 
 ## Aşama 3 — Gerçek konum ve arazi
 
