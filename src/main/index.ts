@@ -57,14 +57,15 @@ function registerExperimentHandlers(): void {
 
       const experiments = await readExperiments();
       const existingIndex = experiments.findIndex((item) => item.id === experiment.id);
+      const existing = existingIndex >= 0 ? experiments[existingIndex] : undefined;
       const normalized: SavedExperiment = {
         ...experiment,
         name: experiment.name.trim(),
+        createdAtIso: existing?.createdAtIso ?? experiment.createdAtIso,
         updatedAtIso: new Date().toISOString()
       };
 
       if (existingIndex >= 0) {
-        normalized.createdAtIso = experiments[existingIndex].createdAtIso;
         experiments[existingIndex] = normalized;
       } else {
         experiments.unshift(normalized);
