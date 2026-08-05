@@ -13,18 +13,26 @@ Kullanıcının bir gözlem veya deney tanımlamasını, seçilen modellerin bu 
 - Harita projeksiyonları fiziksel model olarak değerlendirilmez.
 - Her sonuç kullanılan varsayımlar ve formüllerle izlenebilir olur.
 - Tanımsız model davranışlarında uydurma sonuç yerine `unsupported` durumu döndürülür.
-- Arayüz prototipindeki sayılar hesaplama motoruna bağlanana kadar demo veri olarak işaretlenir.
 
-## İlk sürüm kapsamı
+## Çalışan ilk hesaplama motoru
+
+İlk etkileşimli hedef görünürlüğü deneyi şu anda çalışmaktadır:
 
 - İdeal küre modeli
-- Parametrik düzlem modeli
-- İki nokta arasında görüş hattı
+- Tanımlı, engelsiz düzlem modeli
+- Azimutal projeksiyonun fiziksel model olmadığını belirten `unsupported` sonucu
+- Gözlemci yüksekliği
+- Hedef yüksekliği
+- Yüzey mesafesi
+- Gözlenen görünürlük ve belirsizlik
+- Atmosfer kapalı veya standart kırılma
+- Kırılma katsayısı
+- Görünür ve gizlenen hedef oranı
 - Ufuk mesafesi
-- Hedefin görünür ve gizlenen kısmı
-- Atmosfer kapalı ve standart kırılma seçenekleri
-- Sonuçların yan yana karşılaştırılması
-- Deney kaydetme ve raporlama altyapısı
+- Hedef tepe görüş açısı
+- Gözlem ile tahmin arasındaki fark
+
+Standart kırılma, bu aşamada etkin yarıçap yaklaşımıyla hesaplanır. Arazi, dalga yüksekliği ve gelişmiş atmosfer profili henüz dahil değildir.
 
 ## Teknoloji
 
@@ -49,7 +57,7 @@ npm test
 npm run build
 ```
 
-Aynı kontroller her push ve pull request için GitHub Actions üzerinde otomatik çalışır.
+Aynı kontroller her pull request ve `main` dalı güncellemesi için GitHub Actions üzerinde otomatik çalışır. Aynı dalın eski CI koşuları otomatik iptal edilir.
 
 ## Belgeler
 
@@ -62,4 +70,4 @@ Aynı kontroller her push ve pull request için GitHub Actions üzerinde otomati
 
 ## Durum
 
-İlk ürün, mimari ve arayüz taslağı `agent/initial-simulator-design` dalında geliştirilmektedir.
+İlk ürün, mimari, arayüz ve hedef görünürlüğü motoru `agent/initial-simulator-design` dalında geliştirilmektedir.
