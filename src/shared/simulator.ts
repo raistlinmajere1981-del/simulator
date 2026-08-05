@@ -12,13 +12,9 @@ export interface SimulatorInputs {
   verticalDatumKind: VerticalDatumKind;
   verticalDatumOffsetM: number;
   terrainMode: TerrainMode;
-  /**
-   * Legacy single-point fields kept during the v3 -> v4 transition. New UI
-   * writes the same first point into manualTerrainPoints.
-   */
+  /** Legacy single-point fields retained while the multi-point editor lands. */
   terrainIntermediateDistancePercent: number;
   terrainIntermediateElevationM: number;
-  manualTerrainPoints: ManualTerrainPoint[];
   distanceSource: DistanceSource;
   surfaceDistanceKm: number;
   observerLatitudeDeg: number;
@@ -41,9 +37,6 @@ export const DEFAULT_SIMULATOR_INPUTS: SimulatorInputs = {
   terrainMode: 'off',
   terrainIntermediateDistancePercent: 50,
   terrainIntermediateElevationM: 0,
-  manualTerrainPoints: [
-    { id: 'terrain-point-1', distancePercent: 50, elevationM: 0 }
-  ],
   distanceSource: 'manual',
   surfaceDistanceKm: 22.38,
   observerLatitudeDeg: 41.0082,
@@ -76,6 +69,11 @@ export interface SavedExperiment {
   createdAtIso: string;
   updatedAtIso: string;
   inputs: SimulatorInputs;
+  /**
+   * Ordered interior terrain points. Optional in the TypeScript transition so
+   * v3-era UI code can still save; storage normalization always materializes it.
+   */
+  manualTerrainPoints?: ManualTerrainPoint[];
   geodesic?: SavedGeodesicCalculation;
   modelVersions: Record<string, string>;
   predictions: ModelPrediction[];
