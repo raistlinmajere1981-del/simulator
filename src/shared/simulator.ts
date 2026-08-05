@@ -31,7 +31,7 @@ export const DEFAULT_SIMULATOR_INPUTS: SimulatorInputs = {
   targetHeightM: 15,
   observerGroundElevationM: 0,
   targetGroundElevationM: 0,
-  verticalDatumKind: 'orthometric-mean-sea-level',
+  verticalDatumKind: 'orthometric-msl',
   verticalDatumOffsetM: 0,
   terrainMode: 'off',
   terrainIntermediateDistancePercent: 50,
