@@ -1,7 +1,10 @@
+import type { TerrainProfile } from './terrain';
+
 export type ModelCapability =
   | 'surface-distance'
   | 'line-of-sight'
   | 'horizon'
+  | 'terrain-profile'
   | 'atmospheric-refraction'
   | 'solar-position'
   | 'lunar-position'
@@ -40,6 +43,7 @@ export interface ExperimentDefinition {
   type: 'horizon' | 'target-visibility' | 'shadow' | 'celestial';
   observer: Observer;
   target?: Target;
+  terrainProfile?: TerrainProfile;
   observedAtIso: string;
   measurements: Record<string, UncertainValue>;
 }
