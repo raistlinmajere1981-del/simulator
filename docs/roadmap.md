@@ -57,7 +57,7 @@ Durum: tamamlandı
 
 ## Aşama 3.1 — WGS84 gerçek konum girdileri
 
-Durum: çalışan ilk sürüm tamamlandı, yerel görsel doğrulama bekliyor
+Durum: tamamlandı
 
 - Gözlemci ve hedef için enlem/boylam girdileri
 - Manuel ve koordinattan hesaplanan mesafe arasında seçim
@@ -69,25 +69,55 @@ Durum: çalışan ilk sürüm tamamlandı, yerel görsel doğrulama bekliyor
 - Yakın-antipodal yakınsama sorununda işaretli küresel yedek çözüm
 - Jeodezik varsayım, formül, iterasyon ve sonuç hesap izi
 - Koordinat ve jeodezik anlık görüntüsünün yerel kayda eklenmesi
-- Taşınabilir ve yerel kayıt şemalarının sürüm 2’ye taşınması
+- Taşınabilir ve yerel kayıt şemalarının sürüm 2'ye taşınması
 - Sürüm 1 kayıtların manuel mesafe modunda geriye dönük açılması
 - HTML raporunda koordinat ve WGS84 jeodezik bölümü
+- Linux/KDE üzerinde manuel/koordinat geçişi, canlı sonuçlar, kayıt, JSON ve HTML raporu doğrulaması
 - Referans, sınır ve taşıma testleri
+
+## Aşama 3.2 — Düşey datum ve manuel arazi
+
+Durum: çalışan ilk sürüm tamamlandı, yerel görsel doğrulama bekliyor
+
+Tamamlananlar:
+
+- Ortometrik deniz seviyesi, WGS84 elipsoidal ve yerel düşey datum seçimi
+- Gelgit veya yerel benchmark için datum ofseti
+- Gözlemci zemin kotu ve hedef taban kotu
+- Gözlemci göz kotu ve hedef tepe kotunun ortak referansta türetilmesi
+- Manuel, içe aktarılan ve DEM kaynaklı genel profil sözleşmesi
+- Mesafe-yükseklik örneklerinin doğrulanması
+- Tek ara örnekli manuel profil arayüzü
+- Düzlem geometrisinde görüş hattı açıklığı
+- Küresel geometrinin yerel düşey doğrultularında görüş hattı açıklığı
+- Kritik engel ve minimum açıklık tespiti
+- Araziyi temizleyen minimum hedef kotunun sayısal çözümü
+- Eğrilik ve arazi etkilerinin hedef görünürlüğünde birlikte uygulanması
+- Etkin yarıçapın profil analizine yaklaşık yansıması
+- Model metrikleri, uyarıları ve hesap izinde arazi sonuçları
+- Kayıt ve taşınabilir dosya şemasının sürüm 3'e yükseltilmesi
+- Sürüm 1 ve 2 kayıtların profil kapalı güvenli varsayılanlarla taşınması
+- HTML raporunda düşey datum, uç kotları ve manuel profil bölümü
+- Uygulama sürümü `0.5.0`
+- Profil, model, taşıma ve rapor testleri
 
 Kalan doğrulama:
 
-- Linux/KDE üzerinde manuel/koordinat geçişi
-- Koordinat değişiminde canlı model güncellemesi
-- Jeodezik hesap izi görünümü
-- Koordinatlı kayıt, yeniden açma, JSON ve HTML raporu
+- Linux/KDE 1920×1080 yerleşimi
+- Profil kapalıyken önceki sonuçların korunması
+- Manuel profil değişiminde iki modelin canlı güncellenmesi
+- Arazi hesap izi ve sonuç tablosu
+- Kayıt, yeniden açma, JSON ve HTML raporu
 
-## Aşama 3.2 — Gerçek arazi
+Sonraki gerçek arazi işleri:
 
-- Gözlemci ve hedef zemin kotları
+- Birden fazla manuel profil noktası
+- CSV veya GeoJSON profil içe aktarma
 - Sayısal yükseklik modeli entegrasyonu
-- Görüş hattı boyunca arazi örneklemesi
-- Deniz seviyesi ve arazi engelleri
+- Görüş hattı boyunca DEM örneklemesi
 - Arazi veri kaynağı ve çözünürlük izlenebilirliği
+- Ortometrik ve elipsoidal yükseklik için isteğe bağlı jeoit dönüşümü
+- Su seviyesi, gelgit zamanı ve dalga belirsizliği
 
 ## Aşama 4 — Gelişmiş atmosfer
 

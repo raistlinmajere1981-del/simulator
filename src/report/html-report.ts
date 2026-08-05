@@ -5,6 +5,7 @@ import type {
   ResultStatus
 } from '../shared/domain';
 import type { SavedExperiment } from '../shared/simulator';
+import type { VerticalDatumKind } from '../shared/terrain';
 
 const statusLabels: Record<ResultStatus, string> = {
   compatible: 'Gözlem aralığıyla uyumlu',
@@ -17,6 +18,12 @@ const modelNames: Record<string, string> = {
   'ideal-sphere': 'İdeal Küre',
   'defined-plane': 'Tanımlı Düzlem',
   'azimuthal-projection': 'Azimutal Gösterim'
+};
+
+const datumLabels: Record<VerticalDatumKind, string> = {
+  'orthometric-msl': 'Ortalama deniz seviyesi',
+  'ellipsoidal-wgs84': 'WGS84 elipsoidal yükseklik',
+  local: 'Yerel düşey referans'
 };
 
 const inputNumberFormatter = new Intl.NumberFormat('tr-TR', {
@@ -161,6 +168,45 @@ function geodesicSection(experiment: SavedExperiment): string {
     </section>`;
 }
 
+function verticalTerrainSection(experiment: SavedExperiment, effectiveDistanceKm: number): string {
+  const inputs = experiment.inputs;
+  const offset = inputs.verticalDatumOffsetM;
+  const observerEyeElevationM = inputs.observerGroundElevationM + offset + inputs.observerHeightM;
+  const targetTopElevationM = inputs.targetGroundElevationM + offset + inputs.targetHeightM;
+  const terrainRows = inputs.terrainMode === 'manual-three-point' ? `
+    <tr><td>Gözlemci ucu</td><td>0 km</td><td>${inputNumberFormatter.format(inputs.observerGroundElevationM)} m</td></tr>
+    <tr><td>Ara örnek</td><td>${inputNumberFormatter.format(effectiveDistanceKm * inputs.terrainIntermediateDistancePercent / 100)} km</td><td>${inputNumberFormatter.format(inputs.terrainIntermediateElevationM)} m</td></tr>
+    <tr><td>Hedef ucu</td><td>${inputNumberFormatter.format(effectiveDistanceKm)} km</td><td>${inputNumberFormatter.format(inputs.targetGroundElevationM)} m</td></tr>` : `
+    <tr><td colspan="3">Arazi profili kapalı; yalnızca gözlemci ve hedef zemin kotları kullanıldı.</td></tr>`;
+
+  return `
+    <section class="model-section vertical-section">
+      <header class="model-heading">
+        <div><h2>Düşey Referans ve Arazi</h2><span>Taşınabilir deney şeması v3</span></div>
+        <strong class="status ${inputs.terrainMode === 'manual-three-point' ? 'status-compatible' : 'status-indeterminate'}">${inputs.terrainMode === 'manual-three-point' ? 'Manuel profil etkin' : 'Profil kapalı'}</strong>
+      </header>
+      <p>Kotlar ortak bir düşey datumda tutulur. Datum ofseti bütün zemin ve arazi örneklerine aynı yönde uygulanır.</p>
+      <div class="two-column">
+        <div>
+          <h3>Düşey tanım</h3>
+          <table><tbody>
+            <tr><td>Datum</td><td>${escapeHtml(datumLabels[inputs.verticalDatumKind])}</td></tr>
+            <tr><td>Datum / gelgit ofseti</td><td>${inputNumberFormatter.format(offset)} m</td></tr>
+            <tr><td>Gözlemci zemin kotu</td><td>${inputNumberFormatter.format(inputs.observerGroundElevationM)} m</td></tr>
+            <tr><td>Gözlemci mutlak göz kotu</td><td>${inputNumberFormatter.format(observerEyeElevationM)} m</td></tr>
+            <tr><td>Hedef taban kotu</td><td>${inputNumberFormatter.format(inputs.targetGroundElevationM)} m</td></tr>
+            <tr><td>Hedef tepe kotu</td><td>${inputNumberFormatter.format(targetTopElevationM)} m</td></tr>
+          </tbody></table>
+        </div>
+        <div>
+          <h3>Profil örnekleri</h3>
+          <table><thead><tr><th>Nokta</th><th>Mesafe</th><th>Ham kot</th></tr></thead><tbody>${terrainRows}</tbody></table>
+          <p class="muted">İlk sürüm manuel profil iki uç ve tek ara örnekten oluşur. DEM çözünürlüğü veya gerçek arazi kaynağı içermez.</p>
+        </div>
+      </div>
+    </section>`;
+}
+
 export function createExperimentHtmlReport(
   experiment: SavedExperiment,
   generatedAtIso = new Date().toISOString()
@@ -202,6 +248,7 @@ export function createExperimentHtmlReport(
     .input-card strong { font-size: 17px; }
     .model-section { margin: 18px 0; padding: 24px; page-break-inside: avoid; }
     .geodesic-section { border-top: 4px solid #2b79ad; }
+    .vertical-section { border-top: 4px solid #4b8a58; }
     .model-heading { display: flex; justify-content: space-between; gap: 16px; align-items: start; border-bottom: 1px solid #e0e7ec; padding-bottom: 14px; }
     .model-heading span { display: block; color: #718492; margin-top: 4px; font-size: 12px; }
     .status { max-width: 330px; padding: 7px 10px; border-radius: 999px; font-size: 12px; text-align: center; }
@@ -238,7 +285,7 @@ export function createExperimentHtmlReport(
         <span>Rapor üretimi: ${formatDate(generatedAtIso)}</span>
       </div>
       <div class="input-grid">
-        <div class="input-card"><small>Gözlemci yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
+        <div class="input-card"><small>Göz yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
         <div class="input-card"><small>Hedef yüksekliği</small><strong>${inputNumberFormatter.format(inputs.targetHeightM)} m</strong></div>
         <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(effectiveDistanceKm)} km</strong></div>
         <div class="input-card"><small>Gözlenen görünürlük</small><strong>%${inputNumberFormatter.format(inputs.observedVisiblePercent)}</strong></div>
@@ -250,6 +297,7 @@ export function createExperimentHtmlReport(
     </header>
 
     ${geodesicSection(experiment)}
+    ${verticalTerrainSection(experiment, effectiveDistanceKm)}
     ${experiment.predictions.map((prediction) => predictionSection(
       prediction,
       experiment.modelVersions[prediction.modelId]

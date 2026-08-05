@@ -1,10 +1,19 @@
 import type { CalculationTrace, ModelPrediction } from './domain';
+import type { VerticalDatumKind } from './terrain';
 
 export type DistanceSource = 'manual' | 'coordinates';
+export type TerrainMode = 'off' | 'manual-three-point';
 
 export interface SimulatorInputs {
   observerHeightM: number;
   targetHeightM: number;
+  observerGroundElevationM: number;
+  targetGroundElevationM: number;
+  verticalDatumKind: VerticalDatumKind;
+  verticalDatumOffsetM: number;
+  terrainMode: TerrainMode;
+  terrainIntermediateDistancePercent: number;
+  terrainIntermediateElevationM: number;
   distanceSource: DistanceSource;
   surfaceDistanceKm: number;
   observerLatitudeDeg: number;
@@ -20,6 +29,13 @@ export interface SimulatorInputs {
 export const DEFAULT_SIMULATOR_INPUTS: SimulatorInputs = {
   observerHeightM: 10,
   targetHeightM: 15,
+  observerGroundElevationM: 0,
+  targetGroundElevationM: 0,
+  verticalDatumKind: 'orthometric-msl',
+  verticalDatumOffsetM: 0,
+  terrainMode: 'off',
+  terrainIntermediateDistancePercent: 50,
+  terrainIntermediateElevationM: 0,
   distanceSource: 'manual',
   surfaceDistanceKm: 22.38,
   observerLatitudeDeg: 41.0082,

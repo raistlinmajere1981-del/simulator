@@ -43,6 +43,40 @@ function metricValue(
   return metrics.find((metric) => metric.key === key)?.value ?? null;
 }
 
+function terrainExperiment(
+  distanceM: number,
+  observerEyeM: number,
+  targetHeightM: number,
+  middleElevationM: number
+): ExperimentDefinition {
+  return {
+    ...experiment,
+    id: `terrain-${distanceM}`,
+    observer: { ...experiment.observer, eyeHeightM: observerEyeM },
+    target: { ...experiment.target!, heightM: targetHeightM },
+    terrainProfile: {
+      id: 'manual-three-point',
+      label: 'Manuel test profili',
+      source: 'manual',
+      datum: {
+        kind: 'orthometric-msl',
+        label: 'Ortalama deniz seviyesi',
+        offsetM: 0
+      },
+      totalDistanceM: distanceM,
+      samples: [
+        { distanceM: 0, elevationM: 0 },
+        { distanceM: distanceM / 2, elevationM: middleElevationM },
+        { distanceM, elevationM: 0 }
+      ]
+    },
+    measurements: {
+      ...experiment.measurements,
+      surfaceDistanceM: { value: distanceM, uncertainty: 1, unit: 'm' }
+    }
+  };
+}
+
 describe('initial simulation models', () => {
   it('predicts partial visibility on the ideal sphere with a reproducible trace', async () => {
     const result = await new IdealSphereModel().predict(experiment, {
@@ -65,6 +99,36 @@ describe('initial simulation models', () => {
     expect(metricValue(result.metrics, 'visibleFraction')).toBe(1);
     expect(result.status).toBe('incompatible');
     expect(result.trace.steps.find((step) => step.id === 'horizon')?.result).toBe('∞');
+  });
+
+  it('reduces planar target visibility when a manual terrain point blocks the lower target', async () => {
+    const result = await new DefinedPlaneModel().predict(
+      terrainExperiment(1_000, 2, 10, 5),
+      { atmosphereMode: 'off' }
+    );
+
+    expect(metricValue(result.metrics, 'visibleFraction')).toBeCloseTo(0.2, 5);
+    expect(metricValue(result.metrics, 'terrainRequiredTargetElevationM')).toBeCloseTo(8, 5);
+    expect(result.trace.steps.map((step) => step.id)).toContain('terrain-clearance');
+  });
+
+  it('applies the same flat profile differently in spherical and planar geometry', async () => {
+    const longExperiment = terrainExperiment(100_000, 2, 500, 0);
+    const plane = await new DefinedPlaneModel().predict(longExperiment, {
+      atmosphereMode: 'off'
+    });
+    const sphere = await new IdealSphereModel().predict(longExperiment, {
+      atmosphereMode: 'off'
+    });
+
+    const planarClearance = metricValue(plane.metrics, 'terrainMinimumClearanceM');
+    const sphericalClearance = metricValue(sphere.metrics, 'terrainMinimumClearanceM');
+
+    expect(metricValue(plane.metrics, 'visibleFraction')).toBe(1);
+    expect(planarClearance).not.toBeNull();
+    expect(sphericalClearance).not.toBeNull();
+    expect(planarClearance ?? -Infinity).toBeGreaterThan(sphericalClearance ?? Infinity);
+    expect(metricValue(sphere.metrics, 'visibleFraction')).toBeLessThan(1);
   });
 
   it('does not treat an azimuthal projection as a physical model', async () => {

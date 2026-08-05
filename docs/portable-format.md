@@ -2,7 +2,7 @@
 
 ## Amaç
 
-Taşınabilir deney dosyası, bir deneyin form girdilerini, koordinatlarını, jeodezik hesap anlık görüntüsünü, model sürümlerini, sonuçları, uyarıları, varsayımları ve hesap izlerini tek JSON belgesinde taşır.
+Taşınabilir deney dosyası; bir deneyin form girdilerini, koordinatlarını, jeodezik hesap anlık görüntüsünü, düşey datumunu, zemin ve arazi kotlarını, model sürümlerini, sonuçları, uyarıları, varsayımları ve hesap izlerini tek JSON belgesinde taşır.
 
 Bu sayede bir deney:
 
@@ -32,7 +32,7 @@ geometric-observation-laboratory/portable-experiment
 Güncel şema sürümü:
 
 ```text
-2
+3
 ```
 
 Üst düzey yapı:
@@ -40,11 +40,11 @@ Güncel şema sürümü:
 ```json
 {
   "schema": "geometric-observation-laboratory/portable-experiment",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "exportedAtIso": "2026-08-05T15:00:00.000Z",
   "application": {
     "name": "Geometrik Gözlem Laboratuvarı",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "experiment": {
     "id": "...",
@@ -65,8 +65,14 @@ Güncel şema sürümü:
 
 `inputs` alanı şunları içerir:
 
-- gözlemci yüksekliği,
+- gözlemci göz yüksekliği,
 - hedef yüksekliği,
+- gözlemci zemin kotu,
+- hedef taban kotu,
+- düşey datum türü,
+- datum, gelgit veya yerel benchmark ofseti,
+- arazi profili modu,
+- manuel ara noktanın yüzde konumu ve kotu,
 - `manual` veya `coordinates` mesafe kaynağı,
 - manuel yüzey mesafesi,
 - gözlemci enlem ve boylamı,
@@ -76,7 +82,22 @@ Güncel şema sürümü:
 - standart kırılma seçimi,
 - kırılma katsayısı.
 
-Enlemler `-90…90°`, boylamlar `-180…180°` aralığında doğrulanır. Bütün sayısal alanlar sonlu olmalıdır.
+Düşey datum türleri:
+
+```text
+orthometric-msl
+ellipsoidal-wgs84
+local
+```
+
+Arazi profili modları:
+
+```text
+off
+manual-three-point
+```
+
+Manuel ara nokta yüzdesi açık aralıkta `0…100` arasında olmalıdır; uç noktalar gözlemci ve hedef kotları tarafından temsil edilir. Enlemler `-90…90°`, boylamlar `-180…180°` aralığında doğrulanır. Bütün sayısal alanlar sonlu olmalıdır.
 
 ## Jeodezik anlık görüntü
 
@@ -103,7 +124,11 @@ Bu alanın amacı, gelecekte jeodezik motor değişse bile kayıt anındaki sonu
 `predictions`, her fiziksel modelin kayıt anındaki:
 
 - durumunu,
-- metriklerini,
+- görünür ve gizlenen hedef değerlerini,
+- arazi minimum açıklığını,
+- kritik arazi mesafesini,
+- araziyi temizleyen minimum hedef kotunu,
+- diğer metriklerini,
 - uyarılarını,
 - hesap izi kimliğini,
 - varsayımlarını,
@@ -121,7 +146,7 @@ Dosyadaki sonuç anlık görüntüsü yeni uygulama sürümü tarafından sessiz
 2. Şema kimliği kontrol edilir.
 3. Şema sürümünün desteklendiği doğrulanır.
 4. Deney kimliği, tarihler ve ad kontrol edilir.
-5. Sayısal girdiler ve koordinatlar izin verilen aralıklarda olmalıdır.
+5. Sayısal girdiler, koordinatlar, düşey datum ve profil alanları izin verilen aralıklarda olmalıdır.
 6. Varsa jeodezik anlık görüntü bütün alanlarıyla doğrulanır.
 7. Model sonuçları, metrikler ve hesap izi adımları doğrulanır.
 8. Hatalı dosya yerel kayıt deposunu değiştirmeden reddedilir.
@@ -130,20 +155,33 @@ Dosyadaki sonuç anlık görüntüsü yeni uygulama sürümü tarafından sessiz
 
 ## Eski dosya desteği
 
-### Sürüm 1 → sürüm 2
+### Sürüm 1 → sürüm 3
 
-Sürüm 1 dosyalarında koordinat ve mesafe kaynağı alanları yoktur. Taşıma sırasında:
+Sürüm 1 dosyalarında koordinat, mesafe kaynağı ve düşey arazi alanları yoktur. Taşıma sırasında:
 
 - `distanceSource` değeri `manual` olur,
 - önceki `surfaceDistanceKm` değeri korunur,
 - koordinat alanları güvenli örnek varsayılanlarla tamamlanır,
-- jeodezik anlık görüntü oluşturulmaz.
+- jeodezik anlık görüntü oluşturulmaz,
+- zemin kotları ve datum ofseti `0 m` olur,
+- datum `orthometric-msl` olur,
+- arazi profili `off` olur.
 
-Böylece eski deney sonucu değişmeden açılır; kullanıcı daha sonra koordinat modunu bilinçli olarak seçebilir.
+### Sürüm 2 → sürüm 3
 
-Şema kapsayıcısı bulunmayan tek bir geçerli eski deney nesnesi sürüm `0` kabul edilerek aynı kurallarla taşınabilir.
+Sürüm 2 koordinat ve jeodezik verileri korur. Yeni düşey ve arazi alanları:
 
-Desteklenmeyen gelecekteki şema sürümleri sessizce yorumlanmaz; açık hata ile reddedilir.
+- zemin kotları `0 m`,
+- datum `orthometric-msl`,
+- datum ofseti `0 m`,
+- arazi profili `off`,
+- ara nokta varsayılan olarak `%50` ve `0 m`
+
+ile tamamlanır.
+
+Bu varsayılanlar eski deneylerin önceki görünürlük sonuçlarını değiştirmeden açılmasını amaçlar.
+
+Şema kapsayıcısı bulunmayan tek bir geçerli eski deney nesnesi sürüm `0` kabul edilerek aynı kurallarla taşınabilir. Desteklenmeyen gelecekteki şema sürümleri sessizce yorumlanmaz; açık hata ile reddedilir.
 
 ## Yerel kayıt deposu
 
@@ -158,10 +196,10 @@ geometric-observation-laboratory/local-experiment-store
 Güncel sürüm:
 
 ```text
-2
+3
 ```
 
-Sürüm 1 kapsayıcıları ve daha eski düz JSON dizileri ilk okumada sürüm 2 yapısına taşınır ve atomik yazımla kaydedilir. Doğrulanamayan kayıtlar yüklenmez ve sayıları taşıma sonucunda raporlanır.
+Sürüm 1 ve 2 kapsayıcıları ile daha eski düz JSON dizileri ilk okumada sürüm 3 yapısına taşınır ve atomik yazımla kaydedilir. Doğrulanamayan kayıtlar yüklenmez ve sayıları taşıma sonucunda raporlanır.
 
 ## HTML raporu
 
@@ -174,5 +212,15 @@ HTML raporu taşınabilir veri dosyasının yerine geçmez. Rapor:
 için üretilir.
 
 Koordinat modunda rapor; iki koordinatı, WGS84 mesafesini, azimutları, çözüm yöntemini ve jeodezik hesap izini ayrı bölümde gösterir.
+
+Düşey referans ve arazi bölümünde:
+
+- datum ve ofset,
+- gözlemci zemin ve mutlak göz kotu,
+- hedef taban ve tepe kotu,
+- profil modu,
+- manuel profil örnekleri
+
+gösterilir. Model bölümleri arazi metriklerini ve hesap adımlarını kendi sonuç anlık görüntülerinden sunar.
 
 Rapor verileri HTML içine güvenli biçimde kaçırılır. JSON dosyası yeniden içe aktarılabilir veri kaynağıdır; HTML raporu salt okunur sunum çıktısıdır.

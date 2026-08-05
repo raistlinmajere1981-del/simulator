@@ -9,7 +9,7 @@ Kullanıcının bir gözlem veya deney tanımlamasını, seçilen modellerin bu 
 ## Temel ilkeler
 
 - Aynı deney girdileri bütün modellere uygulanır.
-- Geometri, atmosfer ve görsel canlandırma birbirinden ayrılır.
+- Geometri, atmosfer, arazi verisi ve görsel canlandırma birbirinden ayrılır.
 - Harita projeksiyonları fiziksel model olarak değerlendirilmez.
 - Her sonuç kullanılan varsayımlar ve formüllerle izlenebilir olur.
 - Tanımsız model davranışlarında uydurma sonuç yerine `unsupported` durumu döndürülür.
@@ -20,14 +20,20 @@ Kullanıcının bir gözlem veya deney tanımlamasını, seçilen modellerin bu 
 Hedef görünürlüğü deneyi şu yeteneklere sahiptir:
 
 - İdeal küre modeli
-- Tanımlı, engelsiz düzlem modeli
+- Tanımlı düzlem modeli
 - Azimutal projeksiyonun fiziksel model olmadığını belirten `unsupported` sonucu
-- Gözlemci ve hedef yüksekliği
+- Gözlemci göz yüksekliği ve hedef yüksekliği
+- Gözlemci zemin kotu ve hedef taban kotu
+- Ortalama deniz seviyesi, WGS84 elipsoidal veya yerel düşey datum seçimi
+- Datum, gelgit veya yerel benchmark ofseti
 - Manuel yüzey mesafesi
 - Gözlemci ve hedef enlem-boylamı
 - WGS84 elipsoidi üzerinde koordinattan yüzey mesafesi
 - Başlangıç ve varış azimutları
 - Manuel ve koordinat mesafesi arasında seçim
+- Tek ara örnekli manuel arazi profili
+- Küre ve düzlemde ayrı arazi görüş hattı çözümü
+- Kritik arazi noktası, minimum açıklık ve araziyi temizleyen hedef kotu
 - Gözlenen görünürlük ve belirsizlik
 - Atmosfer kapalı veya standart kırılma
 - Düzenlenebilir kırılma katsayısı
@@ -39,7 +45,7 @@ Hedef görünürlüğü deneyi şu yeteneklere sahiptir:
 
 Koordinat modu WGS84 ters jeodezik problemini Vincenty iterasyonuyla çözer. Yakın-antipodal durumda iterasyon yakınsamazsa sonuç sessizce elipsoidal sonuç gibi sunulmaz; ortalama Dünya yarıçaplı küresel yedek çözüm açık uyarıyla işaretlenir.
 
-Standart kırılma bu aşamada etkin yarıçap yaklaşımıyla hesaplanır. Arazi, dalga yüksekliği ve gelişmiş atmosfer profili henüz dahil değildir.
+Standart kırılma bu aşamada etkin yarıçap yaklaşımıyla hesaplanır. Manuel arazi profili iki uç zemin kotu ve tek ara örnekten oluşur. DEM, dalga yüzeyi, jeoit dönüşümü ve gelişmiş atmosfer profili henüz dahil değildir.
 
 ## Deney kayıtları
 
@@ -50,19 +56,21 @@ Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama şu işlemle
 - kayıtları yeniden açma,
 - kayıt silme,
 - koordinat ve jeodezik hesap anlık görüntüsünü saklama,
+- düşey datum, zemin kotları ve manuel profil girdilerini saklama,
 - model sürümleri ve sonuç anlık görüntülerini saklama.
 
 ## Taşınabilir dosyalar ve raporlar
 
-`0.4.0` geliştirme sürümünde:
+`0.5.0` geliştirme sürümünde:
 
 - deneyler sürümlemeli `.ggl.json` dosyası olarak dışa aktarılabilir,
 - taşınabilir deney dosyaları doğrulanarak içe aktarılabilir,
-- sürüm 1 kayıtlar koordinat alanları eklenerek manuel mesafe moduna taşınabilir,
+- sürüm 1 ve 2 kayıtlar güvenli varsayılanlarla şema sürüm 3'e taşınabilir,
+- eski kayıtlar manuel mesafe ve kapalı arazi profili davranışını korur,
 - kimlik çakışmaları güvenli yeni kayıt oluşturarak çözülür,
-- girdiler, koordinatlar, jeodezik sonuçlar, model sonuçları ve hesap izleri çevrimdışı HTML raporuna dönüştürülebilir.
+- girdiler, koordinatlar, jeodezik sonuçlar, düşey datum, arazi profili, model sonuçları ve hesap izleri çevrimdışı HTML raporuna dönüştürülebilir.
 
-HTML raporu okunabilir/yazdırılabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı `.ggl.json` dosyasıdır.
+HTML raporu okunabilir ve yazdırılabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı `.ggl.json` dosyasıdır.
 
 ## Teknoloji
 
@@ -97,9 +105,10 @@ Aynı kontroller pull request'lerde GitHub Actions üzerinde otomatik çalışı
 - [`docs/model-contract.md`](docs/model-contract.md)
 - [`docs/ui-design.md`](docs/ui-design.md)
 - [`docs/geodesy.md`](docs/geodesy.md)
+- [`docs/terrain-profile.md`](docs/terrain-profile.md)
 - [`docs/portable-format.md`](docs/portable-format.md)
 - [`docs/roadmap.md`](docs/roadmap.md)
 
 ## Durum
 
-Hedef görünürlüğü motoru, yerel kayıtlar, taşınabilir dosyalar ve çevrimdışı raporlama `main` dalındadır. WGS84 koordinat girdileri `agent/wgs84-geodesic-inputs` dalında otomatik ve yerel doğrulama aşamasındadır.
+Hedef görünürlüğü motoru, yerel kayıtlar, taşınabilir dosyalar, çevrimdışı raporlama ve WGS84 koordinat girdileri `main` dalındadır. Düşey datum ve manuel arazi profili sürümü `agent/vertical-datum-and-terrain-foundation` dalında otomatik ve yerel doğrulama aşamasındadır.
