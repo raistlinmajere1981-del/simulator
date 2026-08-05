@@ -69,9 +69,15 @@ function findLargestGapPoint(
     }
   ];
 
-  let bestLeft = all[0];
-  let bestRight = all[1];
-  let bestGap = (bestRight?.distancePercent ?? 100) - (bestLeft?.distancePercent ?? 0);
+  const first = all[0];
+  const second = all[1];
+  if (!first || !second) {
+    throw new RangeError('Profil uçları oluşturulamadı.');
+  }
+
+  let bestLeft: PreviewPoint = first;
+  let bestRight: PreviewPoint = second;
+  let bestGap = bestRight.distancePercent - bestLeft.distancePercent;
 
   for (let index = 1; index < all.length - 1; index += 1) {
     const left = all[index];
