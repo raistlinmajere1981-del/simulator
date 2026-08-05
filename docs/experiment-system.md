@@ -1,63 +1,77 @@
 # Deney Sistemi
 
-## Deney yaşam döngüsü
+## Temel akış
 
-1. Kullanıcı deney türünü seçer.
-2. Konum, yükseklik, tarih, saat ve ölçüm girdilerini girer.
-3. Sistem eksik veya fiziksel olarak geçersiz değerleri doğrular.
-4. Kullanıcı karşılaştırılacak modelleri ve atmosfer modunu seçer.
-5. Her model bağımsız tahmin üretir.
-6. Ölçüm belirsizliği tahmin belirsizliğiyle karşılaştırılır.
-7. Sonuçlar ve hesap izi kaydedilir.
+1. Kullanıcı ölçülebilir deney girdilerini tanımlar.
+2. Aynı deney seçili bütün modellere gönderilir.
+3. Her model yalnızca tanımladığı kurallarla tahmin üretir.
+4. Tahmin, gerçek gözlem ve belirsizlik aralığıyla karşılaştırılır.
+5. Arayüz görünürlük, fark, durum ve model uyarılarını birlikte gösterir.
 
-## Ortak deney girdileri
+## İlk çalışan deney: hedef görünürlüğü
 
-- Gözlemci koordinatı, rakımı ve göz yüksekliği
-- Hedef koordinatı, taban yüksekliği ve toplam yüksekliği
-- Ölçüm tarihi, saati ve zaman dilimi
-- Yüzey mesafesi ve kaynağı
-- Hava sıcaklığı, basınç ve nem
-- Atmosfer profili veya standart kırılma seçimi
-- Kamera sensörü, odak uzaklığı, kırpma ve eğim bilgisi
-- Gerçek gözlem metriği ve belirsizliği
+Zorunlu girdiler:
 
-## Atmosfer modları
+- Gözlemci yüksekliği
+- Hedef yüksekliği
+- Yüzey mesafesi
+- Gözlenen görünür oran
+- Gözlem belirsizliği
 
-### Kapalı
+İsteğe bağlı bağlam:
 
-Yalnızca model geometrisi ve doğrusal ışık yolu kullanılır.
+- Atmosfer kapalı
+- Standart kırılma
+- Kırılma katsayısı
 
-### Standart
+Üretilen metrikler:
 
-Kullanıcının görebildiği bir kırılma katsayısıyla etkin yarıçap veya eşdeğer yaklaşım kullanılır. Katsayı sonuç raporuna yazılır.
+- Görünür hedef yüksekliği
+- Gizlenen hedef yüksekliği
+- Görünür oran
+- Gizlenen oran
+- Yüzey üzerindeki ufuk mesafesi
+- Hedef tepe görüş açısı
+- Teğete göre yüzey düşümü
+- Gözlem ile tahmin arasındaki yüzde puan farkı
 
-### Profil tabanlı
+## Durum değerlendirmesi
 
-Sıcaklık, basınç ve nemin yüksekliğe göre değişimi üzerinden ışın yolu adım adım çözülür. Bu mod daha sonraki aşamadır.
+Gözlenen görünürlük `değer ± belirsizlik` olarak tutulur.
 
-## Sonuç durumları
+- Tahmin belirsizlik aralığındaysa `compatible`
+- Fark bir ile iki belirsizlik arasındaysa `indeterminate`
+- Fark iki belirsizlikten büyükse `incompatible`
+- Model gerekli fiziksel kuralları tanımlamıyorsa `unsupported`
 
-- `compatible`: Tahmin ve gözlem belirsizlik aralıkları uyumludur.
-- `incompatible`: Aralıklar belirlenen ölçüte göre uyuşmaz.
-- `indeterminate`: Belirsizlik karar vermek için fazladır.
-- `unsupported`: Model deney için gereken kuralları sağlamaz.
+Bu sınıflandırma modelin genel doğruluğu veya bilimsel güven puanı değildir. Yalnızca tanımlanan tek deneydeki tahmin-gözlem ilişkisini ifade eder.
 
-## Uyum skoru
+## Model davranışları
 
-Arayüzde tek başına açıklamasız bir güven puanı kullanılmaz. Bir skor gösterilecekse:
+### İdeal küre
 
-- formülü belgelenir,
-- kullanılan ölçüm ve tahmin dağılımları görünürdür,
-- örneklem sayısı belirtilir,
-- skorun model doğruluğu değil yalnızca tanımlı gözleme uyum olduğu açıklanır.
+- Ortalama Dünya yarıçapını kullanır.
+- Atmosfer kapalıyken saf geometrik sonuç üretir.
+- Standart kırılmada etkin yarıçap yaklaşımını kullanır.
+- Arazi, dalga ve katmanlı atmosfer dahil değildir.
 
-## İlk deney türü: hedef görünürlüğü
+### Tanımlı düzlem
 
-İlk sürümde şu çıktılar hedeflenir:
+- Sonsuz ve engelsiz düzlem varsayar.
+- Işığın doğrusal ilerlediğini kabul eder.
+- Sonlu geometrik ufuk üretmez.
+- Atmosferik kırılma kuralı henüz tanımlı değildir.
 
-- geometrik ufuk mesafesi,
-- hedefin teorik görünür ve gizli kısmı,
-- gözlemci-hedef görüş açısı,
-- kırılma açık/kapalı farkı,
-- girdi hassasiyet tablosu,
-- gözlenen değerle fark ve belirsizlik durumu.
+### Azimutal gösterim
+
+- Fiziksel yüzey modeli değildir.
+- Dikey yön, ışık yolu ve ufuk kuralları tanımlı olmadığı için hedef görünürlüğü sonucu üretmez.
+
+## Sonraki genişletmeler
+
+- Deneyleri JSON olarak kaydetme
+- Koordinatlardan model bağımsız ölçüm mesafesi alma
+- WGS84 elipsoid
+- Arazi profili
+- Gelişmiş atmosferik ışın izleme
+- Fotoğraf kalibrasyonu
