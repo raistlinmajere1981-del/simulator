@@ -1,4 +1,5 @@
 import type {
+  CalculationTrace,
   ExperimentDefinition,
   ModelCapability,
   ModelMetadata,
@@ -32,11 +33,16 @@ function metric(
   return { key, label, value, unit };
 }
 
+function format(value: number, digits = 3): string {
+  if (!Number.isFinite(value)) return '∞';
+  return value.toLocaleString('tr-TR', { maximumFractionDigits: digits });
+}
+
 export class IdealSphereModel implements SimulationModel {
   readonly metadata: ModelMetadata = {
     id: 'ideal-sphere',
     name: 'İdeal Küre',
-    version: '0.1.0',
+    version: '0.2.0',
     description:
       'Ortalama yarıçaplı küresel yüzey üzerinde görüş hattı ve ufuk hesabı.',
     capabilities: [
@@ -94,7 +100,12 @@ export class IdealSphereModel implements SimulationModel {
         status: 'unsupported',
         metrics: [],
         warnings: validationErrors,
-        traceId: `${this.metadata.id}:${experiment.id}:unsupported`
+        traceId: `${this.metadata.id}:${experiment.id}:unsupported`,
+        trace: {
+          summary: 'Gerekli deney girdileri veya desteklenen atmosfer modu bulunamadı.',
+          assumptions: this.metadata.assumptions,
+          steps: []
+        }
       };
     }
 
@@ -109,10 +120,11 @@ export class IdealSphereModel implements SimulationModel {
     }
 
     const warnings: string[] = [];
-    let radiusM = MEAN_EARTH_RADIUS_M;
+    const baseRadiusM = MEAN_EARTH_RADIUS_M;
+    let radiusM = baseRadiusM;
+    const coefficient = context.refractionCoefficient ?? 0.13;
 
     if (context.atmosphereMode === 'standard') {
-      const coefficient = context.refractionCoefficient ?? 0.13;
       radiusM = effectiveRadiusM(radiusM, coefficient);
       warnings.push(
         `Standart kırılma etkin yarıçap yaklaşımıyla uygulandı (k=${coefficient.toFixed(3)}).`
@@ -142,10 +154,85 @@ export class IdealSphereModel implements SimulationModel {
         ? 0
         : visibleHeightM / experiment.target.heightM;
     const hiddenFraction = 1 - visibleFraction;
-    const evaluation = evaluateFractionPrediction(
-      visibleFraction,
-      getMeasurement(experiment, 'visibleFraction', 'fraction')
+    const horizonSurfaceDistanceM = surfaceHorizonDistanceM(observerHeightM, radiusM);
+    const targetTopElevationDeg = sphericalElevationAngleDeg(
+      surfaceDistanceM,
+      observerHeightM,
+      targetTopHeightM,
+      radiusM
     );
+    const curvatureDropM = surfaceDropFromTangentM(surfaceDistanceM, radiusM);
+    const observation = getMeasurement(experiment, 'visibleFraction', 'fraction');
+    const evaluation = evaluateFractionPrediction(visibleFraction, observation);
+
+    const trace: CalculationTrace = {
+      summary:
+        'Küresel yüzeyde gözlemci ufku, hedefin görünmesi gereken en düşük noktası ve hedefin kalan görünür bölümü hesaplandı.',
+      assumptions: this.metadata.assumptions,
+      steps: [
+        {
+          id: 'effective-radius',
+          title: 'Kullanılan yarıçap',
+          formula:
+            context.atmosphereMode === 'standard'
+              ? 'Rₑ = R / (1 - k)'
+              : 'Rₑ = R',
+          substitution:
+            context.atmosphereMode === 'standard'
+              ? `${format(baseRadiusM)} / (1 - ${format(coefficient)})`
+              : `${format(baseRadiusM)}`,
+          result: `${format(radiusM)} m`,
+          note:
+            context.atmosphereMode === 'standard'
+              ? 'Etkin yarıçap yaklaşımı standart kırılmayı yaklaşık temsil eder.'
+              : 'Atmosferik kırılma uygulanmadı.'
+        },
+        {
+          id: 'horizon-distance',
+          title: 'Gözlemci ufuk mesafesi',
+          formula: 'sₕ = Rₑ · acos(Rₑ / (Rₑ + hₒ))',
+          substitution: `${format(radiusM)} · acos(${format(radiusM)} / (${format(radiusM)} + ${format(observerHeightM)}))`,
+          result: `${format(horizonSurfaceDistanceM)} m`
+        },
+        {
+          id: 'minimum-visible-height',
+          title: 'Hedefte görünmesi gereken en düşük nokta',
+          formula: 'hₘᵢₙ = Rₑ / cos(s/Rₑ - acos(Rₑ/(Rₑ+hₒ))) - Rₑ',
+          substitution: `s=${format(surfaceDistanceM)} m, hₒ=${format(observerHeightM)} m, Rₑ=${format(radiusM)} m`,
+          result: `${format(minimumVisibleHeightM)} m`
+        },
+        {
+          id: 'visible-fraction',
+          title: 'Görünür hedef oranı',
+          formula: 'f = (H - clamp(hₘᵢₙ - hᵦ, 0, H)) / H',
+          substitution: `(${format(experiment.target.heightM)} - ${format(hiddenHeightM)}) / ${format(experiment.target.heightM)}`,
+          result: `%${format(visibleFraction * 100, 2)}`
+        },
+        {
+          id: 'target-angle',
+          title: 'Hedef tepe açısı',
+          formula: 'α = atan2(y, x)',
+          substitution: `s=${format(surfaceDistanceM)} m, hₒ=${format(observerHeightM)} m, hₜ=${format(targetTopHeightM)} m`,
+          result: `${format(targetTopElevationDeg, 4)}°`
+        },
+        {
+          id: 'observation-comparison',
+          title: 'Gözlem karşılaştırması',
+          formula: 'Δ = |fₜₐₕₘᵢₙ - f_gözlem|',
+          substitution:
+            observation
+              ? `|${format(visibleFraction * 100, 2)} - ${format(observation.value * 100, 2)}|`
+              : 'Gözlem değeri girilmedi.',
+          result:
+            evaluation.difference === null
+              ? 'Karşılaştırma yok'
+              : `${format(evaluation.difference * 100, 2)} yüzde puan`,
+          note: observation
+            ? `Gözlem belirsizliği ±%${format(observation.uncertainty * 100, 2)}.`
+            : undefined
+        }
+      ]
+    };
 
     return {
       modelId: this.metadata.id,
@@ -159,24 +246,19 @@ export class IdealSphereModel implements SimulationModel {
         metric(
           'horizonSurfaceDistanceM',
           'Yüzey üzerindeki ufuk mesafesi',
-          surfaceHorizonDistanceM(observerHeightM, radiusM),
+          horizonSurfaceDistanceM,
           'm'
         ),
         metric(
           'targetTopElevationDeg',
           'Hedef tepe görüş açısı',
-          sphericalElevationAngleDeg(
-            surfaceDistanceM,
-            observerHeightM,
-            targetTopHeightM,
-            radiusM
-          ),
+          targetTopElevationDeg,
           'deg'
         ),
         metric(
           'curvatureDropM',
           'Teğete göre yüzey düşümü',
-          surfaceDropFromTangentM(surfaceDistanceM, radiusM),
+          curvatureDropM,
           'm'
         ),
         metric(
@@ -187,7 +269,8 @@ export class IdealSphereModel implements SimulationModel {
         )
       ],
       warnings,
-      traceId: `${this.metadata.id}:${experiment.id}:${context.atmosphereMode}`
+      traceId: `${this.metadata.id}:${experiment.id}:${context.atmosphereMode}`,
+      trace
     };
   }
 }
