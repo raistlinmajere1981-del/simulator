@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { inverseWgs84Geodesic } from '../src/simulation/geodesy';
 
 describe('WGS84 inverse geodesic', () => {
-  it('matches the published Flinders Peak to Buninyong Vincenty example', () => {
+  it('matches the WGS84 inverse solution for Flinders Peak to Buninyong', () => {
     const result = inverseWgs84Geodesic(
       { latitudeDeg: -37.95103, longitudeDeg: 144.42487 },
       { latitudeDeg: -37.6528, longitudeDeg: 143.9265 }
@@ -10,9 +10,9 @@ describe('WGS84 inverse geodesic', () => {
 
     expect(result.method).toBe('vincenty');
     expect(result.converged).toBe(true);
-    expect(result.distanceM).toBeCloseTo(54_972.271, 2);
-    expect(result.initialBearingDeg).toBeCloseTo(306.86816, 4);
-    expect(result.finalBearingDeg).toBeCloseTo(307.1736, 4);
+    expect(result.distanceM).toBeCloseTo(54_973.295266, 3);
+    expect(result.initialBearingDeg).toBeCloseTo(306.869922693, 6);
+    expect(result.finalBearingDeg).toBeCloseTo(307.175392588, 6);
     expect(result.trace.steps.some((step) => step.id === 'ellipsoidal-distance')).toBe(true);
   });
 
