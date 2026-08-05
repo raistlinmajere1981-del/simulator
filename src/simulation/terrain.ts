@@ -54,8 +54,12 @@ export function validateTerrainProfile(profile: TerrainProfile): string[] {
     previousDistance = sample.distanceM;
   });
 
-  const first = profile.samples[0];
-  const last = profile.samples[profile.samples.length - 1];
+  const first = profile.samples.at(0);
+  const last = profile.samples.at(-1);
+  if (!first || !last) {
+    errors.push('Arazi profilinin uç örnekleri okunamadı.');
+    return errors;
+  }
   if (Math.abs(first.distanceM) > DISTANCE_TOLERANCE_M) {
     errors.push('Arazi profilinin ilk örneği 0 m konumunda olmalıdır.');
   }
@@ -91,9 +95,20 @@ function summarize(
   samples: TerrainClearanceSample[],
   warnings: string[]
 ): TerrainClearanceResult {
+  const lastSample = samples.at(-1);
+  if (!lastSample) {
+    return {
+      blocked: false,
+      minimumClearanceM: null,
+      criticalSample: null,
+      samples,
+      warnings: [...warnings, 'Profil sonucu örnek içermiyor.']
+    };
+  }
+
   const interior = samples.filter((sample) =>
     sample.distanceM > DISTANCE_TOLERANCE_M &&
-    sample.distanceM < samples[samples.length - 1].distanceM - DISTANCE_TOLERANCE_M
+    sample.distanceM < lastSample.distanceM - DISTANCE_TOLERANCE_M
   );
 
   if (interior.length === 0) {
@@ -106,8 +121,13 @@ function summarize(
     };
   }
 
+  const firstInterior = interior.at(0);
+  if (!firstInterior) {
+    throw new Error('Arazi profili kritik örneği belirlenemedi.');
+  }
   const criticalSample = interior.reduce((minimum, sample) =>
-    sample.clearanceM < minimum.clearanceM ? sample : minimum
+    sample.clearanceM < minimum.clearanceM ? sample : minimum,
+    firstInterior
   );
 
   return {
