@@ -57,7 +57,7 @@ Durum: tamamlandı
 
 ## Aşama 3.1 — WGS84 gerçek konum girdileri
 
-Durum: çalışan ilk sürüm tamamlandı, yerel görsel doğrulama bekliyor
+Durum: tamamlandı
 
 - Gözlemci ve hedef için enlem/boylam girdileri
 - Manuel ve koordinattan hesaplanan mesafe arasında seçim
@@ -72,22 +72,35 @@ Durum: çalışan ilk sürüm tamamlandı, yerel görsel doğrulama bekliyor
 - Taşınabilir ve yerel kayıt şemalarının sürüm 2’ye taşınması
 - Sürüm 1 kayıtların manuel mesafe modunda geriye dönük açılması
 - HTML raporunda koordinat ve WGS84 jeodezik bölümü
+- Linux/KDE üzerinde manuel/koordinat geçişi, canlı sonuçlar, kayıt, JSON ve HTML raporu doğrulaması
 - Referans, sınır ve taşıma testleri
 
-Kalan doğrulama:
+## Aşama 3.2 — Düşey datum ve gerçek arazi
 
-- Linux/KDE üzerinde manuel/koordinat geçişi
-- Koordinat değişiminde canlı model güncellemesi
-- Jeodezik hesap izi görünümü
-- Koordinatlı kayıt, yeniden açma, JSON ve HTML raporu
+Durum: hesaplama temeli geliştiriliyor
 
-## Aşama 3.2 — Gerçek arazi
+Tamamlanan temel:
+
+- Ortometrik deniz seviyesi, WGS84 elipsoidal ve yerel düşey datum sözleşmesi
+- Gelgit veya yerel benchmark için datum ofseti
+- Manuel, içe aktarılan ve DEM kaynaklı profil türleri
+- Mesafe-yükseklik örneklerinin doğrulanması
+- Düzlem geometrisinde görüş hattı açıklığı
+- Küresel geometrinin yerel düşey doğrultularında görüş hattı açıklığı
+- Kritik engel ve minimum açıklık tespiti
+- Etkin yarıçapın profil analizine yaklaşık yansıması
+
+Sıradaki işler:
 
 - Gözlemci ve hedef zemin kotları
+- İlk manuel arazi profili arayüzü
+- Modellerin arazi analizini metrik ve hesap izine bağlaması
+- Kayıt, taşınabilir dosya ve HTML raporunda profil verisi
+- CSV/GeoJSON profil içe aktarma
 - Sayısal yükseklik modeli entegrasyonu
-- Görüş hattı boyunca arazi örneklemesi
-- Deniz seviyesi ve arazi engelleri
+- Görüş hattı boyunca DEM örneklemesi
 - Arazi veri kaynağı ve çözünürlük izlenebilirliği
+- Ortometrik ve elipsoidal yükseklik için isteğe bağlı jeoit dönüşümü
 
 ## Aşama 4 — Gelişmiş atmosfer
 
