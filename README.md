@@ -13,26 +13,49 @@ Kullanıcının bir gözlem veya deney tanımlamasını, seçilen modellerin bu 
 - Harita projeksiyonları fiziksel model olarak değerlendirilmez.
 - Her sonuç kullanılan varsayımlar ve formüllerle izlenebilir olur.
 - Tanımsız model davranışlarında uydurma sonuç yerine `unsupported` durumu döndürülür.
+- Tek bir deneydeki uyum, bir modelin genel doğruluğu olarak sunulmaz.
 
-## Çalışan ilk hesaplama motoru
+## Çalışan hedef görünürlüğü laboratuvarı
 
-İlk etkileşimli hedef görünürlüğü deneyi şu anda çalışmaktadır:
+İlk etkileşimli hedef görünürlüğü deneyi şu yeteneklere sahiptir:
 
 - İdeal küre modeli
 - Tanımlı, engelsiz düzlem modeli
 - Azimutal projeksiyonun fiziksel model olmadığını belirten `unsupported` sonucu
-- Gözlemci yüksekliği
-- Hedef yüksekliği
+- Gözlemci ve hedef yüksekliği
 - Yüzey mesafesi
 - Gözlenen görünürlük ve belirsizlik
 - Atmosfer kapalı veya standart kırılma
-- Kırılma katsayısı
+- Düzenlenebilir kırılma katsayısı
 - Görünür ve gizlenen hedef oranı
 - Ufuk mesafesi
 - Hedef tepe görüş açısı
 - Gözlem ile tahmin arasındaki fark
+- Her model için varsayım, formül, yerine koyma ve sonuç adımlarını gösteren hesap izi
 
 Standart kırılma, bu aşamada etkin yarıçap yaklaşımıyla hesaplanır. Arazi, dalga yüksekliği ve gelişmiş atmosfer profili henüz dahil değildir.
+
+## Deney kayıtları
+
+Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama şu işlemleri destekler:
+
+- deney oluşturma ve güncelleme,
+- uygulama kapatıldıktan sonra kayıtları koruma,
+- kayıtları yeniden açma,
+- kayıt silme,
+- model sürümleri ve sonuç anlık görüntülerini saklama.
+
+## Taşınabilir dosyalar ve raporlar
+
+`0.3.0` geliştirme sürümünde:
+
+- deneyler sürümlemeli `.ggl.json` dosyası olarak dışa aktarılabilir,
+- taşınabilir deney dosyaları doğrulanarak içe aktarılabilir,
+- eski ham deney JSON kayıtları güncel yapıya taşınabilir,
+- kimlik çakışmaları güvenli yeni kayıt oluşturarak çözülür,
+- girdiler, sonuçlar, varsayımlar ve hesap izleri çevrimdışı HTML raporuna dönüştürülebilir.
+
+HTML raporu okunabilir/yazdırılabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı `.ggl.json` dosyasıdır.
 
 ## Teknoloji
 
@@ -57,7 +80,7 @@ npm test
 npm run build
 ```
 
-Aynı kontroller her pull request ve `main` dalı güncellemesi için GitHub Actions üzerinde otomatik çalışır. Aynı dalın eski CI koşuları otomatik iptal edilir.
+Aynı kontroller pull request'lerde GitHub Actions üzerinde otomatik çalışır. Aynı dalın eski CI koşuları otomatik iptal edilir.
 
 ## Belgeler
 
@@ -66,8 +89,9 @@ Aynı kontroller her pull request ve `main` dalı güncellemesi için GitHub Act
 - [`docs/experiment-system.md`](docs/experiment-system.md)
 - [`docs/model-contract.md`](docs/model-contract.md)
 - [`docs/ui-design.md`](docs/ui-design.md)
+- [`docs/portable-format.md`](docs/portable-format.md)
 - [`docs/roadmap.md`](docs/roadmap.md)
 
 ## Durum
 
-İlk ürün, mimari, arayüz ve hedef görünürlüğü motoru `agent/initial-simulator-design` dalında geliştirilmektedir.
+Hedef görünürlüğü motoru, yerel kayıtlar ve hesap izlenebilirliği `main` dalındadır. Taşınabilir deney dosyaları ile çevrimdışı raporlama `agent/portable-experiments-and-reports` dalında yerel doğrulama aşamasındadır.
