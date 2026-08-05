@@ -1,4 +1,25 @@
+.geodesic-top-grid {
+  grid-template-rows: max-content;
+  align-items: stretch;
+}
+
+.coordinate-summary {
+  height: max-content;
+  overflow: visible;
+}
+
+.coordinate-summary .refraction-control {
+  min-height: 28px;
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border: 1px solid #304354;
+  border-radius: 3px;
+  background: #0b1822;
+}
+
 .terrain-panel {
+  position: relative;
+  z-index: 0;
   display: grid;
   gap: 8px;
   padding: 10px 12px;
