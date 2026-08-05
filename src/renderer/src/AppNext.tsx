@@ -10,8 +10,10 @@ import {
   DEFAULT_SIMULATOR_INPUTS,
   type DistanceSource,
   type SavedExperiment,
-  type SimulatorInputs
+  type SimulatorInputs,
+  type TerrainMode
 } from '../../shared/simulator';
+import type { TerrainProfile, VerticalDatumKind } from '../../shared/terrain';
 import {
   inverseWgs84Geodesic,
   type GeodesicResult
@@ -30,7 +32,10 @@ type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
 type NumericInputKey = Exclude<
   keyof SimulatorInputs,
-  'useStandardRefraction' | 'distanceSource'
+  | 'useStandardRefraction'
+  | 'distanceSource'
+  | 'terrainMode'
+  | 'verticalDatumKind'
 >;
 
 interface ModelPresentation {
@@ -59,6 +64,12 @@ const presentationByModelId: Record<string, ModelPresentation> = {
   'azimuthal-projection': { tone: 'violet', shape: 'gleason' }
 };
 
+const datumLabels: Record<VerticalDatumKind, string> = {
+  'orthometric-msl': 'Ortalama deniz seviyesi',
+  'ellipsoidal-wgs84': 'WGS84 elipsoidal yükseklik',
+  local: 'Yerel düşey referans'
+};
+
 const geodesicMetadata: ModelMetadata = {
   id: 'wgs84-geodesic',
   name: 'WGS84 Jeodezik Çözüm',
@@ -81,6 +92,11 @@ const statusLabels: Record<ResultStatus, string> = {
 const inputRanges: Record<NumericInputKey, { min: number; max: number }> = {
   observerHeightM: { min: 0, max: 100_000 },
   targetHeightM: { min: 0.1, max: 100_000 },
+  observerGroundElevationM: { min: -12_000, max: 100_000 },
+  targetGroundElevationM: { min: -12_000, max: 100_000 },
+  verticalDatumOffsetM: { min: -1_000, max: 1_000 },
+  terrainIntermediateDistancePercent: { min: 0.001, max: 99.999 },
+  terrainIntermediateElevationM: { min: -12_000, max: 100_000 },
   surfaceDistanceKm: { min: 0, max: 20_000 },
   observerLatitudeDeg: { min: -90, max: 90 },
   observerLongitudeDeg: { min: -180, max: 180 },
@@ -122,6 +138,10 @@ function formatDistance(distanceM: number | null, infinite = false): string {
   return `${numberFormatter.format(distanceM / 1_000)} km`;
 }
 
+function formatMetres(valueM: number | null): string {
+  return valueM === null ? '—' : `${numberFormatter.format(valueM)} m`;
+}
+
 function formatAngle(angleDeg: number | null): string {
   return angleDeg === null ? '—' : `${numberFormatter.format(angleDeg)}°`;
 }
@@ -142,6 +162,33 @@ function defaultExperimentName(): string {
     dateStyle: 'short',
     timeStyle: 'short'
   }).format(new Date())}`;
+}
+
+function buildTerrainProfile(
+  inputs: SimulatorInputs,
+  effectiveDistanceM: number
+): TerrainProfile | undefined {
+  if (inputs.terrainMode === 'off' || effectiveDistanceM <= 0) return undefined;
+
+  return {
+    id: 'interactive-manual-three-point',
+    label: 'Manuel üç noktalı arazi profili',
+    source: 'manual',
+    datum: {
+      kind: inputs.verticalDatumKind,
+      label: datumLabels[inputs.verticalDatumKind],
+      offsetM: inputs.verticalDatumOffsetM
+    },
+    totalDistanceM: effectiveDistanceM,
+    samples: [
+      { distanceM: 0, elevationM: inputs.observerGroundElevationM },
+      {
+        distanceM: effectiveDistanceM * inputs.terrainIntermediateDistancePercent / 100,
+        elevationM: inputs.terrainIntermediateElevationM
+      },
+      { distanceM: effectiveDistanceM, elevationM: inputs.targetGroundElevationM }
+    ]
+  };
 }
 
 function geodesicPrediction(result: GeodesicResult | undefined): ModelPrediction | undefined {
@@ -253,7 +300,7 @@ function Sidebar({
           <span>Görsel katmanlar</span>
           <span className="section-state">sonraki aşama</span>
         </div>
-        {['Kıta / Ülke Sınırları', 'Topografya', 'Gece Işıkları', 'Atmosfer Profili', 'Izgara'].map((item) => (
+        {['Kıta / Ülke Sınırları', 'Topografya Görselleştirme', 'Gece Işıkları', 'Atmosfer Profili', 'Izgara'].map((item) => (
           <label className="switch-row unavailable-layer" key={item}>
             <span>{item}</span><input type="checkbox" disabled /><span className="switch" />
           </label>
@@ -350,7 +397,7 @@ function ScenarioSummary({
       </div>
 
       <div className="input-grid base-input-grid">
-        <NumericField inputKey="observerHeightM" label="Gözlemci yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+        <NumericField inputKey="observerHeightM" label="Göz yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
         <NumericField inputKey="targetHeightM" label="Hedef yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
         <NumericField inputKey="observedVisiblePercent" label="Gözlenen görünürlük" unit="%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
         <NumericField inputKey="observationUncertaintyPercent" label="Gözlem belirsizliği" unit="±%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
@@ -434,6 +481,60 @@ function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.El
   );
 }
 
+function TerrainPanel({
+  inputs,
+  effectiveDistanceKm,
+  onDatumChange,
+  onModeChange,
+  onNumberChange
+}: {
+  inputs: SimulatorInputs;
+  effectiveDistanceKm: number;
+  onDatumChange(kind: VerticalDatumKind): void;
+  onModeChange(mode: TerrainMode): void;
+  onNumberChange(key: NumericInputKey, value: number): void;
+}): React.JSX.Element {
+  const terrainEnabled = inputs.terrainMode === 'manual-three-point';
+  return (
+    <section className={`terrain-panel panel ${terrainEnabled ? 'enabled' : ''}`}>
+      <div className="terrain-heading">
+        <div>
+          <span className="eyebrow">Düşey referans ve arazi</span>
+          <strong>{terrainEnabled ? 'Manuel üç noktalı profil' : 'Yalnız uç zemin kotları'}</strong>
+        </div>
+        <div className="terrain-mode-buttons">
+          <button className={!terrainEnabled ? 'selected' : ''} type="button" onClick={() => onModeChange('off')}>Profil kapalı</button>
+          <button className={terrainEnabled ? 'selected' : ''} type="button" onClick={() => onModeChange('manual-three-point')}>Manuel profil</button>
+        </div>
+      </div>
+
+      <div className="terrain-control-grid">
+        <label className="input-field terrain-select">
+          <span>Düşey datum</span>
+          <select
+            value={inputs.verticalDatumKind}
+            onChange={(event) => onDatumChange(event.currentTarget.value as VerticalDatumKind)}
+          >
+            {Object.entries(datumLabels).map(([kind, label]) => (
+              <option key={kind} value={kind}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <NumericField inputKey="observerGroundElevationM" label="Gözlemci zemin kotu" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+        <NumericField inputKey="targetGroundElevationM" label="Hedef taban kotu" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+        <NumericField inputKey="verticalDatumOffsetM" label="Datum / gelgit ofseti" unit="m" step={0.01} inputs={inputs} onNumberChange={onNumberChange} />
+        <NumericField inputKey="terrainIntermediateDistancePercent" label="Ara nokta konumu" unit="%" step={0.1} inputs={inputs} disabled={!terrainEnabled} onNumberChange={onNumberChange} />
+        <NumericField inputKey="terrainIntermediateElevationM" label="Ara nokta kotu" unit="m" step={0.1} inputs={inputs} disabled={!terrainEnabled} onNumberChange={onNumberChange} />
+      </div>
+
+      <p className="terrain-summary">
+        {datumLabels[inputs.verticalDatumKind]} · ofset {numberFormatter.format(inputs.verticalDatumOffsetM)} m · gözlemci mutlak göz kotu {numberFormatter.format(inputs.observerGroundElevationM + inputs.verticalDatumOffsetM + inputs.observerHeightM)} m · hedef tepe kotu {numberFormatter.format(inputs.targetGroundElevationM + inputs.verticalDatumOffsetM + inputs.targetHeightM)} m
+        {terrainEnabled && ` · ara örnek ${numberFormatter.format(effectiveDistanceKm * inputs.terrainIntermediateDistancePercent / 100)} km konumunda`}
+      </p>
+    </section>
+  );
+}
+
 function ModelCard({
   metadata,
   run,
@@ -452,6 +553,7 @@ function ModelCard({
   const hiddenFraction = getMetric(prediction, 'hiddenFraction');
   const horizonDistanceM = getMetric(prediction, 'horizonSurfaceDistanceM');
   const targetAngleDeg = getMetric(prediction, 'targetTopElevationDeg');
+  const terrainClearanceM = getMetric(prediction, 'terrainMinimumClearanceM');
   const warning = prediction?.warnings[0];
   const isProjection = metadata.id === 'azimuthal-projection';
 
@@ -480,16 +582,17 @@ function ModelCard({
         </div>
       ) : (
         <div className="profile-view">
-          <div className="profile-label left">Gözlemci<br /><b>{numberFormatter.format(inputs.observerHeightM)} m</b></div>
-          <div className="profile-label right">Hedef<br /><b>{numberFormatter.format(inputs.targetHeightM)} m</b></div>
+          <div className="profile-label left">Gözlemci<br /><b>{numberFormatter.format(inputs.observerGroundElevationM + inputs.observerHeightM)} m</b></div>
+          <div className="profile-label right">Hedef tepesi<br /><b>{numberFormatter.format(inputs.targetGroundElevationM + inputs.targetHeightM)} m</b></div>
           <span className="line-of-sight" /><span className={`surface ${presentation.shape}`} />
+          {inputs.terrainMode !== 'off' && <span className="terrain-obstacle" title="Manuel arazi örneği" />}
         </div>
       )}
       <div className={`metric-grid ${isProjection ? 'unsupported-metrics' : ''}`}>
         <div><small>Beklenen görünürlük</small><strong>{formatPercent(visibleFraction)}</strong></div>
         <div><small>Gizlenen kısım</small><strong>{formatPercent(hiddenFraction)}</strong></div>
         <div><small>Ufuk mesafesi</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane')}</strong></div>
-        <div><small>Hedef tepe açısı</small><strong>{formatAngle(targetAngleDeg)}</strong></div>
+        <div><small>{terrainClearanceM === null ? 'Hedef tepe açısı' : 'Arazi açıklığı'}</small><strong>{terrainClearanceM === null ? formatAngle(targetAngleDeg) : formatMetres(terrainClearanceM)}</strong></div>
       </div>
       <div className="model-warning">{warning ?? metadata.assumptions[0]}</div>
     </article>
@@ -502,7 +605,7 @@ function ResultsTable({ runs, onShowTrace }: { runs: ModelRun[]; onShowTrace(mod
       <span className="eyebrow">Sonuç karşılaştırma</span>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Model / gösterim</th><th>Beklenen görünürlük</th><th>Gizlenen</th><th>Görüş açısı</th><th>Ufuk</th><th>Gözlem farkı</th><th>İz</th></tr></thead>
+          <thead><tr><th>Model / gösterim</th><th>Beklenen görünürlük</th><th>Gizlenen</th><th>Görüş açısı</th><th>Ufuk</th><th>Arazi açıklığı</th><th>Gözlem farkı</th><th>İz</th></tr></thead>
           <tbody>
             {simulationModels.map((model) => {
               const run = runs.find((candidate) => candidate.metadata.id === model.metadata.id);
@@ -517,6 +620,7 @@ function ResultsTable({ runs, onShowTrace }: { runs: ModelRun[]; onShowTrace(mod
                   <td>{formatPercent(getMetric(prediction, 'hiddenFraction'))}</td>
                   <td>{formatAngle(getMetric(prediction, 'targetTopElevationDeg'))}</td>
                   <td>{formatDistance(getMetric(prediction, 'horizonSurfaceDistanceM'), model.metadata.id === 'defined-plane')}</td>
+                  <td>{formatMetres(getMetric(prediction, 'terrainMinimumClearanceM'))}</td>
                   <td>{formatDifference(getMetric(prediction, 'observationDifferencePp'))}</td>
                   <td><button className="table-trace-button" disabled={!prediction} type="button" onClick={() => onShowTrace(model.metadata.id)}>Aç</button></td>
                 </tr>
@@ -563,6 +667,10 @@ export function AppNext(): React.JSX.Element {
     ...inputs,
     surfaceDistanceKm: effectiveDistanceKm
   }), [effectiveDistanceKm, inputs]);
+  const terrainProfile = useMemo(
+    () => buildTerrainProfile(inputs, effectiveDistanceKm * 1_000),
+    [effectiveDistanceKm, inputs]
+  );
 
   const experiment = useMemo<ExperimentDefinition>(() => ({
     id: activeExperimentId ?? 'interactive-target-visibility',
@@ -571,22 +679,23 @@ export function AppNext(): React.JSX.Element {
     observer: {
       latitudeDeg: inputs.observerLatitudeDeg,
       longitudeDeg: inputs.observerLongitudeDeg,
-      elevationM: 0,
+      elevationM: inputs.observerGroundElevationM + inputs.verticalDatumOffsetM,
       eyeHeightM: inputs.observerHeightM
     },
     target: {
       label: 'Hedef',
       latitudeDeg: inputs.targetLatitudeDeg,
       longitudeDeg: inputs.targetLongitudeDeg,
-      elevationM: 0,
+      elevationM: inputs.targetGroundElevationM + inputs.verticalDatumOffsetM,
       heightM: inputs.targetHeightM
     },
+    terrainProfile,
     observedAtIso: new Date().toISOString(),
     measurements: {
       surfaceDistanceM: { value: effectiveDistanceKm * 1_000, uncertainty: inputs.distanceSource === 'coordinates' ? 0.01 : 20, unit: 'm' },
       visibleFraction: { value: inputs.observedVisiblePercent / 100, uncertainty: inputs.observationUncertaintyPercent / 100, unit: 'fraction' }
     }
-  }), [activeExperimentId, activeExperimentName, effectiveDistanceKm, inputs]);
+  }), [activeExperimentId, activeExperimentName, effectiveDistanceKm, inputs, terrainProfile]);
 
   const context = useMemo(() => ({
     atmosphereMode: inputs.useStandardRefraction ? 'standard' as const : 'off' as const,
@@ -762,6 +871,14 @@ export function AppNext(): React.JSX.Element {
             <ObservationPanel inputs={inputs} />
           </div>
 
+          <TerrainPanel
+            inputs={inputs}
+            effectiveDistanceKm={effectiveDistanceKm}
+            onDatumChange={(verticalDatumKind) => updateInputs((current) => ({ ...current, verticalDatumKind }))}
+            onModeChange={(terrainMode) => updateInputs((current) => ({ ...current, terrainMode }))}
+            onNumberChange={handleNumberChange}
+          />
+
           <div className="model-grid">
             {simulationModels.map((model) => (
               <ModelCard
@@ -780,12 +897,13 @@ export function AppNext(): React.JSX.Element {
               <span className="eyebrow">Hesaplama kapsamı</span>
               <ul>
                 <li>Koordinat modu WGS84 ters jeodezik çözümünü kullanır.</li>
-                <li>İdeal küre, ortalama Dünya yarıçapını kullanır.</li>
-                <li>Standart kırılma seçeneği etkin yarıçap yaklaşımıdır.</li>
-                <li>Düzlem modeli engelsiz yüzey ve doğrusal ışık varsayar.</li>
+                <li>Zemin ve hedef kotları seçilen ortak düşey datumda yorumlanır.</li>
+                <li>Manuel profil bir ara örnek ile iki uç kotunu birleştirir.</li>
+                <li>Küre ve düzlem aynı profili kendi geometrilerinde ayrı çözer.</li>
+                <li>Standart kırılma yalnızca kürede etkin yarıçap yaklaşımıdır.</li>
                 <li>Azimutal gösterim yalnızca kartografik referanstır.</li>
               </ul>
-              <p>Arazi, dalga yüksekliği, kamera kalibrasyonu ve katmanlı atmosfer profili henüz hesaba dahil değildir.</p>
+              <p>DEM verisi, dalga yüzeyi, kamera kalibrasyonu ve katmanlı atmosfer profili henüz hesaba dahil değildir.</p>
             </section>
           </div>
         </main>
