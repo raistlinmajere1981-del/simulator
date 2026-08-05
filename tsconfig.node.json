@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "noEmit": true,
+    "types": ["node", "electron-vite/node"]
   },
   "include": [
     "electron.vite.config.ts",

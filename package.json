@@ -4,7 +4,6 @@
   "private": true,
   "description": "Farklı geometrik ve fiziksel modelleri ölçülebilir gözlemler üzerinden karşılaştıran masaüstü simülasyon laboratuvarı.",
   "main": "./out/main/index.js",
-  "type": "module",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
@@ -13,18 +12,18 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "latest",
-    "@vitejs/plugin-react": "latest",
-    "electron": "^43.2.0",
+    "@types/node": "^22.19.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "electron": "^39.2.6",
     "electron-vite": "^5.0.0",
-    "typescript": "^7.0.2",
-    "vite": "^8.1.5",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6",
     "vitest": "^4.1.10"
   }
 }
