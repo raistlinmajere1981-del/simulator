@@ -1,42 +1,47 @@
 # Ürün Vizyonu
 
-## Tanım
+## Amaç
 
-Geometrik Gözlem Laboratuvarı, farklı geometrik ve fiziksel modellerin aynı ölçülebilir gözlem karşısında ürettiği tahminleri karşılaştıran, deney odaklı bir masaüstü uygulamasıdır.
+Farklı geometrik ve fiziksel Dünya modellerinin aynı ölçülebilir deney karşısında ürettiği sayısal tahminleri karşılaştıran masaüstü laboratuvarı oluşturmak.
 
-## Kullanıcı problemi
+Uygulama bir sonucu önceden seçmez. Deney girdisini, model varsayımlarını, tahmini, gözlemi ve belirsizliği görünür biçimde ayırır.
 
-Dünya'nın şekli ve gözlemsel sonuçlar hakkındaki tartışmalarda çoğu karşılaştırma:
+## Kullanıcı vaadi
 
-- aynı girdileri kullanmaz,
-- atmosferi geometriyle karıştırır,
-- ölçüm belirsizliğini yok sayar,
-- harita projeksiyonunu fiziksel model gibi ele alır,
-- görsel canlandırmayı sayısal kanıt yerine koyar,
-- sonuç üretmek için açıklanmayan varsayımlar kullanır.
+- Aynı girdiyi birden fazla modelde çalıştırma
+- Her sayının hangi varsayımla üretildiğini görme
+- Tahmin ile gözlem farkını ölçme
+- Eksik tanımlı modellerde uydurma sonuç yerine açık uyarı alma
+- Deneyi daha sonra yeniden üretme
 
-Uygulama bu sorunları açık deney tanımı, model sözleşmesi ve izlenebilir hesaplama ile azaltmayı hedefler.
+## İlk çalışan ürün dilimi
 
-## Ürün ilkeleri
+Hedef görünürlüğü deneyi:
 
-1. **Deney önce gelir.** Kullanıcı önce gözlemi ve ölçümü tanımlar.
-2. **Aynı girdi, ayrı tahmin.** Seçili modeller aynı deney paketini alır.
-3. **Varsayımlar görünürdür.** Modelin yüzey, ışık, atmosfer ve zaman kuralları saklanmaz.
-4. **Belirsizlik sonuçtur.** Tek sayı yerine gerektiğinde aralık ve dağılım gösterilir.
-5. **Desteklenmeyen deney uydurulmaz.** Eksik model kuralları açıkça raporlanır.
-6. **Görselleştirme açıklayıcıdır.** Sayısal çözüm motorundan ayrı tutulur.
-7. **Tarafsızlık eşdeğerlik değildir.** Modeller önceden etiketlenmez; gözlem farkı ve veri desteği saklanmaz.
+- Gözlemci ve hedef yüksekliği
+- Yüzey mesafesi
+- Gözlenen görünür oran ve belirsizlik
+- İdeal küre
+- Tanımlı düzlem
+- Standart atmosferik kırılma
+- Görünür ve gizlenen hedef oranı
+- Ufuk ve görüş açısı
 
-## İlk hedef kullanıcılar
+Azimutal harita gösterimi fiziksel model gibi hesaplanmaz. Gerekli fizik kuralları tanımlanmadığı için açıkça desteklenmiyor olarak gösterilir.
 
-- kendi gözlemlerini sayısal olarak incelemek isteyen meraklılar,
-- fotoğraf veya video üzerinden görüş hattı analizi yapan kullanıcılar,
-- eğitim amacıyla geometri, atmosfer ve astronomi ilişkisini göstermek isteyenler,
-- farklı model iddialarını yeniden üretilebilir deneylerle karşılaştırmak isteyen araştırmacılar.
+## Bilimsel sunum ilkeleri
 
-## Başarı ölçütleri
+- Genel model güven puanı kullanılmaz.
+- Tek deneydeki uyum, genel doğruluk iddiası olarak sunulmaz.
+- Belirsizlik sonuçtan ayrı gösterilmez; değerlendirmeye dahildir.
+- Geometri, atmosfer, arazi ve kamera etkileri ayrı katmanlardır.
+- Görsel canlandırma sayısal çözümün yerine geçmez.
 
-- Kaydedilen bir deney başka bir bilgisayarda aynı sonuçları üretebilmeli.
-- Her sonuç kullanılan model sürümü ve parametrelerle ilişkilendirilmeli.
-- Belirsizlik veya eksik veri sonucu otomatik olarak görünür olmalı.
-- Kullanıcı, bir sonucun hangi formül ve ara değerlerden geldiğini inceleyebilmeli.
+## Uzun vadeli yön
+
+- WGS84 ve gerçek koordinatlar
+- Arazi profili
+- Gelişmiş atmosfer
+- Fotoğraf kalibrasyonu
+- Güneş, Ay ve yıldız deneyleri
+- Deney arşivi ve raporlama
