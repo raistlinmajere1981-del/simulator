@@ -1,0 +1,84 @@
+.dialog-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dialog-header-actions .primary-button {
+  white-space: nowrap;
+}
+
+.portable-info {
+  display: grid;
+  gap: 4px;
+  margin: 14px 14px 0;
+  padding: 10px 12px;
+  border: 1px solid #2c4a5f;
+  border-left: 3px solid #3c84b8;
+  border-radius: 4px;
+  color: #8da7b8;
+  background: #0d1d29;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.portable-info strong {
+  color: #c4d8e6;
+  font-size: 10px;
+}
+
+.portable-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 310px;
+}
+
+.report-button {
+  padding: 7px 11px;
+  border: 1px solid #5f5630;
+  border-radius: 3px;
+  color: #e4cd75;
+  background: #2c2817;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.report-button:hover:not(:disabled) {
+  border-color: #897b42;
+  background: #3b351d;
+}
+
+.primary-button:hover:not(:disabled),
+.secondary-button:hover:not(:disabled) {
+  filter: brightness(1.14);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled,
+.report-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .dialog-card > header {
+    align-items: flex-start;
+  }
+
+  .dialog-header-actions {
+    align-items: flex-end;
+    flex-direction: column-reverse;
+  }
+
+  .experiment-record {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .portable-actions {
+    max-width: none;
+    justify-content: flex-start;
+  }
+}
