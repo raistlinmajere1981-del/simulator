@@ -10,7 +10,12 @@ import {
   evaluateFractionPrediction,
   getMeasurement
 } from '../simulation/evaluation';
-import { planarElevationAngleDeg } from '../simulation/geometry';
+import { clamp, planarElevationAngleDeg } from '../simulation/geometry';
+import {
+  analyzePlanarTerrainClearance,
+  minimumClearTargetElevationM,
+  validateTerrainProfile
+} from '../simulation/terrain';
 import type {
   SimulationContext,
   SimulationModel
@@ -33,14 +38,15 @@ export class DefinedPlaneModel implements SimulationModel {
   readonly metadata: ModelMetadata = {
     id: 'defined-plane',
     name: 'Tanımlı Düzlem',
-    version: '0.2.0',
+    version: '0.3.0',
     description:
-      'Düz, engelsiz yüzey ve doğrusal ışık varsayımıyla görüş hesabı.',
-    capabilities: ['surface-distance', 'line-of-sight', 'horizon'],
+      'Düz yüzey ve doğrusal ışık varsayımıyla, isteğe bağlı arazi profili üzerinden görüş hesabı.',
+    capabilities: ['surface-distance', 'line-of-sight', 'horizon', 'terrain-profile'],
     assumptions: [
-      'Yüzey sonsuz düzlemdir.',
+      'Temel yüzey sonsuz düzlemdir.',
       'Işık doğrusal ilerler.',
-      'Arazi, dalga ve optik kırılma bulunmaz.',
+      'Arazi profili yoksa yüzey engelsiz kabul edilir.',
+      'Kotlar ortak bir düşey datumda doğrusal yüksekliklerdir.',
       'Geometrik ufuk sonlu değildir.'
     ]
   };
@@ -56,13 +62,15 @@ export class DefinedPlaneModel implements SimulationModel {
     if (experiment.type !== 'target-visibility') {
       errors.push('Bu sürüm yalnızca hedef görünürlüğü deneyini destekler.');
     }
-
-    if (!experiment.target) {
-      errors.push('Hedef bilgisi zorunludur.');
-    }
-
+    if (!experiment.target) errors.push('Hedef bilgisi zorunludur.');
     if (!distance || distance.value < 0) {
       errors.push('Metre biriminde geçerli surfaceDistanceM ölçümü zorunludur.');
+    }
+    if (experiment.terrainProfile) {
+      errors.push(...validateTerrainProfile(experiment.terrainProfile));
+      if (distance && Math.abs(experiment.terrainProfile.totalDistanceM - distance.value) > 1e-6) {
+        errors.push('Arazi profili ile deney yüzey mesafesi aynı olmalıdır.');
+      }
     }
 
     return errors;
@@ -90,29 +98,62 @@ export class DefinedPlaneModel implements SimulationModel {
       };
     }
 
-    const distanceMeasurement = getMeasurement(
-      experiment,
-      'surfaceDistanceM',
-      'm'
-    );
-
-    if (!distanceMeasurement) {
-      throw new Error('Yüzey mesafesi bulunamadı.');
-    }
+    const distanceMeasurement = getMeasurement(experiment, 'surfaceDistanceM', 'm');
+    if (!distanceMeasurement) throw new Error('Yüzey mesafesi bulunamadı.');
 
     const warnings: string[] = [];
-
     if (context.atmosphereMode !== 'off') {
       warnings.push(
         'Bu düzlem tanımı atmosferik kırılma kuralı içermediği için kırılma uygulanmadı.'
       );
     }
 
-    const observerHeightM =
-      experiment.observer.elevationM + experiment.observer.eyeHeightM;
-    const targetTopHeightM =
-      experiment.target.elevationM + experiment.target.heightM;
-    const visibleFraction = experiment.target.heightM > 0 ? 1 : 0;
+    const observerHeightM = experiment.observer.elevationM + experiment.observer.eyeHeightM;
+    const targetBaseHeightM = experiment.target.elevationM;
+    const targetTopHeightM = targetBaseHeightM + experiment.target.heightM;
+
+    let terrainMinimumClearanceM: number | null = null;
+    let terrainCriticalDistanceM: number | null = null;
+    let terrainRequiredTargetElevationM: number | null = null;
+
+    if (experiment.terrainProfile) {
+      const terrainClearance = analyzePlanarTerrainClearance(
+        experiment.terrainProfile,
+        {
+          observerEyeElevationM: observerHeightM,
+          targetTopElevationM: targetTopHeightM,
+          surfaceDistanceM: distanceMeasurement.value
+        }
+      );
+      terrainMinimumClearanceM = terrainClearance.minimumClearanceM;
+      terrainCriticalDistanceM = terrainClearance.criticalSample?.distanceM ?? null;
+      terrainRequiredTargetElevationM = minimumClearTargetElevationM(
+        experiment.terrainProfile,
+        {
+          observerEyeElevationM: observerHeightM,
+          targetBaseElevationM: targetBaseHeightM,
+          surfaceDistanceM: distanceMeasurement.value,
+          geometry: { kind: 'planar' }
+        }
+      );
+      warnings.push(
+        terrainClearance.blocked
+          ? `Arazi profili mevcut hedef tepesinin görüş hattını ${format(Math.abs(terrainMinimumClearanceM ?? 0), 2)} m kesiyor.`
+          : 'Arazi profili doğrusal görüş hattına uygulandı; hedef tepesi araziyi temizliyor.'
+      );
+    }
+
+    const requiredTargetElevationM = terrainRequiredTargetElevationM ?? targetBaseHeightM;
+    const hiddenHeightM = clamp(
+      requiredTargetElevationM - targetBaseHeightM,
+      0,
+      experiment.target.heightM
+    );
+    const visibleHeightM = experiment.target.heightM - hiddenHeightM;
+    const visibleFraction = experiment.target.heightM > 0
+      ? visibleHeightM / experiment.target.heightM
+      : 0;
+    const hiddenFraction = 1 - visibleFraction;
     const targetTopElevationDeg = planarElevationAngleDeg(
       distanceMeasurement.value,
       observerHeightM,
@@ -121,25 +162,48 @@ export class DefinedPlaneModel implements SimulationModel {
     const observation = getMeasurement(experiment, 'visibleFraction', 'fraction');
     const evaluation = evaluateFractionPrediction(visibleFraction, observation);
 
+    const terrainSteps = experiment.terrainProfile ? [
+      {
+        id: 'vertical-reference',
+        title: 'Düşey referans ve uç kotları',
+        formula: 'h_göz = z_gözlemci + H_göz; h_hedef = z_hedef + H_hedef',
+        substitution: `h_göz=${format(observerHeightM)} m, z_hedef=${format(targetBaseHeightM)} m, h_tepe=${format(targetTopHeightM)} m`,
+        result: `${experiment.terrainProfile.datum.label}; ofset ${format(experiment.terrainProfile.datum.offsetM)} m`
+      },
+      {
+        id: 'terrain-clearance',
+        title: 'Doğrusal görüş hattı ve arazi',
+        formula: 'h_gerekli = min{h | min(açıklık(h)) > 0}',
+        substitution: `${experiment.terrainProfile.samples.length} örnek; kritik mesafe ${terrainCriticalDistanceM === null ? '—' : `${format(terrainCriticalDistanceM)} m`}`,
+        result: terrainRequiredTargetElevationM === null
+          ? 'Ara örnek yok'
+          : `${format(terrainRequiredTargetElevationM)} m`,
+        note: terrainMinimumClearanceM === null
+          ? undefined
+          : `Mevcut hedef tepesi için minimum açıklık ${format(terrainMinimumClearanceM)} m.`
+      }
+    ] : [];
+
     const trace: CalculationTrace = {
       summary:
-        'Engelsiz sonsuz düzlem ve doğrusal ışık varsayımında hedefin tamamı görünür kabul edildi; yalnızca hedef tepe açısı ve gözlem farkı hesaplandı.',
+        'Düz yüzey ve doğrusal ışık varsayımında hedef görünürlüğü, ortak düşey kotlar ve varsa arazi profilinin görüş hattı kesişimiyle hesaplandı.',
       assumptions: this.metadata.assumptions,
       steps: [
         {
           id: 'horizon',
           title: 'Geometrik ufuk',
           formula: 'sₕ = ∞',
-          substitution: 'Düzlem üzerinde yüzey eğriliği veya engel tanımlı değil.',
+          substitution: 'Düzlem üzerinde yüzey eğriliği tanımlı değil.',
           result: '∞',
-          note: 'Bu sonuç yalnızca tanımlanan engelsiz düzlem sözleşmesine aittir.'
+          note: 'Arazi profili yerel engel oluşturabilir; bu geometrik ufku sonlu yapmaz.'
         },
+        ...terrainSteps,
         {
           id: 'visible-fraction',
           title: 'Görünür hedef oranı',
-          formula: 'f = 1',
-          substitution: `H=${format(experiment.target.heightM)} m; gizleyen yüzey veya engel yok`,
-          result: '%100'
+          formula: 'f = (H - clamp(h_gerekli - hᵦ, 0, H)) / H',
+          substitution: `(${format(experiment.target.heightM)} - ${format(hiddenHeightM)}) / ${format(experiment.target.heightM)}`,
+          result: `%${format(visibleFraction * 100, 2)}`
         },
         {
           id: 'target-angle',
@@ -152,14 +216,12 @@ export class DefinedPlaneModel implements SimulationModel {
           id: 'observation-comparison',
           title: 'Gözlem karşılaştırması',
           formula: 'Δ = |fₜₐₕₘᵢₙ - f_gözlem|',
-          substitution:
-            observation
-              ? `|100 - ${format(observation.value * 100, 2)}|`
-              : 'Gözlem değeri girilmedi.',
-          result:
-            evaluation.difference === null
-              ? 'Karşılaştırma yok'
-              : `${format(evaluation.difference * 100, 2)} yüzde puan`,
+          substitution: observation
+            ? `|${format(visibleFraction * 100, 2)} - ${format(observation.value * 100, 2)}|`
+            : 'Gözlem değeri girilmedi.',
+          result: evaluation.difference === null
+            ? 'Karşılaştırma yok'
+            : `${format(evaluation.difference * 100, 2)} yüzde puan`,
           note: observation
             ? `Gözlem belirsizliği ±%${format(observation.uncertainty * 100, 2)}.`
             : undefined
@@ -172,28 +234,16 @@ export class DefinedPlaneModel implements SimulationModel {
       experimentId: experiment.id,
       status: evaluation.status,
       metrics: [
-        metric(
-          'visibleHeightM',
-          'Görünür hedef yüksekliği',
-          experiment.target.heightM,
-          'm'
-        ),
-        metric('hiddenHeightM', 'Gizlenen hedef yüksekliği', 0, 'm'),
+        metric('visibleHeightM', 'Görünür hedef yüksekliği', visibleHeightM, 'm'),
+        metric('hiddenHeightM', 'Gizlenen hedef yüksekliği', hiddenHeightM, 'm'),
         metric('visibleFraction', 'Görünür oran', visibleFraction, 'fraction'),
-        metric('hiddenFraction', 'Gizlenen oran', 0, 'fraction'),
-        metric(
-          'horizonSurfaceDistanceM',
-          'Yüzey üzerindeki ufuk mesafesi',
-          null,
-          'm'
-        ),
-        metric(
-          'targetTopElevationDeg',
-          'Hedef tepe görüş açısı',
-          targetTopElevationDeg,
-          'deg'
-        ),
+        metric('hiddenFraction', 'Gizlenen oran', hiddenFraction, 'fraction'),
+        metric('horizonSurfaceDistanceM', 'Yüzey üzerindeki ufuk mesafesi', null, 'm'),
+        metric('targetTopElevationDeg', 'Hedef tepe görüş açısı', targetTopElevationDeg, 'deg'),
         metric('curvatureDropM', 'Teğete göre yüzey düşümü', 0, 'm'),
+        metric('terrainMinimumClearanceM', 'Arazi minimum açıklığı', terrainMinimumClearanceM, 'm'),
+        metric('terrainCriticalDistanceM', 'Kritik arazi mesafesi', terrainCriticalDistanceM, 'm'),
+        metric('terrainRequiredTargetElevationM', 'Araziyi temizleyen hedef kotu', terrainRequiredTargetElevationM, 'm'),
         metric(
           'observationDifferencePp',
           'Gözlem farkı',
@@ -202,7 +252,7 @@ export class DefinedPlaneModel implements SimulationModel {
         )
       ],
       warnings,
-      traceId: `${this.metadata.id}:${experiment.id}:${context.atmosphereMode}`,
+      traceId: `${this.metadata.id}:${experiment.id}:${experiment.terrainProfile?.id ?? 'no-terrain'}`,
       trace
     };
   }
