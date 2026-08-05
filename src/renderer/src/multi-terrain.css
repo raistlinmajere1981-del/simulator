@@ -1,6 +1,12 @@
 .multi-terrain-editor {
   display: grid;
+  grid-template-columns: minmax(330px, .72fr) minmax(0, 1.28fr);
+  grid-template-areas:
+    "heading heading"
+    "preview list"
+    "errors errors";
   gap: 8px;
+  min-height: 0;
   padding-top: 8px;
   border-top: 1px solid #284252;
 }
@@ -10,6 +16,7 @@
 }
 
 .multi-terrain-editor-heading {
+  grid-area: heading;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -49,8 +56,10 @@
 }
 
 .terrain-profile-preview {
+  grid-area: preview;
   position: relative;
-  height: 94px;
+  min-height: 122px;
+  height: 122px;
   overflow: hidden;
   border: 1px solid #294555;
   border-radius: 4px;
@@ -115,19 +124,24 @@
 }
 
 .terrain-point-list {
+  grid-area: list;
   display: grid;
-  gap: 5px;
-  max-height: 190px;
+  gap: 4px;
+  align-content: start;
+  min-height: 0;
+  max-height: 122px;
   overflow: auto;
-  padding-right: 2px;
+  padding-right: 3px;
+  scrollbar-gutter: stable;
 }
 
 .terrain-point-row {
   display: grid;
-  grid-template-columns: 22px minmax(120px, 1fr) minmax(120px, 1fr) 72px 44px;
-  gap: 6px;
+  grid-template-columns: 22px minmax(110px, 1fr) minmax(110px, 1fr) 68px 42px;
+  gap: 5px;
   align-items: end;
-  padding: 6px;
+  min-height: 36px;
+  padding: 4px 5px;
   border: 1px solid #243e4e;
   border-radius: 3px;
   background: #0a1923;
@@ -135,7 +149,7 @@
 
 .terrain-point-row label > span {
   display: block;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   color: #718999;
   font-size: 7px;
   text-transform: uppercase;
@@ -151,8 +165,8 @@
 
 .terrain-point-row input {
   min-width: 0;
-  height: 25px;
-  padding: 0 7px;
+  height: 23px;
+  padding: 0 6px;
   border: 0;
   color: #d3e0e8;
   background: transparent;
@@ -172,7 +186,7 @@
   place-items: center;
   width: 20px;
   height: 20px;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   border: 1px solid #37627a;
   border-radius: 50%;
   color: #9bc8e2;
@@ -189,6 +203,7 @@
 
 .terrain-point-delete {
   align-self: center;
+  padding: 5px 7px;
   border-color: #674139;
   color: #e8a79c;
   background: #341d1a;
@@ -204,6 +219,7 @@
 }
 
 .terrain-editor-errors {
+  grid-area: errors;
   padding: 7px 9px;
   border-left: 3px solid #d66555;
   color: #e3a298;
@@ -215,12 +231,36 @@
   margin: 2px 0;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1500px) {
+  .multi-terrain-editor {
+    grid-template-columns: minmax(280px, .62fr) minmax(0, 1.38fr);
+  }
+
   .terrain-point-row {
-    grid-template-columns: 22px 1fr 1fr 48px;
+    grid-template-columns: 22px 1fr 1fr 44px;
   }
 
   .terrain-point-distance {
     display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .multi-terrain-editor {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "heading"
+      "preview"
+      "list"
+      "errors";
+  }
+
+  .terrain-profile-preview {
+    height: 92px;
+    min-height: 92px;
+  }
+
+  .terrain-point-list {
+    max-height: 132px;
   }
 }
