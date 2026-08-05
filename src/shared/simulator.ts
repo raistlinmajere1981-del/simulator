@@ -1,6 +1,5 @@
 import type { CalculationTrace, ModelPrediction } from './domain';
-import type { ManualTerrainPoint } from './manual-terrain';
-import type { VerticalDatumKind } from './terrain';
+import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 
 export type DistanceSource = 'manual' | 'coordinates';
 export type TerrainMode = 'off' | 'manual-three-point' | 'manual-points';
