@@ -44,7 +44,7 @@ function metricValue(
 }
 
 describe('initial simulation models', () => {
-  it('predicts partial visibility on the ideal sphere with standard refraction', async () => {
+  it('predicts partial visibility on the ideal sphere with a reproducible trace', async () => {
     const result = await new IdealSphereModel().predict(experiment, {
       atmosphereMode: 'standard',
       refractionCoefficient: 0.13
@@ -52,15 +52,19 @@ describe('initial simulation models', () => {
 
     expect(metricValue(result.metrics, 'visibleFraction')).toBeCloseTo(0.519, 3);
     expect(result.status).toBe('compatible');
+    expect(result.trace.steps.map((step) => step.id)).toContain('effective-radius');
+    expect(result.trace.steps.map((step) => step.id)).toContain('visible-fraction');
+    expect(result.trace.assumptions).not.toHaveLength(0);
   });
 
-  it('predicts full visibility on the unobstructed plane', async () => {
+  it('predicts full visibility on the unobstructed plane and explains the assumption', async () => {
     const result = await new DefinedPlaneModel().predict(experiment, {
       atmosphereMode: 'off'
     });
 
     expect(metricValue(result.metrics, 'visibleFraction')).toBe(1);
     expect(result.status).toBe('incompatible');
+    expect(result.trace.steps.find((step) => step.id === 'horizon')?.result).toBe('∞');
   });
 
   it('does not treat an azimuthal projection as a physical model', async () => {
@@ -70,5 +74,7 @@ describe('initial simulation models', () => {
 
     expect(result.status).toBe('unsupported');
     expect(result.metrics).toHaveLength(0);
+    expect(result.trace.steps).toHaveLength(3);
+    expect(result.trace.steps.every((step) => step.result === 'Hesaplanamaz')).toBe(true);
   });
 });
