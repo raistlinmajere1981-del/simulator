@@ -1,0 +1,110 @@
+.terrain-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-color: #2d4658;
+  background: #0d1b25;
+}
+
+.terrain-panel.enabled {
+  border-color: #45694e;
+  box-shadow: inset 0 2px 0 rgba(91, 190, 110, .12);
+}
+
+.terrain-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.terrain-heading strong {
+  display: block;
+  margin-top: 3px;
+  color: #d5e2e9;
+  font-size: 11px;
+}
+
+.terrain-mode-buttons {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid #31495b;
+  border-radius: 4px;
+  background: #08131c;
+}
+
+.terrain-mode-buttons button {
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 3px;
+  color: #7890a1;
+  background: transparent;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.terrain-mode-buttons button.selected {
+  color: #e4f6e8;
+  background: #28633c;
+}
+
+.terrain-control-grid {
+  display: grid;
+  grid-template-columns: 1.35fr repeat(5, minmax(0, 1fr));
+  gap: 7px;
+  align-items: end;
+}
+
+.terrain-select select {
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid #2d4658;
+  border-radius: 3px;
+  color: #c8d7e0;
+  background: #0b1822;
+  font-size: 9px;
+}
+
+.terrain-summary {
+  margin: 0;
+  color: #758d9d;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.terrain-obstacle {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-right: 10px solid transparent;
+  border-bottom: 18px solid rgba(207, 150, 55, .8);
+  border-left: 10px solid transparent;
+  transform: translateX(-50%);
+}
+
+@media (max-width: 1500px) {
+  .terrain-control-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .terrain-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .terrain-mode-buttons {
+    align-self: flex-start;
+  }
+
+  .terrain-control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
