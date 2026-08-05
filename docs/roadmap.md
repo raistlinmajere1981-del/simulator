@@ -23,7 +23,7 @@ Durum: tamamlandı
 - Atmosfer kapalı ve standart kırılma seçenekleri
 - Gözlem farkı ve belirsizlik değerlendirmesi
 - Etkileşimli arayüz girdileri
-- Windows masaüstünde 1920×1080 görsel doğrulama
+- Linux/KDE masaüstünde 1920×1080 görsel doğrulama
 - Girdi sınırlandırması ve uygulanmayan kontrollerin açık işaretlenmesi
 - Birim testleri ve üretim derlemesi
 
@@ -41,7 +41,7 @@ Durum: çalışan ilk sürüm tamamlandı, yerel kullanım doğrulaması bekliyo
 
 Kalan işler:
 
-- Kayıt ve yeniden açma akışının Windows üzerinde doğrulanması
+- Kayıt ve yeniden açma akışının Linux/KDE üzerinde doğrulanması
 - JSON dışa aktarma ve içe aktarma
 - İnsan tarafından okunabilir sonuç raporu
 - Kayıt şeması sürümü ve eski kayıt taşıma mekanizması
