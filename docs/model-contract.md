@@ -1,55 +1,69 @@
 # Model Sözleşmesi
 
-Bir model yalnızca bir çizim veya harita değildir. Deney üretebilmesi için gerekli fiziksel ve geometrik kuralları açıkça tanımlamalıdır.
+Her fiziksel model `SimulationModel` sözleşmesini uygular.
 
-## Zorunlu metadata
+## Zorunlu alanlar
 
-- Model kimliği ve sürümü
-- Açıklama ve kaynak notları
+- Kimlik, ad ve sürüm
+- Açıklama
 - Desteklenen yetenekler
-- Kullanılan sabitler
-- Varsayımlar
-- Geçerlilik sınırları
+- Açık varsayımlar
+- Deney doğrulaması
+- Tahmin üretimi
 
-## Tanımlanması gereken kurallar
+## İlk yetenekler
 
-1. **Yüzey geometrisi:** küre, elipsoid, düzlem, disk veya başka bir yüzey.
-2. **Mesafe metriği:** iki nokta arasındaki fiziksel mesafe nasıl ölçülür?
-3. **Yerel dikey:** her konumda yukarı ve aşağı yönü nedir?
-4. **Işık yolu:** ışık doğrusal mı, kırılmalı mı veya başka bir kurala mı bağlıdır?
-5. **Atmosfer:** yoğunluk ve kırılma modeli nasıl tanımlanır?
-6. **Gök cisimleri:** destekleniyorsa konum ve hareket kuralları nelerdir?
-7. **Zaman sistemi:** tarih ve saat hangi referansla hesaplanır?
+- `surface-distance`
+- `line-of-sight`
+- `horizon`
+- `atmospheric-refraction`
 
-## Harita projeksiyonları
+Astronomi yetenekleri daha sonraki aşamalarda eklenecektir.
 
-Azimutal eş uzaklıklı, Mercator veya başka projeksiyonlar fiziksel model olarak kaydedilmez. Bir fiziksel modelin görüntüleme seçeneği olabilirler. Fiziksel sonuç üreteceklerse ayrıca yüzey ve ışık kuralları tanımlanmalıdır.
+## Tahmin sonucu
 
-## Yetenek tabanlı çalışma
+Her sonuç şunları içerir:
 
-Örnek yetenekler:
+- Model kimliği
+- Deney kimliği
+- Durum
+- Sayısal metrikler
+- Uyarılar
+- İz kimliği
 
-```text
-surface-distance
-line-of-sight
-horizon
-atmospheric-refraction
-solar-position
-lunar-position
-stellar-position
-```
+Durum değerleri:
 
-Deney motoru gerekli yetenekleri kontrol eder. Eksik yetenek durumunda varsayılan değer üretmek yerine modelin deneyi desteklemediği bildirilir.
+- `compatible`
+- `incompatible`
+- `indeterminate`
+- `unsupported`
 
-## Hesap izi
+## Güvenli başarısızlık
 
-Her tahmin ileride aşağıdaki bilgileri taşımalıdır:
+Bir model deney için gerekli kuralları tanımlamıyorsa tahmin uydurmaz. `unsupported` sonucu ve eksik kuralı açıklayan uyarı döndürür.
 
-- giriş verisinin özeti,
-- kullanılan model ve sürüm,
-- kullanılan sabitler,
-- ara hesaplar,
-- uyarılar,
-- sonuç metrikleri,
-- deterministik tekrar için seed,
-- benzersiz iz kimliği.
+Azimutal eş uzaklıklı gösterim bunun ilk örneğidir. Harita projeksiyonu fiziksel yüzey, dikey yön veya ışık yolu tanımlamadığı için hedef görünürlüğü tahmini üretemez.
+
+## Çalıştırıcı
+
+`runSimulationModels` bütün seçili modelleri aynı deney ve bağlamla çalıştırır. Tek bir model hata verirse diğer modellerin sonuçları kaybolmaz; hata veren model güvenli biçimde `unsupported` sonucuna dönüştürülür.
+
+## Atmosfer bağlamı
+
+Desteklenen ilk modlar:
+
+- `off`: saf geometrik hesap
+- `standard`: kırılma katsayısıyla etkin yarıçap
+- `profile`: sözleşmede ayrılmıştır, ışın izleme henüz uygulanmamıştır
+
+Bir model atmosfer kuralı tanımlamıyorsa bunu uyarı olarak belirtir ve geometrik sonucunu üretir.
+
+## Genişletme ilkesi
+
+Yeni bir model eklenirken:
+
+1. Fiziksel kurallar açıkça yazılmalı.
+2. Desteklenen deneyler belirtilmeli.
+3. Her sayısal davranış için test eklenmeli.
+4. Eksik davranışlarda `unsupported` kullanılmalı.
+5. Harita gösterimi ile fiziksel model ayrı tutulmalı.
