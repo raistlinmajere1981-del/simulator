@@ -1,0 +1,227 @@
+import { useEffect, useState } from 'react';
+import type { ModelMetadata, ModelPrediction } from '../../shared/domain';
+import type { SavedExperiment } from '../../shared/simulator';
+
+interface SaveExperimentDialogProps {
+  initialName: string;
+  open: boolean;
+  onCancel(): void;
+  onSave(name: string): Promise<void>;
+}
+
+export function SaveExperimentDialog({
+  initialName,
+  open,
+  onCancel,
+  onSave
+}: SaveExperimentDialogProps): React.JSX.Element | null {
+  const [name, setName] = useState(initialName);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) setName(initialName);
+  }, [initialName, open]);
+
+  if (!open) return null;
+
+  const submit = async (event: React.FormEvent): Promise<void> => {
+    event.preventDefault();
+    if (name.trim().length === 0 || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      await onSave(name.trim());
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onCancel}>
+      <form
+        aria-label="Deneyi kaydet"
+        className="dialog-card save-dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+        onSubmit={(event) => void submit(event)}
+      >
+        <header>
+          <div>
+            <span className="eyebrow">Yerel deney kaydı</span>
+            <h2>Deneyi Kaydet</h2>
+          </div>
+          <button className="dialog-close" type="button" onClick={onCancel}>×</button>
+        </header>
+        <label className="dialog-field">
+          <span>Deney adı</span>
+          <input
+            autoFocus
+            maxLength={80}
+            value={name}
+            onChange={(event) => setName(event.currentTarget.value)}
+          />
+        </label>
+        <p className="dialog-help">
+          Girdiler, model sürümleri, sonuç anlık görüntüsü ve hesap izleri cihazdaki uygulama veri klasörüne kaydedilir.
+        </p>
+        <footer>
+          <button className="secondary-button" type="button" onClick={onCancel}>İptal</button>
+          <button className="primary-button" disabled={name.trim().length === 0 || isSaving} type="submit">
+            {isSaving ? 'Kaydediliyor…' : 'Kaydet'}
+          </button>
+        </footer>
+      </form>
+    </div>
+  );
+}
+
+interface DataManagerDialogProps {
+  experiments: SavedExperiment[];
+  open: boolean;
+  onClose(): void;
+  onDelete(experiment: SavedExperiment): Promise<void>;
+  onLoad(experiment: SavedExperiment): void;
+}
+
+function formatDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat('tr-TR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(date);
+}
+
+export function DataManagerDialog({
+  experiments,
+  open,
+  onClose,
+  onDelete,
+  onLoad
+}: DataManagerDialogProps): React.JSX.Element | null {
+  if (!open) return null;
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        aria-label="Veri yöneticisi"
+        className="dialog-card data-dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span className="eyebrow">Yerel veri yöneticisi</span>
+            <h2>Kaydedilen Deneyler</h2>
+          </div>
+          <button className="dialog-close" type="button" onClick={onClose}>×</button>
+        </header>
+
+        {experiments.length === 0 ? (
+          <div className="empty-state">
+            <strong>Henüz kayıt yok</strong>
+            <span>Aktif deneydeki “Deneyi Kaydet” düğmesini kullanın.</span>
+          </div>
+        ) : (
+          <div className="experiment-list">
+            {experiments.map((experiment) => (
+              <article className="experiment-record" key={experiment.id}>
+                <div>
+                  <strong>{experiment.name}</strong>
+                  <span>Güncelleme: {formatDate(experiment.updatedAtIso)}</span>
+                  <small>
+                    {experiment.inputs.surfaceDistanceKm.toLocaleString('tr-TR')} km ·
+                    {' '}gözlem %{experiment.inputs.observedVisiblePercent.toLocaleString('tr-TR')} ·
+                    {' '}{experiment.predictions.length} çıktı
+                  </small>
+                </div>
+                <div className="record-actions">
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => {
+                      onLoad(experiment);
+                      onClose();
+                    }}
+                  >
+                    Aç
+                  </button>
+                  <button
+                    className="danger-button"
+                    type="button"
+                    onClick={() => void onDelete(experiment)}
+                  >
+                    Sil
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+interface TraceDialogProps {
+  metadata: ModelMetadata | undefined;
+  prediction: ModelPrediction | undefined;
+  onClose(): void;
+}
+
+export function TraceDialog({
+  metadata,
+  prediction,
+  onClose
+}: TraceDialogProps): React.JSX.Element | null {
+  if (!metadata || !prediction) return null;
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        aria-label={`${metadata.name} hesap izi`}
+        className="dialog-card trace-dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span className="eyebrow">Yeniden üretilebilir hesap</span>
+            <h2>{metadata.name} · Hesap İzi</h2>
+          </div>
+          <button className="dialog-close" type="button" onClick={onClose}>×</button>
+        </header>
+
+        <p className="trace-summary">{prediction.trace.summary}</p>
+
+        <div className="trace-layout">
+          <aside className="trace-assumptions">
+            <span className="eyebrow">Varsayımlar</span>
+            <ul>
+              {prediction.trace.assumptions.map((assumption) => (
+                <li key={assumption}>{assumption}</li>
+              ))}
+            </ul>
+            <small>İz kimliği: {prediction.traceId}</small>
+          </aside>
+
+          <div className="trace-steps">
+            {prediction.trace.steps.length === 0 ? (
+              <div className="empty-state">Hesap adımı üretilemedi.</div>
+            ) : (
+              prediction.trace.steps.map((step, index) => (
+                <article className="trace-step" key={step.id}>
+                  <span className="trace-index">{index + 1}</span>
+                  <div>
+                    <h3>{step.title}</h3>
+                    <code>{step.formula}</code>
+                    <p><b>Yerine koyma:</b> {step.substitution}</p>
+                    <strong className="trace-result">{step.result}</strong>
+                    {step.note && <small>{step.note}</small>}
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
