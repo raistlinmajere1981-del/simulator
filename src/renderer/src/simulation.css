@@ -1,0 +1,154 @@
+.top-grid {
+  min-height: 248px;
+}
+
+.scenario-summary {
+  min-width: 0;
+}
+
+.calculation-badge {
+  padding: 6px 8px;
+  border: 1px solid #2f7a64;
+  border-radius: 999px;
+  color: #79dfb2;
+  background: #12352c;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.input-field {
+  min-width: 0;
+}
+
+.input-field > span {
+  display: block;
+  margin-bottom: 5px;
+  color: #aebdca;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .035em;
+}
+
+.input-field > div {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #304354;
+  border-radius: 3px;
+  background: #091520;
+}
+
+.input-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 0;
+  outline: 0;
+  color: #eef5fb;
+  background: transparent;
+  font-size: 12px;
+}
+
+.input-field input:focus {
+  box-shadow: inset 0 0 0 1px #3b82f6;
+}
+
+.input-field input:disabled {
+  color: #667889;
+  cursor: not-allowed;
+}
+
+.input-field b {
+  min-width: 31px;
+  padding: 7px 6px;
+  border-left: 1px solid #304354;
+  color: #8fa2b4;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.refraction-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: #bac7d2;
+  font-size: 10px;
+}
+
+.refraction-control input {
+  accent-color: #3b82f6;
+}
+
+.status-pill {
+  max-width: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 7px;
+  border: 1px solid #42515d;
+  border-radius: 999px;
+  background: #17232d;
+}
+
+.status-compatible {
+  border-color: #32784a;
+  color: #85df96 !important;
+  background: #153322;
+}
+
+.status-incompatible {
+  border-color: #8a493e;
+  color: #ff9a89 !important;
+  background: #3b211d;
+}
+
+.status-indeterminate {
+  border-color: #75622d;
+  color: #efd06e !important;
+  background: #382f16;
+}
+
+.status-unsupported {
+  border-color: #614a78;
+  color: #d4aff7 !important;
+  background: #2e203b;
+}
+
+.model-warning {
+  min-height: 38px;
+  padding: 8px 12px 10px;
+  border-top: 1px solid #263845;
+  color: #8497a7;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.engine-note {
+  margin: 6px 2px 0;
+  color: #758a9c;
+  font-size: 8px;
+}
+
+.notes p {
+  color: #8295a6;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1320px) {
+  .input-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
