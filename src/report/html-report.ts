@@ -18,9 +18,16 @@ const modelNames: Record<string, string> = {
   'azimuthal-projection': 'Azimutal Gösterim'
 };
 
-const numberFormatter = new Intl.NumberFormat('tr-TR', {
-  maximumFractionDigits: 4
+const inputNumberFormatter = new Intl.NumberFormat('tr-TR', {
+  maximumFractionDigits: 2
 });
+
+const metricNumberFormatters = {
+  fraction: new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 }),
+  percentagePoint: new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 }),
+  degree: new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 3 }),
+  default: new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 })
+};
 
 function escapeHtml(value: unknown): string {
   return String(value)
@@ -47,16 +54,16 @@ function formatMetric(metric: PredictionMetric): string {
   if (metric.value === null) return '—';
 
   if (metric.unit === 'fraction') {
-    return `%${numberFormatter.format(metric.value * 100)}`;
+    return `%${metricNumberFormatters.fraction.format(metric.value * 100)}`;
   }
   if (metric.unit === 'percentage-point') {
-    return `${numberFormatter.format(metric.value)} yüzde puan`;
+    return `${metricNumberFormatters.percentagePoint.format(metric.value)} yüzde puan`;
   }
   if (metric.unit === 'deg') {
-    return `${numberFormatter.format(metric.value)}°`;
+    return `${metricNumberFormatters.degree.format(metric.value)}°`;
   }
 
-  return `${numberFormatter.format(metric.value)} ${escapeHtml(metric.unit)}`;
+  return `${metricNumberFormatters.default.format(metric.value)} ${escapeHtml(metric.unit)}`;
 }
 
 function metricRows(prediction: ModelPrediction): string {
@@ -215,12 +222,12 @@ export function createExperimentHtmlReport(
         <span>Rapor üretimi: ${formatDate(generatedAtIso)}</span>
       </div>
       <div class="input-grid">
-        <div class="input-card"><small>Gözlemci yüksekliği</small><strong>${numberFormatter.format(inputs.observerHeightM)} m</strong></div>
-        <div class="input-card"><small>Hedef yüksekliği</small><strong>${numberFormatter.format(inputs.targetHeightM)} m</strong></div>
-        <div class="input-card"><small>Yüzey mesafesi</small><strong>${numberFormatter.format(inputs.surfaceDistanceKm)} km</strong></div>
-        <div class="input-card"><small>Gözlenen görünürlük</small><strong>%${numberFormatter.format(inputs.observedVisiblePercent)}</strong></div>
-        <div class="input-card"><small>Gözlem belirsizliği</small><strong>±%${numberFormatter.format(inputs.observationUncertaintyPercent)}</strong></div>
-        <div class="input-card"><small>Atmosfer</small><strong>${inputs.useStandardRefraction ? `Standart kırılma (k=${numberFormatter.format(inputs.refractionCoefficient)})` : 'Kapalı'}</strong></div>
+        <div class="input-card"><small>Gözlemci yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
+        <div class="input-card"><small>Hedef yüksekliği</small><strong>${inputNumberFormatter.format(inputs.targetHeightM)} m</strong></div>
+        <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(inputs.surfaceDistanceKm)} km</strong></div>
+        <div class="input-card"><small>Gözlenen görünürlük</small><strong>%${inputNumberFormatter.format(inputs.observedVisiblePercent)}</strong></div>
+        <div class="input-card"><small>Gözlem belirsizliği</small><strong>±%${inputNumberFormatter.format(inputs.observationUncertaintyPercent)}</strong></div>
+        <div class="input-card"><small>Atmosfer</small><strong>${inputs.useStandardRefraction ? `Standart kırılma (k=${inputNumberFormatter.format(inputs.refractionCoefficient)})` : 'Kapalı'}</strong></div>
       </div>
       <div class="notice">
         Bu rapor, kaydedildiği andaki model sürümlerini, sonuç anlık görüntülerini ve hesap izlerini gösterir. Tek bir deneydeki uyum, bir modelin genel doğruluğu anlamına gelmez.
