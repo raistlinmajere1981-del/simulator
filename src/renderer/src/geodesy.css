@@ -1,0 +1,164 @@
+.coordinate-summary {
+  min-height: 0;
+}
+
+.base-input-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.distance-source-panel {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #2b4050;
+  border-radius: 4px;
+  background: #0c1923;
+}
+
+.distance-source-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.distance-source-heading strong {
+  display: block;
+  margin-top: 4px;
+  color: #d4e0e9;
+  font-size: 11px;
+}
+
+.distance-mode-buttons {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid #31495b;
+  border-radius: 4px;
+  background: #08131c;
+}
+
+.distance-mode-buttons button {
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 3px;
+  color: #7790a2;
+  background: transparent;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.distance-mode-buttons button.selected {
+  color: #e1f0fa;
+  background: #245f8e;
+}
+
+.manual-distance-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 2fr;
+  gap: 12px;
+  align-items: end;
+  margin-top: 9px;
+}
+
+.manual-distance-row p,
+.coordinate-note {
+  margin: 0 0 3px;
+  color: #718697;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.coordinate-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.geodesic-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 7px;
+  align-items: stretch;
+  margin-top: 8px;
+}
+
+.geodesic-summary > div {
+  padding: 7px 8px;
+  border: 1px solid #29495e;
+  border-radius: 3px;
+  background: #102331;
+}
+
+.geodesic-summary small,
+.geodesic-summary strong {
+  display: block;
+}
+
+.geodesic-summary small {
+  color: #7891a3;
+  font-size: 7px;
+  text-transform: uppercase;
+}
+
+.geodesic-summary strong {
+  margin-top: 4px;
+  overflow: hidden;
+  color: #8dd4ff;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.geodesic-summary.fallback > div {
+  border-color: #705b2d;
+  background: #2a2414;
+}
+
+.geodesic-summary.fallback strong {
+  color: #e7c96e;
+}
+
+.geodesic-summary button {
+  padding: 0 10px;
+  border: 1px solid #3b617c;
+  border-radius: 3px;
+  color: #a9d5f1;
+  background: #132c3e;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.coordinate-note {
+  margin-top: 7px;
+}
+
+@media (max-width: 1500px) {
+  .base-input-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .coordinate-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .geodesic-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .geodesic-summary button {
+    min-height: 34px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .distance-source-heading,
+  .manual-distance-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
