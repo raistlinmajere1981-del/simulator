@@ -11,19 +11,24 @@ import {
   type SavedGeodesicCalculation,
   type SimulatorInputs
 } from './simulator';
-import type { VerticalDatumKind } from './terrain';
+import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
+import {
+  migrateLegacyManualTerrainPoint,
+  sortManualTerrainPoints,
+  validateManualTerrainPoints
+} from '../simulation/manual-terrain-profile';
 
 export const PORTABLE_EXPERIMENT_SCHEMA = 'geometric-observation-laboratory/portable-experiment';
-export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 3;
+export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 4;
 export const LOCAL_EXPERIMENT_STORE_SCHEMA = 'geometric-observation-laboratory/local-experiment-store';
-export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 3;
+export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 4;
 
 export interface PortableApplicationInfo {
   name: 'Geometrik Gözlem Laboratuvarı';
   version: string;
 }
 
-export interface PortableExperimentFileV3 {
+export interface PortableExperimentFileV4 {
   schema: typeof PORTABLE_EXPERIMENT_SCHEMA;
   schemaVersion: typeof PORTABLE_EXPERIMENT_SCHEMA_VERSION;
   exportedAtIso: string;
@@ -31,7 +36,7 @@ export interface PortableExperimentFileV3 {
   experiment: SavedExperiment;
 }
 
-export interface LocalExperimentStoreV3 {
+export interface LocalExperimentStoreV4 {
   schema: typeof LOCAL_EXPERIMENT_STORE_SCHEMA;
   schemaVersion: typeof LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION;
   updatedAtIso: string;
@@ -45,7 +50,7 @@ export interface ParsedPortableExperiment {
 }
 
 export interface ParsedLocalExperimentStore {
-  store: LocalExperimentStoreV3;
+  store: LocalExperimentStoreV4;
   migrated: boolean;
   ignoredRecordCount: number;
 }
@@ -90,6 +95,26 @@ function isVerticalDatumKind(value: unknown): value is VerticalDatumKind {
   return value === 'orthometric-msl' || value === 'ellipsoidal-wgs84' || value === 'local';
 }
 
+function parseManualTerrainPoints(value: unknown): ManualTerrainPoint[] | null {
+  if (!Array.isArray(value)) return null;
+
+  const points: ManualTerrainPoint[] = [];
+  for (const item of value) {
+    if (!isRecord(item) || !isNonEmptyString(item.id) ||
+      !isFiniteNumber(item.distancePercent) || !isFiniteNumber(item.elevationM)) {
+      return null;
+    }
+    points.push({
+      id: item.id.trim(),
+      distancePercent: item.distancePercent,
+      elevationM: item.elevationM
+    });
+  }
+
+  if (validateManualTerrainPoints(points).length > 0) return null;
+  return sortManualTerrainPoints(points);
+}
+
 function parseSimulatorInputs(value: unknown, allowLegacyFields: boolean): SimulatorInputs | null {
   if (!isRecord(value)) return null;
 
@@ -116,10 +141,26 @@ function parseSimulatorInputs(value: unknown, allowLegacyFields: boolean): Simul
     isFiniteNumber(value.targetGroundElevationM) &&
     isVerticalDatumKind(value.verticalDatumKind) &&
     isFiniteNumber(value.verticalDatumOffsetM) &&
-    (value.terrainMode === 'off' || value.terrainMode === 'manual-three-point') &&
+    (value.terrainMode === 'off' ||
+      value.terrainMode === 'manual-three-point' ||
+      value.terrainMode === 'manual-points') &&
     inRange(value.terrainIntermediateDistancePercent, 0.001, 99.999) &&
     isFiniteNumber(value.terrainIntermediateElevationM);
   if (!hasTerrainFields && !allowLegacyFields) return null;
+
+  const parsedManualPoints = parseManualTerrainPoints(value.manualTerrainPoints);
+  if (!parsedManualPoints && !allowLegacyFields) return null;
+
+  const legacyDistancePercent = hasTerrainFields
+    ? value.terrainIntermediateDistancePercent as number
+    : DEFAULT_SIMULATOR_INPUTS.terrainIntermediateDistancePercent;
+  const legacyElevationM = hasTerrainFields
+    ? value.terrainIntermediateElevationM as number
+    : DEFAULT_SIMULATOR_INPUTS.terrainIntermediateElevationM;
+  const manualTerrainPoints = parsedManualPoints ?? migrateLegacyManualTerrainPoint(
+    legacyDistancePercent,
+    legacyElevationM
+  );
 
   return {
     observerHeightM: value.observerHeightM as number,
@@ -139,12 +180,9 @@ function parseSimulatorInputs(value: unknown, allowLegacyFields: boolean): Simul
     terrainMode: hasTerrainFields
       ? value.terrainMode as SimulatorInputs['terrainMode']
       : DEFAULT_SIMULATOR_INPUTS.terrainMode,
-    terrainIntermediateDistancePercent: hasTerrainFields
-      ? value.terrainIntermediateDistancePercent as number
-      : DEFAULT_SIMULATOR_INPUTS.terrainIntermediateDistancePercent,
-    terrainIntermediateElevationM: hasTerrainFields
-      ? value.terrainIntermediateElevationM as number
-      : DEFAULT_SIMULATOR_INPUTS.terrainIntermediateElevationM,
+    terrainIntermediateDistancePercent: legacyDistancePercent,
+    terrainIntermediateElevationM: legacyElevationM,
+    manualTerrainPoints,
     distanceSource: hasCoordinateFields
       ? value.distanceSource as SimulatorInputs['distanceSource']
       : DEFAULT_SIMULATOR_INPUTS.distanceSource,
@@ -264,7 +302,7 @@ export function createPortableExperimentFile(
   experiment: SavedExperiment,
   applicationVersion: string,
   exportedAtIso = new Date().toISOString()
-): PortableExperimentFileV3 {
+): PortableExperimentFileV4 {
   return {
     schema: PORTABLE_EXPERIMENT_SCHEMA,
     schemaVersion: PORTABLE_EXPERIMENT_SCHEMA_VERSION,
@@ -285,12 +323,13 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
   }
 
   const version = value.schemaVersion;
-  if (version !== 1 && version !== 2 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
+  if (version !== 1 && version !== 2 && version !== 3 &&
+    version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Deney dosyası şema sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
   }
-  const experiment = parseSavedExperiment(value.experiment, version < 3);
+  const experiment = parseSavedExperiment(value.experiment, version < 4);
   if (!experiment) {
     throw new PortableFormatError('Dosyadaki deney verisi eksik, bozuk veya beklenen aralıkların dışında.');
   }
@@ -304,7 +343,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 export function createLocalExperimentStore(
   experiments: SavedExperiment[],
   updatedAtIso = new Date().toISOString()
-): LocalExperimentStoreV3 {
+): LocalExperimentStoreV4 {
   return {
     schema: LOCAL_EXPERIMENT_STORE_SCHEMA,
     schemaVersion: LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
@@ -329,7 +368,8 @@ export function parseLocalExperimentStore(value: unknown): ParsedLocalExperiment
     throw new PortableFormatError('Yerel deney deposunun şema kimliği tanınmıyor.');
   }
   const version = value.schemaVersion;
-  if (version !== 1 && version !== 2 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
+  if (version !== 1 && version !== 2 && version !== 3 &&
+    version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Yerel deney deposu sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
@@ -339,7 +379,7 @@ export function parseLocalExperimentStore(value: unknown): ParsedLocalExperiment
   }
 
   const experiments = value.experiments
-    .map((item) => parseSavedExperiment(item, version < 3))
+    .map((item) => parseSavedExperiment(item, version < 4))
     .filter((item): item is SavedExperiment => item !== null);
   return {
     store: {
