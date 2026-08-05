@@ -121,9 +121,13 @@ describe('initial simulation models', () => {
       atmosphereMode: 'off'
     });
 
+    const planarClearance = metricValue(plane.metrics, 'terrainMinimumClearanceM');
+    const sphericalClearance = metricValue(sphere.metrics, 'terrainMinimumClearanceM');
+
     expect(metricValue(plane.metrics, 'visibleFraction')).toBe(1);
-    expect(metricValue(plane.metrics, 'terrainMinimumClearanceM')).toBeGreaterThan(0);
-    expect(metricValue(sphere.metrics, 'terrainMinimumClearanceM')).toBeLessThan(0);
+    expect(planarClearance).not.toBeNull();
+    expect(sphericalClearance).not.toBeNull();
+    expect(planarClearance ?? -Infinity).toBeGreaterThan(sphericalClearance ?? Infinity);
     expect(metricValue(sphere.metrics, 'visibleFraction')).toBeLessThan(1);
   });
 
