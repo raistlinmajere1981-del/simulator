@@ -3,6 +3,7 @@ import type { TerrainProfile } from '../src/shared/terrain';
 import {
   analyzePlanarTerrainClearance,
   analyzeSphericalTerrainClearance,
+  minimumClearTargetElevationM,
   validateTerrainProfile
 } from '../src/simulation/terrain';
 import { MEAN_EARTH_RADIUS_M } from '../src/simulation/geometry';
@@ -74,6 +75,18 @@ describe('planar terrain clearance', () => {
     expect(result.minimumClearanceM).toBeCloseTo(-1, 8);
     expect(result.criticalSample?.elevationM).toBe(3);
   });
+
+  it('solves the minimum target elevation that clears an obstacle', () => {
+    const required = minimumClearTargetElevationM(profile(1_000, 5), {
+      observerEyeElevationM: 2,
+      targetBaseElevationM: 0,
+      surfaceDistanceM: 1_000,
+      geometry: { kind: 'planar' }
+    });
+
+    expect(required).not.toBeNull();
+    expect(required ?? 0).toBeCloseTo(8, 5);
+  });
 });
 
 describe('spherical terrain clearance', () => {
@@ -87,6 +100,25 @@ describe('spherical terrain clearance', () => {
 
     expect(result.blocked).toBe(true);
     expect(result.minimumClearanceM).toBeCloseTo(-194.2, 1);
+  });
+
+  it('solves a higher required target than the planar geometry', () => {
+    const terrain = profile(100_000, 0);
+    const planar = minimumClearTargetElevationM(terrain, {
+      observerEyeElevationM: 2,
+      targetBaseElevationM: 0,
+      surfaceDistanceM: 100_000,
+      geometry: { kind: 'planar' }
+    });
+    const spherical = minimumClearTargetElevationM(terrain, {
+      observerEyeElevationM: 2,
+      targetBaseElevationM: 0,
+      surfaceDistanceM: 100_000,
+      geometry: { kind: 'spherical', radiusM: MEAN_EARTH_RADIUS_M }
+    });
+
+    expect(planar ?? Infinity).toBeCloseTo(0, 6);
+    expect(spherical ?? 0).toBeGreaterThan(300);
   });
 
   it('increases midpoint clearance when an effective larger radius is used', () => {
