@@ -1,4 +1,5 @@
 import type {
+  CalculationTrace,
   ExperimentDefinition,
   ModelCapability,
   ModelMetadata,
@@ -24,11 +25,15 @@ function metric(
   return { key, label, value, unit };
 }
 
+function format(value: number, digits = 3): string {
+  return value.toLocaleString('tr-TR', { maximumFractionDigits: digits });
+}
+
 export class DefinedPlaneModel implements SimulationModel {
   readonly metadata: ModelMetadata = {
     id: 'defined-plane',
     name: 'Tanımlı Düzlem',
-    version: '0.1.0',
+    version: '0.2.0',
     description:
       'Düz, engelsiz yüzey ve doğrusal ışık varsayımıyla görüş hesabı.',
     capabilities: ['surface-distance', 'line-of-sight', 'horizon'],
@@ -76,7 +81,12 @@ export class DefinedPlaneModel implements SimulationModel {
         status: 'unsupported',
         metrics: [],
         warnings: validationErrors,
-        traceId: `${this.metadata.id}:${experiment.id}:unsupported`
+        traceId: `${this.metadata.id}:${experiment.id}:unsupported`,
+        trace: {
+          summary: 'Gerekli deney girdileri bulunamadı.',
+          assumptions: this.metadata.assumptions,
+          steps: []
+        }
       };
     }
 
@@ -103,10 +113,59 @@ export class DefinedPlaneModel implements SimulationModel {
     const targetTopHeightM =
       experiment.target.elevationM + experiment.target.heightM;
     const visibleFraction = experiment.target.heightM > 0 ? 1 : 0;
-    const evaluation = evaluateFractionPrediction(
-      visibleFraction,
-      getMeasurement(experiment, 'visibleFraction', 'fraction')
+    const targetTopElevationDeg = planarElevationAngleDeg(
+      distanceMeasurement.value,
+      observerHeightM,
+      targetTopHeightM
     );
+    const observation = getMeasurement(experiment, 'visibleFraction', 'fraction');
+    const evaluation = evaluateFractionPrediction(visibleFraction, observation);
+
+    const trace: CalculationTrace = {
+      summary:
+        'Engelsiz sonsuz düzlem ve doğrusal ışık varsayımında hedefin tamamı görünür kabul edildi; yalnızca hedef tepe açısı ve gözlem farkı hesaplandı.',
+      assumptions: this.metadata.assumptions,
+      steps: [
+        {
+          id: 'horizon',
+          title: 'Geometrik ufuk',
+          formula: 'sₕ = ∞',
+          substitution: 'Düzlem üzerinde yüzey eğriliği veya engel tanımlı değil.',
+          result: '∞',
+          note: 'Bu sonuç yalnızca tanımlanan engelsiz düzlem sözleşmesine aittir.'
+        },
+        {
+          id: 'visible-fraction',
+          title: 'Görünür hedef oranı',
+          formula: 'f = 1',
+          substitution: `H=${format(experiment.target.heightM)} m; gizleyen yüzey veya engel yok`,
+          result: '%100'
+        },
+        {
+          id: 'target-angle',
+          title: 'Hedef tepe açısı',
+          formula: 'α = atan2(hₜ - hₒ, d)',
+          substitution: `atan2(${format(targetTopHeightM)} - ${format(observerHeightM)}, ${format(distanceMeasurement.value)})`,
+          result: `${format(targetTopElevationDeg, 4)}°`
+        },
+        {
+          id: 'observation-comparison',
+          title: 'Gözlem karşılaştırması',
+          formula: 'Δ = |fₜₐₕₘᵢₙ - f_gözlem|',
+          substitution:
+            observation
+              ? `|100 - ${format(observation.value * 100, 2)}|`
+              : 'Gözlem değeri girilmedi.',
+          result:
+            evaluation.difference === null
+              ? 'Karşılaştırma yok'
+              : `${format(evaluation.difference * 100, 2)} yüzde puan`,
+          note: observation
+            ? `Gözlem belirsizliği ±%${format(observation.uncertainty * 100, 2)}.`
+            : undefined
+        }
+      ]
+    };
 
     return {
       modelId: this.metadata.id,
@@ -131,11 +190,7 @@ export class DefinedPlaneModel implements SimulationModel {
         metric(
           'targetTopElevationDeg',
           'Hedef tepe görüş açısı',
-          planarElevationAngleDeg(
-            distanceMeasurement.value,
-            observerHeightM,
-            targetTopHeightM
-          ),
+          targetTopElevationDeg,
           'deg'
         ),
         metric('curvatureDropM', 'Teğete göre yüzey düşümü', 0, 'm'),
@@ -147,7 +202,8 @@ export class DefinedPlaneModel implements SimulationModel {
         )
       ],
       warnings,
-      traceId: `${this.metadata.id}:${experiment.id}:${context.atmosphereMode}`
+      traceId: `${this.metadata.id}:${experiment.id}:${context.atmosphereMode}`,
+      trace
     };
   }
 }
