@@ -4,7 +4,9 @@ import {
   dialog,
   ipcMain,
   shell,
-  type IpcMainInvokeEvent
+  type IpcMainInvokeEvent,
+  type OpenDialogOptions,
+  type SaveDialogOptions
 } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
@@ -43,6 +45,26 @@ function safeFileStem(value: string): string {
 
 function parentWindow(event: IpcMainInvokeEvent): BrowserWindow | undefined {
   return BrowserWindow.fromWebContents(event.sender) ?? undefined;
+}
+
+async function showSaveDialog(
+  event: IpcMainInvokeEvent,
+  options: SaveDialogOptions
+) {
+  const owner = parentWindow(event);
+  return owner
+    ? dialog.showSaveDialog(owner, options)
+    : dialog.showSaveDialog(options);
+}
+
+async function showOpenDialog(
+  event: IpcMainInvokeEvent,
+  options: OpenDialogOptions
+) {
+  const owner = parentWindow(event);
+  return owner
+    ? dialog.showOpenDialog(owner, options)
+    : dialog.showOpenDialog(options);
 }
 
 async function replaceFileAtomically(
@@ -148,7 +170,7 @@ function registerExperimentHandlers(): void {
     async (event, id: string): Promise<FileOperationResult> => {
       const experiment = await getExperimentOrThrow(id);
       const fileName = `${safeFileStem(experiment.name)}.ggl.json`;
-      const selection = await dialog.showSaveDialog(parentWindow(event), {
+      const selection = await showSaveDialog(event, {
         title: 'Deneyi Dışa Aktar',
         defaultPath: join(app.getPath('documents'), fileName),
         filters: [
@@ -182,7 +204,7 @@ function registerExperimentHandlers(): void {
   ipcMain.handle(
     'experiments:import',
     async (event): Promise<ImportExperimentResult> => {
-      const selection = await dialog.showOpenDialog(parentWindow(event), {
+      const selection = await showOpenDialog(event, {
         title: 'Deney Dosyasını İçe Aktar',
         properties: ['openFile'],
         filters: [
@@ -239,7 +261,7 @@ function registerExperimentHandlers(): void {
     async (event, id: string): Promise<FileOperationResult> => {
       const experiment = await getExperimentOrThrow(id);
       const fileName = `${safeFileStem(experiment.name)}-rapor.html`;
-      const selection = await dialog.showSaveDialog(parentWindow(event), {
+      const selection = await showSaveDialog(event, {
         title: 'Deney Raporunu Kaydet',
         defaultPath: join(app.getPath('documents'), fileName),
         filters: [{ name: 'Çevrimdışı HTML Raporu', extensions: ['html'] }]
