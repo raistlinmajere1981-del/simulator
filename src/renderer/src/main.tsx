@@ -4,6 +4,7 @@ import { AppNext } from './AppNext';
 import './styles.css';
 import './simulation.css';
 import './dialogs.css';
+import './portable.css';
 
 const root = document.getElementById('root');
 
