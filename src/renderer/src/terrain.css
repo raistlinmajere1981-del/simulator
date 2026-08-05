@@ -79,6 +79,10 @@
   align-items: end;
 }
 
+.terrain-control-grid-compact {
+  grid-template-columns: 1.35fr repeat(3, minmax(0, 1fr));
+}
+
 .terrain-select select {
   width: 100%;
   min-height: 28px;
@@ -110,7 +114,8 @@
 }
 
 @media (max-width: 1500px) {
-  .terrain-control-grid {
+  .terrain-control-grid,
+  .terrain-control-grid-compact {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -125,7 +130,8 @@
     align-self: flex-start;
   }
 
-  .terrain-control-grid {
+  .terrain-control-grid,
+  .terrain-control-grid-compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
