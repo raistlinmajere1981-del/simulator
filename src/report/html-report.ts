@@ -1,4 +1,5 @@
 import type {
+  CalculationTrace,
   ModelPrediction,
   PredictionMetric,
   ResultStatus
@@ -21,7 +22,10 @@ const modelNames: Record<string, string> = {
 const inputNumberFormatter = new Intl.NumberFormat('tr-TR', {
   maximumFractionDigits: 2
 });
-
+const coordinateFormatter = new Intl.NumberFormat('tr-TR', {
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 6
+});
 const metricNumberFormatters = {
   fraction: new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 }),
   percentagePoint: new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 }),
@@ -41,18 +45,14 @@ function escapeHtml(value: unknown): string {
 function formatDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return escapeHtml(iso);
-
-  return escapeHtml(
-    new Intl.DateTimeFormat('tr-TR', {
-      dateStyle: 'long',
-      timeStyle: 'medium'
-    }).format(date)
-  );
+  return escapeHtml(new Intl.DateTimeFormat('tr-TR', {
+    dateStyle: 'long',
+    timeStyle: 'medium'
+  }).format(date));
 }
 
 function formatMetric(metric: PredictionMetric): string {
   if (metric.value === null) return '—';
-
   if (metric.unit === 'fraction') {
     return `%${metricNumberFormatters.fraction.format(metric.value * 100)}`;
   }
@@ -62,7 +62,9 @@ function formatMetric(metric: PredictionMetric): string {
   if (metric.unit === 'deg') {
     return `${metricNumberFormatters.degree.format(metric.value)}°`;
   }
-
+  if (metric.unit === 'count') {
+    return metricNumberFormatters.default.format(metric.value);
+  }
   return `${metricNumberFormatters.default.format(metric.value)} ${escapeHtml(metric.unit)}`;
 }
 
@@ -70,38 +72,25 @@ function metricRows(prediction: ModelPrediction): string {
   if (prediction.metrics.length === 0) {
     return '<tr><td colspan="2">Bu model/gösterim sayısal sonuç üretmedi.</td></tr>';
   }
-
-  return prediction.metrics
-    .map(
-      (metric) => `
-        <tr>
-          <td>${escapeHtml(metric.label)}</td>
-          <td>${formatMetric(metric)}</td>
-        </tr>`
-    )
-    .join('');
+  return prediction.metrics.map((metric) => `
+    <tr><td>${escapeHtml(metric.label)}</td><td>${formatMetric(metric)}</td></tr>`).join('');
 }
 
-function traceSteps(prediction: ModelPrediction): string {
-  if (prediction.trace.steps.length === 0) {
+function traceSteps(trace: CalculationTrace): string {
+  if (trace.steps.length === 0) {
     return '<p class="muted">Hesap adımı bulunmuyor.</p>';
   }
-
-  return prediction.trace.steps
-    .map(
-      (step, index) => `
-        <article class="trace-step">
-          <div class="trace-number">${index + 1}</div>
-          <div>
-            <h4>${escapeHtml(step.title)}</h4>
-            <code>${escapeHtml(step.formula)}</code>
-            <p><strong>Yerine koyma:</strong> ${escapeHtml(step.substitution)}</p>
-            <p class="trace-result">${escapeHtml(step.result)}</p>
-            ${step.note ? `<small>${escapeHtml(step.note)}</small>` : ''}
-          </div>
-        </article>`
-    )
-    .join('');
+  return trace.steps.map((step, index) => `
+    <article class="trace-step">
+      <div class="trace-number">${index + 1}</div>
+      <div>
+        <h4>${escapeHtml(step.title)}</h4>
+        <code>${escapeHtml(step.formula)}</code>
+        <p><strong>Yerine koyma:</strong> ${escapeHtml(step.substitution)}</p>
+        <p class="trace-result">${escapeHtml(step.result)}</p>
+        ${step.note ? `<small>${escapeHtml(step.note)}</small>` : ''}
+      </div>
+    </article>`).join('');
 }
 
 function predictionSection(
@@ -109,49 +98,66 @@ function predictionSection(
   modelVersion: string | undefined
 ): string {
   const modelName = modelNames[prediction.modelId] ?? prediction.modelId;
-
   return `
     <section class="model-section">
       <header class="model-heading">
-        <div>
-          <h2>${escapeHtml(modelName)}</h2>
-          <span>Sürüm ${escapeHtml(modelVersion ?? 'bilinmiyor')}</span>
-        </div>
-        <strong class="status status-${escapeHtml(prediction.status)}">
-          ${escapeHtml(statusLabels[prediction.status])}
-        </strong>
+        <div><h2>${escapeHtml(modelName)}</h2><span>Sürüm ${escapeHtml(modelVersion ?? 'bilinmiyor')}</span></div>
+        <strong class="status status-${escapeHtml(prediction.status)}">${escapeHtml(statusLabels[prediction.status])}</strong>
       </header>
-
       <p>${escapeHtml(prediction.trace.summary)}</p>
+      <div class="two-column">
+        <div><h3>Sonuçlar</h3><table><thead><tr><th>Metrik</th><th>Değer</th></tr></thead><tbody>${metricRows(prediction)}</tbody></table></div>
+        <div>
+          <h3>Varsayımlar</h3>
+          <ul>${prediction.trace.assumptions.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+          ${prediction.warnings.length > 0 ? `<h3>Uyarılar</h3><ul class="warnings">${prediction.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
+        </div>
+      </div>
+      <h3>Hesap izi</h3>
+      <div class="trace-list">${traceSteps(prediction.trace)}</div>
+      <p class="trace-id">İz kimliği: ${escapeHtml(prediction.traceId)}</p>
+    </section>`;
+}
 
+function geodesicSection(experiment: SavedExperiment): string {
+  const geodesic = experiment.geodesic;
+  if (experiment.inputs.distanceSource !== 'coordinates') return '';
+  if (!geodesic) {
+    return `
+      <section class="model-section">
+        <header class="model-heading"><div><h2>WGS84 Jeodezik Çözüm</h2><span>Kayıt anlık görüntüsü yok</span></div><strong class="status status-indeterminate">Hesap verisi bulunamadı</strong></header>
+        <p>Koordinatlar kaydedilmiş olsa da bu eski kayıtta jeodezik hesap anlık görüntüsü bulunmuyor.</p>
+      </section>`;
+  }
+
+  return `
+    <section class="model-section geodesic-section">
+      <header class="model-heading">
+        <div><h2>WGS84 Jeodezik Çözüm</h2><span>Sürüm ${escapeHtml(experiment.modelVersions['wgs84-geodesic'] ?? '0.1.0')}</span></div>
+        <strong class="status ${geodesic.converged ? 'status-compatible' : 'status-indeterminate'}">${geodesic.method === 'vincenty' ? 'Vincenty yakınsadı' : 'Küresel yedek çözüm'}</strong>
+      </header>
+      <p>${escapeHtml(geodesic.trace.summary)}</p>
       <div class="two-column">
         <div>
-          <h3>Sonuçlar</h3>
-          <table>
-            <thead><tr><th>Metrik</th><th>Değer</th></tr></thead>
-            <tbody>${metricRows(prediction)}</tbody>
-          </table>
+          <h3>Koordinatlar ve sonuç</h3>
+          <table><tbody>
+            <tr><td>Gözlemci koordinatı</td><td>${coordinateFormatter.format(experiment.inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(experiment.inputs.observerLongitudeDeg)}°</td></tr>
+            <tr><td>Hedef koordinatı</td><td>${coordinateFormatter.format(experiment.inputs.targetLatitudeDeg)}°, ${coordinateFormatter.format(experiment.inputs.targetLongitudeDeg)}°</td></tr>
+            <tr><td>Elipsoidal yüzey mesafesi</td><td>${inputNumberFormatter.format(geodesic.distanceM / 1_000)} km</td></tr>
+            <tr><td>Başlangıç azimutu</td><td>${metricNumberFormatters.degree.format(geodesic.initialBearingDeg)}°</td></tr>
+            <tr><td>Varış azimutu</td><td>${metricNumberFormatters.degree.format(geodesic.finalBearingDeg)}°</td></tr>
+            <tr><td>İterasyon</td><td>${geodesic.iterations}</td></tr>
+          </tbody></table>
         </div>
         <div>
           <h3>Varsayımlar</h3>
-          <ul>
-            ${prediction.trace.assumptions
-              .map((item) => `<li>${escapeHtml(item)}</li>`)
-              .join('')}
-          </ul>
-          ${
-            prediction.warnings.length > 0
-              ? `<h3>Uyarılar</h3><ul class="warnings">${prediction.warnings
-                  .map((item) => `<li>${escapeHtml(item)}</li>`)
-                  .join('')}</ul>`
-              : ''
-          }
+          <ul>${geodesic.trace.assumptions.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+          ${geodesic.warnings.length > 0 ? `<h3>Uyarılar</h3><ul class="warnings">${geodesic.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
         </div>
       </div>
-
-      <h3>Hesap izi</h3>
-      <div class="trace-list">${traceSteps(prediction)}</div>
-      <p class="trace-id">İz kimliği: ${escapeHtml(prediction.traceId)}</p>
+      <h3>Jeodezik hesap izi</h3>
+      <div class="trace-list">${traceSteps(geodesic.trace)}</div>
+      <p class="trace-id">İz kimliği: ${escapeHtml(geodesic.traceId)}</p>
     </section>`;
 }
 
@@ -160,6 +166,15 @@ export function createExperimentHtmlReport(
   generatedAtIso = new Date().toISOString()
 ): string {
   const inputs = experiment.inputs;
+  const effectiveDistanceKm = experiment.geodesic?.distanceM !== undefined &&
+    inputs.distanceSource === 'coordinates'
+    ? experiment.geodesic.distanceM / 1_000
+    : inputs.surfaceDistanceKm;
+  const coordinateCards = inputs.distanceSource === 'coordinates' ? `
+    <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
+    <div class="input-card"><small>Hedef koordinatı</small><strong>${coordinateFormatter.format(inputs.targetLatitudeDeg)}°, ${coordinateFormatter.format(inputs.targetLongitudeDeg)}°</strong></div>
+    <div class="input-card"><small>Mesafe kaynağı</small><strong>WGS84 koordinat çözümü</strong></div>` : `
+    <div class="input-card"><small>Mesafe kaynağı</small><strong>Manuel giriş</strong></div>`;
 
   return `<!doctype html>
 <html lang="tr">
@@ -184,8 +199,9 @@ export function createExperimentHtmlReport(
     .input-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
     .input-card { padding: 12px; border: 1px solid #dce5eb; border-radius: 7px; background: #f8fafb; }
     .input-card small { display: block; color: #687d8d; margin-bottom: 5px; }
-    .input-card strong { font-size: 18px; }
+    .input-card strong { font-size: 17px; }
     .model-section { margin: 18px 0; padding: 24px; page-break-inside: avoid; }
+    .geodesic-section { border-top: 4px solid #2b79ad; }
     .model-heading { display: flex; justify-content: space-between; gap: 16px; align-items: start; border-bottom: 1px solid #e0e7ec; padding-bottom: 14px; }
     .model-heading span { display: block; color: #718492; margin-top: 4px; font-size: 12px; }
     .status { max-width: 330px; padding: 7px 10px; border-radius: 999px; font-size: 12px; text-align: center; }
@@ -224,28 +240,22 @@ export function createExperimentHtmlReport(
       <div class="input-grid">
         <div class="input-card"><small>Gözlemci yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
         <div class="input-card"><small>Hedef yüksekliği</small><strong>${inputNumberFormatter.format(inputs.targetHeightM)} m</strong></div>
-        <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(inputs.surfaceDistanceKm)} km</strong></div>
+        <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(effectiveDistanceKm)} km</strong></div>
         <div class="input-card"><small>Gözlenen görünürlük</small><strong>%${inputNumberFormatter.format(inputs.observedVisiblePercent)}</strong></div>
         <div class="input-card"><small>Gözlem belirsizliği</small><strong>±%${inputNumberFormatter.format(inputs.observationUncertaintyPercent)}</strong></div>
         <div class="input-card"><small>Atmosfer</small><strong>${inputs.useStandardRefraction ? `Standart kırılma (k=${inputNumberFormatter.format(inputs.refractionCoefficient)})` : 'Kapalı'}</strong></div>
+        ${coordinateCards}
       </div>
-      <div class="notice">
-        Bu rapor, kaydedildiği andaki model sürümlerini, sonuç anlık görüntülerini ve hesap izlerini gösterir. Tek bir deneydeki uyum, bir modelin genel doğruluğu anlamına gelmez.
-      </div>
+      <div class="notice">Bu rapor, kaydedildiği andaki model sürümlerini, sonuç anlık görüntülerini ve hesap izlerini gösterir. Tek bir deneydeki uyum, bir modelin genel doğruluğu anlamına gelmez.</div>
     </header>
 
-    ${experiment.predictions
-      .map((prediction) =>
-        predictionSection(
-          prediction,
-          experiment.modelVersions[prediction.modelId]
-        )
-      )
-      .join('')}
+    ${geodesicSection(experiment)}
+    ${experiment.predictions.map((prediction) => predictionSection(
+      prediction,
+      experiment.modelVersions[prediction.modelId]
+    )).join('')}
 
-    <footer>
-      Bu dosya çevrimdışı okunabilen, kendine yeterli bir HTML raporudur. Geometrik Gözlem Laboratuvarı tarafından üretilmiştir.
-    </footer>
+    <footer>Bu dosya çevrimdışı okunabilen, kendine yeterli bir HTML raporudur. Geometrik Gözlem Laboratuvarı tarafından üretilmiştir.</footer>
   </main>
 </body>
 </html>`;
