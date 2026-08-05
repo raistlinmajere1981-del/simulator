@@ -8,9 +8,14 @@ import type {
 } from '../../shared/domain';
 import {
   DEFAULT_SIMULATOR_INPUTS,
+  type DistanceSource,
   type SavedExperiment,
   type SimulatorInputs
 } from '../../shared/simulator';
+import {
+  inverseWgs84Geodesic,
+  type GeodesicResult
+} from '../../simulation/geodesy';
 import {
   runSimulationModels,
   type ModelRun
@@ -23,7 +28,10 @@ import {
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
-type NumericInputKey = Exclude<keyof SimulatorInputs, 'useStandardRefraction'>;
+type NumericInputKey = Exclude<
+  keyof SimulatorInputs,
+  'useStandardRefraction' | 'distanceSource'
+>;
 
 interface ModelPresentation {
   tone: ModelTone;
@@ -51,6 +59,18 @@ const presentationByModelId: Record<string, ModelPresentation> = {
   'azimuthal-projection': { tone: 'violet', shape: 'gleason' }
 };
 
+const geodesicMetadata: ModelMetadata = {
+  id: 'wgs84-geodesic',
+  name: 'WGS84 Jeodezik Çözüm',
+  version: '0.1.0',
+  description: 'İki koordinat arasındaki elipsoidal yüzey mesafesi ve uç azimutları.',
+  capabilities: ['surface-distance'],
+  assumptions: [
+    'Referans elipsoidi WGS84’tür.',
+    'Ters problem Vincenty iterasyonuyla çözülür.'
+  ]
+};
+
 const statusLabels: Record<ResultStatus, string> = {
   compatible: 'Gözlem aralığıyla uyumlu',
   incompatible: 'Gözlem aralığıyla uyumsuz',
@@ -62,6 +82,10 @@ const inputRanges: Record<NumericInputKey, { min: number; max: number }> = {
   observerHeightM: { min: 0, max: 100_000 },
   targetHeightM: { min: 0.1, max: 100_000 },
   surfaceDistanceKm: { min: 0, max: 20_000 },
+  observerLatitudeDeg: { min: -90, max: 90 },
+  observerLongitudeDeg: { min: -180, max: 180 },
+  targetLatitudeDeg: { min: -90, max: 90 },
+  targetLongitudeDeg: { min: -180, max: 180 },
   observedVisiblePercent: { min: 0, max: 100 },
   observationUncertaintyPercent: { min: 0, max: 100 },
   refractionCoefficient: { min: -1, max: 0.99 }
@@ -69,6 +93,13 @@ const inputRanges: Record<NumericInputKey, { min: number; max: number }> = {
 
 const numberFormatter = new Intl.NumberFormat('tr-TR', {
   maximumFractionDigits: 2
+});
+const coordinateFormatter = new Intl.NumberFormat('tr-TR', {
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 6
+});
+const bearingFormatter = new Intl.NumberFormat('tr-TR', {
+  maximumFractionDigits: 3
 });
 
 function getPresentation(modelId: string): ModelPresentation {
@@ -111,6 +142,24 @@ function defaultExperimentName(): string {
     dateStyle: 'short',
     timeStyle: 'short'
   }).format(new Date())}`;
+}
+
+function geodesicPrediction(result: GeodesicResult | undefined): ModelPrediction | undefined {
+  if (!result) return undefined;
+  return {
+    modelId: geodesicMetadata.id,
+    experimentId: 'interactive-target-visibility',
+    status: result.method === 'vincenty' ? 'compatible' : 'indeterminate',
+    metrics: [
+      { key: 'surfaceDistanceM', label: 'WGS84 yüzey mesafesi', value: result.distanceM, unit: 'm' },
+      { key: 'initialBearingDeg', label: 'Başlangıç azimutu', value: result.initialBearingDeg, unit: 'deg' },
+      { key: 'finalBearingDeg', label: 'Varış azimutu', value: result.finalBearingDeg, unit: 'deg' },
+      { key: 'iterations', label: 'İterasyon sayısı', value: result.iterations, unit: 'count' }
+    ],
+    warnings: result.warnings,
+    traceId: result.traceId,
+    trace: result.trace
+  };
 }
 
 function Sidebar({
@@ -224,25 +273,69 @@ function Sidebar({
   );
 }
 
+function NumericField({
+  inputKey,
+  label,
+  unit,
+  step,
+  inputs,
+  disabled,
+  onNumberChange
+}: {
+  inputKey: NumericInputKey;
+  label: string;
+  unit: string;
+  step: number;
+  inputs: SimulatorInputs;
+  disabled?: boolean;
+  onNumberChange(key: NumericInputKey, value: number): void;
+}): React.JSX.Element {
+  return (
+    <label className="input-field">
+      <span>{label}</span>
+      <div>
+        <input
+          disabled={disabled}
+          min={inputRanges[inputKey].min}
+          max={inputRanges[inputKey].max}
+          step={step}
+          type="number"
+          value={inputs[inputKey]}
+          onChange={(event) => onNumberChange(inputKey, event.currentTarget.valueAsNumber)}
+        />
+        <b>{unit}</b>
+      </div>
+    </label>
+  );
+}
+
 function ScenarioSummary({
   activeName,
   inputs,
+  effectiveDistanceKm,
+  geodesic,
   isDirty,
+  onDistanceSourceChange,
   onNumberChange,
   onRefractionChange,
   onReset,
-  onSave
+  onSave,
+  onShowGeodesicTrace
 }: {
   activeName: string;
   inputs: SimulatorInputs;
+  effectiveDistanceKm: number;
+  geodesic: GeodesicResult | undefined;
   isDirty: boolean;
+  onDistanceSourceChange(source: DistanceSource): void;
   onNumberChange(key: NumericInputKey, value: number): void;
   onRefractionChange(enabled: boolean): void;
   onReset(): void;
   onSave(): void;
+  onShowGeodesicTrace(): void;
 }): React.JSX.Element {
   return (
-    <section className="scenario-summary panel">
+    <section className="scenario-summary panel coordinate-summary">
       <div className="panel-title-row">
         <div>
           <span className="eyebrow">Aktif senaryo</span>
@@ -256,31 +349,51 @@ function ScenarioSummary({
         </div>
       </div>
 
-      <div className="input-grid">
-        {([
-          ['observerHeightM', 'Gözlemci yüksekliği', 'm', 0.1],
-          ['targetHeightM', 'Hedef yüksekliği', 'm', 0.1],
-          ['surfaceDistanceKm', 'Yüzey mesafesi', 'km', 0.01],
-          ['observedVisiblePercent', 'Gözlenen görünürlük', '%', 1],
-          ['observationUncertaintyPercent', 'Gözlem belirsizliği', '±%', 1],
-          ['refractionCoefficient', 'Kırılma katsayısı', 'k', 0.01]
-        ] as const).map(([key, label, unit, step]) => (
-          <label className="input-field" key={key}>
-            <span>{label}</span>
-            <div>
-              <input
-                disabled={key === 'refractionCoefficient' && !inputs.useStandardRefraction}
-                min={inputRanges[key].min}
-                max={inputRanges[key].max}
-                step={step}
-                type="number"
-                value={inputs[key]}
-                onChange={(event) => onNumberChange(key, event.currentTarget.valueAsNumber)}
-              />
-              <b>{unit}</b>
+      <div className="input-grid base-input-grid">
+        <NumericField inputKey="observerHeightM" label="Gözlemci yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+        <NumericField inputKey="targetHeightM" label="Hedef yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+        <NumericField inputKey="observedVisiblePercent" label="Gözlenen görünürlük" unit="%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
+        <NumericField inputKey="observationUncertaintyPercent" label="Gözlem belirsizliği" unit="±%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
+        <NumericField inputKey="refractionCoefficient" label="Kırılma katsayısı" unit="k" step={0.01} inputs={inputs} disabled={!inputs.useStandardRefraction} onNumberChange={onNumberChange} />
+      </div>
+
+      <div className="distance-source-panel">
+        <div className="distance-source-heading">
+          <div>
+            <span className="eyebrow">Mesafe kaynağı</span>
+            <strong>{inputs.distanceSource === 'manual' ? 'Elle girilen yüzey mesafesi' : 'WGS84 koordinat çözümü'}</strong>
+          </div>
+          <div className="distance-mode-buttons">
+            <button className={inputs.distanceSource === 'manual' ? 'selected' : ''} type="button" onClick={() => onDistanceSourceChange('manual')}>Manuel</button>
+            <button className={inputs.distanceSource === 'coordinates' ? 'selected' : ''} type="button" onClick={() => onDistanceSourceChange('coordinates')}>Koordinat</button>
+          </div>
+        </div>
+
+        {inputs.distanceSource === 'manual' ? (
+          <div className="manual-distance-row">
+            <NumericField inputKey="surfaceDistanceKm" label="Yüzey mesafesi" unit="km" step={0.01} inputs={inputs} onNumberChange={onNumberChange} />
+            <p>Bu değer bütün modellerin ortak deney mesafesi olarak kullanılır.</p>
+          </div>
+        ) : (
+          <>
+            <div className="coordinate-grid">
+              <NumericField inputKey="observerLatitudeDeg" label="Gözlemci enlemi" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
+              <NumericField inputKey="observerLongitudeDeg" label="Gözlemci boylamı" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
+              <NumericField inputKey="targetLatitudeDeg" label="Hedef enlemi" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
+              <NumericField inputKey="targetLongitudeDeg" label="Hedef boylamı" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
             </div>
-          </label>
-        ))}
+            <div className={`geodesic-summary ${geodesic?.method === 'spherical-fallback' ? 'fallback' : ''}`}>
+              <div><small>WGS84 mesafesi</small><strong>{numberFormatter.format(effectiveDistanceKm)} km</strong></div>
+              <div><small>Başlangıç azimutu</small><strong>{geodesic ? `${bearingFormatter.format(geodesic.initialBearingDeg)}°` : '—'}</strong></div>
+              <div><small>Varış azimutu</small><strong>{geodesic ? `${bearingFormatter.format(geodesic.finalBearingDeg)}°` : '—'}</strong></div>
+              <div><small>Çözüm</small><strong>{geodesic?.method === 'vincenty' ? `Vincenty · ${geodesic.iterations} iterasyon` : 'Küresel yedek'}</strong></div>
+              <button type="button" onClick={onShowGeodesicTrace}>Jeodezik hesap izi</button>
+            </div>
+            <p className="coordinate-note">
+              Gözlemci {coordinateFormatter.format(inputs.observerLatitudeDeg)}°, {coordinateFormatter.format(inputs.observerLongitudeDeg)}° · Hedef {coordinateFormatter.format(inputs.targetLatitudeDeg)}°, {coordinateFormatter.format(inputs.targetLongitudeDeg)}°
+            </p>
+          </>
+        )}
       </div>
 
       <label className="refraction-control">
@@ -347,13 +460,10 @@ function ModelCard({
       <header>
         <h3>{metadata.name}</h3>
         <div className="model-header-actions">
-          <button className="trace-button" disabled={!prediction} type="button" onClick={onShowTrace}>
-            Hesap izi
-          </button>
+          <button className="trace-button" disabled={!prediction} type="button" onClick={onShowTrace}>Hesap izi</button>
           <span className={`status-pill status-${status}`}>{statusLabels[status]}</span>
         </div>
       </header>
-
       <div className={`world-visual ${presentation.shape} ${isProjection ? 'projection-only' : ''}`}>
         <span className="observer-pin">●</span><span className="target-pin">●</span><span className="route" />
         {isProjection && (
@@ -363,7 +473,6 @@ function ModelCard({
           </div>
         )}
       </div>
-
       {isProjection ? (
         <div className="projection-explanation">
           <strong>Hesaplama yapılmadı</strong>
@@ -376,7 +485,6 @@ function ModelCard({
           <span className="line-of-sight" /><span className={`surface ${presentation.shape}`} />
         </div>
       )}
-
       <div className={`metric-grid ${isProjection ? 'unsupported-metrics' : ''}`}>
         <div><small>Beklenen görünürlük</small><strong>{formatPercent(visibleFraction)}</strong></div>
         <div><small>Gizlenen kısım</small><strong>{formatPercent(hiddenFraction)}</strong></div>
@@ -388,13 +496,7 @@ function ModelCard({
   );
 }
 
-function ResultsTable({
-  runs,
-  onShowTrace
-}: {
-  runs: ModelRun[];
-  onShowTrace(modelId: string): void;
-}): React.JSX.Element {
+function ResultsTable({ runs, onShowTrace }: { runs: ModelRun[]; onShowTrace(modelId: string): void }): React.JSX.Element {
   return (
     <section className="results panel">
       <span className="eyebrow">Sonuç karşılaştırma</span>
@@ -440,18 +542,51 @@ export function AppNext(): React.JSX.Element {
   const [traceModelId, setTraceModelId] = useState<string>();
   const [storageMessage, setStorageMessage] = useState('');
 
+  const geodesic = useMemo(() => {
+    if (inputs.distanceSource !== 'coordinates') return undefined;
+    return inverseWgs84Geodesic(
+      { latitudeDeg: inputs.observerLatitudeDeg, longitudeDeg: inputs.observerLongitudeDeg },
+      { latitudeDeg: inputs.targetLatitudeDeg, longitudeDeg: inputs.targetLongitudeDeg }
+    );
+  }, [
+    inputs.distanceSource,
+    inputs.observerLatitudeDeg,
+    inputs.observerLongitudeDeg,
+    inputs.targetLatitudeDeg,
+    inputs.targetLongitudeDeg
+  ]);
+
+  const effectiveDistanceKm = inputs.distanceSource === 'coordinates' && geodesic
+    ? geodesic.distanceM / 1_000
+    : inputs.surfaceDistanceKm;
+  const effectiveInputs = useMemo<SimulatorInputs>(() => ({
+    ...inputs,
+    surfaceDistanceKm: effectiveDistanceKm
+  }), [effectiveDistanceKm, inputs]);
+
   const experiment = useMemo<ExperimentDefinition>(() => ({
     id: activeExperimentId ?? 'interactive-target-visibility',
     title: activeExperimentName || 'Etkileşimli hedef görünürlüğü deneyi',
     type: 'target-visibility',
-    observer: { latitudeDeg: 0, longitudeDeg: 0, elevationM: 0, eyeHeightM: inputs.observerHeightM },
-    target: { label: 'Hedef', latitudeDeg: 0, longitudeDeg: 0, elevationM: 0, heightM: inputs.targetHeightM },
+    observer: {
+      latitudeDeg: inputs.observerLatitudeDeg,
+      longitudeDeg: inputs.observerLongitudeDeg,
+      elevationM: 0,
+      eyeHeightM: inputs.observerHeightM
+    },
+    target: {
+      label: 'Hedef',
+      latitudeDeg: inputs.targetLatitudeDeg,
+      longitudeDeg: inputs.targetLongitudeDeg,
+      elevationM: 0,
+      heightM: inputs.targetHeightM
+    },
     observedAtIso: new Date().toISOString(),
     measurements: {
-      surfaceDistanceM: { value: inputs.surfaceDistanceKm * 1_000, uncertainty: 20, unit: 'm' },
+      surfaceDistanceM: { value: effectiveDistanceKm * 1_000, uncertainty: inputs.distanceSource === 'coordinates' ? 0.01 : 20, unit: 'm' },
       visibleFraction: { value: inputs.observedVisiblePercent / 100, uncertainty: inputs.observationUncertaintyPercent / 100, unit: 'fraction' }
     }
-  }), [activeExperimentId, activeExperimentName, inputs]);
+  }), [activeExperimentId, activeExperimentName, effectiveDistanceKm, inputs]);
 
   const context = useMemo(() => ({
     atmosphereMode: inputs.useStandardRefraction ? 'standard' as const : 'off' as const,
@@ -505,7 +640,11 @@ export function AppNext(): React.JSX.Element {
       createdAtIso: existing?.createdAtIso ?? now,
       updatedAtIso: now,
       inputs,
-      modelVersions: Object.fromEntries(simulationModels.map((model) => [model.metadata.id, model.metadata.version])),
+      geodesic,
+      modelVersions: Object.fromEntries([
+        ...simulationModels.map((model) => [model.metadata.id, model.metadata.version] as const),
+        [geodesicMetadata.id, geodesicMetadata.version]
+      ]),
       predictions: runs.map((run) => run.prediction)
     };
 
@@ -552,7 +691,6 @@ export function AppNext(): React.JSX.Element {
       const result = await window.simulatorDesktop.importExperiment();
       setStorageMessage(result.message);
       if (result.status !== 'success' || !result.experiment) return;
-
       setSavedExperiments((current) => [
         result.experiment as SavedExperiment,
         ...current.filter((item) => item.id !== result.experiment?.id)
@@ -571,7 +709,14 @@ export function AppNext(): React.JSX.Element {
     }
   };
 
-  const selectedRun = runs.find((run) => run.metadata.id === traceModelId);
+  const modelRun = runs.find((run) => run.metadata.id === traceModelId);
+  const geoPrediction = geodesicPrediction(geodesic);
+  const selectedMetadata = traceModelId === geodesicMetadata.id
+    ? geodesicMetadata
+    : modelRun?.metadata;
+  const selectedPrediction = traceModelId === geodesicMetadata.id
+    ? geoPrediction
+    : modelRun?.prediction;
 
   return (
     <div className="app-shell">
@@ -594,11 +739,14 @@ export function AppNext(): React.JSX.Element {
       <div className="workspace">
         <Sidebar experiments={savedExperiments} onLoadExperiment={loadExperiment} />
         <main className="main-content">
-          <div className="top-grid">
+          <div className="top-grid geodesic-top-grid">
             <ScenarioSummary
               activeName={activeExperimentName}
               inputs={inputs}
+              effectiveDistanceKm={effectiveDistanceKm}
+              geodesic={geodesic}
               isDirty={isDirty}
+              onDistanceSourceChange={(distanceSource) => updateInputs((current) => ({ ...current, distanceSource }))}
               onNumberChange={handleNumberChange}
               onRefractionChange={(enabled) => updateInputs((current) => ({ ...current, useStandardRefraction: enabled }))}
               onReset={() => {
@@ -609,6 +757,7 @@ export function AppNext(): React.JSX.Element {
                 setStorageMessage('Yeni deney hazırlandı.');
               }}
               onSave={() => setSaveDialogOpen(true)}
+              onShowGeodesicTrace={() => setTraceModelId(geodesicMetadata.id)}
             />
             <ObservationPanel inputs={inputs} />
           </div>
@@ -619,7 +768,7 @@ export function AppNext(): React.JSX.Element {
                 key={model.metadata.id}
                 metadata={model.metadata}
                 run={runs.find((candidate) => candidate.metadata.id === model.metadata.id)}
-                inputs={inputs}
+                inputs={effectiveInputs}
                 onShowTrace={() => setTraceModelId(model.metadata.id)}
               />
             ))}
@@ -630,6 +779,7 @@ export function AppNext(): React.JSX.Element {
             <section className="notes panel">
               <span className="eyebrow">Hesaplama kapsamı</span>
               <ul>
+                <li>Koordinat modu WGS84 ters jeodezik çözümünü kullanır.</li>
                 <li>İdeal küre, ortalama Dünya yarıçapını kullanır.</li>
                 <li>Standart kırılma seçeneği etkin yarıçap yaklaşımıdır.</li>
                 <li>Düzlem modeli engelsiz yüzey ve doğrusal ışık varsayar.</li>
@@ -658,8 +808,8 @@ export function AppNext(): React.JSX.Element {
         onReport={exportReport}
       />
       <TraceDialog
-        metadata={selectedRun?.metadata}
-        prediction={selectedRun?.prediction}
+        metadata={selectedMetadata}
+        prediction={selectedPrediction}
         onClose={() => setTraceModelId(undefined)}
       />
     </div>
