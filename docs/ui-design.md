@@ -1,50 +1,64 @@
 # Arayüz Tasarımı
 
-## Ana çalışma biçimi
+## Ana çalışma alanı
 
-Uygulama üç temel görünüme ayrılır:
+Uygulama tek deney girdisini seçili modellerde yan yana karşılaştırır.
 
-### Deney oluşturma
+Ana bölümler:
 
-Kullanıcı deney türünü, gözlemciyi, hedefi, tarih-saat bilgisini, atmosferi, kamera verisini ve gerçek ölçümü girer. Eksik girdiler alan düzeyinde gösterilir.
+- Sol senaryo ve model paneli
+- Etkileşimli deney girdileri
+- Gerçek gözlem veya referans görseli
+- Model kartları
+- Sonuç karşılaştırma tablosu
+- Hesaplama kapsamı ve uyarılar
 
-### Simülasyon odası
+## Etkileşimli ilk ekran
 
-Aynı deney seçili modellerde yan yana gösterilir. Her model kartında aynı metrikler aynı sırada bulunur. Kullanıcı kart sayısını iki, üç veya dört sütun olarak değiştirebilir.
+Kullanıcı şu değerleri doğrudan değiştirebilir:
 
-### Analiz ve rapor
+- Gözlemci yüksekliği
+- Hedef yüksekliği
+- Yüzey mesafesi
+- Gözlenen görünürlük
+- Gözlem belirsizliği
+- Standart kırılma açık veya kapalı
+- Kırılma katsayısı
 
-Tahmin-gözlem farkı, belirsizlik, hassasiyet analizi, model varsayımları, formüller ve hesap izi burada incelenir.
+Her değişiklik seçili modelleri yeniden çalıştırır.
 
-## Mevcut prototip
+## Model kartı
 
-İlk React ekranı referans görseldeki laboratuvar düzenini korur:
+Her kart aynı sırada şunları gösterir:
 
-- solda senaryolar, modeller ve katmanlar,
-- üstte deney özeti ve gerçek gözlem,
-- ortada üç model karşılaştırma kartı,
-- altta sonuç tablosu ve notlar.
+- Beklenen görünürlük
+- Gizlenen kısım
+- Ufuk mesafesi
+- Hedef tepe görüş açısı
+- Gözlemle karşılaştırma durumu
+- Model varsayımı veya uyarısı
 
-Sayısal alanlar şimdilik demo veridir ve arayüzde bu durum açıkça belirtilir.
+## Durumların sunumu
 
-## Değiştirilen kavramlar
+- Uyumlu
+- Uyumsuz
+- Belirsiz
+- Desteklenmiyor
 
-- `Model Güveni` yerine `Gözleme Uyum` kullanılır.
-- Gleason görünümü fiziksel model değil azimutal gösterim olarak etiketlenir.
-- Desteklenmeyen deneyler boş veya uydurma sayı yerine durum mesajı gösterir.
-- Atmosfer tek bir aç/kapat düğmesi yerine mod ve parametrelerle sunulur.
+Bu durumlar modelin genel güvenilirlik puanı değildir. Yalnızca aktif deneydeki tahmin ile girilen gözlem arasındaki ilişkiyi açıklar.
 
-## Görsel hiyerarşi
+## Sayısal ve görsel ayrımı
 
-1. Aktif deney ve gerçek ölçüm
-2. Model tahminleri
-3. Tahmin-gözlem karşılaştırması
-4. Varsayımlar ve uyarılar
-5. Yardımcı 2B/3B görselleştirme
+Dünya, düzlem ve harita şekilleri açıklayıcı canlandırmadır. Sayısal değerler model motorundan gelir. Görsel motor hesaplama kaynağı olarak kullanılmaz.
 
-## Erişilebilirlik
+## Yerel görsel doğrulama hedefleri
 
-- Renk tek durum göstergesi olmayacaktır.
-- Klavye ile senaryo ve model kartları arasında gezinilebilmelidir.
-- Sayısal değerler yüksek kontrastlı ve kopyalanabilir olmalıdır.
-- Grafiklerin tablo veya metin karşılığı bulunmalıdır.
+İlk masaüstü çalıştırmada kontrol edilecekler:
+
+- 1180 piksel ve üzerindeki pencere düzeni
+- Form alanlarının taşmaması
+- Model kartlarının eşit yüksekliği
+- Türkçe sayı biçimlendirmesi
+- Değer değişimlerinde anlık güncelleme
+- Standart kırılma seçeneğinin sonuçlara etkisi
+- Desteklenmeyen projeksiyon kartının açık görünmesi
