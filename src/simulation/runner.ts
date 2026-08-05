@@ -32,7 +32,20 @@ export async function runSimulationModels(
             status: 'unsupported',
             metrics: [],
             warnings: [`Model hesaplaması tamamlanamadı: ${message}`],
-            traceId: `${model.metadata.id}:${experiment.id}:error`
+            traceId: `${model.metadata.id}:${experiment.id}:error`,
+            trace: {
+              summary: 'Model çalıştırılırken beklenmeyen bir hata oluştu.',
+              assumptions: model.metadata.assumptions,
+              steps: [
+                {
+                  id: 'runtime-error',
+                  title: 'Hesaplama hatası',
+                  formula: '—',
+                  substitution: message,
+                  result: 'Sonuç üretilemedi'
+                }
+              ]
+            }
           }
         };
       }
