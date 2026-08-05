@@ -1,0 +1,71 @@
+export type ModelCapability =
+  | 'surface-distance'
+  | 'line-of-sight'
+  | 'horizon'
+  | 'atmospheric-refraction'
+  | 'solar-position'
+  | 'lunar-position'
+  | 'stellar-position';
+
+export type ResultStatus =
+  | 'compatible'
+  | 'incompatible'
+  | 'indeterminate'
+  | 'unsupported';
+
+export interface GeoPoint {
+  latitudeDeg: number;
+  longitudeDeg: number;
+  elevationM: number;
+}
+
+export interface Observer extends GeoPoint {
+  eyeHeightM: number;
+}
+
+export interface Target extends GeoPoint {
+  label: string;
+  heightM: number;
+}
+
+export interface UncertainValue {
+  value: number;
+  uncertainty: number;
+  unit: string;
+}
+
+export interface ExperimentDefinition {
+  id: string;
+  title: string;
+  type: 'horizon' | 'target-visibility' | 'shadow' | 'celestial';
+  observer: Observer;
+  target?: Target;
+  observedAtIso: string;
+  measurements: Record<string, UncertainValue>;
+}
+
+export interface ModelMetadata {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  capabilities: ModelCapability[];
+  assumptions: string[];
+}
+
+export interface PredictionMetric {
+  key: string;
+  label: string;
+  value: number | null;
+  unit: string;
+  uncertainty?: number;
+}
+
+export interface ModelPrediction {
+  modelId: string;
+  experimentId: string;
+  status: ResultStatus;
+  metrics: PredictionMetric[];
+  warnings: string[];
+  traceId: string;
+}
