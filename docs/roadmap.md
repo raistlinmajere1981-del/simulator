@@ -1,58 +1,76 @@
 # Yol Haritası
 
-## Aşama 0 — Tasarım ve sözleşmeler
+## Aşama 0 — Temel ve sözleşmeler
 
-- Ürün kapsamını kesinleştirme
-- Deney veri şeması
+Durum: tamamlandı
+
+- Electron + React + TypeScript proje iskeleti
+- Deney ve model alan tipleri
 - Model eklenti sözleşmesi
-- Arayüz prototipi
-- Hesap doğrulama yaklaşımı
+- GitHub Actions doğrulaması
+- Ürün, mimari ve arayüz belgeleri
 
-## Aşama 1 — Geometrik MVP
+## Aşama 1 — Hedef görünürlüğü motoru
+
+Durum: ilk çalışan sürüm tamamlandı
 
 - İdeal küre modeli
-- Tanımlı sonsuz düzlem modeli
-- İki nokta arası mesafe
+- Tanımlı düzlem modeli
+- Azimutal projeksiyon için fiziksel model değildir uyarısı
 - Ufuk mesafesi
-- Hedef görünürlüğü ve gizlenme
-- Atmosfer kapalı / standart kırılma
-- Birim testleri ve referans hesaplar
-- Deneyleri JSON olarak kaydetme
+- Görünür ve gizlenen hedef yüksekliği
+- Hedef tepe görüş açısı
+- Atmosfer kapalı ve standart kırılma seçenekleri
+- Gözlem farkı ve belirsizlik değerlendirmesi
+- Etkileşimli arayüz girdileri
+- Birim testleri ve üretim derlemesi
 
-## Aşama 2 — WGS84 ve gerçek arazi
+Kalan doğrulama:
 
-- Elipsoid jeodezik hesaplar
-- Deniz seviyesi ve gelgit girdileri
+- Yerel masaüstü görsel kontrolü
+- Form alanlarının farklı ekran boyutlarında denenmesi
+- Aşırı ve geçersiz girdiler için kullanıcı mesajları
+
+## Aşama 2 — Deney kaydetme ve izlenebilirlik
+
+- Deneyi JSON olarak kaydetme ve açma
+- Formül ve ara değer izleri
+- Model varsayımları görünümü
+- Sonuç raporu
+- Tekrarlanabilir deney kimliği
+
+## Aşama 3 — Gerçek konum ve arazi
+
+- Koordinatlardan mesafe hesabı
+- WGS84 elipsoid modeli
 - Sayısal yükseklik modeli entegrasyonu
-- Arazi görüş hattı
-- Veri kaynağı ve lisans kaydı
+- Deniz seviyesi ve arazi engelleri
 
-## Aşama 3 — Fotoğraf kalibrasyonu
+## Aşama 4 — Gelişmiş atmosfer
 
-- Sensör ve lens profili
-- Ufuk ve hedef işaretleme
+- Sıcaklık, basınç ve nem girdileri
+- Dikey atmosfer profili
+- Katmanlı ışın izleme
+- Standart ve gelişmiş sonuç karşılaştırması
+
+## Aşama 5 — Fotoğraf kalibrasyonu
+
+- Kamera ve lens bilgileri
+- Ufuk, hedef tabanı ve hedef tepesi işaretleme
 - Piksel-açı dönüşümü
-- Kamera eğimi ve kırpma hesabı
 - Ölçüm belirsizliği üretimi
 
-## Aşama 4 — Güneş, Ay ve gölgeler
+## Aşama 6 — Güneş, Ay ve gökyüzü deneyleri
 
-- Güneş azimutu ve yüksekliği
-- Gölge boyu deneyleri
-- Gün doğumu / gün batımı
+- Güneş yüksekliği ve azimutu
+- Gölge deneyleri
+- Gün doğumu ve gün batımı
 - Ay konumu ve evreleri
+- Yıldız görünürlüğü ve yıldız izleri
 
-## Aşama 5 — Yıldızlar ve büyük ölçekli olaylar
+## Aşama 7 — Büyük ölçekli olaylar
 
-- Yıldız yönleri ve izleri
-- Kuzey / güney gök kutbu karşılaştırması
-- Tutulma deneyleri
-- Uçuş ve büyük çember rota analizleri
-
-## Karar verilmesi gerekenler
-
-- İlk sürüm yalnızca masaüstü mü olacak, yoksa web çıktısı da üretilecek mi?
-- Deney dosyaları JSON ile mi başlayacak, doğrudan SQLite mı kullanılacak?
-- Model eklentileri yalnızca proje içi güvenilir kod mu olacak?
-- İlk gerçek gözlem veri seti hangi senaryolardan oluşacak?
-- Atmosfer profil verisinin kaynağı ve çevrimdışı çalışma yöntemi ne olacak?
+- Tutulmalar
+- Mevsimler
+- Zaman dilimleri
+- Rota karşılaştırmaları
