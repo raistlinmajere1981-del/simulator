@@ -6,6 +6,10 @@ import type {
 } from '../shared/domain';
 import type { SavedExperiment } from '../shared/simulator';
 import type { VerticalDatumKind } from '../shared/terrain';
+import {
+  migrateLegacyManualTerrainPoint,
+  sortManualTerrainPoints
+} from '../simulation/manual-terrain-profile';
 
 const statusLabels: Record<ResultStatus, string> = {
   compatible: 'Gözlem aralığıyla uyumlu',
@@ -173,17 +177,31 @@ function verticalTerrainSection(experiment: SavedExperiment, effectiveDistanceKm
   const offset = inputs.verticalDatumOffsetM;
   const observerEyeElevationM = inputs.observerGroundElevationM + offset + inputs.observerHeightM;
   const targetTopElevationM = inputs.targetGroundElevationM + offset + inputs.targetHeightM;
-  const terrainRows = inputs.terrainMode === 'manual-three-point' ? `
-    <tr><td>Gözlemci ucu</td><td>0 km</td><td>${inputNumberFormatter.format(inputs.observerGroundElevationM)} m</td></tr>
-    <tr><td>Ara örnek</td><td>${inputNumberFormatter.format(effectiveDistanceKm * inputs.terrainIntermediateDistancePercent / 100)} km</td><td>${inputNumberFormatter.format(inputs.terrainIntermediateElevationM)} m</td></tr>
-    <tr><td>Hedef ucu</td><td>${inputNumberFormatter.format(effectiveDistanceKm)} km</td><td>${inputNumberFormatter.format(inputs.targetGroundElevationM)} m</td></tr>` : `
-    <tr><td colspan="3">Arazi profili kapalı; yalnızca gözlemci ve hedef zemin kotları kullanıldı.</td></tr>`;
+  const terrainEnabled = inputs.terrainMode !== 'off';
+  const manualPoints = sortManualTerrainPoints(
+    experiment.manualTerrainPoints ?? migrateLegacyManualTerrainPoint(
+      inputs.terrainIntermediateDistancePercent,
+      inputs.terrainIntermediateElevationM
+    )
+  );
+  const interiorRows = manualPoints.map((point, index) => `
+    <tr>
+      <td>Ara nokta ${index + 1}</td>
+      <td>%${inputNumberFormatter.format(point.distancePercent)}</td>
+      <td>${inputNumberFormatter.format(effectiveDistanceKm * point.distancePercent / 100)} km</td>
+      <td>${inputNumberFormatter.format(point.elevationM)} m</td>
+    </tr>`).join('');
+  const terrainRows = terrainEnabled ? `
+    <tr><td>Gözlemci ucu</td><td>%0</td><td>0 km</td><td>${inputNumberFormatter.format(inputs.observerGroundElevationM)} m</td></tr>
+    ${interiorRows}
+    <tr><td>Hedef ucu</td><td>%100</td><td>${inputNumberFormatter.format(effectiveDistanceKm)} km</td><td>${inputNumberFormatter.format(inputs.targetGroundElevationM)} m</td></tr>` : `
+    <tr><td colspan="4">Arazi profili kapalı; yalnızca gözlemci ve hedef zemin kotları kullanıldı.</td></tr>`;
 
   return `
     <section class="model-section vertical-section">
       <header class="model-heading">
-        <div><h2>Düşey Referans ve Arazi</h2><span>Taşınabilir deney şeması v3</span></div>
-        <strong class="status ${inputs.terrainMode === 'manual-three-point' ? 'status-compatible' : 'status-indeterminate'}">${inputs.terrainMode === 'manual-three-point' ? 'Manuel profil etkin' : 'Profil kapalı'}</strong>
+        <div><h2>Düşey Referans ve Arazi</h2><span>Taşınabilir deney şeması v4</span></div>
+        <strong class="status ${terrainEnabled ? 'status-compatible' : 'status-indeterminate'}">${terrainEnabled ? `${manualPoints.length} ara noktalı manuel profil` : 'Profil kapalı'}</strong>
       </header>
       <p>Kotlar ortak bir düşey datumda tutulur. Datum ofseti bütün zemin ve arazi örneklerine aynı yönde uygulanır.</p>
       <div class="two-column">
@@ -200,8 +218,8 @@ function verticalTerrainSection(experiment: SavedExperiment, effectiveDistanceKm
         </div>
         <div>
           <h3>Profil örnekleri</h3>
-          <table><thead><tr><th>Nokta</th><th>Mesafe</th><th>Ham kot</th></tr></thead><tbody>${terrainRows}</tbody></table>
-          <p class="muted">İlk sürüm manuel profil iki uç ve tek ara örnekten oluşur. DEM çözünürlüğü veya gerçek arazi kaynağı içermez.</p>
+          <table><thead><tr><th>Nokta</th><th>Rota</th><th>Mesafe</th><th>Ham kot</th></tr></thead><tbody>${terrainRows}</tbody></table>
+          <p class="muted">Manuel ara noktalar rota yüzdesiyle saklanır; raporda kayıt anındaki gerçek rota mesafesine dönüştürülür. Uç kotları gözlemci ve hedeften otomatik türetilir.</p>
         </div>
       </div>
     </section>`;
