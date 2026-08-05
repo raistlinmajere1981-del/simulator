@@ -1,68 +1,99 @@
-# Teknik Mimari
-
-## Genel yaklaşım
-
-İlk sürüm yerel çalışan Electron masaüstü uygulamasıdır. React arayüzü deney hazırlama ve sonuç inceleme görevlerini yürütür. Sayısal çekirdek arayüzden bağımsız TypeScript modüllerinde tutulur.
-
-```text
-Electron Main
-  └── güvenli preload köprüsü
-        └── React Renderer
-              ├── Deney editörü
-              ├── Model karşılaştırma görünümü
-              ├── Analiz ve rapor görünümü
-              └── 2B / 3B açıklayıcı görselleştirme
-
-Simulation Core
-  ├── Model sözleşmesi
-  ├── Deney doğrulama
-  ├── Geometri motoru
-  ├── Atmosfer / optik motoru
-  ├── Astronomi motoru
-  ├── Belirsizlik motoru
-  └── Hesap izi ve raporlama
-```
+# Mimari
 
 ## Katmanlar
 
-### 1. Alan modeli
+### Electron ana süreç
 
-`src/shared` altında deney, gözlemci, hedef, ölçüm, model ve sonuç tipleri bulunur. Bu katman Electron veya React bağımlılığı taşımaz.
+- Masaüstü pencere yaşam döngüsü
+- Güvenli dosya ve işletim sistemi işlemleri
+- İleride deney kaydetme ve rapor dışa aktarma
 
-### 2. Sayısal çekirdek
+### React arayüzü
 
-`src/simulation` saf fonksiyonlar ve model sözleşmelerini içerir. Hesaplama girdileri doğrulanır; ara değerler daha sonra hesap izi içinde kaydedilir.
+- Deney girdileri
+- Model karşılaştırma kartları
+- Sonuç tablosu
+- Görsel canlandırma
 
-### 3. Model eklentileri
+### Ortak alan tipleri
 
-Her model ortak sözleşmeyi uygular. Model metadata kaydı şunları içerir:
+- Deney tanımı
+- Model metadata bilgisi
+- Tahmin metrikleri
+- Belirsizlik değerleri
+- Sonuç durumları
 
-- benzersiz kimlik ve sürüm,
-- desteklenen deney yetenekleri,
-- açık varsayımlar,
-- gereken parametreler,
-- doğrulama kuralları.
+### Simülasyon çekirdeği
 
-### 4. Deney motoru
+- Geometri yardımcıları
+- Gözlem değerlendirmesi
+- Model çalıştırıcı
+- Hata yalıtımı
+- Atmosfer bağlamı
 
-Deneyi seçili modellere dağıtır, sonuçları toplar ve karşılaştırılabilir metriklere dönüştürür. Bir model gerekli yeteneğe sahip değilse `unsupported` sonucu üretir.
+### Model eklentileri
 
-### 5. Görselleştirme
+İlk uygulamalar:
 
-2B ve 3B sahneler sayısal sonuçları okur. Kamera veya çizim motoru bilimsel sonucu yeniden hesaplamaz. Sahne üzerinde ölçek ve abartı kullanıldıysa açıkça gösterilir.
+- `IdealSphereModel`
+- `DefinedPlaneModel`
+- `AzimuthalProjectionReference`
 
-### 6. Kalıcılık
+## Veri akışı
 
-İlk aşamada deneyler sürümlü JSON dosyaları olarak saklanabilir. Daha sonra SQLite tabanlı yerel veri yöneticisine geçilebilir. Veri şeması için göç mekanizması gereklidir.
+```text
+Kullanıcı girdileri
+  → ExperimentDefinition
+  → SimulationContext
+  → runSimulationModels
+  → her modelin predict işlemi
+  → ModelPrediction listesi
+  → React karşılaştırma görünümü
+```
 
-## Güvenlik
+## Hesaplama ayrımı
 
-- Renderer içinde Node.js entegrasyonu kapalıdır.
-- `contextIsolation` açıktır.
-- Dosya erişimi yalnızca preload üzerinden sınırlı komutlarla yapılır.
-- Model eklentileri ilk sürümde güvenilmeyen üçüncü taraf kod çalıştırmaz.
-- Dış bağlantılar uygulama içinde değil sistem tarayıcısında açılır.
+### Geometri
 
-## Uzun vadeli performans
+Küre ve düzlem üzerindeki görüş ilişkilerini hesaplar.
 
-TypeScript, ilk geometri ve deney motoru için yeterlidir. Büyük Monte Carlo çalışmaları, atmosferik ışın izleme veya yüksek çözünürlüklü arazi hesapları gerektiğinde çekirdek Rust/WebAssembly işçilerine taşınabilir. Sözleşme katmanı bu geçişten bağımsız kalmalıdır.
+### Atmosfer
+
+İlk sürümde yalnızca:
+
+- Kapalı
+- Standart kırılma için etkin yarıçap
+
+Katmanlı atmosfer profili sözleşmede ayrılmış ancak henüz uygulanmamıştır.
+
+### Değerlendirme
+
+Model tahminini gözlenen değer ve belirsizlikle karşılaştırır. Bu katman model formülünden ayrıdır.
+
+### Canlandırma
+
+2B/3B şekiller açıklama amaçlıdır. Sayısal değerlerin kaynağı değildir.
+
+## Hata yalıtımı
+
+Model çalıştırıcı her modeli ayrı çalıştırır. Tek bir modeldeki hata diğer sonuçları engellemez. Hatalı veya eksik model `unsupported` sonucu ve uyarı üretir.
+
+## Test ve CI
+
+GitHub Actions şu adımları çalıştırır:
+
+1. Bağımlılık kurulumu
+2. TypeScript typecheck
+3. Vitest testleri
+4. Electron-Vite üretim derlemesi
+
+Özellik dallarında yalnızca pull request koşusu çalışır. Aynı PR için eski koşular otomatik iptal edilir.
+
+## Sonraki mimari genişletmeler
+
+- Deney deposu ve JSON şeması
+- WGS84/elipsoid paketi
+- Arazi profili sağlayıcısı
+- Atmosferik ışın izleme
+- Kamera kalibrasyonu
+- Rapor üretimi
