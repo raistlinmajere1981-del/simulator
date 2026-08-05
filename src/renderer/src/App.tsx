@@ -13,6 +13,7 @@ import {
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
+type NumericInputKey = Exclude<keyof SimulatorInputs, 'useStandardRefraction'>;
 
 interface ModelPresentation {
   tone: ModelTone;
@@ -29,13 +30,29 @@ interface SimulatorInputs {
   refractionCoefficient: number;
 }
 
-const scenarios = [
-  'Ufuk Analizi',
-  'Gemi Kaybolma Testi',
-  'Uzun Mesafe Görüş',
-  'Güneş ve Ay Gözlemleri',
-  'Yıldız Gözlemleri',
-  'Tutulma Simülasyonları'
+interface ScenarioDefinition {
+  label: string;
+  icon: string;
+  enabled: boolean;
+}
+
+const DEFAULT_INPUTS: SimulatorInputs = {
+  observerHeightM: 10,
+  targetHeightM: 15,
+  surfaceDistanceKm: 22.38,
+  observedVisiblePercent: 52,
+  observationUncertaintyPercent: 8,
+  useStandardRefraction: true,
+  refractionCoefficient: 0.13
+};
+
+const scenarios: ScenarioDefinition[] = [
+  { label: 'Hedef Görünürlüğü', icon: '▰', enabled: true },
+  { label: 'Ufuk Analizi', icon: '◫', enabled: false },
+  { label: 'Uzun Mesafe Görüş', icon: '⌁', enabled: false },
+  { label: 'Güneş ve Ay Gözlemleri', icon: '☀', enabled: false },
+  { label: 'Yıldız Gözlemleri', icon: '✦', enabled: false },
+  { label: 'Tutulma Simülasyonları', icon: '◐', enabled: false }
 ];
 
 const presentationByModelId: Record<string, ModelPresentation> = {
@@ -48,7 +65,16 @@ const statusLabels: Record<ResultStatus, string> = {
   compatible: 'Gözlem aralığıyla uyumlu',
   incompatible: 'Gözlem aralığıyla uyumsuz',
   indeterminate: 'Belirsizlik içinde karar verilemedi',
-  unsupported: 'Bu deney için model tanımsız'
+  unsupported: 'Fiziksel model kuralları tanımsız'
+};
+
+const inputRanges: Record<NumericInputKey, { min: number; max: number }> = {
+  observerHeightM: { min: 0, max: 100_000 },
+  targetHeightM: { min: 0.1, max: 100_000 },
+  surfaceDistanceKm: { min: 0, max: 20_000 },
+  observedVisiblePercent: { min: 0, max: 100 },
+  observationUncertaintyPercent: { min: 0, max: 100 },
+  refractionCoefficient: { min: -1, max: 0.99 }
 };
 
 const numberFormatter = new Intl.NumberFormat('tr-TR', {
@@ -90,66 +116,103 @@ function formatDifference(differencePp: number | null): string {
     : `${numberFormatter.format(differencePp)} puan`;
 }
 
-function Sidebar(): React.JSX.Element {
-  const [active, setActive] = useState('Gemi Kaybolma Testi');
+function clampInputValue(key: NumericInputKey, value: number): number {
+  const range = inputRanges[key];
+  return Math.min(range.max, Math.max(range.min, value));
+}
 
+function Sidebar(): React.JSX.Element {
   return (
     <aside className="sidebar">
       <section className="side-section">
-        <div className="section-heading"><span>Test senaryoları</span><button>+</button></div>
+        <div className="section-heading">
+          <span>Test senaryoları</span>
+          <span className="section-state">1 / 6 hazır</span>
+        </div>
         <nav className="scenario-list">
-          {scenarios.map((scenario, index) => (
+          {scenarios.map((scenario) => (
             <button
-              className={active === scenario ? 'active' : ''}
-              key={scenario}
-              onClick={() => setActive(scenario)}
+              className={scenario.enabled ? 'active' : 'unavailable'}
+              disabled={!scenario.enabled}
+              key={scenario.label}
+              title={scenario.enabled ? 'Aktif deney' : 'Bu deney henüz uygulanmadı'}
             >
-              <span className="nav-icon">{['◫', '▰', '⌁', '☀', '✦', '◐'][index]}</span>
-              {scenario}
+              <span className="nav-icon">{scenario.icon}</span>
+              <span className="nav-label">{scenario.label}</span>
+              <span className="nav-state">{scenario.enabled ? 'AKTİF' : 'YAKINDA'}</span>
             </button>
           ))}
         </nav>
       </section>
 
       <section className="side-section compact">
-        <div className="section-heading"><span>Kaydedilen senaryolar</span></div>
+        <div className="section-heading">
+          <span>Kaydedilen deneyler</span>
+          <span className="section-state">taslak</span>
+        </div>
         <div className="saved-row">Deniz seviyesi örneği <span>●</span></div>
-        <div className="saved-row">Kule görünürlüğü <span>○</span></div>
-        <div className="saved-row">Ufuk çizgisi <span>○</span></div>
+        <div className="saved-row muted-row">Kule görünürlüğü <span>○</span></div>
+        <div className="saved-row muted-row">Ufuk çizgisi <span>○</span></div>
       </section>
 
       <section className="side-section compact">
-        <div className="section-heading"><span>Modeller</span><button>+</button></div>
+        <div className="section-heading">
+          <span>Modeller</span>
+          <span className="section-state">2 fiziksel</span>
+        </div>
         {simulationModels.map((model) => {
           const presentation = getPresentation(model.metadata.id);
+          const isProjection = model.metadata.id === 'azimuthal-projection';
+
           return (
-            <div className="model-toggle" key={model.metadata.id}>
+            <div
+              className={`model-toggle ${isProjection ? 'reference-model' : ''}`}
+              key={model.metadata.id}
+            >
               <span className={`model-dot ${presentation.tone}`} />
               <span>{model.metadata.name}</span>
-              <span className="enabled-dot" />
+              {isProjection ? (
+                <span className="reference-badge">REFERANS</span>
+              ) : (
+                <span className="enabled-dot" title="Hesaplamaya dahil" />
+              )}
             </div>
           );
         })}
-        <div className="model-toggle"><span className="model-dot coral" /><span>Toroidal Model</span><span /></div>
-        <div className="model-toggle"><span className="model-dot blue" /><span>İçbükey Dünya</span><span /></div>
+        <div className="model-toggle future-model">
+          <span className="model-dot coral" />
+          <span>Toroidal Model</span>
+          <span className="future-badge">YAKINDA</span>
+        </div>
+        <div className="model-toggle future-model">
+          <span className="model-dot blue" />
+          <span>İçbükey Dünya</span>
+          <span className="future-badge">YAKINDA</span>
+        </div>
       </section>
 
-      <section className="side-section compact grow">
-        <div className="section-heading"><span>Görünüm / katmanlar</span></div>
-        {['Kıta / Ülke Sınırları', 'Topografya', 'Gece Işıkları', 'Atmosfer', 'Izgara'].map((item, index) => (
-          <label className="switch-row" key={item}>
+      <section className="side-section compact grow disabled-section">
+        <div className="section-heading">
+          <span>Görsel katmanlar</span>
+          <span className="section-state">sonraki aşama</span>
+        </div>
+        {['Kıta / Ülke Sınırları', 'Topografya', 'Gece Işıkları', 'Atmosfer Profili', 'Izgara'].map((item) => (
+          <label className="switch-row unavailable-layer" key={item}>
             <span>{item}</span>
-            <input type="checkbox" defaultChecked={index !== 2} />
+            <input type="checkbox" disabled />
             <span className="switch" />
           </label>
         ))}
       </section>
 
-      <section className="time-card">
-        <div className="section-heading"><span>Zaman ve tarih</span></div>
-        <div className="time-values"><span>Örnek deney</span><span>15:30</span></div>
-        <input type="range" defaultValue="42" />
-        <div className="time-actions"><button>▶</button><button className="primary">▶</button><span>● HAZIR</span></div>
+      <section className="time-card disabled-section">
+        <div className="section-heading">
+          <span>Zaman ve tarih</span>
+          <span className="section-state">astronomi modülü</span>
+        </div>
+        <div className="time-placeholder">
+          Güneş, Ay ve yıldız deneyleri eklendiğinde etkinleşecek.
+        </div>
       </section>
     </aside>
   );
@@ -158,51 +221,120 @@ function Sidebar(): React.JSX.Element {
 function ScenarioSummary({
   inputs,
   onNumberChange,
-  onRefractionChange
+  onRefractionChange,
+  onReset
 }: {
   inputs: SimulatorInputs;
-  onNumberChange: (
-    key: Exclude<keyof SimulatorInputs, 'useStandardRefraction'>,
-    value: number
-  ) => void;
+  onNumberChange: (key: NumericInputKey, value: number) => void;
   onRefractionChange: (enabled: boolean) => void;
+  onReset: () => void;
 }): React.JSX.Element {
   return (
     <section className="scenario-summary panel">
       <div className="panel-title-row">
-        <div><span className="eyebrow">Aktif senaryo</span><h2>Hedef Görünürlüğü Deneyi</h2></div>
-        <span className="calculation-badge">CANLI HESAPLAMA</span>
+        <div>
+          <span className="eyebrow">Aktif senaryo</span>
+          <h2>Hedef Görünürlüğü</h2>
+        </div>
+        <div className="title-actions">
+          <button className="reset-button" onClick={onReset} type="button">
+            Varsayılanlar
+          </button>
+          <span className="calculation-badge">CANLI HESAPLAMA</span>
+        </div>
       </div>
 
       <div className="input-grid">
         <label className="input-field">
           <span>Gözlemci yüksekliği</span>
-          <div><input type="number" min="0" step="0.1" value={inputs.observerHeightM} onChange={(event) => onNumberChange('observerHeightM', event.currentTarget.valueAsNumber)} /><b>m</b></div>
+          <div>
+            <input
+              min="0"
+              step="0.1"
+              type="number"
+              value={inputs.observerHeightM}
+              onChange={(event) => onNumberChange('observerHeightM', event.currentTarget.valueAsNumber)}
+            />
+            <b>m</b>
+          </div>
         </label>
         <label className="input-field">
           <span>Hedef yüksekliği</span>
-          <div><input type="number" min="0.1" step="0.1" value={inputs.targetHeightM} onChange={(event) => onNumberChange('targetHeightM', event.currentTarget.valueAsNumber)} /><b>m</b></div>
+          <div>
+            <input
+              min="0.1"
+              step="0.1"
+              type="number"
+              value={inputs.targetHeightM}
+              onChange={(event) => onNumberChange('targetHeightM', event.currentTarget.valueAsNumber)}
+            />
+            <b>m</b>
+          </div>
         </label>
         <label className="input-field">
           <span>Yüzey mesafesi</span>
-          <div><input type="number" min="0" step="0.01" value={inputs.surfaceDistanceKm} onChange={(event) => onNumberChange('surfaceDistanceKm', event.currentTarget.valueAsNumber)} /><b>km</b></div>
+          <div>
+            <input
+              min="0"
+              step="0.01"
+              type="number"
+              value={inputs.surfaceDistanceKm}
+              onChange={(event) => onNumberChange('surfaceDistanceKm', event.currentTarget.valueAsNumber)}
+            />
+            <b>km</b>
+          </div>
         </label>
         <label className="input-field">
           <span>Gözlenen görünürlük</span>
-          <div><input type="number" min="0" max="100" step="1" value={inputs.observedVisiblePercent} onChange={(event) => onNumberChange('observedVisiblePercent', event.currentTarget.valueAsNumber)} /><b>%</b></div>
+          <div>
+            <input
+              max="100"
+              min="0"
+              step="1"
+              type="number"
+              value={inputs.observedVisiblePercent}
+              onChange={(event) => onNumberChange('observedVisiblePercent', event.currentTarget.valueAsNumber)}
+            />
+            <b>%</b>
+          </div>
         </label>
         <label className="input-field">
           <span>Gözlem belirsizliği</span>
-          <div><input type="number" min="0" max="100" step="1" value={inputs.observationUncertaintyPercent} onChange={(event) => onNumberChange('observationUncertaintyPercent', event.currentTarget.valueAsNumber)} /><b>±%</b></div>
+          <div>
+            <input
+              max="100"
+              min="0"
+              step="1"
+              type="number"
+              value={inputs.observationUncertaintyPercent}
+              onChange={(event) => onNumberChange('observationUncertaintyPercent', event.currentTarget.valueAsNumber)}
+            />
+            <b>±%</b>
+          </div>
         </label>
         <label className="input-field">
           <span>Kırılma katsayısı</span>
-          <div><input type="number" min="-1" max="0.99" step="0.01" disabled={!inputs.useStandardRefraction} value={inputs.refractionCoefficient} onChange={(event) => onNumberChange('refractionCoefficient', event.currentTarget.valueAsNumber)} /><b>k</b></div>
+          <div>
+            <input
+              disabled={!inputs.useStandardRefraction}
+              max="0.99"
+              min="-1"
+              step="0.01"
+              type="number"
+              value={inputs.refractionCoefficient}
+              onChange={(event) => onNumberChange('refractionCoefficient', event.currentTarget.valueAsNumber)}
+            />
+            <b>k</b>
+          </div>
         </label>
       </div>
 
       <label className="refraction-control">
-        <input type="checkbox" checked={inputs.useStandardRefraction} onChange={(event) => onRefractionChange(event.currentTarget.checked)} />
+        <input
+          checked={inputs.useStandardRefraction}
+          type="checkbox"
+          onChange={(event) => onRefractionChange(event.currentTarget.checked)}
+        />
         <span>Standart atmosferik kırılmayı etkin yarıçap yaklaşımıyla uygula</span>
       </label>
     </section>
@@ -212,7 +344,10 @@ function ScenarioSummary({
 function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.Element {
   return (
     <section className="observation panel">
-      <span className="eyebrow">Gerçek gözlem / referans</span>
+      <div className="observation-heading">
+        <span className="eyebrow">Gözlem referansı</span>
+        <span className="reference-mode">SAYISAL GİRDİ</span>
+      </div>
       <div className="observation-image">
         <div className="reticle">＋</div>
         <div className="ship"><span /><i /><b /></div>
@@ -221,9 +356,13 @@ function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.El
       <div className="observation-meta">
         <span>Gözlenen: %{numberFormatter.format(inputs.observedVisiblePercent)}</span>
         <span>Belirsizlik: ±%{numberFormatter.format(inputs.observationUncertaintyPercent)}</span>
-        <button>Görsel yükle</button>
+        <button disabled title="Fotoğraf kalibrasyon modülü henüz eklenmedi" type="button">
+          Görsel yükleme yakında
+        </button>
       </div>
-      <p className="engine-note">Görsel şu anda açıklayıcıdır; karşılaştırma, soldaki sayısal gözlem girdisine göre yapılır.</p>
+      <p className="engine-note">
+        Görsel açıklayıcıdır. Karşılaştırma, sayısal görünürlük ve belirsizlik girdileriyle yapılır.
+      </p>
     </section>
   );
 }
@@ -245,25 +384,49 @@ function ModelCard({
   const horizonDistanceM = getMetric(prediction, 'horizonSurfaceDistanceM');
   const targetAngleDeg = getMetric(prediction, 'targetTopElevationDeg');
   const warning = prediction?.warnings[0];
+  const isProjection = metadata.id === 'azimuthal-projection';
 
   return (
-    <article className={`model-card ${presentation.tone}`}>
+    <article className={`model-card ${presentation.tone} ${isProjection ? 'projection-card' : ''}`}>
       <header>
         <h3>{metadata.name}</h3>
         <span className={`status-pill status-${status}`}>{statusLabels[status]}</span>
       </header>
-      <div className={`world-visual ${presentation.shape}`}>
+
+      <div className={`world-visual ${presentation.shape} ${isProjection ? 'projection-only' : ''}`}>
         <span className="observer-pin">●</span>
         <span className="target-pin">●</span>
         <span className="route" />
+        {isProjection && (
+          <div className="projection-overlay">
+            <strong>HARİTA PROJEKSİYONU</strong>
+            <span>Konumları gösterebilir; fiziksel görüş tahmini üretemez.</span>
+          </div>
+        )}
       </div>
-      <div className="profile-view">
-        <div className="profile-label left">Gözlemci<br /><b>{numberFormatter.format(inputs.observerHeightM)} m</b></div>
-        <div className="profile-label right">Hedef<br /><b>{numberFormatter.format(inputs.targetHeightM)} m</b></div>
-        <span className="line-of-sight" />
-        <span className={`surface ${presentation.shape}`} />
-      </div>
-      <div className="metric-grid">
+
+      {isProjection ? (
+        <div className="projection-explanation">
+          <strong>Hesaplama yapılmadı</strong>
+          <p>
+            Yüzey geometrisi, yerel dikey yön ve ışık ilerleme kuralları tanımlanmadan
+            bu deney için sayısal sonuç üretilemez.
+          </p>
+        </div>
+      ) : (
+        <div className="profile-view">
+          <div className="profile-label left">
+            Gözlemci<br /><b>{numberFormatter.format(inputs.observerHeightM)} m</b>
+          </div>
+          <div className="profile-label right">
+            Hedef<br /><b>{numberFormatter.format(inputs.targetHeightM)} m</b>
+          </div>
+          <span className="line-of-sight" />
+          <span className={`surface ${presentation.shape}`} />
+        </div>
+      )}
+
+      <div className={`metric-grid ${isProjection ? 'unsupported-metrics' : ''}`}>
         <div><small>Beklenen görünürlük</small><strong>{formatPercent(visibleFraction)}</strong></div>
         <div><small>Gizlenen kısım</small><strong>{formatPercent(hiddenFraction)}</strong></div>
         <div><small>Ufuk mesafesi</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane')}</strong></div>
@@ -280,16 +443,34 @@ function ResultsTable({ runs }: { runs: ModelRun[] }): React.JSX.Element {
       <span className="eyebrow">Sonuç karşılaştırma</span>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Model</th><th>Beklenen görünürlük</th><th>Gizlenen</th><th>Görüş açısı</th><th>Ufuk</th><th>Gözlem farkı</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Model / gösterim</th>
+              <th>Beklenen görünürlük</th>
+              <th>Gizlenen</th>
+              <th>Görüş açısı</th>
+              <th>Ufuk</th>
+              <th>Gözlem farkı</th>
+            </tr>
+          </thead>
           <tbody>
             {simulationModels.map((model) => {
               const run = runs.find((candidate) => candidate.metadata.id === model.metadata.id);
               const prediction = run?.prediction;
               const presentation = getPresentation(model.metadata.id);
               const status = prediction?.status ?? 'indeterminate';
+              const isProjection = model.metadata.id === 'azimuthal-projection';
+
               return (
-                <tr key={model.metadata.id}>
-                  <td><span className={`model-dot ${presentation.tone}`} />{model.metadata.name}<small>{statusLabels[status]}</small></td>
+                <tr className={isProjection ? 'projection-row' : ''} key={model.metadata.id}>
+                  <td>
+                    <span className={`model-dot ${presentation.tone}`} />
+                    {model.metadata.name}
+                    <small>
+                      {isProjection ? 'Kartografik referans · ' : 'Fiziksel model · '}
+                      {statusLabels[status]}
+                    </small>
+                  </td>
                   <td>{formatPercent(getMetric(prediction, 'visibleFraction'))}</td>
                   <td>{formatPercent(getMetric(prediction, 'hiddenFraction'))}</td>
                   <td>{formatAngle(getMetric(prediction, 'targetTopElevationDeg'))}</td>
@@ -306,15 +487,7 @@ function ResultsTable({ runs }: { runs: ModelRun[] }): React.JSX.Element {
 }
 
 export function App(): React.JSX.Element {
-  const [inputs, setInputs] = useState<SimulatorInputs>({
-    observerHeightM: 10,
-    targetHeightM: 15,
-    surfaceDistanceKm: 22.38,
-    observedVisiblePercent: 52,
-    observationUncertaintyPercent: 8,
-    useStandardRefraction: true,
-    refractionCoefficient: 0.13
-  });
+  const [inputs, setInputs] = useState<SimulatorInputs>(DEFAULT_INPUTS);
   const [runs, setRuns] = useState<ModelRun[]>([]);
   const [isCalculating, setIsCalculating] = useState(true);
 
@@ -326,25 +499,25 @@ export function App(): React.JSX.Element {
       latitudeDeg: 0,
       longitudeDeg: 0,
       elevationM: 0,
-      eyeHeightM: Math.max(0, inputs.observerHeightM)
+      eyeHeightM: inputs.observerHeightM
     },
     target: {
       label: 'Hedef',
       latitudeDeg: 0,
       longitudeDeg: 0,
       elevationM: 0,
-      heightM: Math.max(0.1, inputs.targetHeightM)
+      heightM: inputs.targetHeightM
     },
     observedAtIso: '2026-08-05T12:30:00.000Z',
     measurements: {
       surfaceDistanceM: {
-        value: Math.max(0, inputs.surfaceDistanceKm) * 1_000,
+        value: inputs.surfaceDistanceKm * 1_000,
         uncertainty: 20,
         unit: 'm'
       },
       visibleFraction: {
-        value: Math.min(1, Math.max(0, inputs.observedVisiblePercent / 100)),
-        uncertainty: Math.min(1, Math.max(0, inputs.observationUncertaintyPercent / 100)),
+        value: inputs.observedVisiblePercent / 100,
+        uncertainty: inputs.observationUncertaintyPercent / 100,
         unit: 'fraction'
       }
     }
@@ -371,23 +544,34 @@ export function App(): React.JSX.Element {
     };
   }, [context, experiment]);
 
-  const handleNumberChange = (
-    key: Exclude<keyof SimulatorInputs, 'useStandardRefraction'>,
-    value: number
-  ): void => {
+  const handleNumberChange = (key: NumericInputKey, value: number): void => {
     if (!Number.isFinite(value)) {
       return;
     }
 
-    setInputs((current) => ({ ...current, [key]: value }));
+    setInputs((current) => ({
+      ...current,
+      [key]: clampInputValue(key, value)
+    }));
   };
 
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="brand"><button className="menu-button">☰</button><strong>GEOMETRİK GÖZLEM LABORATUVARI</strong><span>{isCalculating ? 'Hesaplanıyor…' : 'Hesaplama hazır'}</span></div>
-        <div className="top-actions"><button>▤ Veri Yöneticisi</button><button>⚙ Ayarlar</button><button>ⓘ Yardım</button></div>
+        <div className="brand">
+          <button className="menu-button" type="button">☰</button>
+          <strong>GEOMETRİK GÖZLEM LABORATUVARI</strong>
+          <span className={isCalculating ? 'calculation-state busy' : 'calculation-state ready'}>
+            {isCalculating ? 'Hesaplanıyor…' : 'Hesaplama hazır'}
+          </span>
+        </div>
+        <div className="top-actions">
+          <button disabled title="Deney kaydetme modülü sonraki aşamada" type="button">▤ Veri Yöneticisi</button>
+          <button disabled title="Ayarlar modülü sonraki aşamada" type="button">⚙ Ayarlar</button>
+          <button disabled title="Yardım içeriği sonraki aşamada" type="button">ⓘ Yardım</button>
+        </div>
       </header>
+
       <div className="workspace">
         <Sidebar />
         <main className="main-content">
@@ -395,10 +579,15 @@ export function App(): React.JSX.Element {
             <ScenarioSummary
               inputs={inputs}
               onNumberChange={handleNumberChange}
-              onRefractionChange={(enabled) => setInputs((current) => ({ ...current, useStandardRefraction: enabled }))}
+              onRefractionChange={(enabled) => setInputs((current) => ({
+                ...current,
+                useStandardRefraction: enabled
+              }))}
+              onReset={() => setInputs(DEFAULT_INPUTS)}
             />
             <ObservationPanel inputs={inputs} />
           </div>
+
           <div className="model-grid">
             {simulationModels.map((model) => (
               <ModelCard
@@ -409,6 +598,7 @@ export function App(): React.JSX.Element {
               />
             ))}
           </div>
+
           <div className="bottom-grid">
             <ResultsTable runs={runs} />
             <section className="notes panel">
@@ -417,9 +607,12 @@ export function App(): React.JSX.Element {
                 <li>İdeal küre, ortalama Dünya yarıçapını kullanır.</li>
                 <li>Standart kırılma seçeneği etkin yarıçap yaklaşımıdır.</li>
                 <li>Düzlem modeli engelsiz yüzey ve doğrusal ışık varsayar.</li>
-                <li>Azimutal gösterim fiziksel model olmadığı için sonuç üretmez.</li>
+                <li>Azimutal gösterim yalnızca kartografik referanstır.</li>
               </ul>
-              <p>Sonuçlar ilk sayısal motorun çıktısıdır; arazi, dalga ve gelişmiş atmosfer profili henüz dahil değildir.</p>
+              <p>
+                Arazi, dalga yüksekliği, kamera kalibrasyonu ve katmanlı atmosfer profili
+                henüz hesaba dahil değildir.
+              </p>
             </section>
           </div>
         </main>
