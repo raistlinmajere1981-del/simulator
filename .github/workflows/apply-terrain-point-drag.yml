@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/apply-terrain-point-drag.yml
       - scripts/apply-terrain-point-drag.py
+      - scripts/fix-terrain-point-drag-generator.py
 
 permissions:
   contents: write
@@ -20,6 +21,9 @@ jobs:
         with:
           ref: agent/terrain-profile-point-drag
           fetch-depth: 0
+
+      - name: Prepare generator
+        run: python3 scripts/fix-terrain-point-drag-generator.py
 
       - name: Apply product changes
         run: python3 scripts/apply-terrain-point-drag.py
@@ -36,8 +40,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Remove temporary patch script
-        run: rm -f scripts/apply-terrain-point-drag.py
+      - name: Remove temporary patch scripts
+        run: rm -f scripts/apply-terrain-point-drag.py scripts/fix-terrain-point-drag-generator.py
 
       - name: Commit product changes
         shell: bash
