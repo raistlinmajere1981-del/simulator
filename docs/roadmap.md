@@ -176,8 +176,23 @@ Durum: tamamlandı
 - Saf uygulama fonksiyonu ve sınır testleri
 - Uygulama sürümü `0.8.1`
 
+## Aşama 3.7 — GeoJSON arazi profili
+
+Durum: tamamlandı
+
+- Doğrudan `LineString`, `Feature` ve tek hatlı `FeatureCollection`
+- WGS84 `[boylam, enlem, yükseklik]` koordinatları
+- Ardışık noktalar arasında ters jeodezik mesafe hesabı
+- Kümülatif mesafeden rota yüzdesi üretimi
+- GeoJSON rota mesafesini deneye isteğe bağlı uygulama
+- Başlangıç ve bitiş zemin yüksekliklerini bağımsız uygulama
+- 5 MB, 2.002 koordinat ve 20.000 km güvenlik sınırları
+- Tekrarlanan konum, eksik yükseklik ve birden fazla rota reddi
+- GeoJSON kaynağının kayıt, JSON ve HTML raporunda korunması
+- Taşınabilir ve yerel kayıt şeması v6
+- Uygulama sürümü `0.9.0`
+
 ## Sonraki gerçek arazi işleri
-- GeoJSON profil içe aktarma
 - Noktaları grafik üzerinde sürükleme
 - Sayısal yükseklik modeli entegrasyonu
 - Görüş hattı boyunca DEM örnekleme

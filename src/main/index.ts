@@ -31,9 +31,10 @@ import {
   parseTerrainProfileCsv,
   TerrainProfileColumnMappingRequiredError
 } from '../simulation/csv-terrain-profile';
+import { parseTerrainProfileGeoJson } from '../simulation/geojson-terrain-profile';
 
 const EXPERIMENTS_FILE_NAME = 'experiments.json';
-const MAX_TERRAIN_CSV_BYTES = 5 * 1024 * 1024;
+const MAX_TERRAIN_PROFILE_BYTES = 5 * 1024 * 1024;
 const TERRAIN_MAPPING_TTL_MS = 10 * 60 * 1_000;
 
 interface PendingTerrainImport {
@@ -142,7 +143,7 @@ async function getExperimentOrThrow(id: string): Promise<SavedExperiment> {
 
 function validateTerrainImportContext(value: unknown): TerrainProfileImportContext {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new TypeError('CSV arazi profili için geçerli deney bilgisi gönderilmedi.');
+    throw new TypeError('Arazi profili için geçerli deney bilgisi gönderilmedi.');
   }
 
   const candidate = value as Record<string, unknown>;
@@ -150,7 +151,7 @@ function validateTerrainImportContext(value: unknown): TerrainProfileImportConte
     (candidate.routeDistanceM as number) <= 0 ||
     !Number.isFinite(candidate.observerGroundElevationM) ||
     !Number.isFinite(candidate.targetGroundElevationM)) {
-    throw new TypeError('CSV arazi profili için mesafe ve uç kotları geçerli olmalı.');
+    throw new TypeError('Arazi profili için mesafe ve uç yükseklikleri geçerli olmalı.');
   }
 
   return {
@@ -366,7 +367,7 @@ function registerExperimentHandlers(): void {
 
       const statistics = await fs.stat(selectedPath);
       if (!statistics.isFile()) throw new Error('Seçilen yol normal bir dosya değil.');
-      if (statistics.size > MAX_TERRAIN_CSV_BYTES) {
+      if (statistics.size > MAX_TERRAIN_PROFILE_BYTES) {
         throw new Error('CSV arazi profili 5 MB sınırını aşıyor.');
       }
 
@@ -416,6 +417,44 @@ function registerExperimentHandlers(): void {
       return {
         status: 'success',
         message: `“${profile.fileName}” eşlenen sütunlarla okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
+        profile
+      };
+    }
+  );
+
+  ipcMain.handle(
+    'terrain:import-geojson',
+    async (event, rawContext: unknown): Promise<ImportTerrainProfileResult> => {
+      const context = validateTerrainImportContext(rawContext);
+      const selection = await showOpenDialog(event, {
+        title: 'GeoJSON Arazi Profilini İçe Aktar',
+        properties: ['openFile'],
+        filters: [
+          { name: 'GeoJSON Arazi Profili', extensions: ['geojson', 'json'] },
+          { name: 'Tüm Dosyalar', extensions: ['*'] }
+        ]
+      });
+
+      const selectedPath = selection.filePaths[0];
+      if (selection.canceled || !selectedPath) {
+        return {
+          status: 'cancelled',
+          message: 'GeoJSON profil içe aktarma iptal edildi.'
+        };
+      }
+
+      const statistics = await fs.stat(selectedPath);
+      if (!statistics.isFile()) throw new Error('Seçilen yol normal bir dosya değil.');
+      if (statistics.size > MAX_TERRAIN_PROFILE_BYTES) {
+        throw new Error('GeoJSON arazi profili 5 MB sınırını aşıyor.');
+      }
+
+      const content = await fs.readFile(selectedPath, 'utf-8');
+      const profile = parseTerrainProfileGeoJson(content, selectedPath, context);
+      return {
+        status: 'success',
+        message: `“${profile.fileName}” okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
+        filePath: selectedPath,
         profile
       };
     }

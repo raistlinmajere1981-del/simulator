@@ -209,4 +209,7 @@ export interface SimulatorDesktopApi {
     mapping: TerrainProfileColumnMapping,
     context: TerrainProfileImportContext
   ): Promise<ImportTerrainProfileResult>;
+  importGeoJsonTerrainProfile(
+    context: TerrainProfileImportContext
+  ): Promise<ImportTerrainProfileResult>;
 }

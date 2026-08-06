@@ -10,7 +10,7 @@ import type {
 } from '../shared/simulator';
 
 const api: SimulatorDesktopApi = {
-  version: '0.8.0',
+  version: '0.9.0',
   platform: process.platform,
   listExperiments: () =>
     ipcRenderer.invoke('experiments:list') as Promise<SavedExperiment[]>,
@@ -35,7 +35,12 @@ const api: SimulatorDesktopApi = {
     requestId,
     mapping,
     context
-  ) as Promise<ImportTerrainProfileResult>
+  ) as Promise<ImportTerrainProfileResult>,
+  importGeoJsonTerrainProfile: (context: TerrainProfileImportContext) =>
+    ipcRenderer.invoke(
+      'terrain:import-geojson',
+      context
+    ) as Promise<ImportTerrainProfileResult>
 };
 
 contextBridge.exposeInMainWorld('simulatorDesktop', api);
