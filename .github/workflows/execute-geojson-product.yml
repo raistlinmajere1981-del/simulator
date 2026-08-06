@@ -24,6 +24,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           import textwrap
 
           retry_path = Path('.github/workflows/retry-geojson-terrain-profile.yml')
@@ -54,30 +55,38 @@ jobs:
               "    \"app_path = 'src/renderer/src/AppNext.tsx'\\n\""
           )
 
-          portable_calls = [
-              i for i, line in enumerate(lines)
-              if line.startswith("replace_once(portable_path, 'PortableExperimentFileV5'")
-              or line.startswith("replace_once(portable_path, 'LocalExperimentStoreV5'")
-          ]
-          if len(portable_calls) != 4:
-              raise RuntimeError(f'Expected four portable type replacement calls, found {len(portable_calls)}')
-          portable_replacement = [
-              "portable_text = read(portable_path)",
-              "if portable_text.count('PortableExperimentFileV5') != 2:",
-              "    raise RuntimeError('Unexpected PortableExperimentFileV5 count')",
-              "if portable_text.count('LocalExperimentStoreV5') != 2:",
-              "    raise RuntimeError('Unexpected LocalExperimentStoreV5 count')",
-              "Path(portable_path).write_text(",
-              "    portable_text.replace('PortableExperimentFileV5', 'PortableExperimentFileV6')",
-              "    .replace('LocalExperimentStoreV5', 'LocalExperimentStoreV6'),",
-              "    encoding='utf-8'",
-              ")"
-          ]
-          first_portable = portable_calls[0]
-          last_portable = portable_calls[-1]
-          lines[first_portable:last_portable + 1] = portable_replacement
+          patched_code = '\n'.join(lines) + '\n'
+          portable_pattern = (
+              r"replace_once\(\s*portable_path,\s*'PortableExperimentFileV5',\s*"
+              r"'PortableExperimentFileV6'\s*\)\s*"
+              r"replace_once\(\s*portable_path,\s*'LocalExperimentStoreV5',\s*"
+              r"'LocalExperimentStoreV6'\s*\)\s*"
+              r"replace_once\(\s*portable_path,\s*'PortableExperimentFileV5',\s*"
+              r"'PortableExperimentFileV6'\s*\)\s*"
+              r"replace_once\(\s*portable_path,\s*'LocalExperimentStoreV5',\s*"
+              r"'LocalExperimentStoreV6'\s*\)"
+          )
+          portable_replacement = """portable_text = read(portable_path)
+          if portable_text.count('PortableExperimentFileV5') != 2:
+              raise RuntimeError('Unexpected PortableExperimentFileV5 count')
+          if portable_text.count('LocalExperimentStoreV5') != 2:
+              raise RuntimeError('Unexpected LocalExperimentStoreV5 count')
+          Path(portable_path).write_text(
+              portable_text.replace('PortableExperimentFileV5', 'PortableExperimentFileV6')
+              .replace('LocalExperimentStoreV5', 'LocalExperimentStoreV6'),
+              encoding='utf-8'
+          )"""
+          patched_code, portable_count = re.subn(
+              portable_pattern,
+              portable_replacement,
+              patched_code,
+              count=1,
+              flags=re.S
+          )
+          if portable_count != 1:
+              raise RuntimeError(f'Expected one portable type migration block, found {portable_count}')
 
-          exec(compile('\n'.join(lines) + '\n', 'geojson-retry.py', 'exec'))
+          exec(compile(patched_code, 'geojson-retry.py', 'exec'))
           PY
 
       - name: Preserve workflow files
