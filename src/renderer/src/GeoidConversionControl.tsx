@@ -1,9 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { ManualTerrainPoint, VerticalDatumKind } from '../../shared/terrain';
-import {
-  convertGeoidHeight,
-  type GeoidHeightDatum
-} from '../../simulation/geoid-height-conversion';
+import type { GeoidHeightDatum } from '../../simulation/geoid-height-conversion';
+import { convertGeoidTerrainProfile } from '../../simulation/geoid-profile-conversion';
 import './geoid-conversion-control.css';
 
 interface GeoidConversionControlProps {
@@ -56,34 +54,19 @@ export function GeoidConversionControl({
   const preview = useMemo(() => {
     if (!targetDatum || !isConvertibleDatum(currentDatum)) return undefined;
     try {
-      const common = {
-        from: currentDatum,
-        to: targetDatum,
-        geoidUndulationM,
-        ...(includeUncertainty
-          ? { geoidUndulationUncertaintyM: geoidUncertaintyM }
-          : {})
-      };
-      const observer = convertGeoidHeight({
-        ...common,
-        valueM: observerGroundElevationM
-      });
-      const target = convertGeoidHeight({
-        ...common,
-        valueM: targetGroundElevationM
-      });
-      const convertedPoints = points.map((point) => ({
-        ...point,
-        elevationM: convertGeoidHeight({
-          ...common,
-          valueM: point.elevationM
-        }).valueM
-      }));
       return {
         status: 'success' as const,
-        observer,
-        target,
-        points: convertedPoints
+        result: convertGeoidTerrainProfile({
+          from: currentDatum,
+          to: targetDatum,
+          geoidUndulationM,
+          ...(includeUncertainty
+            ? { geoidUndulationUncertaintyM: geoidUncertaintyM }
+            : {}),
+          observerGroundElevationM,
+          targetGroundElevationM,
+          points
+        })
       };
     } catch (error) {
       return {
@@ -189,21 +172,21 @@ export function GeoidConversionControl({
         <div className="geoid-conversion-preview">
           <span>
             Gözlemci zemin kotu
-            <b>{numberFormatter.format(observerGroundElevationM)} → {numberFormatter.format(preview.observer.valueM)} m</b>
+            <b>{numberFormatter.format(observerGroundElevationM)} → {numberFormatter.format(preview.result.observerGroundElevationM)} m</b>
           </span>
           <span>
             Hedef zemin kotu
-            <b>{numberFormatter.format(targetGroundElevationM)} → {numberFormatter.format(preview.target.valueM)} m</b>
+            <b>{numberFormatter.format(targetGroundElevationM)} → {numberFormatter.format(preview.result.targetGroundElevationM)} m</b>
           </span>
           <span>
             Arazi örnekleri
-            <b>{points.length} nokta · düzeltme {numberFormatter.format(preview.observer.correctionM)} m</b>
+            <b>{points.length} nokta · düzeltme {numberFormatter.format(preview.result.correctionM)} m</b>
           </span>
           <span>
             Sonuç belirsizliği
-            <b>{preview.observer.uncertaintyM === null
+            <b>{preview.result.uncertaintyM === null
               ? 'Hesaplanmadı'
-              : `±${numberFormatter.format(preview.observer.uncertaintyM)} m`}</b>
+              : `±${numberFormatter.format(preview.result.uncertaintyM)} m`}</b>
           </span>
         </div>
       ) : null}
@@ -222,9 +205,9 @@ export function GeoidConversionControl({
             if (!targetDatum || preview?.status !== 'success') return;
             onApply(
               targetDatum,
-              preview.observer.valueM,
-              preview.target.valueM,
-              preview.points
+              preview.result.observerGroundElevationM,
+              preview.result.targetGroundElevationM,
+              preview.result.points
             );
             setMessage(`Dönüşüm uygulandı · ${sourceLabel.trim()}`);
           }}
