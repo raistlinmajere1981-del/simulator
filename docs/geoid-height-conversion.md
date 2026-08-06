@@ -1,6 +1,6 @@
-# Jeoit yüksekliği dönüşüm çekirdeği
+# Jeoit yüksekliği dönüşümü
 
-Bu çekirdek WGS84 elipsoidal yükseklik (`h`) ile ortometrik yükseklik (`H`)
+Bu özellik WGS84 elipsoidal yükseklik (`h`) ile ortometrik yükseklik (`H`)
 arasında kullanıcı veya doğrulanmış dış kaynak tarafından sağlanan jeoit ondülasyonu
 (`N`) ile dönüşüm yapar.
 
@@ -32,7 +32,7 @@ belirsizliği eksikse sonuçta açık uyarı bulunur.
 
 ## Hesap izi
 
-Her dönüşüm şunları içeren bir hesap izi üretir:
+Her tekil dönüşüm şunları içeren bir hesap izi üretir:
 
 - kullanılan `N = h - H` işaret sözleşmesi,
 - kaynak ve hedef datum,
@@ -42,15 +42,40 @@ Her dönüşüm şunları içeren bir hesap izi üretir:
 - varsa belirsizlik birleşimi,
 - varsayımlar ve uyarılar.
 
+## Kontrollü profil dönüşümü
+
+Arazi panelindeki kontrol aynı `N` değerini atomik olarak şu kotların tamamına
+uygular:
+
+- gözlemci zemin kotu,
+- hedef taban kotu,
+- bütün manuel veya içe aktarılmış arazi ara noktaları.
+
+Dönüşüm yalnız `WGS84 elipsoidal` ve `ortometrik / deniz seviyesi` datumları
+arasında kullanılabilir. Yerel datum açık bir jeodezik bağ olmadan dönüştürülmez.
+Önizleme, işlem uygulanmadan önce iki uç kotunu, ortak düzeltmeyi, dönüştürülen
+nokta sayısını ve varsa ondülasyon belirsizliğini gösterir.
+
+Nokta kimlikleri, rota yüzdeleri ve sırası korunur. İçe aktarılmış bir profil
+varsa dönüşüm kaynakla eşleşme durumunu `içe aktarımdan sonra düzenlendi` olarak
+işaretler. Mevcut datum / gelgit ofseti jeoit dönüşümüne katılmaz; ayrı bir deney
+düzeltmesi olarak korunur.
+
+Kullanıcı dönüşümden önce bir kaynak veya model etiketi girmek zorundadır. Bu
+`1.0.6` aşamasında etiket işlem bildirimi ve bilinçli onay için kullanılır; kalıcı
+model adı, sürüm, epok, `N`, belirsizlik ve uygulama zamanı provenansı bir sonraki
+sürümlü kayıt şeması aşamasında eklenecektir.
+
 ## Bilinçli sınırlar
 
 - Motor otomatik jeoit modeli indirmez veya sorgulamaz.
-- Girilen `N` değerinin deney koordinatına uygunluğunu doğrulamaz.
-- Jeoit modeli adı, sürümü ve epoku bu çekirdeğin dışında kaynak provenansı olarak
-  yönetilmelidir.
+- Girilen `N` değerinin deney koordinatına veya bütün rota boyunca uygunluğunu
+  doğrulamaz.
+- Jeoit modeli adı, sürümü ve epoku otomatik tahmin edilmez.
 - Yerel düşey datumlar, açık bir dönüşüm ofseti veya jeodezik bağ olmadan otomatik
   dönüştürülmez.
-- Aynı datum seçilirse değer değiştirilmez ve bu durum uyarı olarak kaydedilir.
+- Aynı datum seçilirse profil dönüşümü başlatılmaz.
+- Jeoit dönüşümü mevcut datum / gelgit ofsetini değiştirmez.
 
 Bu ayrım, doğrulanmamış bir jeoit değerinin sessizce bilimsel gerçek gibi
 kullanılmasını önler.
