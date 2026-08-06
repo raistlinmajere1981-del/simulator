@@ -207,8 +207,22 @@ Durum: tamamlandı
 - Saf uygulama testleri ve uçtan uca Electron derlemesi
 - Uygulama sürümü `0.9.1`
 
+## Aşama 3.9 — Profil noktalarını grafik üzerinde sürükleme
+
+Durum: tamamlandı
+
+- Ara noktaların SVG profil grafiğinde pointer ile sürüklenmesi
+- Yatay hareketten rota yüzdesi üretimi
+- Düşey hareketten zemin yüksekliği üretimi
+- Komşu noktaları geçmeyi engelleyen dinamik sınırlar
+- Başlangıç ve bitiş uçlarının sabit kalması
+- Dokunmatik pointer desteği ve pointer capture
+- Aynı manuel profil doğrulama kurallarının kullanılması
+- İçe aktarılan kaynakta otomatik değişiklik işareti
+- Saf koordinat dönüşümü ve sınır testleri
+- Uygulama sürümü `0.9.2`
+
 ## Sonraki gerçek arazi işleri
-- Noktaları grafik üzerinde sürükleme
 - Sayısal yükseklik modeli entegrasyonu
 - Görüş hattı boyunca DEM örnekleme
 - Veri kaynağı ve çözünürlük izlenebilirliği

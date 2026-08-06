@@ -103,6 +103,13 @@ Arayüz:
 
 Nokta ekleme, düzenleme veya silme işlemi deney durumunu değiştirir ve küre ile düzlem hesaplarını canlı olarak yeniden çalıştırır.
 
+## Grafik üzerinde düzenleme
+
+Manuel ara noktalar profil grafiğindeki işaretlerinden sürüklenebilir. Yatay hareket
+rota yüzdesini, düşey hareket zemin yüksekliğini değiştirir. Noktalar komşularını
+geçemez; başlangıç ve bitiş uçları sürüklenemez. Her hareket aynı manuel profil
+doğrulamasından geçer ve içe aktarılmış bir kaynağı değiştirilmiş olarak işaretler.
+
 ## Görüş hattı açıklığı
 
 Her profil örneğinde:
@@ -181,8 +188,6 @@ HTML raporu bütün ara noktaları sıra numarası, yüzde konumu, gerçek rota 
 
 Mevcut sürüm şunları içermez:
 
-- CSV veya GeoJSON profil içe aktarma,
-- profil noktalarını grafik üzerinde sürükleyerek düzenleme,
 - çevrimiçi DEM indirme,
 - jeoit modeliyle datum dönüşümü,
 - su yüzeyi, dalga ve gelgit zaman modeli,
