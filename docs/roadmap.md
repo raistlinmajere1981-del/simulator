@@ -222,8 +222,22 @@ Durum: tamamlandı
 - Saf koordinat dönüşümü ve sınır testleri
 - Uygulama sürümü `0.9.2`
 
+## Aşama 3.10 — ESRI ASCII DEM ayrıştırma ve örnekleme çekirdeği
+
+Durum: tamamlandı
+
+- ESRI ASCII Grid başlıklarının sıra bağımsız ayrıştırılması
+- Köşe ve hücre merkezi başlangıç tanımları
+- Kuzeyden güneye veri satırı yönünün doğru ele alınması
+- En yakın hücre ve iki doğrusal örnekleme
+- Kapsam dışı ve NODATA hücrelerinde açık boş sonuç
+- WGS84 coğrafi derece kapsam doğrulaması
+- 4.000.000 hücre güvenlik sınırı
+- Saf parser ve örnekleme testleri
+- Uygulama sürümü `0.9.3`
+
 ## Sonraki gerçek arazi işleri
-- Sayısal yükseklik modeli entegrasyonu
+- Sayısal yükseklik modeli dosya akışı
 - Görüş hattı boyunca DEM örnekleme
 - Veri kaynağı ve çözünürlük izlenebilirliği
 - Jeoit dönüşümü
