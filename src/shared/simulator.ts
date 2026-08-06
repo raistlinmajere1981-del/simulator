@@ -3,6 +3,8 @@ import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 
 export type DistanceSource = 'manual' | 'coordinates';
 export type TerrainMode = 'off' | 'manual-three-point' | 'manual-points';
+export type CsvTerrainDistanceUnit = 'percent' | 'm' | 'km';
+export type CsvTerrainDelimiter = 'comma' | 'semicolon' | 'tab';
 
 export interface SimulatorInputs {
   observerHeightM: number;
@@ -70,8 +72,8 @@ export interface SavedExperiment {
   updatedAtIso: string;
   inputs: SimulatorInputs;
   /**
-   * Ordered interior terrain points. Optional in the TypeScript transition so
-   * v3-era UI code can still save; storage normalization always materializes it.
+   * Ordered interior terrain points. Endpoints are derived from the observer
+   * and target ground elevations.
    */
   manualTerrainPoints?: ManualTerrainPoint[];
   geodesic?: SavedGeodesicCalculation;
@@ -91,6 +93,28 @@ export interface ImportExperimentResult extends FileOperationResult {
   sourceVersion?: number;
 }
 
+export interface TerrainProfileImportContext {
+  routeDistanceM: number;
+  observerGroundElevationM: number;
+  targetGroundElevationM: number;
+}
+
+export interface ImportedTerrainProfile {
+  fileName: string;
+  delimiter: CsvTerrainDelimiter;
+  distanceUnit: CsvTerrainDistanceUnit;
+  rowCount: number;
+  sourceDistanceM: number | null;
+  observerEndpointElevationM: number;
+  targetEndpointElevationM: number;
+  points: ManualTerrainPoint[];
+  warnings: string[];
+}
+
+export interface ImportTerrainProfileResult extends FileOperationResult {
+  profile?: ImportedTerrainProfile;
+}
+
 export interface SimulatorDesktopApi {
   version: string;
   platform: string;
@@ -100,4 +124,7 @@ export interface SimulatorDesktopApi {
   exportExperiment(id: string): Promise<FileOperationResult>;
   importExperiment(): Promise<ImportExperimentResult>;
   exportExperimentReport(id: string): Promise<FileOperationResult>;
+  importTerrainProfile(
+    context: TerrainProfileImportContext
+  ): Promise<ImportTerrainProfileResult>;
 }
