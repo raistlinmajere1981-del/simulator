@@ -22,16 +22,16 @@ import {
 } from '../simulation/manual-terrain-profile';
 
 export const PORTABLE_EXPERIMENT_SCHEMA = 'geometric-observation-laboratory/portable-experiment';
-export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 5;
+export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 6;
 export const LOCAL_EXPERIMENT_STORE_SCHEMA = 'geometric-observation-laboratory/local-experiment-store';
-export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 5;
+export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 6;
 
 export interface PortableApplicationInfo {
   name: 'Geometrik Gözlem Laboratuvarı';
   version: string;
 }
 
-export interface PortableExperimentFileV5 {
+export interface PortableExperimentFileV6 {
   schema: typeof PORTABLE_EXPERIMENT_SCHEMA;
   schemaVersion: typeof PORTABLE_EXPERIMENT_SCHEMA_VERSION;
   exportedAtIso: string;
@@ -39,7 +39,7 @@ export interface PortableExperimentFileV5 {
   experiment: SavedExperiment;
 }
 
-export interface LocalExperimentStoreV5 {
+export interface LocalExperimentStoreV6 {
   schema: typeof LOCAL_EXPERIMENT_STORE_SCHEMA;
   schemaVersion: typeof LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION;
   updatedAtIso: string;
@@ -53,7 +53,7 @@ export interface ParsedPortableExperiment {
 }
 
 export interface ParsedLocalExperimentStore {
-  store: LocalExperimentStoreV5;
+  store: LocalExperimentStoreV6;
   migrated: boolean;
   ignoredRecordCount: number;
 }
@@ -127,17 +127,12 @@ function parseManualTerrainPoints(value: unknown): ManualTerrainPoint[] | null {
 }
 
 function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null {
-  if (!isRecord(value) || value.kind !== 'csv' ||
+  if (!isRecord(value) ||
     !isNonEmptyString(value.fileName) || !isIsoDate(value.importedAtIso) ||
-    !isCsvTerrainDelimiter(value.delimiter) ||
-    !isCsvTerrainDistanceUnit(value.distanceUnit) ||
-    !Number.isInteger(value.rowCount) || !inRange(value.rowCount, 2, 2_002) ||
     !isFiniteNumber(value.observerEndpointElevationM) ||
     !isFiniteNumber(value.targetEndpointElevationM) ||
     typeof value.appliedObserverEndpoint !== 'boolean' ||
     typeof value.appliedTargetEndpoint !== 'boolean' ||
-    !isNonEmptyString(value.distanceColumnHeader) ||
-    !isNonEmptyString(value.elevationColumnHeader) ||
     typeof value.modifiedAfterImport !== 'boolean') {
     return null;
   }
@@ -146,23 +141,64 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
       value.sourceDistanceM > 20_000_000)) {
     return null;
   }
-
-  return {
-    kind: 'csv',
+  const common = {
     fileName: value.fileName.trim(),
     importedAtIso: value.importedAtIso,
-    delimiter: value.delimiter,
-    distanceUnit: value.distanceUnit,
     sourceDistanceM: value.sourceDistanceM as number | null,
-    rowCount: value.rowCount as number,
     observerEndpointElevationM: value.observerEndpointElevationM,
     targetEndpointElevationM: value.targetEndpointElevationM,
     appliedObserverEndpoint: value.appliedObserverEndpoint,
     appliedTargetEndpoint: value.appliedTargetEndpoint,
-    distanceColumnHeader: value.distanceColumnHeader.trim(),
-    elevationColumnHeader: value.elevationColumnHeader.trim(),
+    appliedRouteDistance: value.appliedRouteDistance === true,
     modifiedAfterImport: value.modifiedAfterImport
   };
+
+  if (value.kind === 'csv') {
+    if (!isCsvTerrainDelimiter(value.delimiter) ||
+      !isCsvTerrainDistanceUnit(value.distanceUnit) ||
+      !Number.isInteger(value.rowCount) || !inRange(value.rowCount, 2, 2_002) ||
+      !isNonEmptyString(value.distanceColumnHeader) ||
+      !isNonEmptyString(value.elevationColumnHeader)) {
+      return null;
+    }
+    return {
+      ...common,
+      kind: 'csv',
+      delimiter: value.delimiter,
+      distanceUnit: value.distanceUnit,
+      rowCount: value.rowCount as number,
+      distanceColumnHeader: value.distanceColumnHeader.trim(),
+      elevationColumnHeader: value.elevationColumnHeader.trim()
+    };
+  }
+
+  if (value.kind === 'geojson') {
+    if (value.geometryType !== 'LineString' ||
+      !Number.isInteger(value.coordinateCount) ||
+      !inRange(value.coordinateCount, 2, 2_002) ||
+      !isFiniteNumber(value.sourceDistanceM) || value.sourceDistanceM <= 0 ||
+      value.elevationSource !== 'coordinate-z' ||
+      !inRange(value.startLongitudeDeg, -180, 180) ||
+      !inRange(value.startLatitudeDeg, -90, 90) ||
+      !inRange(value.endLongitudeDeg, -180, 180) ||
+      !inRange(value.endLatitudeDeg, -90, 90)) {
+      return null;
+    }
+    return {
+      ...common,
+      kind: 'geojson',
+      sourceDistanceM: value.sourceDistanceM,
+      geometryType: 'LineString',
+      coordinateCount: value.coordinateCount as number,
+      startLongitudeDeg: value.startLongitudeDeg,
+      startLatitudeDeg: value.startLatitudeDeg,
+      endLongitudeDeg: value.endLongitudeDeg,
+      endLatitudeDeg: value.endLatitudeDeg,
+      elevationSource: 'coordinate-z'
+    };
+  }
+
+  return null;
 }
 
 function parseSimulatorInputs(value: unknown, allowLegacyFields: boolean): SimulatorInputs | null {
@@ -362,7 +398,7 @@ export function createPortableExperimentFile(
   experiment: SavedExperiment,
   applicationVersion: string,
   exportedAtIso = new Date().toISOString()
-): PortableExperimentFileV5 {
+): PortableExperimentFileV6 {
   return {
     schema: PORTABLE_EXPERIMENT_SCHEMA,
     schemaVersion: PORTABLE_EXPERIMENT_SCHEMA_VERSION,
@@ -384,7 +420,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
-    version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
+    version !== 5 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Deney dosyası şema sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
@@ -403,7 +439,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 export function createLocalExperimentStore(
   experiments: SavedExperiment[],
   updatedAtIso = new Date().toISOString()
-): LocalExperimentStoreV5 {
+): LocalExperimentStoreV6 {
   return {
     schema: LOCAL_EXPERIMENT_STORE_SCHEMA,
     schemaVersion: LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
@@ -429,7 +465,7 @@ export function parseLocalExperimentStore(value: unknown): ParsedLocalExperiment
   }
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
-    version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
+    version !== 5 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Yerel deney deposu sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );

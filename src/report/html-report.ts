@@ -11,6 +11,7 @@ import type {
   TerrainProfileSource
 } from '../shared/simulator';
 import type { VerticalDatumKind } from '../shared/terrain';
+import { PORTABLE_EXPERIMENT_SCHEMA_VERSION } from '../shared/portable';
 import {
   migrateLegacyManualTerrainPoint,
   sortManualTerrainPoints
@@ -205,25 +206,35 @@ function terrainSourceSection(source: TerrainProfileSource | undefined): string 
   const stateLabel = source.modifiedAfterImport
     ? 'İçe aktarımdan sonra düzenlendi'
     : 'Kayıt, içe aktarılan kaynakla eşleşiyor';
+  const commonRows = `
+    <tr><td>Dosya adı</td><td>${escapeHtml(source.fileName)}</td></tr>
+    <tr><td>İçe aktarma zamanı</td><td>${formatDate(source.importedAtIso)}</td></tr>
+    <tr><td>Kaynak rota</td><td>${sourceRoute} · Deney mesafesine uygulandı: ${yesNo(source.appliedRouteDistance === true)}</td></tr>
+    <tr><td>Kaynak başlangıç yüksekliği</td><td>${inputNumberFormatter.format(source.observerEndpointElevationM)} m · Deneye uygulandı: ${yesNo(source.appliedObserverEndpoint)}</td></tr>
+    <tr><td>Kaynak bitiş yüksekliği</td><td>${inputNumberFormatter.format(source.targetEndpointElevationM)} m · Deneye uygulandı: ${yesNo(source.appliedTargetEndpoint)}</td></tr>`;
+
+  const detailRows = source.kind === 'csv' ? `
+    <tr><td>Kaynak türü</td><td>CSV / TSV</td></tr>
+    <tr><td>Ayırıcı</td><td>${escapeHtml(delimiterLabels[source.delimiter])}</td></tr>
+    <tr><td>Mesafe birimi</td><td>${escapeHtml(distanceUnitLabels[source.distanceUnit])}</td></tr>
+    <tr><td>Kaynak satır sayısı</td><td>${source.rowCount}</td></tr>
+    <tr><td>Mesafe sütunu</td><td>${escapeHtml(source.distanceColumnHeader)}</td></tr>
+    <tr><td>Yükseklik sütunu</td><td>${escapeHtml(source.elevationColumnHeader)}</td></tr>` : `
+    <tr><td>Kaynak türü</td><td>GeoJSON</td></tr>
+    <tr><td>Geometri</td><td>${escapeHtml(source.geometryType)}</td></tr>
+    <tr><td>Koordinat sayısı</td><td>${source.coordinateCount}</td></tr>
+    <tr><td>Koordinat referansı</td><td>WGS84 boylam / enlem</td></tr>
+    <tr><td>Yükseklik kaynağı</td><td>Koordinatların üçüncü bileşeni (Z)</td></tr>
+    <tr><td>Başlangıç koordinatı</td><td>${coordinateFormatter.format(source.startLatitudeDeg)}°, ${coordinateFormatter.format(source.startLongitudeDeg)}°</td></tr>
+    <tr><td>Bitiş koordinatı</td><td>${coordinateFormatter.format(source.endLatitudeDeg)}°, ${coordinateFormatter.format(source.endLongitudeDeg)}°</td></tr>`;
 
   return `
     <div class="source-card ${stateClass}">
       <div class="source-card-heading">
-        <strong>CSV / TSV kaynak kaydı</strong>
+        <strong>${source.kind === 'csv' ? 'CSV / TSV kaynak kaydı' : 'GeoJSON kaynak kaydı'}</strong>
         <span>${escapeHtml(stateLabel)}</span>
       </div>
-      <table><tbody>
-        <tr><td>Dosya adı</td><td>${escapeHtml(source.fileName)}</td></tr>
-        <tr><td>İçe aktarma zamanı</td><td>${formatDate(source.importedAtIso)}</td></tr>
-        <tr><td>Ayırıcı</td><td>${escapeHtml(delimiterLabels[source.delimiter])}</td></tr>
-        <tr><td>Mesafe birimi</td><td>${escapeHtml(distanceUnitLabels[source.distanceUnit])}</td></tr>
-        <tr><td>Kaynak rota</td><td>${sourceRoute}</td></tr>
-        <tr><td>Kaynak satır sayısı</td><td>${source.rowCount}</td></tr>
-        <tr><td>Mesafe sütunu</td><td>${escapeHtml(source.distanceColumnHeader)}</td></tr>
-        <tr><td>Kot sütunu</td><td>${escapeHtml(source.elevationColumnHeader)}</td></tr>
-        <tr><td>CSV gözlemci uç kotu</td><td>${inputNumberFormatter.format(source.observerEndpointElevationM)} m · Deneye uygulandı: ${yesNo(source.appliedObserverEndpoint)}</td></tr>
-        <tr><td>CSV hedef uç kotu</td><td>${inputNumberFormatter.format(source.targetEndpointElevationM)} m · Deneye uygulandı: ${yesNo(source.appliedTargetEndpoint)}</td></tr>
-      </tbody></table>
+      <table><tbody>${commonRows}${detailRows}</tbody></table>
     </div>`;
 }
 
@@ -255,7 +266,7 @@ function verticalTerrainSection(experiment: SavedExperiment, effectiveDistanceKm
   return `
     <section class="model-section vertical-section">
       <header class="model-heading">
-        <div><h2>Düşey Referans ve Arazi</h2><span>Taşınabilir deney şeması v5</span></div>
+        <div><h2>Düşey Referans ve Arazi</h2><span>Taşınabilir deney şeması v${PORTABLE_EXPERIMENT_SCHEMA_VERSION}</span></div>
         <strong class="status ${terrainEnabled ? 'status-compatible' : 'status-indeterminate'}">${terrainEnabled ? `${manualPoints.length} ara noktalı manuel profil` : 'Profil kapalı'}</strong>
       </header>
       <p>Kotlar ortak bir düşey datumda tutulur. Datum ofseti bütün zemin ve arazi örneklerine aynı yönde uygulanır.</p>

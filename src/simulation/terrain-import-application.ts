@@ -1,6 +1,6 @@
 import type {
-  ImportedTerrainProfile,
-  SimulatorInputs
+  SimulatorInputs,
+  TerrainProfileImport
 } from '../shared/simulator';
 
 export const MAX_IMPORTED_ROUTE_DISTANCE_KM = 20_000;
@@ -12,7 +12,7 @@ export interface TerrainProfileApplicationOptions {
 }
 
 export function getApplicableImportedRouteDistanceKm(
-  profile: ImportedTerrainProfile
+  profile: TerrainProfileImport
 ): number | null {
   if (profile.sourceDistanceM === null) return null;
   const distanceKm = profile.sourceDistanceM / 1_000;
@@ -23,7 +23,7 @@ export function getApplicableImportedRouteDistanceKm(
 
 export function applyImportedTerrainInputs(
   current: SimulatorInputs,
-  profile: ImportedTerrainProfile,
+  profile: TerrainProfileImport,
   options: TerrainProfileApplicationOptions
 ): SimulatorInputs {
   const importedDistanceKm = options.applyRouteDistance &&

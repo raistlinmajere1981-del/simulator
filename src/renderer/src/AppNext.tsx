@@ -9,7 +9,8 @@ import type {
 import {
   DEFAULT_SIMULATOR_INPUTS,
   type DistanceSource,
-  type ImportedTerrainProfile,
+  type ImportedGeoJsonTerrainProfile,
+  type TerrainProfileImport,
   type SavedExperiment,
   type SimulatorInputs,
   type TerrainMode,
@@ -498,6 +499,18 @@ function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.El
   );
 }
 
+function isImportedGeoJsonTerrainProfile(
+  profile: TerrainProfileImport
+): profile is ImportedGeoJsonTerrainProfile {
+  return isImportedGeoJsonTerrainProfile(profile);
+}
+
+function isCsvTerrainProfileSource(
+  source: TerrainProfileSource
+): source is Extract<TerrainProfileSource, { kind: 'csv' }> {
+  return source.kind === 'csv';
+}
+
 function TerrainPanel({
   inputs,
   points,
@@ -522,7 +535,7 @@ function TerrainPanel({
   onNumberChange(key: NumericInputKey, value: number): void;
   onPointsChange(points: ManualTerrainPoint[]): void;
   onApplyImport(
-    profile: ImportedTerrainProfile,
+    profile: TerrainProfileImport,
     options: TerrainProfileImportOptions
   ): void;
 }): React.JSX.Element {
@@ -565,8 +578,12 @@ function TerrainPanel({
       {source && (
         <div className={`terrain-source-strip ${source.modifiedAfterImport ? 'modified' : ''}`}>
           <div>
-            <strong>CSV kaynağı: {source.fileName}</strong>
-            <span>{source.distanceColumnHeader} → mesafe · {source.elevationColumnHeader} → kot · {source.rowCount} satır</span>
+            <strong>{isCsvTerrainProfileSource(source) ? 'CSV kaynağı' : 'GeoJSON kaynağı'}: {source.fileName}</strong>
+            {isCsvTerrainProfileSource(source) ? (
+              <span>{source.distanceColumnHeader} → mesafe · {source.elevationColumnHeader} → yükseklik · {source.rowCount} satır</span>
+            ) : (
+              <span>{source.coordinateCount} koordinat · WGS84 LineString · Z → yükseklik</span>
+            )}
           </div>
           <span>{source.modifiedAfterImport ? 'İÇE AKTARIMDAN SONRA DÜZENLENDİ' : 'KAYNAKLA EŞLEŞİYOR'}</span>
         </div>
@@ -807,25 +824,46 @@ export function AppNext(): React.JSX.Element {
   };
 
   const applyTerrainImport = (
-    profile: ImportedTerrainProfile,
+    profile: TerrainProfileImport,
     options: TerrainProfileImportOptions
   ): void => {
-    const source: TerrainProfileSource = {
-      kind: 'csv',
+    const appliedRouteDistance = Boolean(
+      options.applyRouteDistance &&
+      inputs.distanceSource === 'manual' &&
+      profile.sourceDistanceM !== null
+    );
+    const commonSource = {
       fileName: profile.fileName,
       importedAtIso: new Date().toISOString(),
-      delimiter: profile.delimiter,
-      distanceUnit: profile.distanceUnit,
       sourceDistanceM: profile.sourceDistanceM,
-      rowCount: profile.rowCount,
       observerEndpointElevationM: profile.observerEndpointElevationM,
       targetEndpointElevationM: profile.targetEndpointElevationM,
       appliedObserverEndpoint: options.applyObserverEndpoint,
       appliedTargetEndpoint: options.applyTargetEndpoint,
-      distanceColumnHeader: profile.distanceColumnHeader,
-      elevationColumnHeader: profile.elevationColumnHeader,
+      appliedRouteDistance,
       modifiedAfterImport: false
     };
+    const source: TerrainProfileSource = isImportedGeoJsonTerrainProfile(profile)
+      ? {
+          ...commonSource,
+          kind: 'geojson',
+          geometryType: profile.geometryType,
+          coordinateCount: profile.coordinateCount,
+          startLongitudeDeg: profile.startLongitudeDeg,
+          startLatitudeDeg: profile.startLatitudeDeg,
+          endLongitudeDeg: profile.endLongitudeDeg,
+          endLatitudeDeg: profile.endLatitudeDeg,
+          elevationSource: profile.elevationSource
+        }
+      : {
+          ...commonSource,
+          kind: 'csv',
+          delimiter: profile.delimiter,
+          distanceUnit: profile.distanceUnit,
+          rowCount: profile.rowCount,
+          distanceColumnHeader: profile.distanceColumnHeader,
+          elevationColumnHeader: profile.elevationColumnHeader
+        };
 
     setManualTerrainPoints(profile.points);
     setInputs((current) => applyImportedTerrainInputs(current, profile, options));

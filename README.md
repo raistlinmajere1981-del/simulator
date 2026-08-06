@@ -147,3 +147,10 @@ Aynı kontroller pull request'lerde GitHub Actions üzerinde otomatik çalışı
 ## Durum
 
 Hedef görünürlüğü motoru, yerel kayıtlar, taşınabilir dosyalar, çevrimdışı raporlama, WGS84 koordinat girdileri, düşey datum, çok noktalı manuel arazi profili ve temel CSV içe aktarma `main` dalındadır. CSV kaynak kaydı, uç kotu seçenekleri ve sütun eşleme sürümü `agent/csv-profile-provenance-mapping` dalında otomatik ve Linux/KDE yerel doğrulamasını beklemektedir.
+
+
+### GeoJSON arazi profili
+
+WGS84 `[boylam, enlem, yükseklik]` koordinatları taşıyan tek bir 3B LineString,
+gerçek jeodezik parça mesafeleriyle arazi profiline dönüştürülebilir. Örnek dosya:
+`examples/terrain-profile-wgs84.geojson`.
