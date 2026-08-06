@@ -2,19 +2,19 @@ import { useMemo, useState } from 'react';
 import type { ManualTerrainPoint, VerticalDatumKind } from '../../shared/terrain';
 import type { GeoidHeightDatum } from '../../simulation/geoid-height-conversion';
 import { convertGeoidTerrainProfile } from '../../simulation/geoid-profile-conversion';
+import {
+  createGeoidConversionApplication,
+  type GeoidConversionApplication
+} from '../../simulation/geoid-conversion-provenance';
 import './geoid-conversion-control.css';
 
 interface GeoidConversionControlProps {
+  experimentId: string;
   currentDatum: VerticalDatumKind;
   observerGroundElevationM: number;
   targetGroundElevationM: number;
   points: ManualTerrainPoint[];
-  onApply(
-    targetDatum: GeoidHeightDatum,
-    observerGroundElevationM: number,
-    targetGroundElevationM: number,
-    points: ManualTerrainPoint[]
-  ): void;
+  onApply(application: GeoidConversionApplication): void;
 }
 
 const numberFormatter = new Intl.NumberFormat('tr-TR', {
@@ -34,6 +34,7 @@ function isConvertibleDatum(
 }
 
 export function GeoidConversionControl({
+  experimentId,
   currentDatum,
   observerGroundElevationM,
   targetGroundElevationM,
@@ -44,6 +45,8 @@ export function GeoidConversionControl({
   const [geoidUncertaintyM, setGeoidUncertaintyM] = useState(0);
   const [includeUncertainty, setIncludeUncertainty] = useState(false);
   const [sourceLabel, setSourceLabel] = useState('');
+  const [sourceModelVersion, setSourceModelVersion] = useState('');
+  const [sourceEpoch, setSourceEpoch] = useState('');
   const [message, setMessage] = useState('');
   const targetDatum: GeoidHeightDatum | null = isConvertibleDatum(currentDatum)
     ? currentDatum === 'ellipsoidal-wgs84'
@@ -135,13 +138,33 @@ export function GeoidConversionControl({
           <span>Değerin kaynağı / model etiketi</span>
           <input
             maxLength={120}
-            placeholder="Örn. EGM2008, saha çözümü veya kurum verisi"
+            placeholder="Örn. EGM2008 veya kurum grid servisi"
             type="text"
             value={sourceLabel}
             onChange={(event) => {
               setSourceLabel(event.currentTarget.value);
               setMessage('');
             }}
+          />
+        </label>
+        <label>
+          <span>Model sürümü / çözünürlüğü</span>
+          <input
+            maxLength={80}
+            placeholder="İsteğe bağlı"
+            type="text"
+            value={sourceModelVersion}
+            onChange={(event) => setSourceModelVersion(event.currentTarget.value)}
+          />
+        </label>
+        <label>
+          <span>Model epoku</span>
+          <input
+            maxLength={80}
+            placeholder="İsteğe bağlı, örn. 2008.0"
+            type="text"
+            value={sourceEpoch}
+            onChange={(event) => setSourceEpoch(event.currentTarget.value)}
           />
         </label>
         <label className="geoid-uncertainty-toggle">
@@ -194,8 +217,8 @@ export function GeoidConversionControl({
       <p>
         Aynı N değeri gözlemci, hedef ve bütün arazi örneklerine uygulanır. Değerin
         iki uç ve rota boyunca geçerli olduğunu doğrulayın. Otomatik jeoit modeli
-        sorgulanmaz; mevcut datum / gelgit ofseti ayrı tutulur. Kaynak etiketi bu
-        sürümde henüz kalıcı deney provenansına yazılmaz.
+        sorgulanmaz; mevcut datum / gelgit ofseti ayrı tutulur. Kaynak, sürüm,
+        epok, N, belirsizlik, yön ve hesap izi deney kaydında korunur.
       </p>
       <div className="geoid-conversion-actions">
         {message && <span role="status">{message}</span>}
@@ -204,16 +227,33 @@ export function GeoidConversionControl({
           type="button"
           onClick={() => {
             if (!targetDatum || preview?.status !== 'success') return;
-            onApply(
-              targetDatum,
-              preview.result.observerGroundElevationM,
-              preview.result.targetGroundElevationM,
-              preview.result.points
-            );
-            setMessage(`Dönüşüm uygulandı · ${sourceLabel.trim()}`);
+            try {
+              const application = createGeoidConversionApplication({
+                experimentId,
+                sourceLabel,
+                ...(sourceModelVersion.trim().length === 0
+                  ? {}
+                  : { sourceModelVersion }),
+                ...(sourceEpoch.trim().length === 0 ? {} : { sourceEpoch }),
+                appliedAtIso: new Date().toISOString(),
+                geoidUndulationM,
+                ...(includeUncertainty
+                  ? { geoidUndulationUncertaintyM: geoidUncertaintyM }
+                  : {}),
+                result: preview.result
+              });
+              onApply(application);
+              setMessage(`Dönüşüm ve provenans kaydedildi · ${sourceLabel.trim()}`);
+            } catch (error) {
+              setMessage(
+                error instanceof Error
+                  ? error.message
+                  : 'Jeoit provenansı oluşturulamadı.'
+              );
+            }
           }}
         >
-          Bütün kotları dönüştür ve datumu değiştir
+          Bütün kotları dönüştür ve provenansı kaydet
         </button>
       </div>
     </section>

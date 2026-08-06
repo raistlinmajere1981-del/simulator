@@ -61,10 +61,34 @@ varsa dönüşüm kaynakla eşleşme durumunu `içe aktarımdan sonra düzenlend
 işaretler. Mevcut datum / gelgit ofseti jeoit dönüşümüne katılmaz; ayrı bir deney
 düzeltmesi olarak korunur.
 
-Kullanıcı dönüşümden önce bir kaynak veya model etiketi girmek zorundadır. Bu
-`1.0.6` aşamasında etiket işlem bildirimi ve bilinçli onay için kullanılır; kalıcı
-model adı, sürüm, epok, `N`, belirsizlik ve uygulama zamanı provenansı bir sonraki
-sürümlü kayıt şeması aşamasında eklenecektir.
+## Kalıcı provenans
+
+Kullanıcı dönüşümden önce kaynak/model etiketi girmek zorundadır. Model sürümü
+veya çözünürlüğü, model epoku ve ondülasyon belirsizliği isteğe bağlıdır; eksik
+alanlar sessizce tahmin edilmez ve kayıt uyarılarına yazılır.
+
+Uygulama `1.0.7` ile her dönüşümü ayrı, sürümlü bir `ModelPrediction` hesap kaydı
+olarak saklar. Kayıt şu bilgileri içerir:
+
+- kaynak/model etiketi,
+- isteğe bağlı model sürümü veya çözünürlüğü,
+- isteğe bağlı model epoku,
+- uygulama zamanı,
+- kaynak ve hedef datum,
+- `N` değeri ve varsa belirsizliği,
+- bütün kotlara uygulanan ortak düzeltme,
+- dönüştürülen uç ve arazi kotu sayısı,
+- formüller, sayısal yerine koymalar, varsayımlar, uyarılar ve iz kimliği.
+
+Bu kayıt mevcut taşınabilir deney şemasının model tahmini sözleşmesini kullandığı
+için yeni şema sürümü gerekmez. Yerel kayıt, `.ggl.json` dışa/içe aktarma ve HTML
+raporu aynı alanları mevcut doğrulama ve klonlama kurallarıyla korur. Eski şema-7
+deneylerinde bu hesap kaydı bulunmaz; dosyalar değiştirilmeden açılmaya devam eder.
+
+Dönüşümden sonra datum veya arazi kotları elle değiştirilirse provenans silinmez;
+tarihsel işlemi korumak için durum `belirsiz` yapılır ve sonradan değişiklik uyarısı
+eklenir. Yeni bir dış arazi profili uygulandığında önceki jeoit dönüşüm kaydı yeni
+profil için geçerli olmayacağından çalışma durumundan kaldırılır.
 
 ## Bilinçli sınırlar
 
