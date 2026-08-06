@@ -49,6 +49,25 @@ Dosya içeriği renderer sürecine gönderilmez. Ana süreç yalnız oluşturula
 noktalarını, grid çözünürlüğünü, kapsamı, örnekleme yöntemini ve kaynak dosya
 adını aktarır. Kaynak bilgileri deney kaydında ve HTML raporunda korunur.
 
+## Görüş hattı önizlemesi
+
+DEM dosyası arazi profiline uygulanmadan önce bütün iç rota örnekleri mevcut
+küresel görüş hattına karşı sınanır. Önizleme şu deney girdilerini canlı kullanır:
+
+- gözlemci ve hedef yüksekliği,
+- mevcut veya dosyadan seçilmiş başlangıç ve bitiş zemin kotları,
+- düşey datum / gelgit ofseti,
+- standart kırılma seçimi ve kırılma katsayısı.
+
+Kart; minimum açıklığı, kritik rota konumunu, kritik arazi ve görüş hattı kotlarını,
+görüş hattını kesen örnek sayısını ve 5 m içinde kalan yakın açıklık örneklerini
+gösterir. Standart kırılma seçiliyse aynı etkin yarıçap yaklaşımı kullanılır.
+
+Bu sonuç içe aktarma kararına yardımcı olan canlı bir önizlemedir; deney kaydına
+sabit bir sonuç olarak yazılmaz. Profil uygulandıktan sonra model sonuçları güncel
+girdilerle görüş hattı açıklığını yeniden hesaplar. Önizleme DEM'in düşey datumunu
+veya mutlak doğruluğunu doğrulamaz.
+
 ## Örnekleme tanısı
 
 Her DEM profili için aşağıdaki ölçümler üretilir:
