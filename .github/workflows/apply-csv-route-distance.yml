@@ -1,0 +1,324 @@
+name: Apply CSV route distance stage
+
+on:
+  push:
+    branches:
+      - agent/csv-route-distance-adoption
+    paths:
+      - .github/workflows/apply-csv-route-distance.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: contains(github.event.head_commit.message, '[apply-csv-route-distance]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/csv-route-distance-adoption
+          fetch-depth: 0
+
+      - name: Apply implementation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f'{path}: expected one match, found {count}')
+              file.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          helper = '''import type {
+            ImportedTerrainProfile,
+            SimulatorInputs
+          } from '../shared/simulator';
+
+          export const MAX_IMPORTED_ROUTE_DISTANCE_KM = 20_000;
+
+          export interface TerrainProfileApplicationOptions {
+            applyObserverEndpoint: boolean;
+            applyTargetEndpoint: boolean;
+            applyRouteDistance: boolean;
+          }
+
+          export function getApplicableImportedRouteDistanceKm(
+            profile: ImportedTerrainProfile
+          ): number | null {
+            if (profile.sourceDistanceM === null) return null;
+            const distanceKm = profile.sourceDistanceM / 1_000;
+            if (!Number.isFinite(distanceKm) || distanceKm <= 0) return null;
+            if (distanceKm > MAX_IMPORTED_ROUTE_DISTANCE_KM) return null;
+            return distanceKm;
+          }
+
+          export function applyImportedTerrainInputs(
+            current: SimulatorInputs,
+            profile: ImportedTerrainProfile,
+            options: TerrainProfileApplicationOptions
+          ): SimulatorInputs {
+            const importedDistanceKm = options.applyRouteDistance &&
+              current.distanceSource === 'manual'
+              ? getApplicableImportedRouteDistanceKm(profile)
+              : null;
+
+            return {
+              ...current,
+              terrainMode: 'manual-points',
+              surfaceDistanceKm: importedDistanceKm ?? current.surfaceDistanceKm,
+              observerGroundElevationM: options.applyObserverEndpoint
+                ? profile.observerEndpointElevationM
+                : current.observerGroundElevationM,
+              targetGroundElevationM: options.applyTargetEndpoint
+                ? profile.targetEndpointElevationM
+                : current.targetGroundElevationM
+            };
+          }
+          '''
+          Path('src/simulation/terrain-import-application.ts').write_text(helper, encoding='utf-8')
+
+          test = '''import { describe, expect, it } from 'vitest';
+          import {
+            applyImportedTerrainInputs,
+            getApplicableImportedRouteDistanceKm
+          } from '../src/simulation/terrain-import-application';
+          import {
+            DEFAULT_SIMULATOR_INPUTS,
+            type ImportedTerrainProfile
+          } from '../src/shared/simulator';
+
+          const profile: ImportedTerrainProfile = {
+            fileName: 'route.csv',
+            delimiter: 'comma',
+            distanceUnit: 'm',
+            distanceColumnHeader: 'distance_m',
+            elevationColumnHeader: 'elevation_m',
+            rowCount: 3,
+            sourceDistanceM: 10_000,
+            observerEndpointElevationM: 4,
+            targetEndpointElevationM: 5,
+            points: [{ id: 'p1', distancePercent: 50, elevationM: 20 }],
+            warnings: []
+          };
+
+          describe('CSV terrain profile application', () => {
+            it('applies the CSV route distance in manual distance mode when selected', () => {
+              const result = applyImportedTerrainInputs(
+                { ...DEFAULT_SIMULATOR_INPUTS, surfaceDistanceKm: 22.38 },
+                profile,
+                {
+                  applyObserverEndpoint: true,
+                  applyTargetEndpoint: true,
+                  applyRouteDistance: true
+                }
+              );
+
+              expect(result.surfaceDistanceKm).toBe(10);
+              expect(result.observerGroundElevationM).toBe(4);
+              expect(result.targetGroundElevationM).toBe(5);
+              expect(result.terrainMode).toBe('manual-points');
+            });
+
+            it('keeps the current route distance when the option is not selected', () => {
+              const result = applyImportedTerrainInputs(
+                { ...DEFAULT_SIMULATOR_INPUTS, surfaceDistanceKm: 22.38 },
+                profile,
+                {
+                  applyObserverEndpoint: false,
+                  applyTargetEndpoint: false,
+                  applyRouteDistance: false
+                }
+              );
+
+              expect(result.surfaceDistanceKm).toBe(22.38);
+            });
+
+            it('does not override a coordinate-derived route distance', () => {
+              const result = applyImportedTerrainInputs(
+                {
+                  ...DEFAULT_SIMULATOR_INPUTS,
+                  distanceSource: 'coordinates',
+                  surfaceDistanceKm: 22.38
+                },
+                profile,
+                {
+                  applyObserverEndpoint: false,
+                  applyTargetEndpoint: false,
+                  applyRouteDistance: true
+                }
+              );
+
+              expect(result.surfaceDistanceKm).toBe(22.38);
+            });
+
+            it('rejects percentage-only and out-of-range source distances', () => {
+              expect(getApplicableImportedRouteDistanceKm({
+                ...profile,
+                sourceDistanceM: null,
+                distanceUnit: 'percent'
+              })).toBeNull();
+              expect(getApplicableImportedRouteDistanceKm({
+                ...profile,
+                sourceDistanceM: 20_000_001
+              })).toBeNull();
+            });
+          });
+          '''
+          Path('tests/terrain-import-application.test.ts').write_text(test, encoding='utf-8')
+
+          replace_once(
+              'src/renderer/src/MultiPointTerrainEditor.tsx',
+              "import type { ManualTerrainPoint } from '../../shared/terrain';\n",
+              "import type { ManualTerrainPoint } from '../../shared/terrain';\nimport {\n  getApplicableImportedRouteDistanceKm,\n  type TerrainProfileApplicationOptions\n} from '../../simulation/terrain-import-application';\n"
+          )
+          replace_once(
+              'src/renderer/src/MultiPointTerrainEditor.tsx',
+              "export interface TerrainProfileImportOptions {\n  applyObserverEndpoint: boolean;\n  applyTargetEndpoint: boolean;\n}\n",
+              "export type TerrainProfileImportOptions = TerrainProfileApplicationOptions;\n"
+          )
+          replace_once(
+              'src/renderer/src/MultiPointTerrainEditor.tsx',
+              "  routeDistanceKm: number;\n  observerGroundElevationM: number;",
+              "  routeDistanceKm: number;\n  allowRouteDistanceImport: boolean;\n  observerGroundElevationM: number;"
+          )
+          replace_once(
+              'src/renderer/src/MultiPointTerrainEditor.tsx',
+              "  routeDistanceKm,\n  observerGroundElevationM,",
+              "  routeDistanceKm,\n  allowRouteDistanceImport,\n  observerGroundElevationM,"
+          )
+          replace_once(
+              'src/renderer/src/MultiPointTerrainEditor.tsx',
+              "  const [applyObserverEndpoint, setApplyObserverEndpoint] = useState(false);\n  const [applyTargetEndpoint, setApplyTargetEndpoint] = useState(false);",
+              "  const [applyObserverEndpoint, setApplyObserverEndpoint] = useState(false);\n  const [applyTargetEndpoint, setApplyTargetEndpoint] = useState(false);\n  const [applyRouteDistance, setApplyRouteDistance] = useState(false);"
+          )
+          replace_once(
+              'src/renderer/src/MultiPointTerrainEditor.tsx',
+              "  const preview = useMemo(() => previewCoordinates(previewPoints), [previewPoints]);\n  const criticalPercent",
+              "  const preview = useMemo(() => previewCoordinates(previewPoints), [previewPoints]);\n  const pendingSourceDistanceKm = pendingImport\n    ? getApplicableImportedRouteDistanceKm(pendingImport)\n    : null;\n  const criticalPercent"
+          )
+          replace_once(
+              'src/renderer/src/MultiPointTerrainEditor.tsx',
+              "    setApplyObserverEndpoint(false);\n    setApplyTargetEndpoint(false);",
+              "    setApplyObserverEndpoint(false);\n    setApplyTargetEndpoint(false);\n    setApplyRouteDistance(false);"
+          )
+          replace_once(
+              'src/renderer/src/MultiPointTerrainEditor.tsx',
+              "      applyObserverEndpoint,\n      applyTargetEndpoint\n    });",
+              "      applyObserverEndpoint,\n      applyTargetEndpoint,\n      applyRouteDistance\n    });"
+          )
+          replace_once(
+              'src/renderer/src/MultiPointTerrainEditor.tsx',
+              "            Ara noktalar dosyadan alınır. Aşağıdaki iki kutu yalnız başlangıç ve bitiş\n            zemin yüksekliğinin de dosyadan alınmasını sağlar.",
+              "            Ara noktalar dosyadan alınır. Aşağıdaki seçenekler CSV rota uzunluğunun\n            ve başlangıç-bitiş zemin yüksekliğinin deneye aktarılmasını sağlar."
+          )
+          replace_once(
+              'src/renderer/src/MultiPointTerrainEditor.tsx',
+              "          <div className=\"terrain-endpoint-options\">\n            <label title=\"İşaretlenirse üst bölümdeki Gözlemci zemin kotu bu değerle değiştirilir\">",
+              "          <div className=\"terrain-endpoint-options\">\n            {allowRouteDistanceImport && pendingSourceDistanceKm !== null && (\n              <label title=\"İşaretlenirse manuel yüzey mesafesi CSV dosyasının toplam rotasıyla değiştirilir\">\n                <input\n                  checked={applyRouteDistance}\n                  type=\"checkbox\"\n                  onChange={(event) => setApplyRouteDistance(event.currentTarget.checked)}\n                />\n                <span>Deney mesafesini CSV rotasına ayarla: <b>{numberFormatter.format(pendingSourceDistanceKm)} km</b></span>\n              </label>\n            )}\n            <label title=\"İşaretlenirse üst bölümdeki Gözlemci zemin kotu bu değerle değiştirilir\">"
+          )
+
+          replace_once(
+              'src/renderer/src/AppNext.tsx',
+              "import {\n  buildManualTerrainProfile,\n  migrateLegacyManualTerrainPoint\n} from '../../simulation/manual-terrain-profile';\n",
+              "import {\n  buildManualTerrainProfile,\n  migrateLegacyManualTerrainPoint\n} from '../../simulation/manual-terrain-profile';\nimport { applyImportedTerrainInputs } from '../../simulation/terrain-import-application';\n"
+          )
+          replace_once(
+              'src/renderer/src/AppNext.tsx',
+              "  effectiveDistanceKm,\n  criticalDistanceM,\n  onDatumChange,",
+              "  effectiveDistanceKm,\n  criticalDistanceM,\n  allowRouteDistanceImport,\n  onDatumChange,"
+          )
+          replace_once(
+              'src/renderer/src/AppNext.tsx',
+              "  effectiveDistanceKm: number;\n  criticalDistanceM: number | null;\n  onDatumChange",
+              "  effectiveDistanceKm: number;\n  criticalDistanceM: number | null;\n  allowRouteDistanceImport: boolean;\n  onDatumChange"
+          )
+          replace_once(
+              'src/renderer/src/AppNext.tsx',
+              "          routeDistanceKm={effectiveDistanceKm}\n          observerGroundElevationM=",
+              "          routeDistanceKm={effectiveDistanceKm}\n          allowRouteDistanceImport={allowRouteDistanceImport}\n          observerGroundElevationM="
+          )
+          replace_once(
+              'src/renderer/src/AppNext.tsx',
+              "    if (key === 'observerGroundElevationM' || key === 'targetGroundElevationM') {",
+              "    if (key === 'observerGroundElevationM' ||\n      key === 'targetGroundElevationM' ||\n      key === 'surfaceDistanceKm') {"
+          )
+          replace_once(
+              'src/renderer/src/AppNext.tsx',
+              "    setInputs((current) => ({\n      ...current,\n      terrainMode: 'manual-points',\n      observerGroundElevationM: options.applyObserverEndpoint\n        ? profile.observerEndpointElevationM\n        : current.observerGroundElevationM,\n      targetGroundElevationM: options.applyTargetEndpoint\n        ? profile.targetEndpointElevationM\n        : current.targetGroundElevationM\n    }));",
+              "    setInputs((current) => applyImportedTerrainInputs(current, profile, options));"
+          )
+          replace_once(
+              'src/renderer/src/AppNext.tsx',
+              "              onDistanceSourceChange={(distanceSource) => updateInputs((current) => ({ ...current, distanceSource }))}",
+              "              onDistanceSourceChange={(distanceSource) => {\n                markTerrainSourceModified();\n                updateInputs((current) => ({ ...current, distanceSource }));\n              }}"
+          )
+          replace_once(
+              'src/renderer/src/AppNext.tsx',
+              "            effectiveDistanceKm={effectiveDistanceKm}\n            criticalDistanceM={criticalTerrainDistanceM}",
+              "            effectiveDistanceKm={effectiveDistanceKm}\n            criticalDistanceM={criticalTerrainDistanceM}\n            allowRouteDistanceImport={inputs.distanceSource === 'manual'}"
+          )
+
+          package_path = Path('package.json')
+          package = json.loads(package_path.read_text(encoding='utf-8'))
+          package['version'] = '0.8.1'
+          package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          replace_once(
+              'docs/roadmap.md',
+              'Durum: çalışan sürüm tamamlandı, yerel doğrulama bekliyor',
+              'Durum: tamamlandı ve `main` dalına alındı'
+          )
+          replace_once(
+              'docs/roadmap.md',
+              '## Sonraki gerçek arazi işleri\n\n- CSV toplam mesafesini manuel deney mesafesine isteğe bağlı aktarma',
+              '''## Aşama 3.6 — CSV rota mesafesini deneye aktarma
+
+          Durum: tamamlandı
+
+          - Mutlak mesafeli CSV profillerinde kaynak toplam rota uzunluğu
+          - Yalnız manuel mesafe modunda kullanılabilen bağımsız seçim
+          - Varsayılan olarak mevcut deney mesafesini koruma
+          - Seçildiğinde manuel yüzey mesafesini CSV rotasına ayarlama
+          - Koordinat modunda WGS84 mesafesini değiştirmeme
+          - Yüzde tabanlı ve uygulama sınırını aşan profillerde seçeneği göstermeme
+          - Mesafe değiştiğinde CSV kaynağını sonradan düzenlenmiş olarak işaretleme
+          - Saf uygulama fonksiyonu ve sınır testleri
+          - Uygulama sürümü `0.8.1`
+
+          ## Sonraki gerçek arazi işleri'''
+          )
+
+          csv_doc = Path('docs/csv-terrain-profile.md')
+          csv_doc.write_text(csv_doc.read_text(encoding='utf-8') + '''
+
+          ## CSV rota uzunluğunu deney mesafesine uygulama
+
+          Metre veya kilometre sütunlu bir profilin son satırı, CSV dosyasındaki toplam rota
+          uzunluğunu belirler. Manuel mesafe modunda kullanıcı bu uzunluğu deneyin yüzey
+          mesafesine aktarmayı seçebilir.
+
+          - Seçenek varsayılan olarak kapalıdır.
+          - Seçilmezse noktalar mevcut deney rotasına yüzde olarak ölçeklenir.
+          - Seçilirse manuel yüzey mesafesi CSV toplam rotasına ayarlanır.
+          - Koordinat modunda mesafe WGS84 çözümünden geldiği için CSV tarafından değiştirilmez.
+          - Yüzde tabanlı profiller mutlak rota uzunluğu taşımadığı için bu seçenek gösterilmez.
+          ''', encoding='utf-8')
+
+          workflow = Path('.github/workflows/apply-csv-route-distance.yml')
+          workflow.unlink()
+          PY
+
+      - name: Commit implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "add optional CSV route distance adoption"
+          git push origin HEAD:agent/csv-route-distance-adoption
