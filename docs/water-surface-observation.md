@@ -101,9 +101,38 @@ Bu nedenle yerel kayıt, `.ggl.json` dışa/içe aktarma ve HTML raporu mevcut
 şema-7 mekanizmasıyla kaydı korur. Yeni şema sürümü gerekmez; eski deneylerde bu
 hesap kaydı bulunmaz.
 
+## Tipli anlık görüntü
+
+`1.0.9` sürümünde hesap kaydı yeniden `WaterSurfaceObservationSnapshot` nesnesine
+çözülebilir. Çözümleyici yalnız görünen Türkçe metne güvenmez; kararlı metrik
+anahtarlarını, hesap adımı kimliklerini ve `water-surface:` iz kimliği sözleşmesini
+birlikte doğrular.
+
+Yeniden kurulan alanlar:
+
+- kaynak etiketi ve kaynak türü,
+- gözlem ve kayıt zamanı,
+- düşey datum,
+- istasyon ve yayın zamanı,
+- anlık su seviyesi ve bütün belirsizlik bileşenleri,
+- anlamlı dalga yüksekliği,
+- gelgit evresi,
+- belirsizlik birleşim yöntemi,
+- notlar,
+- birleşik belirsizlik ve alt/üst su yüzeyi sınırı.
+
+Çözümleyici birleşik belirsizliği kaynak bileşenlerden yeniden hesaplar. Kayıttaki
+`u_toplam`, `z_alt` veya `z_üst` değerlerinden biri değiştirilmişse kayıt geçerli
+anlık görüntü olarak kabul edilmez. Su seviyesi metriğinin kendi `uncertainty`
+alanı ile ayrı belirsizlik metriği de birbirine eşit olmalıdır.
+
+Bu yaklaşım yeni bir taşınabilir şema alanı eklemeden makine tarafından yeniden
+kullanılabilir veri sağlar. Eski `0.1.0` su yüzeyi hesap kayıtları çözülmeye devam
+eder.
+
 ## Bu aşamanın sınırı
 
-`1.0.8` sürümünde bu sözleşme ölçüm ve provenans katmanıdır. Su seviyesi aralığı
-henüz gözlemci yüksekliğine, hedef kotuna, arazi profiline veya görünürlük
-motoruna otomatik uygulanmaz. Fiziksel uygulama için su yüzeyinin deneyde hangi
-nesneye ve hangi işaretle etki ettiği ayrıca seçilmelidir.
+`1.0.9` sürümünde sözleşme ölçüm/provenans ve tipli yeniden açma katmanıdır. Su
+seviyesi aralığı henüz gözlemci yüksekliğine, hedef kotuna, arazi profiline veya
+görünürlük motoruna otomatik uygulanmaz. Fiziksel uygulama için su yüzeyinin
+deneyde hangi nesneye ve hangi işaretle etki ettiği ayrıca seçilmelidir.
