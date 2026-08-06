@@ -192,6 +192,21 @@ Durum: tamamlandı
 - Taşınabilir ve yerel kayıt şeması v6
 - Uygulama sürümü `0.9.0`
 
+## Aşama 3.8 — GeoJSON rota koordinatlarını deneye aktarma
+
+Durum: tamamlandı
+
+- GeoJSON dosya seçiminin arazi paneline bağlanması
+- Rota başlangıç ve bitiş koordinatlarını bağımsız uygulama seçeneği
+- Seçildiğinde deneyin koordinat moduna geçirilmesi
+- Yüzey mesafesinin WGS84 ile otomatik yeniden hesaplanması
+- Manuel rota mesafesi seçeneğiyle karşılıklı dışlama
+- Koordinat uygulama durumunun kayıt ve HTML raporunda korunması
+- Koordinatlar sonradan değiştirildiğinde kaynak değişiklik işareti
+- Hatalı özyinelemeli GeoJSON tür denetiminin düzeltilmesi
+- Saf uygulama testleri ve uçtan uca Electron derlemesi
+- Uygulama sürümü `0.9.1`
+
 ## Sonraki gerçek arazi işleri
 - Noktaları grafik üzerinde sürükleme
 - Sayısal yükseklik modeli entegrasyonu

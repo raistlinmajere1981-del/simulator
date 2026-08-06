@@ -38,6 +38,11 @@ Koordinatların üçüncü bileşeni zemin yüksekliği olarak kullanılır. Yü
 ortometrik mi elipsoidal mı olduğu dosyadan otomatik anlaşılamaz; kullanıcı
 deneyde uygun düşey referansı seçmelidir.
 
+İçe aktarma incelemesinde rota uçları deneyin gözlemci ve hedef koordinatlarına
+isteğe bağlı uygulanabilir. Bu seçenek seçildiğinde deney koordinat moduna geçer
+ve kullanılan yüzey mesafesi WGS84 ters jeodezik çözümle yeniden hesaplanır.
+Manuel rota mesafesini uygulama seçeneğiyle aynı anda kullanılamaz.
+
 ## Sınırlar
 
 - En az 2, en fazla 2.002 koordinat

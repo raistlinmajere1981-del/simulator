@@ -152,5 +152,6 @@ Hedef görünürlüğü motoru, yerel kayıtlar, taşınabilir dosyalar, çevrim
 ### GeoJSON arazi profili
 
 WGS84 `[boylam, enlem, yükseklik]` koordinatları taşıyan tek bir 3B LineString,
-gerçek jeodezik parça mesafeleriyle arazi profiline dönüştürülebilir. Örnek dosya:
+gerçek jeodezik parça mesafeleriyle arazi profiline dönüştürülebilir. Rota uçları
+isteğe bağlı olarak deneyin gözlemci ve hedef koordinatlarına aktarılabilir. Örnek dosya:
 `examples/terrain-profile-wgs84.geojson`.

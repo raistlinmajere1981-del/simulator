@@ -89,6 +89,7 @@ interface BaseTerrainProfileSource {
   appliedObserverEndpoint: boolean;
   appliedTargetEndpoint: boolean;
   appliedRouteDistance?: boolean;
+  appliedRouteCoordinates?: boolean;
   modifiedAfterImport: boolean;
 }
 
