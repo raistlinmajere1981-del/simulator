@@ -55,22 +55,70 @@ jobs:
 
           editor_path = Path('src/renderer/src/MultiPointTerrainEditor.tsx')
           editor = editor_path.read_text(encoding='utf-8')
-          if '  TerrainProfileImport,\n' not in editor:
-              if '  ImportedGeoJsonTerrainProfile,\n' in editor:
-                  editor = editor.replace(
-                      '  ImportedGeoJsonTerrainProfile,\n',
-                      '  ImportedGeoJsonTerrainProfile,\n  TerrainProfileImport,\n',
-                      1
-                  )
-              elif '  TerrainProfileMappingRequest\n' in editor:
-                  editor = editor.replace(
-                      '  TerrainProfileMappingRequest\n',
-                      '  TerrainProfileImport,\n  TerrainProfileMappingRequest\n',
-                      1
-                  )
-              else:
-                  raise RuntimeError('TerrainProfileImport could not be added to the editor import')
+          import_start = editor.index('import type {\n')
+          import_end_marker = "} from '../../shared/simulator';"
+          import_end = editor.index(import_end_marker, import_start) + len(import_end_marker)
+          editor_import = """import type {
+            CsvTerrainDistanceUnit,
+            ImportedGeoJsonTerrainProfile,
+            TerrainProfileImport,
+            TerrainProfileMappingRequest
+          } from '../../shared/simulator';"""
+          editor = editor[:import_start] + editor_import + editor[import_end:]
           editor = editor.replace('ImportedTerrainProfile', 'TerrainProfileImport')
+
+          label_start = editor.index('function distanceUnitLabel(')
+          label_end = editor.index('function delimiterLabel(', label_start)
+          label_functions = """function isGeoJsonProfile(
+            profile: TerrainProfileImport
+          ): profile is ImportedGeoJsonTerrainProfile {
+            return 'kind' in profile && profile.kind === 'geojson';
+          }
+
+          function distanceUnitLabel(profile: TerrainProfileImport): string {
+            if (isGeoJsonProfile(profile)) return 'WGS84 koordinatları';
+            if (profile.distanceUnit === 'percent') return 'rotanın yüzdesi';
+            if (profile.distanceUnit === 'km') return 'kilometre';
+            return 'metre';
+          }
+
+          function sourceDistanceLabel(profile: TerrainProfileImport): string {
+            if (profile.sourceDistanceM === null) return 'Konumlar yüzde olarak verilmiş';
+            const sourceLabel = isGeoJsonProfile(profile) ? 'GeoJSON rotası' : 'CSV rotası';
+            return `${numberFormatter.format(profile.sourceDistanceM / 1_000)} km ${sourceLabel}`;
+          }
+
+          """
+          editor = editor[:label_start] + label_functions + editor[label_end:]
+
+          pending_start = editor.index('      {pendingImport && (\n')
+          metric_start = editor.index('          <div className="terrain-import-metrics">', pending_start)
+          endpoint_start = editor.index('          <div className="terrain-endpoint-options">', metric_start)
+          profile_details = """          <div className="terrain-import-metrics">
+            <div>
+              <small>{isGeoJsonProfile(pendingImport) ? 'GeoJSON koordinatı' : 'Dosyadaki veri satırı'}</small>
+              <strong>{isGeoJsonProfile(pendingImport) ? pendingImport.coordinateCount : pendingImport.rowCount}</strong>
+            </div>
+            <div><small>Kullanılacak ara nokta</small><strong>{pendingImport.points.length}</strong></div>
+            <div><small>Konumların birimi</small><strong>{distanceUnitLabel(pendingImport)}</strong></div>
+            <div><small>Dosyadaki toplam rota</small><strong>{sourceDistanceLabel(pendingImport)}</strong></div>
+            <div><small>Başlangıç → bitiş yüksekliği</small><strong>{numberFormatter.format(pendingImport.observerEndpointElevationM)} → {numberFormatter.format(pendingImport.targetEndpointElevationM)} m</strong></div>
+          </div>
+          {isGeoJsonProfile(pendingImport) ? (
+            <div className="terrain-import-columns">
+              <span>Geometri: <b>{pendingImport.geometryType}</b></span>
+              <span>Yükseklik kaynağı: <b>koordinatların üçüncü bileşeni (Z)</b></span>
+              <span>Başlangıç: <b>{pendingImport.startLatitudeDeg.toFixed(6)}°, {pendingImport.startLongitudeDeg.toFixed(6)}°</b></span>
+              <span>Bitiş: <b>{pendingImport.endLatitudeDeg.toFixed(6)}°, {pendingImport.endLongitudeDeg.toFixed(6)}°</b></span>
+            </div>
+          ) : (
+            <div className="terrain-import-columns">
+              <span>Rotadaki yer sütunu: <b>{pendingImport.distanceColumnHeader}</b></span>
+              <span>Arazi yüksekliği sütunu: <b>{pendingImport.elevationColumnHeader}</b></span>
+            </div>
+          )}
+"""
+          editor = editor[:metric_start] + profile_details + editor[endpoint_start:]
           editor_path.write_text(editor, encoding='utf-8')
 
           app_path = Path('src/renderer/src/AppNext.tsx')
