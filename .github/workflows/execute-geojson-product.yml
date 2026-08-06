@@ -45,6 +45,15 @@ jobs:
               "if app_block_start < 0:",
               "    raise RuntimeError('AppNext source replacement block not found')"
           ]
+
+          call_matches = [i for i, line in enumerate(lines) if line == 'app_replacement_call = (']
+          if len(call_matches) != 1:
+              raise RuntimeError(f'Expected one AppNext replacement call, found {len(call_matches)}')
+          lines.insert(
+              call_matches[0] + 1,
+              "    \"app_path = 'src/renderer/src/AppNext.tsx'\\n\""
+          )
+
           exec(compile('\n'.join(lines) + '\n', 'geojson-retry.py', 'exec'))
           PY
 
