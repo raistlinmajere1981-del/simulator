@@ -203,3 +203,16 @@ HTML raporu aynı alanları `Profil kaynağı ve provenans` bölümünde göster
 - Koordinat sütunlarından rota üretimi yoktur.
 - GeoJSON ve DEM içe aktarma yoktur.
 - Jeoit/datum dönüşümü otomatik değildir.
+
+
+## CSV rota uzunluğunu deney mesafesine uygulama
+
+Metre veya kilometre sütunlu bir profilin son satırı, CSV dosyasındaki toplam rota
+uzunluğunu belirler. Manuel mesafe modunda kullanıcı bu uzunluğu deneyin yüzey
+mesafesine aktarmayı seçebilir.
+
+- Seçenek varsayılan olarak kapalıdır.
+- Seçilmezse noktalar mevcut deney rotasına yüzde olarak ölçeklenir.
+- Seçilirse manuel yüzey mesafesi CSV toplam rotasına ayarlanır.
+- Koordinat modunda mesafe WGS84 çözümünden geldiği için CSV tarafından değiştirilmez.
+- Yüzde tabanlı profiller mutlak rota uzunluğu taşımadığı için bu seçenek gösterilmez.

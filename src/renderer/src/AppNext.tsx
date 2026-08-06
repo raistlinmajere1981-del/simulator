@@ -28,6 +28,7 @@ import {
   buildManualTerrainProfile,
   migrateLegacyManualTerrainPoint
 } from '../../simulation/manual-terrain-profile';
+import { applyImportedTerrainInputs } from '../../simulation/terrain-import-application';
 import {
   runSimulationModels,
   type ModelRun
@@ -503,6 +504,7 @@ function TerrainPanel({
   source,
   effectiveDistanceKm,
   criticalDistanceM,
+  allowRouteDistanceImport,
   onDatumChange,
   onModeChange,
   onNumberChange,
@@ -514,6 +516,7 @@ function TerrainPanel({
   source: TerrainProfileSource | undefined;
   effectiveDistanceKm: number;
   criticalDistanceM: number | null;
+  allowRouteDistanceImport: boolean;
   onDatumChange(kind: VerticalDatumKind): void;
   onModeChange(mode: TerrainMode): void;
   onNumberChange(key: NumericInputKey, value: number): void;
@@ -573,6 +576,7 @@ function TerrainPanel({
         <MultiPointTerrainEditor
           points={points}
           routeDistanceKm={effectiveDistanceKm}
+          allowRouteDistanceImport={allowRouteDistanceImport}
           observerGroundElevationM={inputs.observerGroundElevationM}
           targetGroundElevationM={inputs.targetGroundElevationM}
           criticalDistanceM={criticalDistanceM}
@@ -794,7 +798,9 @@ export function AppNext(): React.JSX.Element {
 
   const handleNumberChange = (key: NumericInputKey, value: number): void => {
     if (!Number.isFinite(value)) return;
-    if (key === 'observerGroundElevationM' || key === 'targetGroundElevationM') {
+    if (key === 'observerGroundElevationM' ||
+      key === 'targetGroundElevationM' ||
+      key === 'surfaceDistanceKm') {
       markTerrainSourceModified();
     }
     updateInputs((current) => ({ ...current, [key]: clampInputValue(key, value) }));
@@ -822,16 +828,7 @@ export function AppNext(): React.JSX.Element {
     };
 
     setManualTerrainPoints(profile.points);
-    setInputs((current) => ({
-      ...current,
-      terrainMode: 'manual-points',
-      observerGroundElevationM: options.applyObserverEndpoint
-        ? profile.observerEndpointElevationM
-        : current.observerGroundElevationM,
-      targetGroundElevationM: options.applyTargetEndpoint
-        ? profile.targetEndpointElevationM
-        : current.targetGroundElevationM
-    }));
+    setInputs((current) => applyImportedTerrainInputs(current, profile, options));
     setTerrainProfileSource(source);
     setIsDirty(true);
   };
@@ -972,7 +969,10 @@ export function AppNext(): React.JSX.Element {
               effectiveDistanceKm={effectiveDistanceKm}
               geodesic={geodesic}
               isDirty={isDirty}
-              onDistanceSourceChange={(distanceSource) => updateInputs((current) => ({ ...current, distanceSource }))}
+              onDistanceSourceChange={(distanceSource) => {
+                markTerrainSourceModified();
+                updateInputs((current) => ({ ...current, distanceSource }));
+              }}
               onNumberChange={handleNumberChange}
               onRefractionChange={(enabled) => updateInputs((current) => ({ ...current, useStandardRefraction: enabled }))}
               onReset={() => {
@@ -996,6 +996,7 @@ export function AppNext(): React.JSX.Element {
             source={terrainProfileSource}
             effectiveDistanceKm={effectiveDistanceKm}
             criticalDistanceM={criticalTerrainDistanceM}
+            allowRouteDistanceImport={inputs.distanceSource === 'manual'}
             onDatumChange={(verticalDatumKind) => updateInputs((current) => ({ ...current, verticalDatumKind }))}
             onModeChange={(terrainMode) => updateInputs((current) => ({ ...current, terrainMode }))}
             onNumberChange={handleNumberChange}

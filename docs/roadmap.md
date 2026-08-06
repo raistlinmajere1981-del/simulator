@@ -123,7 +123,7 @@ Durum: tamamlandı ve `main` dalına alındı
 
 ## Aşama 3.5 — CSV provenansı, uç kotları ve sütun eşleme
 
-Durum: çalışan sürüm tamamlandı, yerel doğrulama bekliyor
+Durum: tamamlandı ve `main` dalına alındı
 
 Tamamlananlar:
 
@@ -162,9 +162,21 @@ Yerel doğrulama:
 - Şema v5 JSON dışa/içe aktarma
 - HTML raporunda dosya, sütun, birim, rota, uç seçimleri ve değişiklik durumu
 
-## Sonraki gerçek arazi işleri
+## Aşama 3.6 — CSV rota mesafesini deneye aktarma
 
-- CSV toplam mesafesini manuel deney mesafesine isteğe bağlı aktarma
+Durum: tamamlandı
+
+- Mutlak mesafeli CSV profillerinde kaynak toplam rota uzunluğu
+- Yalnız manuel mesafe modunda kullanılabilen bağımsız seçim
+- Varsayılan olarak mevcut deney mesafesini koruma
+- Seçildiğinde manuel yüzey mesafesini CSV rotasına ayarlama
+- Koordinat modunda WGS84 mesafesini değiştirmeme
+- Yüzde tabanlı ve uygulama sınırını aşan profillerde seçeneği göstermeme
+- Mesafe değiştiğinde CSV kaynağını sonradan düzenlenmiş olarak işaretleme
+- Saf uygulama fonksiyonu ve sınır testleri
+- Uygulama sürümü `0.8.1`
+
+## Sonraki gerçek arazi işleri
 - GeoJSON profil içe aktarma
 - Noktaları grafik üzerinde sürükleme
 - Sayısal yükseklik modeli entegrasyonu
