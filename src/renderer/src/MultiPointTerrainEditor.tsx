@@ -6,6 +6,10 @@ import type {
 } from '../../shared/simulator';
 import type { ManualTerrainPoint } from '../../shared/terrain';
 import {
+  getApplicableImportedRouteDistanceKm,
+  type TerrainProfileApplicationOptions
+} from '../../simulation/terrain-import-application';
+import {
   insertManualTerrainPoint,
   removeManualTerrainPoint,
   sortManualTerrainPoints,
@@ -13,14 +17,12 @@ import {
   validateManualTerrainPoints
 } from '../../simulation/manual-terrain-profile';
 
-export interface TerrainProfileImportOptions {
-  applyObserverEndpoint: boolean;
-  applyTargetEndpoint: boolean;
-}
+export type TerrainProfileImportOptions = TerrainProfileApplicationOptions;
 
 interface MultiPointTerrainEditorProps {
   points: ManualTerrainPoint[];
   routeDistanceKm: number;
+  allowRouteDistanceImport: boolean;
   observerGroundElevationM: number;
   targetGroundElevationM: number;
   criticalDistanceM?: number | null;
@@ -151,6 +153,7 @@ function delimiterLabel(request: TerrainProfileMappingRequest): string {
 export function MultiPointTerrainEditor({
   points,
   routeDistanceKm,
+  allowRouteDistanceImport,
   observerGroundElevationM,
   targetGroundElevationM,
   criticalDistanceM,
@@ -166,6 +169,7 @@ export function MultiPointTerrainEditor({
   const [mappingDistanceUnit, setMappingDistanceUnit] = useState<CsvTerrainDistanceUnit>('m');
   const [applyObserverEndpoint, setApplyObserverEndpoint] = useState(false);
   const [applyTargetEndpoint, setApplyTargetEndpoint] = useState(false);
+  const [applyRouteDistance, setApplyRouteDistance] = useState(false);
   const [importMessage, setImportMessage] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const sortedPoints = useMemo(() => sortManualTerrainPoints(points), [points]);
@@ -189,6 +193,9 @@ export function MultiPointTerrainEditor({
     }
   ], [observerGroundElevationM, sortedPoints, targetGroundElevationM]);
   const preview = useMemo(() => previewCoordinates(previewPoints), [previewPoints]);
+  const pendingSourceDistanceKm = pendingImport
+    ? getApplicableImportedRouteDistanceKm(pendingImport)
+    : null;
   const criticalPercent = criticalDistanceM === null || criticalDistanceM === undefined ||
     routeDistanceKm <= 0
     ? null
@@ -219,6 +226,7 @@ export function MultiPointTerrainEditor({
     setPendingImport(profile);
     setApplyObserverEndpoint(false);
     setApplyTargetEndpoint(false);
+    setApplyRouteDistance(false);
   };
 
   const chooseCsvProfile = async (): Promise<void> => {
@@ -303,7 +311,8 @@ export function MultiPointTerrainEditor({
     );
     onApplyImport(imported, {
       applyObserverEndpoint,
-      applyTargetEndpoint
+      applyTargetEndpoint,
+      applyRouteDistance
     });
   };
 
@@ -415,8 +424,8 @@ export function MultiPointTerrainEditor({
             <span className="terrain-import-ready">UYGULAMAYA HAZIR</span>
           </div>
           <p className="terrain-plain-guide">
-            Ara noktalar dosyadan alınır. Aşağıdaki iki kutu yalnız başlangıç ve bitiş
-            zemin yüksekliğinin de dosyadan alınmasını sağlar.
+            Ara noktalar dosyadan alınır. Aşağıdaki seçenekler CSV rota uzunluğunun
+            ve başlangıç-bitiş zemin yüksekliğinin deneye aktarılmasını sağlar.
           </p>
           <div className="terrain-import-metrics">
             <div><small>Dosyadaki veri satırı</small><strong>{pendingImport.rowCount}</strong></div>
@@ -430,6 +439,16 @@ export function MultiPointTerrainEditor({
             <span>Arazi yüksekliği sütunu: <b>{pendingImport.elevationColumnHeader}</b></span>
           </div>
           <div className="terrain-endpoint-options">
+            {allowRouteDistanceImport && pendingSourceDistanceKm !== null && (
+              <label title="İşaretlenirse manuel yüzey mesafesi CSV dosyasının toplam rotasıyla değiştirilir">
+                <input
+                  checked={applyRouteDistance}
+                  type="checkbox"
+                  onChange={(event) => setApplyRouteDistance(event.currentTarget.checked)}
+                />
+                <span>Deney mesafesini CSV rotasına ayarla: <b>{numberFormatter.format(pendingSourceDistanceKm)} km</b></span>
+              </label>
+            )}
             <label title="İşaretlenirse üst bölümdeki Gözlemci zemin kotu bu değerle değiştirilir">
               <input
                 checked={applyObserverEndpoint}
