@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseTerrainProfileCsv } from '../src/simulation/csv-terrain-profile';
+import {
+  parseTerrainProfileCsv,
+  TerrainProfileColumnMappingRequiredError
+} from '../src/simulation/csv-terrain-profile';
 
 const context = {
   routeDistanceM: 10_000,
@@ -25,6 +28,8 @@ describe('CSV terrain profile import', () => {
     expect(profile.fileName).toBe('coast.csv');
     expect(profile.delimiter).toBe('comma');
     expect(profile.distanceUnit).toBe('percent');
+    expect(profile.distanceColumnHeader).toBe('distance_percent');
+    expect(profile.elevationColumnHeader).toBe('elevation_m');
     expect(profile.rowCount).toBe(5);
     expect(profile.sourceDistanceM).toBeNull();
     expect(profile.points).toEqual([
@@ -89,6 +94,8 @@ describe('CSV terrain profile import', () => {
       .toBe(true);
     expect(profile.warnings.some((warning) => warning.includes('hedef uç kotu')))
       .toBe(true);
+    expect(profile.warnings.some((warning) => warning.includes('seçilebilir')))
+      .toBe(true);
   });
 
   it('treats an ambiguous distance header as metres with a warning', () => {
@@ -101,6 +108,65 @@ describe('CSV terrain profile import', () => {
     expect(profile.distanceUnit).toBe('m');
     expect(profile.warnings.some((warning) => warning.includes('metre olarak yorumlandı')))
       .toBe(true);
+  });
+
+  it('requests column mapping for unknown headers and exposes only a short preview', () => {
+    let thrown: unknown;
+    try {
+      parseTerrainProfileCsv(
+        'chainage,terrain_height,station\n0,4,OBS\n1000,8,A\n10000,5,TARGET',
+        '/private/example.csv',
+        context
+      );
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(TerrainProfileColumnMappingRequiredError);
+    const mappingError = thrown as TerrainProfileColumnMappingRequiredError;
+    expect(mappingError.inspection.fileName).toBe('example.csv');
+    expect(mappingError.inspection.headers).toEqual([
+      'chainage',
+      'terrain_height',
+      'station'
+    ]);
+    expect(mappingError.inspection.previewRows).toHaveLength(3);
+    expect(mappingError.inspection.reason).toContain('otomatik belirlenemedi');
+  });
+
+  it('parses custom columns with an explicit mapping', () => {
+    const profile = parseTerrainProfileCsv(
+      'chainage,terrain_height,station\n0,4,OBS\n2500,22,A\n10000,5,TARGET',
+      'custom.csv',
+      context,
+      {
+        distanceColumnIndex: 0,
+        elevationColumnIndex: 1,
+        distanceUnit: 'm'
+      }
+    );
+
+    expect(profile.distanceColumnHeader).toBe('chainage');
+    expect(profile.elevationColumnHeader).toBe('terrain_height');
+    expect(profile.observerEndpointElevationM).toBe(4);
+    expect(profile.targetEndpointElevationM).toBe(5);
+    expect(profile.points[0]).toMatchObject({
+      distancePercent: 25,
+      elevationM: 22
+    });
+  });
+
+  it('rejects using the same column for distance and elevation', () => {
+    expect(() => parseTerrainProfileCsv(
+      'x,y\n0,0\n100,1',
+      'same.csv',
+      context,
+      {
+        distanceColumnIndex: 0,
+        elevationColumnIndex: 0,
+        distanceUnit: 'percent'
+      }
+    )).toThrow('farklı CSV sütunları');
   });
 
   it('rejects a profile without explicit endpoints', () => {
@@ -119,13 +185,7 @@ describe('CSV terrain profile import', () => {
     )).toThrow('önceki satırdan büyük olmalı');
   });
 
-  it('rejects unsupported headers and malformed numbers', () => {
-    expect(() => parseTerrainProfileCsv(
-      'x,y\n0,0\n1,1',
-      'unknown.csv',
-      context
-    )).toThrow('Mesafe sütunu bulunamadı');
-
+  it('rejects malformed numbers after mapping or automatic recognition', () => {
     expect(() => parseTerrainProfileCsv(
       'distance_m;elevation_m\n0;0\n5000;abc\n10000;0',
       'bad-number.csv',
