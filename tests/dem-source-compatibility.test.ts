@@ -41,9 +41,11 @@ describe('DEM source compatibility', () => {
     const parsed = parsePortableExperimentFile(
       createPortableExperimentFile(experiment, '1.0.0')
     );
+    const source = parsed.experiment.terrainProfileSource;
 
     expect(parsed.migrated).toBe(false);
-    expect(parsed.experiment.terrainProfileSource?.kind).toBe('dem');
-    expect(parsed.experiment.terrainProfileSource?.sampleCountMode).toBeUndefined();
+    expect(source?.kind).toBe('dem');
+    expect(source?.kind === 'dem' ? source.sampleCountMode : 'unexpected-source')
+      .toBeUndefined();
   });
 });
