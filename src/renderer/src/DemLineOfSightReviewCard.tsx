@@ -35,6 +35,7 @@ export function DemLineOfSightReviewCard({
   const preview = useMemo(() => {
     try {
       return {
+        status: 'success' as const,
         result: reviewDemLineOfSight(profile, {
           observerGroundElevationM: applyObserverEndpoint
             ? profile.observerEndpointElevationM
@@ -51,6 +52,7 @@ export function DemLineOfSightReviewCard({
       };
     } catch (error) {
       return {
+        status: 'error' as const,
         error: error instanceof Error
           ? error.message
           : 'DEM görüş hattı önizlemesi hesaplanamadı.'
@@ -69,7 +71,7 @@ export function DemLineOfSightReviewCard({
     verticalDatumOffsetM
   ]);
 
-  if ('error' in preview) {
+  if (preview.status === 'error') {
     return (
       <div className="dem-line-of-sight-review error">
         <strong>Görüş hattı önizlemesi hesaplanamadı</strong>
