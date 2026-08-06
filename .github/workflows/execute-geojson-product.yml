@@ -24,7 +24,6 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           import textwrap
 
           retry_path = Path('.github/workflows/retry-geojson-terrain-profile.yml')
@@ -55,38 +54,50 @@ jobs:
               "    \"app_path = 'src/renderer/src/AppNext.tsx'\\n\""
           )
 
-          patched_code = '\n'.join(lines) + '\n'
-          portable_pattern = (
-              r"replace_once\(\s*portable_path,\s*'PortableExperimentFileV5',\s*"
-              r"'PortableExperimentFileV6'\s*\)\s*"
-              r"replace_once\(\s*portable_path,\s*'LocalExperimentStoreV5',\s*"
-              r"'LocalExperimentStoreV6'\s*\)\s*"
-              r"replace_once\(\s*portable_path,\s*'PortableExperimentFileV5',\s*"
-              r"'PortableExperimentFileV6'\s*\)\s*"
-              r"replace_once\(\s*portable_path,\s*'LocalExperimentStoreV5',\s*"
-              r"'LocalExperimentStoreV6'\s*\)"
-          )
-          portable_replacement = """portable_text = read(portable_path)
-          if portable_text.count('PortableExperimentFileV5') != 2:
-              raise RuntimeError('Unexpected PortableExperimentFileV5 count')
-          if portable_text.count('LocalExperimentStoreV5') != 2:
-              raise RuntimeError('Unexpected LocalExperimentStoreV5 count')
-          Path(portable_path).write_text(
-              portable_text.replace('PortableExperimentFileV5', 'PortableExperimentFileV6')
-              .replace('LocalExperimentStoreV5', 'LocalExperimentStoreV6'),
-              encoding='utf-8'
-          )"""
-          patched_code, portable_count = re.subn(
-              portable_pattern,
-              portable_replacement,
-              patched_code,
-              count=1,
-              flags=re.S
-          )
-          if portable_count != 1:
-              raise RuntimeError(f'Expected one portable type migration block, found {portable_count}')
+          exec_matches = [
+              i for i, line in enumerate(lines)
+              if line == "exec(compile(script, 'geojson-stage.py', 'exec'))"
+          ]
+          if len(exec_matches) != 1:
+              raise RuntimeError(f'Expected one nested product exec, found {len(exec_matches)}')
+          exec_index = exec_matches[0]
+          nested_patch = [
+              "portable_pattern = (",
+              "    r\"replace_once\\(\\s*portable_path,\\s*'PortableExperimentFileV5',\\s*\"",
+              "    r\"'PortableExperimentFileV6'\\s*\\)\\s*\"",
+              "    r\"replace_once\\(\\s*portable_path,\\s*'LocalExperimentStoreV5',\\s*\"",
+              "    r\"'LocalExperimentStoreV6'\\s*\\)\\s*\"",
+              "    r\"replace_once\\(\\s*portable_path,\\s*'PortableExperimentFileV5',\\s*\"",
+              "    r\"'PortableExperimentFileV6'\\s*\\)\\s*\"",
+              "    r\"replace_once\\(\\s*portable_path,\\s*'LocalExperimentStoreV5',\\s*\"",
+              "    r\"'LocalExperimentStoreV6'\\s*\\)\"",
+              ")",
+              "portable_replacement = (",
+              "    \"portable_text = read(portable_path)\\n\"",
+              "    \"if portable_text.count('PortableExperimentFileV5') != 2:\\n\"",
+              "    \"    raise RuntimeError('Unexpected PortableExperimentFileV5 count')\\n\"",
+              "    \"if portable_text.count('LocalExperimentStoreV5') != 2:\\n\"",
+              "    \"    raise RuntimeError('Unexpected LocalExperimentStoreV5 count')\\n\"",
+              "    \"Path(portable_path).write_text(\\n\"",
+              "    \"    portable_text.replace('PortableExperimentFileV5', 'PortableExperimentFileV6')\\n\"",
+              "    \"    .replace('LocalExperimentStoreV5', 'LocalExperimentStoreV6'),\\n\"",
+              "    \"    encoding='utf-8'\\n\"",
+              "    \")\"",
+              ")",
+              "script, portable_count = re.subn(",
+              "    portable_pattern,",
+              "    portable_replacement,",
+              "    script,",
+              "    count=1,",
+              "    flags=re.S",
+              ")",
+              "if portable_count != 1:",
+              "    raise RuntimeError(f'Expected one portable type migration block, found {portable_count}')",
+              ""
+          ]
+          lines[exec_index:exec_index] = nested_patch
 
-          exec(compile(patched_code, 'geojson-retry.py', 'exec'))
+          exec(compile('\n'.join(lines) + '\n', 'geojson-retry.py', 'exec'))
           PY
 
       - name: Preserve workflow files
