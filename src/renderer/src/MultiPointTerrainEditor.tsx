@@ -86,7 +86,7 @@ function findLargestGapPoint(
   const first = all[0];
   const second = all[1];
   if (!first || !second) {
-    throw new RangeError('Profil uçları oluşturulamadı.');
+    throw new RangeError('Profilin başlangıç ve bitiş noktaları oluşturulamadı.');
   }
 
   let bestLeft: PreviewPoint = first;
@@ -132,20 +132,20 @@ function previewCoordinates(points: readonly PreviewPoint[]): {
 }
 
 function distanceUnitLabel(profile: ImportedTerrainProfile): string {
-  if (profile.distanceUnit === 'percent') return 'rota yüzdesi';
+  if (profile.distanceUnit === 'percent') return 'rotanın yüzdesi';
   if (profile.distanceUnit === 'km') return 'kilometre';
   return 'metre';
 }
 
 function sourceDistanceLabel(profile: ImportedTerrainProfile): string {
-  if (profile.sourceDistanceM === null) return 'Yüzde tabanlı profil';
-  return `${numberFormatter.format(profile.sourceDistanceM / 1_000)} km kaynak rota`;
+  if (profile.sourceDistanceM === null) return 'Konumlar yüzde olarak verilmiş';
+  return `${numberFormatter.format(profile.sourceDistanceM / 1_000)} km CSV rotası`;
 }
 
 function delimiterLabel(request: TerrainProfileMappingRequest): string {
-  if (request.delimiter === 'semicolon') return 'noktalı virgül';
+  if (request.delimiter === 'semicolon') return 'noktalı virgül (;)';
   if (request.delimiter === 'tab') return 'sekme';
-  return 'virgül';
+  return 'virgül (,)';
 }
 
 export function MultiPointTerrainEditor({
@@ -261,7 +261,9 @@ export function MultiPointTerrainEditor({
   const applyColumnMapping = async (): Promise<void> => {
     if (!mappingRequest) return;
     if (mappingDistanceIndex === mappingElevationIndex) {
-      setOperationError('Mesafe ve kot için farklı sütunlar seçilmeli.');
+      setOperationError(
+        'Rota üzerindeki konum ve arazi yüksekliği için farklı sütunlar seçin.'
+      );
       return;
     }
 
@@ -284,7 +286,7 @@ export function MultiPointTerrainEditor({
       if (result.profile) stageProfile(result.profile);
     } catch (error) {
       setOperationError(
-        error instanceof Error ? error.message : 'CSV sütun eşlemesi uygulanamadı.'
+        error instanceof Error ? error.message : 'Seçilen CSV sütunları kullanılamadı.'
       );
     } finally {
       setIsImporting(false);
@@ -297,7 +299,7 @@ export function MultiPointTerrainEditor({
     setOperationError('');
     setPendingImport(undefined);
     setImportMessage(
-      `“${imported.fileName}” profili uygulandı: ${imported.points.length} ara nokta.`
+      `“${imported.fileName}” arazi profili uygulandı: ${imported.points.length} ara nokta.`
     );
     onApplyImport(imported, {
       applyObserverEndpoint,
@@ -309,17 +311,18 @@ export function MultiPointTerrainEditor({
     <section className={`multi-terrain-editor ${disabled ? 'disabled' : ''}`}>
       <header className="multi-terrain-editor-heading">
         <div>
-          <strong>Arazi profil noktaları</strong>
-          <span>{sortedPoints.length} ara nokta · uçlar otomatik</span>
+          <strong>Arazi yüksekliği noktaları</strong>
+          <span>{sortedPoints.length} ara nokta · başlangıç ve bitiş otomatik eklenir</span>
         </div>
         <div className="terrain-editor-heading-actions">
           <button
             className="terrain-csv-button"
             disabled={disabled || isImporting || routeDistanceKm <= 0}
+            title="Bir CSV veya TSV dosyasındaki rota ve arazi yüksekliği değerlerini kullan"
             type="button"
             onClick={() => void chooseCsvProfile()}
           >
-            {isImporting ? 'CSV okunuyor…' : 'CSV içe aktar'}
+            {isImporting ? 'CSV okunuyor…' : 'CSV dosyasından al'}
           </button>
           <button
             disabled={disabled || sortedPoints.length >= MAX_EDITOR_POINTS}
@@ -338,11 +341,15 @@ export function MultiPointTerrainEditor({
               <strong>{mappingRequest.fileName}</strong>
               <span>{mappingRequest.reason}</span>
             </div>
-            <span className="terrain-mapping-required">SÜTUN EŞLEME</span>
+            <span className="terrain-mapping-required">CSV SÜTUNLARINI SEÇ</span>
           </div>
+          <p className="terrain-plain-guide">
+            Program iki sütunu kesin olarak tanıyamadı. Rotada ne kadar ilerlenildiğini
+            gösteren sütunu ve arazi yüksekliğini gösteren sütunu aşağıdan seçin.
+          </p>
           <div className="terrain-mapping-controls">
-            <label>
-              <span>Mesafe sütunu</span>
+            <label title="Başlangıçtan itibaren metre, kilometre veya rota yüzdesi değerlerini içeren sütun">
+              <span>Rotadaki yeri gösteren sütun</span>
               <select
                 value={mappingDistanceIndex}
                 onChange={(event) => setMappingDistanceIndex(Number(event.currentTarget.value))}
@@ -352,19 +359,19 @@ export function MultiPointTerrainEditor({
                 ))}
               </select>
             </label>
-            <label>
-              <span>Mesafe birimi</span>
+            <label title="Seçtiğiniz konum sütunundaki sayıların birimi">
+              <span>Konum birimi</span>
               <select
                 value={mappingDistanceUnit}
                 onChange={(event) => setMappingDistanceUnit(event.currentTarget.value as CsvTerrainDistanceUnit)}
               >
                 <option value="m">metre</option>
                 <option value="km">kilometre</option>
-                <option value="percent">rota yüzdesi</option>
+                <option value="percent">rotanın yüzdesi</option>
               </select>
             </label>
-            <label>
-              <span>Kot sütunu</span>
+            <label title="Her konumdaki zemin veya arazi yüksekliğini metre olarak içeren sütun">
+              <span>Arazi yüksekliğini gösteren sütun</span>
               <select
                 value={mappingElevationIndex}
                 onChange={(event) => setMappingElevationIndex(Number(event.currentTarget.value))}
@@ -374,8 +381,8 @@ export function MultiPointTerrainEditor({
                 ))}
               </select>
             </label>
-            <div className="terrain-mapping-delimiter">
-              <span>Ayırıcı</span>
+            <div className="terrain-mapping-delimiter" title="CSV dosyasındaki sütunları birbirinden ayıran işaret">
+              <span>Dosyadaki ayırıcı</span>
               <strong>{delimiterLabel(mappingRequest)}</strong>
             </div>
           </div>
@@ -392,7 +399,7 @@ export function MultiPointTerrainEditor({
           <div className="terrain-import-actions">
             <button type="button" onClick={() => setMappingRequest(undefined)}>Vazgeç</button>
             <button className="apply" disabled={isImporting} type="button" onClick={() => void applyColumnMapping()}>
-              {isImporting ? 'Doğrulanıyor…' : 'Sütunları uygula'}
+              {isImporting ? 'Kontrol ediliyor…' : 'Seçimleri kontrol et'}
             </button>
           </div>
         </div>
@@ -403,37 +410,41 @@ export function MultiPointTerrainEditor({
           <div className="terrain-import-review-heading">
             <div>
               <strong>{pendingImport.fileName}</strong>
-              <span>Mevcut {sortedPoints.length} ara noktanın yerine uygulanacak.</span>
+              <span>Dosyadaki noktalar mevcut {sortedPoints.length} ara noktanın yerine geçecek.</span>
             </div>
             <span className="terrain-import-ready">UYGULAMAYA HAZIR</span>
           </div>
+          <p className="terrain-plain-guide">
+            Ara noktalar dosyadan alınır. Aşağıdaki iki kutu yalnız başlangıç ve bitiş
+            zemin yüksekliğinin de dosyadan alınmasını sağlar.
+          </p>
           <div className="terrain-import-metrics">
-            <div><small>CSV satırı</small><strong>{pendingImport.rowCount}</strong></div>
-            <div><small>Ara nokta</small><strong>{pendingImport.points.length}</strong></div>
-            <div><small>Mesafe sütunu</small><strong>{distanceUnitLabel(pendingImport)}</strong></div>
-            <div><small>Kaynak rota</small><strong>{sourceDistanceLabel(pendingImport)}</strong></div>
-            <div><small>CSV uç kotları</small><strong>{numberFormatter.format(pendingImport.observerEndpointElevationM)} → {numberFormatter.format(pendingImport.targetEndpointElevationM)} m</strong></div>
+            <div><small>Dosyadaki veri satırı</small><strong>{pendingImport.rowCount}</strong></div>
+            <div><small>Kullanılacak ara nokta</small><strong>{pendingImport.points.length}</strong></div>
+            <div><small>Konumların birimi</small><strong>{distanceUnitLabel(pendingImport)}</strong></div>
+            <div><small>CSV'deki toplam rota</small><strong>{sourceDistanceLabel(pendingImport)}</strong></div>
+            <div><small>Başlangıç → bitiş yüksekliği</small><strong>{numberFormatter.format(pendingImport.observerEndpointElevationM)} → {numberFormatter.format(pendingImport.targetEndpointElevationM)} m</strong></div>
           </div>
           <div className="terrain-import-columns">
-            <span>Mesafe: <b>{pendingImport.distanceColumnHeader}</b></span>
-            <span>Kot: <b>{pendingImport.elevationColumnHeader}</b></span>
+            <span>Rotadaki yer sütunu: <b>{pendingImport.distanceColumnHeader}</b></span>
+            <span>Arazi yüksekliği sütunu: <b>{pendingImport.elevationColumnHeader}</b></span>
           </div>
           <div className="terrain-endpoint-options">
-            <label>
+            <label title="İşaretlenirse üst bölümdeki Gözlemci zemin kotu bu değerle değiştirilir">
               <input
                 checked={applyObserverEndpoint}
                 type="checkbox"
                 onChange={(event) => setApplyObserverEndpoint(event.currentTarget.checked)}
               />
-              <span>Gözlemci zemin kotunu CSV’den uygula: <b>{numberFormatter.format(pendingImport.observerEndpointElevationM)} m</b></span>
+              <span>Başlangıç zemin yüksekliğini dosyadan al: <b>{numberFormatter.format(pendingImport.observerEndpointElevationM)} m</b></span>
             </label>
-            <label>
+            <label title="İşaretlenirse üst bölümdeki Hedef taban kotu bu değerle değiştirilir">
               <input
                 checked={applyTargetEndpoint}
                 type="checkbox"
                 onChange={(event) => setApplyTargetEndpoint(event.currentTarget.checked)}
               />
-              <span>Hedef taban kotunu CSV’den uygula: <b>{numberFormatter.format(pendingImport.targetEndpointElevationM)} m</b></span>
+              <span>Bitiş zemin yüksekliğini dosyadan al: <b>{numberFormatter.format(pendingImport.targetEndpointElevationM)} m</b></span>
             </label>
           </div>
           {pendingImport.warnings.length > 0 && (
@@ -443,12 +454,12 @@ export function MultiPointTerrainEditor({
           )}
           <div className="terrain-import-actions">
             <button type="button" onClick={() => setPendingImport(undefined)}>Vazgeç</button>
-            <button className="apply" type="button" onClick={applyCsvProfile}>Profili uygula</button>
+            <button className="apply" type="button" onClick={applyCsvProfile}>Arazi profilini uygula</button>
           </div>
         </div>
       )}
 
-      <div className="terrain-profile-preview" aria-label="Arazi profili önizlemesi">
+      <div className="terrain-profile-preview" aria-label="Arazi yüksekliği grafiği">
         <svg preserveAspectRatio="none" viewBox="0 0 100 100" role="img">
           <line className="preview-baseline" x1="4" x2="96" y1="92" y2="92" />
           <polyline className="preview-profile-line" points={preview.polyline} />
@@ -488,13 +499,13 @@ export function MultiPointTerrainEditor({
       <div className="terrain-point-list">
         {sortedPoints.length === 0 ? (
           <p className="terrain-point-empty">
-            Ara nokta yok. Profil gözlemci ve hedef uç kotlarını doğrusal olarak birleştirir.
+            Ara nokta yok. Grafik başlangıç ve bitiş zemin yüksekliğini düz çizgiyle birleştirir.
           </p>
         ) : sortedPoints.map((point, index) => (
           <div className="terrain-point-row" key={point.id}>
             <span className="terrain-point-index">{index + 1}</span>
-            <label>
-              <span>Rota konumu</span>
+            <label title="Başlangıçtan bitişe kadar rotanın yüzde kaçında olduğu">
+              <span>Rotadaki yeri</span>
               <div>
                 <input
                   disabled={disabled}
@@ -514,8 +525,8 @@ export function MultiPointTerrainEditor({
                 <b>%</b>
               </div>
             </label>
-            <label>
-              <span>Arazi kotu</span>
+            <label title="Bu noktadaki zemin veya arazi yüksekliği">
+              <span>Arazi yüksekliği</span>
               <div>
                 <input
                   disabled={disabled}
@@ -541,7 +552,7 @@ export function MultiPointTerrainEditor({
             <button
               className="terrain-point-delete"
               disabled={disabled}
-              title="Arazi noktasını sil"
+              title="Bu arazi noktasını sil"
               type="button"
               onClick={() => apply(() => removeManualTerrainPoint(sortedPoints, point.id))}
             >
