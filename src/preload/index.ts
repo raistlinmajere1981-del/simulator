@@ -2,12 +2,14 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   FileOperationResult,
   ImportExperimentResult,
+  ImportTerrainProfileResult,
   SavedExperiment,
-  SimulatorDesktopApi
+  SimulatorDesktopApi,
+  TerrainProfileImportContext
 } from '../shared/simulator';
 
 const api: SimulatorDesktopApi = {
-  version: '0.4.0',
+  version: '0.7.0',
   platform: process.platform,
   listExperiments: () =>
     ipcRenderer.invoke('experiments:list') as Promise<SavedExperiment[]>,
@@ -20,7 +22,9 @@ const api: SimulatorDesktopApi = {
   importExperiment: () =>
     ipcRenderer.invoke('experiments:import') as Promise<ImportExperimentResult>,
   exportExperimentReport: (id) =>
-    ipcRenderer.invoke('experiments:report', id) as Promise<FileOperationResult>
+    ipcRenderer.invoke('experiments:report', id) as Promise<FileOperationResult>,
+  importTerrainProfile: (context: TerrainProfileImportContext) =>
+    ipcRenderer.invoke('terrain:import-csv', context) as Promise<ImportTerrainProfileResult>
 };
 
 contextBridge.exposeInMainWorld('simulatorDesktop', api);
