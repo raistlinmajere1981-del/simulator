@@ -65,6 +65,27 @@ jobs:
               ")"
           )
           script = script[:block_start] + replacement + script[block_end:]
+
+          repeated_old = (
+              "replace_once(helper_path, 'profile: ImportedTerrainProfile', "
+              "'profile: TerrainProfileImport')\n"
+              "replace_once(helper_path, 'profile: ImportedTerrainProfile', "
+              "'profile: TerrainProfileImport')"
+          )
+          repeated_new = (
+              "helper_text = read(helper_path)\n"
+              "if helper_text.count('profile: ImportedTerrainProfile') != 2:\n"
+              "    raise RuntimeError('Unexpected terrain import profile type count')\n"
+              "Path(helper_path).write_text(\n"
+              "    helper_text.replace('profile: ImportedTerrainProfile', "
+              "'profile: TerrainProfileImport'),\n"
+              "    encoding='utf-8'\n"
+              ")"
+          )
+          if script.count(repeated_old) != 1:
+              raise RuntimeError('Could not find repeated terrain import type patch')
+          script = script.replace(repeated_old, repeated_new, 1)
+
           exec(compile(script, 'geojson-stage.py', 'exec'))
           PY
 
