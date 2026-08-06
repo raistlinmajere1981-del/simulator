@@ -27,6 +27,10 @@ import {
   type GeodesicResult
 } from '../../simulation/geodesy';
 import {
+  GEOID_CONVERSION_MODEL_ID,
+  type GeoidConversionApplication
+} from '../../simulation/geoid-conversion-provenance';
+import {
   buildManualTerrainProfile,
   migrateLegacyManualTerrainPoint
 } from '../../simulation/manual-terrain-profile';
@@ -65,6 +69,11 @@ interface ScenarioDefinition {
   label: string;
   icon: string;
   enabled: boolean;
+}
+
+interface GeoidConversionRecordState {
+  prediction: ModelPrediction;
+  modelVersion: string;
 }
 
 const scenarios: ScenarioDefinition[] = [
@@ -520,6 +529,7 @@ function isCsvTerrainProfileSource(
 }
 
 function TerrainPanel({
+  experimentId,
   inputs,
   points,
   source,
@@ -534,6 +544,7 @@ function TerrainPanel({
   onApplyGeoidConversion,
   onApplyImport
 }: {
+  experimentId: string;
   inputs: SimulatorInputs;
   points: ManualTerrainPoint[];
   source: TerrainProfileSource | undefined;
@@ -545,12 +556,7 @@ function TerrainPanel({
   onModeChange(mode: TerrainMode): void;
   onNumberChange(key: NumericInputKey, value: number): void;
   onPointsChange(points: ManualTerrainPoint[]): void;
-  onApplyGeoidConversion(
-    targetDatum: VerticalDatumKind,
-    observerGroundElevationM: number,
-    targetGroundElevationM: number,
-    points: ManualTerrainPoint[]
-  ): void;
+  onApplyGeoidConversion(application: GeoidConversionApplication): void;
   onApplyImport(
     profile: TerrainProfileImport,
     options: TerrainProfileImportOptions
@@ -593,6 +599,7 @@ function TerrainPanel({
       </p>
 
       <GeoidConversionControl
+        experimentId={experimentId}
         currentDatum={inputs.verticalDatumKind}
         observerGroundElevationM={inputs.observerGroundElevationM}
         targetGroundElevationM={inputs.targetGroundElevationM}
@@ -755,6 +762,7 @@ export function AppNext(): React.JSX.Element {
     defaultTerrainPoints()
   );
   const [terrainProfileSource, setTerrainProfileSource] = useState<TerrainProfileSource>();
+  const [geoidConversionRecord, setGeoidConversionRecord] = useState<GeoidConversionRecordState>();
   const [runs, setRuns] = useState<ModelRun[]>([]);
   const [savedExperiments, setSavedExperiments] = useState<SavedExperiment[]>([]);
   const [activeExperimentId, setActiveExperimentId] = useState<string>();
@@ -848,6 +856,22 @@ export function AppNext(): React.JSX.Element {
       : current);
   };
 
+  const markGeoidConversionModified = (): void => {
+    const warning = 'Jeoit dönüşümünden sonra datum veya arazi kotları değiştirildi; kayıt tarihsel işlem provenansı olarak korunuyor.';
+    setGeoidConversionRecord((current) => current
+      ? {
+          ...current,
+          prediction: {
+            ...current.prediction,
+            status: 'indeterminate',
+            warnings: current.prediction.warnings.includes(warning)
+              ? current.prediction.warnings
+              : [...current.prediction.warnings, warning]
+          }
+        }
+      : current);
+  };
+
   const updateInputs = (updater: (current: SimulatorInputs) => SimulatorInputs): void => {
     setInputs(updater);
     setIsDirty(true);
@@ -856,26 +880,26 @@ export function AppNext(): React.JSX.Element {
   const updateTerrainPoints = (points: ManualTerrainPoint[]): void => {
     setManualTerrainPoints(points);
     markTerrainSourceModified();
+    markGeoidConversionModified();
     setIsDirty(true);
   };
 
-  const applyGeoidConversion = (
-    targetDatum: VerticalDatumKind,
-    observerGroundElevationM: number,
-    targetGroundElevationM: number,
-    points: ManualTerrainPoint[]
-  ): void => {
+  const applyGeoidConversion = (application: GeoidConversionApplication): void => {
     setInputs((current) => ({
       ...current,
-      verticalDatumKind: targetDatum,
-      observerGroundElevationM,
-      targetGroundElevationM
+      verticalDatumKind: application.targetDatum,
+      observerGroundElevationM: application.observerGroundElevationM,
+      targetGroundElevationM: application.targetGroundElevationM
     }));
-    setManualTerrainPoints(points);
+    setManualTerrainPoints(application.points);
+    setGeoidConversionRecord({
+      prediction: application.prediction,
+      modelVersion: application.modelVersion
+    });
     markTerrainSourceModified();
     setIsDirty(true);
     setStorageMessage(
-      `Bütün zemin ve arazi kotları ${datumLabels[targetDatum]} datumuna dönüştürüldü.`
+      `Bütün zemin ve arazi kotları ${datumLabels[application.targetDatum]} datumuna dönüştürüldü; provenans kayda hazır.`
     );
   };
 
@@ -889,6 +913,9 @@ export function AppNext(): React.JSX.Element {
       key === 'targetLatitudeDeg' ||
       key === 'targetLongitudeDeg') {
       markTerrainSourceModified();
+    }
+    if (key === 'observerGroundElevationM' || key === 'targetGroundElevationM') {
+      markGeoidConversionModified();
     }
     updateInputs((current) => ({ ...current, [key]: clampInputValue(key, value) }));
   };
@@ -973,13 +1000,23 @@ export function AppNext(): React.JSX.Element {
     setManualTerrainPoints(profile.points);
     setInputs((current) => applyImportedTerrainInputs(current, profile, options));
     setTerrainProfileSource(source);
+    setGeoidConversionRecord(undefined);
     setIsDirty(true);
   };
 
   const loadExperiment = (saved: SavedExperiment): void => {
+    const geoidPrediction = saved.predictions.find(
+      (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
+    );
     setInputs(saved.inputs);
     setManualTerrainPoints(saved.manualTerrainPoints ?? defaultTerrainPoints(saved.inputs));
     setTerrainProfileSource(saved.terrainProfileSource);
+    setGeoidConversionRecord(geoidPrediction
+      ? {
+          prediction: geoidPrediction,
+          modelVersion: saved.modelVersions[GEOID_CONVERSION_MODEL_ID] ?? 'bilinmiyor'
+        }
+      : undefined);
     setActiveExperimentId(saved.id);
     setActiveExperimentName(saved.name);
     setIsDirty(false);
@@ -1000,18 +1037,34 @@ export function AppNext(): React.JSX.Element {
       geodesic,
       modelVersions: Object.fromEntries([
         ...simulationModels.map((model) => [model.metadata.id, model.metadata.version] as const),
-        [geodesicMetadata.id, geodesicMetadata.version]
+        [geodesicMetadata.id, geodesicMetadata.version],
+        ...(geoidConversionRecord
+          ? [[GEOID_CONVERSION_MODEL_ID, geoidConversionRecord.modelVersion] as const]
+          : [])
       ]),
-      predictions: runs.map((run) => run.prediction)
+      predictions: [
+        ...runs.map((run) => run.prediction),
+        ...(geoidConversionRecord ? [geoidConversionRecord.prediction] : [])
+      ]
     };
 
     try {
       const saved = await window.simulatorDesktop.saveExperiment(record);
+      const savedGeoidPrediction = saved.predictions.find(
+        (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
+      );
       setSavedExperiments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       setActiveExperimentId(saved.id);
       setActiveExperimentName(saved.name);
       setManualTerrainPoints(saved.manualTerrainPoints ?? manualTerrainPoints);
       setTerrainProfileSource(saved.terrainProfileSource);
+      setGeoidConversionRecord(savedGeoidPrediction
+        ? {
+            prediction: savedGeoidPrediction,
+            modelVersion: saved.modelVersions[GEOID_CONVERSION_MODEL_ID] ??
+              geoidConversionRecord?.modelVersion ?? 'bilinmiyor'
+          }
+        : undefined);
       setIsDirty(false);
       setSaveDialogOpen(false);
       setStorageMessage(`“${saved.name}” cihazda kaydedildi.`);
@@ -1028,6 +1081,7 @@ export function AppNext(): React.JSX.Element {
       if (activeExperimentId === saved.id) {
         setActiveExperimentId(undefined);
         setActiveExperimentName('');
+        setGeoidConversionRecord(undefined);
         setIsDirty(true);
       }
       setStorageMessage(`“${saved.name}” silindi.`);
@@ -1122,6 +1176,7 @@ export function AppNext(): React.JSX.Element {
                 setInputs(DEFAULT_SIMULATOR_INPUTS);
                 setManualTerrainPoints(defaultTerrainPoints());
                 setTerrainProfileSource(undefined);
+                setGeoidConversionRecord(undefined);
                 setActiveExperimentId(undefined);
                 setActiveExperimentName('');
                 setIsDirty(false);
@@ -1134,6 +1189,7 @@ export function AppNext(): React.JSX.Element {
           </div>
 
           <TerrainPanel
+            experimentId={activeExperimentId ?? 'interactive-target-visibility'}
             inputs={inputs}
             points={manualTerrainPoints}
             source={terrainProfileSource}
@@ -1141,7 +1197,10 @@ export function AppNext(): React.JSX.Element {
             criticalDistanceM={criticalTerrainDistanceM}
             allowRouteDistanceImport={inputs.distanceSource === 'manual'}
             allowDemImport={inputs.distanceSource === 'coordinates'}
-            onDatumChange={(verticalDatumKind) => updateInputs((current) => ({ ...current, verticalDatumKind }))}
+            onDatumChange={(verticalDatumKind) => {
+              markGeoidConversionModified();
+              updateInputs((current) => ({ ...current, verticalDatumKind }));
+            }}
             onModeChange={(terrainMode) => updateInputs((current) => ({ ...current, terrainMode }))}
             onNumberChange={handleNumberChange}
             onPointsChange={updateTerrainPoints}
@@ -1169,6 +1228,7 @@ export function AppNext(): React.JSX.Element {
                 <li>Koordinat modu WGS84 ters jeodezik çözümünü kullanır.</li>
                 <li>Zemin ve hedef kotları seçilen ortak düşey datumda yorumlanır.</li>
                 <li>Manuel profil sıralı ve düzenlenebilir ara noktaları iki uç kotuyla birleştirir.</li>
+                <li>Jeoit profil dönüşümü kaynak, sürüm/epok, N, belirsizlik ve hesap izini deney sonucunda korur.</li>
                 <li>Küre ve düzlem aynı profili kendi geometrilerinde ayrı çözer.</li>
                 <li>Standart kırılma yalnızca kürede etkin yarıçap yaklaşımıdır.</li>
                 <li>Azimutal gösterim yalnızca kartografik referanstır.</li>
