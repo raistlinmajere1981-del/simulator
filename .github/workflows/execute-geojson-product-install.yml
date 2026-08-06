@@ -35,6 +35,103 @@ jobs:
           exec(compile(code, 'execute-geojson-product.py', 'exec'))
           PY
 
+      - name: Add explicit union type guards
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          helper_path = Path('src/simulation/terrain-import-application.ts')
+          helper = helper_path.read_text(encoding='utf-8')
+          helper = helper.replace(
+              "  ImportedTerrainProfile,\n  SimulatorInputs",
+              "  SimulatorInputs,\n  TerrainProfileImport"
+          )
+          helper = helper.replace(
+              'profile: ImportedTerrainProfile',
+              'profile: TerrainProfileImport'
+          )
+          helper_path.write_text(helper, encoding='utf-8')
+
+          editor_path = Path('src/renderer/src/MultiPointTerrainEditor.tsx')
+          editor = editor_path.read_text(encoding='utf-8')
+          editor = editor.replace(
+              'const stageProfile = (profile: ImportedTerrainProfile): void => {',
+              'const stageProfile = (profile: TerrainProfileImport): void => {'
+          )
+          editor = editor.replace(
+              'useState<ImportedTerrainProfile>()',
+              'useState<TerrainProfileImport>()'
+          )
+          editor = editor.replace(
+              'profile: ImportedTerrainProfile,',
+              'profile: TerrainProfileImport,'
+          )
+          editor_path.write_text(editor, encoding='utf-8')
+
+          app_path = Path('src/renderer/src/AppNext.tsx')
+          app = app_path.read_text(encoding='utf-8')
+          if 'type ImportedGeoJsonTerrainProfile,' not in app:
+              if '  type TerrainProfileImport,\n' in app:
+                  app = app.replace(
+                      '  type TerrainProfileImport,\n',
+                      '  type ImportedGeoJsonTerrainProfile,\n  type TerrainProfileImport,\n',
+                      1
+                  )
+              elif '  type ImportedTerrainProfile,\n' in app:
+                  app = app.replace(
+                      '  type ImportedTerrainProfile,\n',
+                      '  type ImportedGeoJsonTerrainProfile,\n  type TerrainProfileImport,\n',
+                      1
+                  )
+              else:
+                  raise RuntimeError('Terrain profile import type was not found in AppNext')
+
+          helper_marker = 'function TerrainPanel({'
+          if 'function isImportedGeoJsonTerrainProfile(' not in app:
+              helper_functions = """function isImportedGeoJsonTerrainProfile(
+            profile: TerrainProfileImport
+          ): profile is ImportedGeoJsonTerrainProfile {
+            return 'kind' in profile && profile.kind === 'geojson';
+          }
+
+          function isCsvTerrainProfileSource(
+            source: TerrainProfileSource
+          ): source is Extract<TerrainProfileSource, { kind: 'csv' }> {
+            return source.kind === 'csv';
+          }
+
+          """
+              if app.count(helper_marker) != 1:
+                  raise RuntimeError('TerrainPanel marker was not found exactly once')
+              app = app.replace(helper_marker, helper_functions + helper_marker, 1)
+
+          app = app.replace(
+              "'kind' in profile && profile.kind === 'geojson'",
+              'isImportedGeoJsonTerrainProfile(profile)'
+          )
+
+          source_start_marker = '      {source && (\n'
+          source_end_marker = '\n\n      {terrainEnabled && ('
+          source_start = app.index(source_start_marker)
+          source_end = app.index(source_end_marker, source_start)
+          source_block = """      {source && (
+            <div className={`terrain-source-strip ${source.modifiedAfterImport ? 'modified' : ''}`}>
+              <div>
+                <strong>{isCsvTerrainProfileSource(source) ? 'CSV kaynağı' : 'GeoJSON kaynağı'}: {source.fileName}</strong>
+                {isCsvTerrainProfileSource(source) ? (
+                  <span>{source.distanceColumnHeader} → mesafe · {source.elevationColumnHeader} → yükseklik · {source.rowCount} satır</span>
+                ) : (
+                  <span>{source.coordinateCount} koordinat · WGS84 LineString · Z → yükseklik</span>
+                )}
+              </div>
+              <span>{source.modifiedAfterImport ? 'İÇE AKTARIMDAN SONRA DÜZENLENDİ' : 'KAYNAKLA EŞLEŞİYOR'}</span>
+            </div>
+          )}"""
+          app = app[:source_start] + source_block + app[source_end:]
+          app_path.write_text(app, encoding='utf-8')
+          PY
+
       - name: Preserve workflow files
         run: git restore --source=HEAD -- .github/workflows
 
