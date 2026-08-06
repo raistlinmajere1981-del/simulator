@@ -49,3 +49,5 @@ jobs:
           git add -A
           git commit -m "record terrain source file integrity"
           git push origin HEAD:agent/terrain-source-integrity
+
+# Trigger commit: Windows validation pool
