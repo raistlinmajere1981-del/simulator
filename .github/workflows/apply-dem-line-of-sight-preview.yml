@@ -1,5 +1,6 @@
 name: Apply DEM line-of-sight preview
 
+# Geoid UI wiring validation dispatch.
 on:
   push:
     branches:
