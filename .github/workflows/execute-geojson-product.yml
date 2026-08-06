@@ -76,7 +76,7 @@ jobs:
               "    \"portable_text = read(portable_path)\\n\"",
               "    \"if portable_text.count('PortableExperimentFileV5') != 2:\\n\"",
               "    \"    raise RuntimeError('Unexpected PortableExperimentFileV5 count')\\n\"",
-              "    \"if portable_text.count('LocalExperimentStoreV5') != 2:\\n\"",
+              "    \"if portable_text.count('LocalExperimentStoreV5') != 3:\\n\"",
               "    \"    raise RuntimeError('Unexpected LocalExperimentStoreV5 count')\\n\"",
               "    \"Path(portable_path).write_text(\\n\"",
               "    \"    portable_text.replace('PortableExperimentFileV5', 'PortableExperimentFileV6')\\n\"",
