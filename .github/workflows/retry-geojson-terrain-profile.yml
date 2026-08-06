@@ -165,13 +165,9 @@ jobs:
           if editor_count != 1:
               raise RuntimeError(f'Could not patch GeoJSON editor action; matches={editor_count}')
 
-          app_block_start_token = (
-              "replace_regex(\n    app_path,\n"
-              "    r\"    const source: TerrainProfileSource ="
-          )
-          app_block_end_token = "\n\nportable_path = 'src/shared/portable.ts'"
-          app_block_start = script.index(app_block_start_token)
-          app_block_end = script.index(app_block_end_token, app_block_start)
+          app_section_start = script.index("app_path = 'src/renderer/src/AppNext.tsx'")
+          app_block_start = script.index("replace_regex(\n    app_path,", app_section_start)
+          app_block_end = script.index("\n\nportable_path = 'src/shared/portable.ts'", app_block_start)
           app_pattern = (
               r"    const source: TerrainProfileSource = \{.*?"
               r"      modifiedAfterImport: false\n    \};"
@@ -222,11 +218,7 @@ jobs:
               f"    {app_replacement_ts!r}\n"
               ")"
           )
-          script = (
-              script[:app_block_start] +
-              app_replacement_call +
-              script[app_block_end:]
-          )
+          script = script[:app_block_start] + app_replacement_call + script[app_block_end:]
 
           exec(compile(script, 'geojson-stage.py', 'exec'))
           PY
