@@ -136,6 +136,14 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
     typeof value.modifiedAfterImport !== 'boolean') {
     return null;
   }
+  const hasIntegrity = value.fileSizeBytes !== undefined || value.sha256 !== undefined;
+  const integrityValid = !hasIntegrity || (
+    Number.isInteger(value.fileSizeBytes) &&
+    inRange(value.fileSizeBytes, 1, 64 * 1024 * 1024) &&
+    typeof value.sha256 === 'string' && /^[a-f0-9]{64}$/.test(value.sha256)
+  );
+  if (!integrityValid) return null;
+
   if (value.sourceDistanceM !== null &&
     (!isFiniteNumber(value.sourceDistanceM) || value.sourceDistanceM <= 0 ||
       value.sourceDistanceM > 20_000_000)) {
@@ -153,6 +161,10 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
     ...(typeof value.appliedRouteCoordinates === 'boolean'
       ? { appliedRouteCoordinates: value.appliedRouteCoordinates }
       : {}),
+    ...(hasIntegrity ? {
+      fileSizeBytes: value.fileSizeBytes as number,
+      sha256: value.sha256 as string
+    } : {}),
     modifiedAfterImport: value.modifiedAfterImport
   };
 

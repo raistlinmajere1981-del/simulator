@@ -29,6 +29,10 @@ describe('experiment html report', () => {
     expect(html).toContain('8,5 m');
     expect(html).toContain('Profil kaynağı ve provenans');
     expect(html).toContain('terrain-profile.csv');
+    expect(html).toContain('Kaynak dosya boyutu');
+    expect(html).toContain('128 bayt');
+    expect(html).toContain('SHA-256');
+    expect(html).toContain('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
     expect(html).toContain('distance_percent');
     expect(html).toContain('elevation_m');
     expect(html).toContain('Rota yüzdesi');
@@ -54,6 +58,8 @@ describe('experiment html report', () => {
       appliedTargetEndpoint: true,
       appliedRouteDistance: false,
       appliedRouteCoordinates: true,
+      fileSizeBytes: 256,
+      sha256: 'b'.repeat(64),
       modifiedAfterImport: false,
       geometryType: 'LineString',
       coordinateCount: 6,
@@ -88,6 +94,8 @@ it('includes ESRI ASCII DEM sampling provenance', () => {
       appliedTargetEndpoint: false,
       appliedRouteDistance: false,
       appliedRouteCoordinates: false,
+      fileSizeBytes: 1_024,
+      sha256: 'c'.repeat(64),
       modifiedAfterImport: false,
       format: 'esri-ascii',
       samplingMethod: 'bilinear',

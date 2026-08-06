@@ -206,9 +206,15 @@ function terrainSourceSection(source: TerrainProfileSource | undefined): string 
   const stateLabel = source.modifiedAfterImport
     ? 'İçe aktarımdan sonra düzenlendi'
     : 'Kayıt, içe aktarılan kaynakla eşleşiyor';
+  const integrityRows = source.fileSizeBytes !== undefined && source.sha256 !== undefined
+    ? `
+    <tr><td>Kaynak dosya boyutu</td><td>${inputNumberFormatter.format(source.fileSizeBytes)} bayt</td></tr>
+    <tr><td>SHA-256</td><td><code>${escapeHtml(source.sha256)}</code></td></tr>`
+    : '<tr><td>Dosya bütünlüğü</td><td>Bu eski kayıtta boyut ve SHA-256 özeti bulunmuyor.</td></tr>';
   const commonRows = `
     <tr><td>Dosya adı</td><td>${escapeHtml(source.fileName)}</td></tr>
     <tr><td>İçe aktarma zamanı</td><td>${formatDate(source.importedAtIso)}</td></tr>
+    ${integrityRows}
     <tr><td>Kaynak rota</td><td>${sourceRoute} · Deney mesafesine uygulandı: ${yesNo(source.appliedRouteDistance === true)}</td></tr>
     <tr><td>Kaynak başlangıç yüksekliği</td><td>${inputNumberFormatter.format(source.observerEndpointElevationM)} m · Deneye uygulandı: ${yesNo(source.appliedObserverEndpoint)}</td></tr>
     <tr><td>Kaynak bitiş yüksekliği</td><td>${inputNumberFormatter.format(source.targetEndpointElevationM)} m · Deneye uygulandı: ${yesNo(source.appliedTargetEndpoint)}</td></tr>`;

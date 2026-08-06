@@ -26,7 +26,8 @@ import type {
   ImportTerrainProfileResult,
   SavedExperiment,
   TerrainProfileColumnMapping,
-  TerrainProfileImportContext
+  TerrainProfileImportContext,
+  TerrainSourceIntegrity
 } from '../shared/simulator';
 import {
   parseTerrainProfileCsv,
@@ -35,6 +36,10 @@ import {
 import { parseTerrainProfileGeoJson } from '../simulation/geojson-terrain-profile';
 import { buildTerrainProfileFromDem } from '../simulation/dem-route-profile';
 import { parseEsriAsciiGrid } from '../simulation/esri-ascii-grid';
+import {
+  attachTerrainSourceIntegrity,
+  calculateTerrainSourceIntegrity
+} from './terrain-source-integrity';
 
 const EXPERIMENTS_FILE_NAME = 'experiments.json';
 const MAX_TERRAIN_PROFILE_BYTES = 5 * 1024 * 1024;
@@ -44,6 +49,7 @@ const TERRAIN_MAPPING_TTL_MS = 10 * 60 * 1_000;
 interface PendingTerrainImport {
   content: string;
   fileName: string;
+  integrity: TerrainSourceIntegrity;
   createdAtMs: number;
 }
 
@@ -237,6 +243,7 @@ function terrainMappingResult(
   error: TerrainProfileColumnMappingRequiredError,
   content: string,
   fileName: string,
+  integrity: TerrainSourceIntegrity,
   filePath?: string
 ): ImportTerrainProfileResult {
   purgeExpiredTerrainImports();
@@ -244,6 +251,7 @@ function terrainMappingResult(
   pendingTerrainImports.set(requestId, {
     content,
     fileName,
+    integrity,
     createdAtMs: Date.now()
   });
   return {
@@ -414,9 +422,14 @@ function registerExperimentHandlers(): void {
         throw new Error('CSV arazi profili 5 MB sınırını aşıyor.');
       }
 
-      const content = await fs.readFile(selectedPath, 'utf-8');
+      const bytes = await fs.readFile(selectedPath);
+      const content = bytes.toString('utf-8');
+      const integrity = calculateTerrainSourceIntegrity(bytes);
       try {
-        const profile = parseTerrainProfileCsv(content, selectedPath, context);
+        const profile = attachTerrainSourceIntegrity(
+          parseTerrainProfileCsv(content, selectedPath, context),
+          integrity
+        );
         return {
           status: 'success',
           message: `“${profile.fileName}” okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
@@ -425,7 +438,13 @@ function registerExperimentHandlers(): void {
         };
       } catch (error) {
         if (error instanceof TerrainProfileColumnMappingRequiredError) {
-          return terrainMappingResult(error, content, selectedPath, selectedPath);
+          return terrainMappingResult(
+            error,
+            content,
+            selectedPath,
+            integrity,
+            selectedPath
+          );
         }
         throw error;
       }
@@ -450,11 +469,14 @@ function registerExperimentHandlers(): void {
       }
       const mapping = validateTerrainColumnMapping(rawMapping);
       const context = validateTerrainImportContext(rawContext);
-      const profile = parseTerrainProfileCsv(
-        pending.content,
-        pending.fileName,
-        context,
-        mapping
+      const profile = attachTerrainSourceIntegrity(
+        parseTerrainProfileCsv(
+          pending.content,
+          pending.fileName,
+          context,
+          mapping
+        ),
+        pending.integrity
       );
       pendingTerrainImports.delete(rawRequestId);
       return {
@@ -489,9 +511,13 @@ function registerExperimentHandlers(): void {
         throw new Error('ESRI ASCII DEM dosyası 64 MB sınırını aşıyor.');
       }
 
-      const content = await fs.readFile(selectedPath, 'utf-8');
+      const bytes = await fs.readFile(selectedPath);
+      const content = bytes.toString('utf-8');
       const grid = parseEsriAsciiGrid(content, selectedPath);
-      const profile = buildTerrainProfileFromDem(grid, context);
+      const profile = attachTerrainSourceIntegrity(
+        buildTerrainProfileFromDem(grid, context),
+        calculateTerrainSourceIntegrity(bytes)
+      );
       return {
         status: 'success',
         message: `“${profile.fileName}” DEM rotası örneklendi: ${profile.points.length} ara nokta uygulamaya hazır.`,
@@ -528,8 +554,12 @@ function registerExperimentHandlers(): void {
         throw new Error('GeoJSON arazi profili 5 MB sınırını aşıyor.');
       }
 
-      const content = await fs.readFile(selectedPath, 'utf-8');
-      const profile = parseTerrainProfileGeoJson(content, selectedPath, context);
+      const bytes = await fs.readFile(selectedPath);
+      const content = bytes.toString('utf-8');
+      const profile = attachTerrainSourceIntegrity(
+        parseTerrainProfileGeoJson(content, selectedPath, context),
+        calculateTerrainSourceIntegrity(bytes)
+      );
       return {
         status: 'success',
         message: `“${profile.fileName}” okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,

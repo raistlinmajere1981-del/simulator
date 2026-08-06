@@ -602,7 +602,10 @@ function TerrainPanel({
               </span>
             )}
           </div>
-          <span>{source.modifiedAfterImport ? 'İÇE AKTARIMDAN SONRA DÜZENLENDİ' : 'KAYNAKLA EŞLEŞİYOR'}</span>
+          <span>
+            {source.sha256 ? `SHA-256 ${source.sha256.slice(0, 12)}… · ` : ''}
+            {source.modifiedAfterImport ? 'İÇE AKTARIMDAN SONRA DÜZENLENDİ' : 'KAYNAKLA EŞLEŞİYOR'}
+          </span>
         </div>
       )}
 
@@ -872,6 +875,9 @@ export function AppNext(): React.JSX.Element {
       appliedTargetEndpoint: options.applyTargetEndpoint,
       appliedRouteDistance,
       appliedRouteCoordinates,
+      ...(profile.fileSizeBytes !== undefined && profile.sha256 !== undefined
+        ? { fileSizeBytes: profile.fileSizeBytes, sha256: profile.sha256 }
+        : {}),
       modifiedAfterImport: false
     };
     const source: TerrainProfileSource = isImportedDemTerrainProfile(profile)
