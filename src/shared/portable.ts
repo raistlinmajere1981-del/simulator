@@ -322,10 +322,12 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     : parseManualTerrainPoints(value.manualTerrainPoints);
   if (!manualTerrainPoints) return null;
 
-  const terrainProfileSource = value.terrainProfileSource === undefined
-    ? undefined
-    : parseTerrainProfileSource(value.terrainProfileSource);
-  if (value.terrainProfileSource !== undefined && !terrainProfileSource) return null;
+  let terrainProfileSource: TerrainProfileSource | undefined;
+  if (value.terrainProfileSource !== undefined) {
+    const parsedSource = parseTerrainProfileSource(value.terrainProfileSource);
+    if (!parsedSource) return null;
+    terrainProfileSource = parsedSource;
+  }
 
   return {
     id: value.id,
