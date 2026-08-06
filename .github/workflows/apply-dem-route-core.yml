@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/apply-dem-route-core.yml
       - scripts/apply-dem-route-core.py
+      - scripts/fix-dem-report-union.py
 
 permissions:
   contents: write
@@ -22,7 +23,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply product changes
-        run: python3 scripts/apply-dem-route-core.py
+        run: |
+          python3 scripts/apply-dem-route-core.py
+          python3 scripts/fix-dem-report-union.py
 
       - name: Install dependencies
         run: npm install --package-lock=false
@@ -36,8 +39,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Remove temporary patch script
-        run: rm -f scripts/apply-dem-route-core.py
+      - name: Remove temporary patch scripts
+        run: rm -f scripts/apply-dem-route-core.py scripts/fix-dem-report-union.py
 
       - name: Commit product changes
         shell: bash
