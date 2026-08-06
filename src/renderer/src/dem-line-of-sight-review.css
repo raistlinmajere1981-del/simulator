@@ -1,0 +1,124 @@
+.dem-line-of-sight-review {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid #416b55;
+  border-radius: 4px;
+  background: #10271d;
+}
+
+.dem-line-of-sight-review.blocked {
+  border-color: #8d554b;
+  background: #301b19;
+}
+
+.dem-line-of-sight-review.error {
+  border-color: #8d6e45;
+  color: #e2c58f;
+  background: #302716;
+  font-size: 8px;
+}
+
+.dem-line-of-sight-review.error strong,
+.dem-line-of-sight-review.error span {
+  display: block;
+}
+
+.dem-line-of-sight-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dem-line-of-sight-heading small {
+  display: block;
+  margin-bottom: 3px;
+  color: #77a388;
+  font-size: 7px;
+}
+
+.dem-line-of-sight-review.blocked .dem-line-of-sight-heading small {
+  color: #c28d83;
+}
+
+.dem-line-of-sight-heading strong {
+  color: #d9eadf;
+  font-size: 10px;
+}
+
+.dem-line-of-sight-review.blocked .dem-line-of-sight-heading strong {
+  color: #f0d2cd;
+}
+
+.dem-line-of-sight-heading > b {
+  padding: 4px 8px;
+  border: 1px solid #4e8563;
+  border-radius: 999px;
+  color: #c7ead2;
+  background: #183a25;
+  font-size: 7px;
+}
+
+.dem-line-of-sight-review.blocked .dem-line-of-sight-heading > b {
+  border-color: #a15f53;
+  color: #ffd8d1;
+  background: #552721;
+}
+
+.dem-line-of-sight-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.dem-line-of-sight-metrics span {
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid rgba(89, 133, 105, .45);
+  border-radius: 3px;
+  color: #8dac98;
+  background: rgba(5, 22, 13, .45);
+  font-size: 7px;
+}
+
+.dem-line-of-sight-review.blocked .dem-line-of-sight-metrics span {
+  border-color: rgba(164, 91, 78, .48);
+  color: #c49b94;
+  background: rgba(35, 8, 6, .38);
+}
+
+.dem-line-of-sight-metrics b {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #d8eadf;
+  font-size: 8px;
+  text-overflow: ellipsis;
+}
+
+.dem-line-of-sight-review.blocked .dem-line-of-sight-metrics b {
+  color: #f0d1cc;
+}
+
+.dem-line-of-sight-review > p {
+  margin: 0;
+  color: #7f9c89;
+  font-size: 7px;
+  line-height: 1.4;
+}
+
+.dem-line-of-sight-review.blocked > p {
+  color: #b58c85;
+}
+
+@media (max-width: 760px) {
+  .dem-line-of-sight-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dem-line-of-sight-metrics {
+    grid-template-columns: 1fr;
+  }
+}
