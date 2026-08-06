@@ -1,4 +1,4 @@
-name: Apply WGS84 DEM route core
+name: Apply ESRI ASCII DEM route profile
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
       - .github/workflows/apply-dem-route-core.yml
       - scripts/apply-dem-route-core.py
       - scripts/fix-dem-report-union.py
+      - scripts/apply-dem-route-integration.py
 
 permissions:
   contents: write
@@ -26,6 +27,7 @@ jobs:
         run: |
           python3 scripts/apply-dem-route-core.py
           python3 scripts/fix-dem-report-union.py
+          python3 scripts/apply-dem-route-integration.py
 
       - name: Install dependencies
         run: npm install --package-lock=false
@@ -40,7 +42,7 @@ jobs:
         run: npm run build
 
       - name: Remove temporary patch scripts
-        run: rm -f scripts/apply-dem-route-core.py scripts/fix-dem-report-union.py
+        run: rm -f scripts/apply-dem-route-core.py scripts/fix-dem-report-union.py scripts/apply-dem-route-integration.py
 
       - name: Commit product changes
         shell: bash
@@ -48,5 +50,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A -- ':!.github/workflows'
-          git commit -m "add WGS84 DEM route profile core"
+          git commit -m "add ESRI ASCII DEM route profile flow"
           git push origin HEAD:agent/esri-ascii-dem-route-profile
