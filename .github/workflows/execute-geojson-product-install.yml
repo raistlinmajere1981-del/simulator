@@ -55,18 +55,22 @@ jobs:
 
           editor_path = Path('src/renderer/src/MultiPointTerrainEditor.tsx')
           editor = editor_path.read_text(encoding='utf-8')
-          editor = editor.replace(
-              'const stageProfile = (profile: ImportedTerrainProfile): void => {',
-              'const stageProfile = (profile: TerrainProfileImport): void => {'
-          )
-          editor = editor.replace(
-              'useState<ImportedTerrainProfile>()',
-              'useState<TerrainProfileImport>()'
-          )
-          editor = editor.replace(
-              'profile: ImportedTerrainProfile,',
-              'profile: TerrainProfileImport,'
-          )
+          if '  TerrainProfileImport,\n' not in editor:
+              if '  ImportedGeoJsonTerrainProfile,\n' in editor:
+                  editor = editor.replace(
+                      '  ImportedGeoJsonTerrainProfile,\n',
+                      '  ImportedGeoJsonTerrainProfile,\n  TerrainProfileImport,\n',
+                      1
+                  )
+              elif '  TerrainProfileMappingRequest\n' in editor:
+                  editor = editor.replace(
+                      '  TerrainProfileMappingRequest\n',
+                      '  TerrainProfileImport,\n  TerrainProfileMappingRequest\n',
+                      1
+                  )
+              else:
+                  raise RuntimeError('TerrainProfileImport could not be added to the editor import')
+          editor = editor.replace('ImportedTerrainProfile', 'TerrainProfileImport')
           editor_path.write_text(editor, encoding='utf-8')
 
           app_path = Path('src/renderer/src/AppNext.tsx')
@@ -86,6 +90,7 @@ jobs:
                   )
               else:
                   raise RuntimeError('Terrain profile import type was not found in AppNext')
+          app = app.replace('ImportedTerrainProfile', 'TerrainProfileImport')
 
           helper_marker = 'function TerrainPanel({'
           if 'function isImportedGeoJsonTerrainProfile(' not in app:
