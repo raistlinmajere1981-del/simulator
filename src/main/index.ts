@@ -22,10 +22,14 @@ import {
 import type {
   FileOperationResult,
   ImportExperimentResult,
-  SavedExperiment
+  ImportTerrainProfileResult,
+  SavedExperiment,
+  TerrainProfileImportContext
 } from '../shared/simulator';
+import { parseTerrainProfileCsv } from '../simulation/csv-terrain-profile';
 
 const EXPERIMENTS_FILE_NAME = 'experiments.json';
+const MAX_TERRAIN_CSV_BYTES = 5 * 1024 * 1024;
 
 function experimentsFilePath(): string {
   return join(app.getPath('userData'), EXPERIMENTS_FILE_NAME);
@@ -121,6 +125,26 @@ async function getExperimentOrThrow(id: string): Promise<SavedExperiment> {
   const experiment = experiments.find((item) => item.id === id);
   if (!experiment) throw new Error('Deney kaydı bulunamadı.');
   return experiment;
+}
+
+function validateTerrainImportContext(value: unknown): TerrainProfileImportContext {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('CSV arazi profili için geçerli deney bilgisi gönderilmedi.');
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (!Number.isFinite(candidate.routeDistanceM) ||
+    (candidate.routeDistanceM as number) <= 0 ||
+    !Number.isFinite(candidate.observerGroundElevationM) ||
+    !Number.isFinite(candidate.targetGroundElevationM)) {
+    throw new TypeError('CSV arazi profili için mesafe ve uç kotları geçerli olmalı.');
+  }
+
+  return {
+    routeDistanceM: candidate.routeDistanceM as number,
+    observerGroundElevationM: candidate.observerGroundElevationM as number,
+    targetGroundElevationM: candidate.targetGroundElevationM as number
+  };
 }
 
 function registerExperimentHandlers(): void {
@@ -252,6 +276,41 @@ function registerExperimentHandlers(): void {
         experiment: imported,
         migrated: parsed.migrated,
         sourceVersion: parsed.sourceVersion
+      };
+    }
+  );
+
+  ipcMain.handle(
+    'terrain:import-csv',
+    async (event, rawContext: unknown): Promise<ImportTerrainProfileResult> => {
+      const context = validateTerrainImportContext(rawContext);
+      const selection = await showOpenDialog(event, {
+        title: 'CSV Arazi Profilini İçe Aktar',
+        properties: ['openFile'],
+        filters: [
+          { name: 'Arazi Profili CSV', extensions: ['csv', 'tsv', 'txt'] },
+          { name: 'Tüm Dosyalar', extensions: ['*'] }
+        ]
+      });
+
+      const selectedPath = selection.filePaths[0];
+      if (selection.canceled || !selectedPath) {
+        return { status: 'cancelled', message: 'CSV profil içe aktarma iptal edildi.' };
+      }
+
+      const statistics = await fs.stat(selectedPath);
+      if (!statistics.isFile()) throw new Error('Seçilen yol normal bir dosya değil.');
+      if (statistics.size > MAX_TERRAIN_CSV_BYTES) {
+        throw new Error('CSV arazi profili 5 MB sınırını aşıyor.');
+      }
+
+      const content = await fs.readFile(selectedPath, 'utf-8');
+      const profile = parseTerrainProfileCsv(content, selectedPath, context);
+      return {
+        status: 'success',
+        message: `“${profile.fileName}” okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
+        filePath: selectedPath,
+        profile
       };
     }
   );

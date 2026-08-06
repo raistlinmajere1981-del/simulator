@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type { ImportedTerrainProfile } from '../../shared/simulator';
 import type { ManualTerrainPoint } from '../../shared/terrain';
 import {
   insertManualTerrainPoint,
@@ -117,6 +118,17 @@ function previewCoordinates(points: readonly PreviewPoint[]): {
   return { polyline, minimumElevationM, maximumElevationM };
 }
 
+function distanceUnitLabel(profile: ImportedTerrainProfile): string {
+  if (profile.distanceUnit === 'percent') return 'rota yüzdesi';
+  if (profile.distanceUnit === 'km') return 'kilometre';
+  return 'metre';
+}
+
+function sourceDistanceLabel(profile: ImportedTerrainProfile): string {
+  if (profile.sourceDistanceM === null) return 'Yüzde tabanlı profil';
+  return `${numberFormatter.format(profile.sourceDistanceM / 1_000)} km kaynak rota`;
+}
+
 export function MultiPointTerrainEditor({
   points,
   routeDistanceKm,
@@ -127,6 +139,9 @@ export function MultiPointTerrainEditor({
   onChange
 }: MultiPointTerrainEditorProps): React.JSX.Element {
   const [operationError, setOperationError] = useState('');
+  const [pendingImport, setPendingImport] = useState<ImportedTerrainProfile>();
+  const [importMessage, setImportMessage] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
   const sortedPoints = useMemo(() => sortManualTerrainPoints(points), [points]);
   const validationErrors = useMemo(
     () => validateManualTerrainPoints(sortedPoints),
@@ -157,6 +172,7 @@ export function MultiPointTerrainEditor({
     try {
       const next = operation();
       setOperationError('');
+      setImportMessage('');
       onChange(next);
     } catch (error) {
       setOperationError(error instanceof Error ? error.message : 'Arazi noktası güncellenemedi.');
@@ -172,6 +188,43 @@ export function MultiPointTerrainEditor({
     apply(() => insertManualTerrainPoint(sortedPoints, point));
   };
 
+  const chooseCsvProfile = async (): Promise<void> => {
+    setOperationError('');
+    setImportMessage('');
+    setIsImporting(true);
+    try {
+      const result = await window.simulatorDesktop.importTerrainProfile({
+        routeDistanceM: routeDistanceKm * 1_000,
+        observerGroundElevationM,
+        targetGroundElevationM
+      });
+      if (result.status === 'cancelled' || !result.profile) {
+        setPendingImport(undefined);
+        setImportMessage(result.message);
+        return;
+      }
+      setPendingImport(result.profile);
+    } catch (error) {
+      setPendingImport(undefined);
+      setOperationError(
+        error instanceof Error ? error.message : 'CSV arazi profili okunamadı.'
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const applyCsvProfile = (): void => {
+    if (!pendingImport) return;
+    const imported = pendingImport;
+    setOperationError('');
+    setPendingImport(undefined);
+    setImportMessage(
+      `“${imported.fileName}” profili uygulandı: ${imported.points.length} ara nokta.`
+    );
+    onChange(imported.points);
+  };
+
   return (
     <section className={`multi-terrain-editor ${disabled ? 'disabled' : ''}`}>
       <header className="multi-terrain-editor-heading">
@@ -179,14 +232,52 @@ export function MultiPointTerrainEditor({
           <strong>Arazi profil noktaları</strong>
           <span>{sortedPoints.length} ara nokta · uçlar otomatik</span>
         </div>
-        <button
-          disabled={disabled || sortedPoints.length >= MAX_EDITOR_POINTS}
-          type="button"
-          onClick={addPoint}
-        >
-          + Nokta ekle
-        </button>
+        <div className="terrain-editor-heading-actions">
+          <button
+            className="terrain-csv-button"
+            disabled={disabled || isImporting || routeDistanceKm <= 0}
+            type="button"
+            onClick={() => void chooseCsvProfile()}
+          >
+            {isImporting ? 'CSV okunuyor…' : 'CSV içe aktar'}
+          </button>
+          <button
+            disabled={disabled || sortedPoints.length >= MAX_EDITOR_POINTS}
+            type="button"
+            onClick={addPoint}
+          >
+            + Nokta ekle
+          </button>
+        </div>
       </header>
+
+      {pendingImport && (
+        <div className="terrain-import-review">
+          <div className="terrain-import-review-heading">
+            <div>
+              <strong>{pendingImport.fileName}</strong>
+              <span>Mevcut {sortedPoints.length} ara noktanın yerine uygulanacak.</span>
+            </div>
+            <span className="terrain-import-ready">UYGULAMAYA HAZIR</span>
+          </div>
+          <div className="terrain-import-metrics">
+            <div><small>CSV satırı</small><strong>{pendingImport.rowCount}</strong></div>
+            <div><small>Ara nokta</small><strong>{pendingImport.points.length}</strong></div>
+            <div><small>Mesafe sütunu</small><strong>{distanceUnitLabel(pendingImport)}</strong></div>
+            <div><small>Kaynak rota</small><strong>{sourceDistanceLabel(pendingImport)}</strong></div>
+            <div><small>CSV uç kotları</small><strong>{numberFormatter.format(pendingImport.observerEndpointElevationM)} → {numberFormatter.format(pendingImport.targetEndpointElevationM)} m</strong></div>
+          </div>
+          {pendingImport.warnings.length > 0 && (
+            <ul className="terrain-import-warnings">
+              {pendingImport.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+            </ul>
+          )}
+          <div className="terrain-import-actions">
+            <button type="button" onClick={() => setPendingImport(undefined)}>Vazgeç</button>
+            <button className="apply" type="button" onClick={applyCsvProfile}>Profili uygula</button>
+          </div>
+        </div>
+      )}
 
       <div className="terrain-profile-preview" aria-label="Arazi profili önizlemesi">
         <svg preserveAspectRatio="none" viewBox="0 0 100 100" role="img">
@@ -296,6 +387,9 @@ export function MultiPointTerrainEditor({
           {operationError && <p>{operationError}</p>}
           {validationErrors.map((error) => <p key={error}>{error}</p>)}
         </div>
+      )}
+      {importMessage && !operationError && (
+        <div className="terrain-import-status" role="status">{importMessage}</div>
       )}
     </section>
   );
