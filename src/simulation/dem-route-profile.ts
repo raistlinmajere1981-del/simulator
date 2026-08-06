@@ -143,6 +143,7 @@ export function buildTerrainProfileFromDem(
     columnCount: grid.columnCount,
     rowCount: grid.rowCount,
     sampleCount,
+    sampleCountMode: requestedSampleCount === undefined ? 'automatic' : 'manual',
     sampleSpacingM: path.totalDistanceM / (sampleCount - 1),
     cellSizeDeg: grid.cellSizeDeg,
     noDataValue: grid.noDataValue,

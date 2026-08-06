@@ -210,6 +210,8 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
       !Number.isInteger(value.rowCount) || !inRange(value.rowCount, 1, 10_000) ||
       (value.columnCount as number) * (value.rowCount as number) > 4_000_000 ||
       !Number.isInteger(value.sampleCount) || !inRange(value.sampleCount, 3, 2_002) ||
+      (value.sampleCountMode !== undefined &&
+        value.sampleCountMode !== 'automatic' && value.sampleCountMode !== 'manual') ||
       !isFiniteNumber(value.sampleSpacingM) || value.sampleSpacingM <= 0 ||
       !isFiniteNumber(value.cellSizeDeg) || value.cellSizeDeg <= 0 || value.cellSizeDeg > 180 ||
       !noDataValid ||
@@ -232,6 +234,9 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
       columnCount: value.columnCount as number,
       rowCount: value.rowCount as number,
       sampleCount: value.sampleCount as number,
+      ...(value.sampleCountMode === 'automatic' || value.sampleCountMode === 'manual'
+        ? { sampleCountMode: value.sampleCountMode }
+        : {}),
       sampleSpacingM: value.sampleSpacingM,
       cellSizeDeg: value.cellSizeDeg,
       noDataValue: value.noDataValue as number | null,

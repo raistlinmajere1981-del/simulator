@@ -28,6 +28,7 @@ describe('DEM route terrain profile', () => {
 
     expect(profile.kind).toBe('dem');
     expect(profile.sampleCount).toBe(5);
+    expect(profile.sampleCountMode).toBe('manual');
     expect(profile.points).toHaveLength(3);
     expect(profile.observerEndpointElevationM).toBeCloseTo(1, 9);
     expect(profile.points[1]?.distancePercent).toBe(50);
@@ -44,6 +45,7 @@ describe('DEM route terrain profile', () => {
     });
     expect(profile.sampleCount).toBeGreaterThanOrEqual(3);
     expect(profile.sampleCount).toBeLessThanOrEqual(2_002);
+    expect(profile.sampleCountMode).toBe('automatic');
     expect(profile.sampleSpacingM).toBeGreaterThan(0);
   });
 

@@ -223,6 +223,7 @@ describe('portable experiment format', () => {
       columnCount: 10,
       rowCount: 10,
       sampleCount: 101,
+      sampleCountMode: 'manual' as const,
       sampleSpacingM: 225,
       cellSizeDeg: 0.03,
       noDataValue: -9999,

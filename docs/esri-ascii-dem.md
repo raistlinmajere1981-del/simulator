@@ -38,9 +38,12 @@ gözlemci ve hedef arasında WGS84 ters jeodezik çözümü kurar; rota üzerind
 koordinatları Vincenty doğrudan çözümüyle üretir ve grid'i varsayılan olarak iki
 doğrusal yöntemle örnekler.
 
-Örnek sayısı grid hücre boyutuna göre otomatik belirlenir ve 3…2.002 aralığında
-sınırlandırılır. Rota kapsam dışına çıkarsa veya bir örnek NODATA hücresine denk
-gelirse profil bütünüyle reddedilir; eksik kısımlar sıfır yükseklikle doldurulmaz.
+Örnek sayısı varsayılan olarak grid hücre boyutuna göre otomatik belirlenir ve
+3…2.002 aralığında sınırlandırılır. Kullanıcı gerektiğinde bu aralıkta kesin bir
+örnek sayısı seçebilir. Örnekleme yöntemi iki doğrusal veya en yakın hücre olarak
+belirlenebilir; yöntem ve örnek sayısının otomatik/manüel oluşu kaynak kaydında
+korunur. Rota kapsam dışına çıkarsa veya bir örnek NODATA hücresine denk gelirse
+profil bütünüyle reddedilir; eksik kısımlar sıfır yükseklikle doldurulmaz.
 
 Dosya içeriği renderer sürecine gönderilmez. Ana süreç yalnız oluşturulan arazi
 noktalarını, grid çözünürlüğünü, kapsamı, örnekleme yöntemini ve kaynak dosya
