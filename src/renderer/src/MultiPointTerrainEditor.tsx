@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
-import type { ImportedTerrainProfile } from '../../shared/simulator';
+import type {
+  CsvTerrainDistanceUnit,
+  ImportedTerrainProfile,
+  TerrainProfileMappingRequest
+} from '../../shared/simulator';
 import type { ManualTerrainPoint } from '../../shared/terrain';
 import {
   insertManualTerrainPoint,
@@ -9,6 +13,11 @@ import {
   validateManualTerrainPoints
 } from '../../simulation/manual-terrain-profile';
 
+export interface TerrainProfileImportOptions {
+  applyObserverEndpoint: boolean;
+  applyTargetEndpoint: boolean;
+}
+
 interface MultiPointTerrainEditorProps {
   points: ManualTerrainPoint[];
   routeDistanceKm: number;
@@ -17,6 +26,10 @@ interface MultiPointTerrainEditorProps {
   criticalDistanceM?: number | null;
   disabled?: boolean;
   onChange(points: ManualTerrainPoint[]): void;
+  onApplyImport(
+    profile: ImportedTerrainProfile,
+    options: TerrainProfileImportOptions
+  ): void;
 }
 
 interface PreviewPoint {
@@ -129,6 +142,12 @@ function sourceDistanceLabel(profile: ImportedTerrainProfile): string {
   return `${numberFormatter.format(profile.sourceDistanceM / 1_000)} km kaynak rota`;
 }
 
+function delimiterLabel(request: TerrainProfileMappingRequest): string {
+  if (request.delimiter === 'semicolon') return 'noktalı virgül';
+  if (request.delimiter === 'tab') return 'sekme';
+  return 'virgül';
+}
+
 export function MultiPointTerrainEditor({
   points,
   routeDistanceKm,
@@ -136,10 +155,17 @@ export function MultiPointTerrainEditor({
   targetGroundElevationM,
   criticalDistanceM,
   disabled = false,
-  onChange
+  onChange,
+  onApplyImport
 }: MultiPointTerrainEditorProps): React.JSX.Element {
   const [operationError, setOperationError] = useState('');
   const [pendingImport, setPendingImport] = useState<ImportedTerrainProfile>();
+  const [mappingRequest, setMappingRequest] = useState<TerrainProfileMappingRequest>();
+  const [mappingDistanceIndex, setMappingDistanceIndex] = useState(0);
+  const [mappingElevationIndex, setMappingElevationIndex] = useState(1);
+  const [mappingDistanceUnit, setMappingDistanceUnit] = useState<CsvTerrainDistanceUnit>('m');
+  const [applyObserverEndpoint, setApplyObserverEndpoint] = useState(false);
+  const [applyTargetEndpoint, setApplyTargetEndpoint] = useState(false);
   const [importMessage, setImportMessage] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const sortedPoints = useMemo(() => sortManualTerrainPoints(points), [points]);
@@ -188,6 +214,13 @@ export function MultiPointTerrainEditor({
     apply(() => insertManualTerrainPoint(sortedPoints, point));
   };
 
+  const stageProfile = (profile: ImportedTerrainProfile): void => {
+    setMappingRequest(undefined);
+    setPendingImport(profile);
+    setApplyObserverEndpoint(false);
+    setApplyTargetEndpoint(false);
+  };
+
   const chooseCsvProfile = async (): Promise<void> => {
     setOperationError('');
     setImportMessage('');
@@ -198,16 +231,60 @@ export function MultiPointTerrainEditor({
         observerGroundElevationM,
         targetGroundElevationM
       });
-      if (result.status === 'cancelled' || !result.profile) {
+      if (result.status === 'cancelled') {
         setPendingImport(undefined);
+        setMappingRequest(undefined);
         setImportMessage(result.message);
         return;
       }
-      setPendingImport(result.profile);
+      if (result.mappingRequest) {
+        const request = result.mappingRequest;
+        setPendingImport(undefined);
+        setMappingRequest(request);
+        setMappingDistanceIndex(0);
+        setMappingElevationIndex(Math.min(1, Math.max(0, request.headers.length - 1)));
+        setMappingDistanceUnit('m');
+        return;
+      }
+      if (result.profile) stageProfile(result.profile);
     } catch (error) {
       setPendingImport(undefined);
+      setMappingRequest(undefined);
       setOperationError(
         error instanceof Error ? error.message : 'CSV arazi profili okunamadı.'
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const applyColumnMapping = async (): Promise<void> => {
+    if (!mappingRequest) return;
+    if (mappingDistanceIndex === mappingElevationIndex) {
+      setOperationError('Mesafe ve kot için farklı sütunlar seçilmeli.');
+      return;
+    }
+
+    setOperationError('');
+    setIsImporting(true);
+    try {
+      const result = await window.simulatorDesktop.importTerrainProfileWithMapping(
+        mappingRequest.requestId,
+        {
+          distanceColumnIndex: mappingDistanceIndex,
+          elevationColumnIndex: mappingElevationIndex,
+          distanceUnit: mappingDistanceUnit
+        },
+        {
+          routeDistanceM: routeDistanceKm * 1_000,
+          observerGroundElevationM,
+          targetGroundElevationM
+        }
+      );
+      if (result.profile) stageProfile(result.profile);
+    } catch (error) {
+      setOperationError(
+        error instanceof Error ? error.message : 'CSV sütun eşlemesi uygulanamadı.'
       );
     } finally {
       setIsImporting(false);
@@ -222,7 +299,10 @@ export function MultiPointTerrainEditor({
     setImportMessage(
       `“${imported.fileName}” profili uygulandı: ${imported.points.length} ara nokta.`
     );
-    onChange(imported.points);
+    onApplyImport(imported, {
+      applyObserverEndpoint,
+      applyTargetEndpoint
+    });
   };
 
   return (
@@ -251,6 +331,73 @@ export function MultiPointTerrainEditor({
         </div>
       </header>
 
+      {mappingRequest && (
+        <div className="terrain-mapping-review">
+          <div className="terrain-import-review-heading">
+            <div>
+              <strong>{mappingRequest.fileName}</strong>
+              <span>{mappingRequest.reason}</span>
+            </div>
+            <span className="terrain-mapping-required">SÜTUN EŞLEME</span>
+          </div>
+          <div className="terrain-mapping-controls">
+            <label>
+              <span>Mesafe sütunu</span>
+              <select
+                value={mappingDistanceIndex}
+                onChange={(event) => setMappingDistanceIndex(Number(event.currentTarget.value))}
+              >
+                {mappingRequest.headers.map((header, index) => (
+                  <option key={`${header}-${index}`} value={index}>{header || `Sütun ${index + 1}`}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Mesafe birimi</span>
+              <select
+                value={mappingDistanceUnit}
+                onChange={(event) => setMappingDistanceUnit(event.currentTarget.value as CsvTerrainDistanceUnit)}
+              >
+                <option value="m">metre</option>
+                <option value="km">kilometre</option>
+                <option value="percent">rota yüzdesi</option>
+              </select>
+            </label>
+            <label>
+              <span>Kot sütunu</span>
+              <select
+                value={mappingElevationIndex}
+                onChange={(event) => setMappingElevationIndex(Number(event.currentTarget.value))}
+              >
+                {mappingRequest.headers.map((header, index) => (
+                  <option key={`${header}-${index}`} value={index}>{header || `Sütun ${index + 1}`}</option>
+                ))}
+              </select>
+            </label>
+            <div className="terrain-mapping-delimiter">
+              <span>Ayırıcı</span>
+              <strong>{delimiterLabel(mappingRequest)}</strong>
+            </div>
+          </div>
+          <div className="terrain-mapping-preview-wrap">
+            <table className="terrain-mapping-preview">
+              <thead><tr>{mappingRequest.headers.map((header, index) => <th key={`${header}-${index}`}>{header || `Sütun ${index + 1}`}</th>)}</tr></thead>
+              <tbody>
+                {mappingRequest.previewRows.map((row, rowIndex) => (
+                  <tr key={rowIndex}>{mappingRequest.headers.map((_header, index) => <td key={index}>{row[index] ?? ''}</td>)}</tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="terrain-import-actions">
+            <button type="button" onClick={() => setMappingRequest(undefined)}>Vazgeç</button>
+            <button className="apply" disabled={isImporting} type="button" onClick={() => void applyColumnMapping()}>
+              {isImporting ? 'Doğrulanıyor…' : 'Sütunları uygula'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {pendingImport && (
         <div className="terrain-import-review">
           <div className="terrain-import-review-heading">
@@ -266,6 +413,28 @@ export function MultiPointTerrainEditor({
             <div><small>Mesafe sütunu</small><strong>{distanceUnitLabel(pendingImport)}</strong></div>
             <div><small>Kaynak rota</small><strong>{sourceDistanceLabel(pendingImport)}</strong></div>
             <div><small>CSV uç kotları</small><strong>{numberFormatter.format(pendingImport.observerEndpointElevationM)} → {numberFormatter.format(pendingImport.targetEndpointElevationM)} m</strong></div>
+          </div>
+          <div className="terrain-import-columns">
+            <span>Mesafe: <b>{pendingImport.distanceColumnHeader}</b></span>
+            <span>Kot: <b>{pendingImport.elevationColumnHeader}</b></span>
+          </div>
+          <div className="terrain-endpoint-options">
+            <label>
+              <input
+                checked={applyObserverEndpoint}
+                type="checkbox"
+                onChange={(event) => setApplyObserverEndpoint(event.currentTarget.checked)}
+              />
+              <span>Gözlemci zemin kotunu CSV’den uygula: <b>{numberFormatter.format(pendingImport.observerEndpointElevationM)} m</b></span>
+            </label>
+            <label>
+              <input
+                checked={applyTargetEndpoint}
+                type="checkbox"
+                onChange={(event) => setApplyTargetEndpoint(event.currentTarget.checked)}
+              />
+              <span>Hedef taban kotunu CSV’den uygula: <b>{numberFormatter.format(pendingImport.targetEndpointElevationM)} m</b></span>
+            </label>
           </div>
           {pendingImport.warnings.length > 0 && (
             <ul className="terrain-import-warnings">
