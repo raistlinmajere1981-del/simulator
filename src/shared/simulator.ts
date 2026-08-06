@@ -80,24 +80,41 @@ export interface TerrainProfileMappingRequest {
   reason: string;
 }
 
-export interface CsvTerrainProfileSource {
-  kind: 'csv';
+interface BaseTerrainProfileSource {
   fileName: string;
   importedAtIso: string;
-  delimiter: CsvTerrainDelimiter;
-  distanceUnit: CsvTerrainDistanceUnit;
   sourceDistanceM: number | null;
-  rowCount: number;
   observerEndpointElevationM: number;
   targetEndpointElevationM: number;
   appliedObserverEndpoint: boolean;
   appliedTargetEndpoint: boolean;
-  distanceColumnHeader: string;
-  elevationColumnHeader: string;
+  appliedRouteDistance?: boolean;
   modifiedAfterImport: boolean;
 }
 
-export type TerrainProfileSource = CsvTerrainProfileSource;
+export interface CsvTerrainProfileSource extends BaseTerrainProfileSource {
+  kind: 'csv';
+  delimiter: CsvTerrainDelimiter;
+  distanceUnit: CsvTerrainDistanceUnit;
+  rowCount: number;
+  distanceColumnHeader: string;
+  elevationColumnHeader: string;
+}
+
+export interface GeoJsonTerrainProfileSource extends BaseTerrainProfileSource {
+  kind: 'geojson';
+  geometryType: 'LineString';
+  coordinateCount: number;
+  startLongitudeDeg: number;
+  startLatitudeDeg: number;
+  endLongitudeDeg: number;
+  endLatitudeDeg: number;
+  elevationSource: 'coordinate-z';
+}
+
+export type TerrainProfileSource =
+  | CsvTerrainProfileSource
+  | GeoJsonTerrainProfileSource;
 
 export interface SavedExperiment {
   id: string;
@@ -149,8 +166,29 @@ export interface ImportedTerrainProfile {
   warnings: string[];
 }
 
+export interface ImportedGeoJsonTerrainProfile {
+  kind: 'geojson';
+  fileName: string;
+  geometryType: 'LineString';
+  coordinateCount: number;
+  sourceDistanceM: number;
+  startLongitudeDeg: number;
+  startLatitudeDeg: number;
+  endLongitudeDeg: number;
+  endLatitudeDeg: number;
+  elevationSource: 'coordinate-z';
+  observerEndpointElevationM: number;
+  targetEndpointElevationM: number;
+  points: ManualTerrainPoint[];
+  warnings: string[];
+}
+
+export type TerrainProfileImport =
+  | ImportedTerrainProfile
+  | ImportedGeoJsonTerrainProfile;
+
 export interface ImportTerrainProfileResult extends FileOperationResult {
-  profile?: ImportedTerrainProfile;
+  profile?: TerrainProfileImport;
   mappingRequest?: TerrainProfileMappingRequest;
 }
 
@@ -169,6 +207,9 @@ export interface SimulatorDesktopApi {
   importTerrainProfileWithMapping(
     requestId: string,
     mapping: TerrainProfileColumnMapping,
+    context: TerrainProfileImportContext
+  ): Promise<ImportTerrainProfileResult>;
+  importGeoJsonTerrainProfile(
     context: TerrainProfileImportContext
   ): Promise<ImportTerrainProfileResult>;
 }

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import type {
   CsvTerrainDistanceUnit,
-  ImportedTerrainProfile,
+  ImportedGeoJsonTerrainProfile,
+  TerrainProfileImport,
   TerrainProfileMappingRequest
 } from '../../shared/simulator';
 import type { ManualTerrainPoint } from '../../shared/terrain';
@@ -29,7 +30,7 @@ interface MultiPointTerrainEditorProps {
   disabled?: boolean;
   onChange(points: ManualTerrainPoint[]): void;
   onApplyImport(
-    profile: ImportedTerrainProfile,
+    profile: TerrainProfileImport,
     options: TerrainProfileImportOptions
   ): void;
 }
@@ -133,15 +134,23 @@ function previewCoordinates(points: readonly PreviewPoint[]): {
   return { polyline, minimumElevationM, maximumElevationM };
 }
 
-function distanceUnitLabel(profile: ImportedTerrainProfile): string {
+function isGeoJsonProfile(
+  profile: TerrainProfileImport
+): profile is ImportedGeoJsonTerrainProfile {
+  return 'kind' in profile && profile.kind === 'geojson';
+}
+
+function distanceUnitLabel(profile: TerrainProfileImport): string {
+  if (isGeoJsonProfile(profile)) return 'WGS84 koordinatları';
   if (profile.distanceUnit === 'percent') return 'rotanın yüzdesi';
   if (profile.distanceUnit === 'km') return 'kilometre';
   return 'metre';
 }
 
-function sourceDistanceLabel(profile: ImportedTerrainProfile): string {
+function sourceDistanceLabel(profile: TerrainProfileImport): string {
   if (profile.sourceDistanceM === null) return 'Konumlar yüzde olarak verilmiş';
-  return `${numberFormatter.format(profile.sourceDistanceM / 1_000)} km CSV rotası`;
+  const sourceLabel = isGeoJsonProfile(profile) ? 'GeoJSON rotası' : 'CSV rotası';
+  return `${numberFormatter.format(profile.sourceDistanceM / 1_000)} km ${sourceLabel}`;
 }
 
 function delimiterLabel(request: TerrainProfileMappingRequest): string {
@@ -162,7 +171,7 @@ export function MultiPointTerrainEditor({
   onApplyImport
 }: MultiPointTerrainEditorProps): React.JSX.Element {
   const [operationError, setOperationError] = useState('');
-  const [pendingImport, setPendingImport] = useState<ImportedTerrainProfile>();
+  const [pendingImport, setPendingImport] = useState<TerrainProfileImport>();
   const [mappingRequest, setMappingRequest] = useState<TerrainProfileMappingRequest>();
   const [mappingDistanceIndex, setMappingDistanceIndex] = useState(0);
   const [mappingElevationIndex, setMappingElevationIndex] = useState(1);
@@ -221,7 +230,7 @@ export function MultiPointTerrainEditor({
     apply(() => insertManualTerrainPoint(sortedPoints, point));
   };
 
-  const stageProfile = (profile: ImportedTerrainProfile): void => {
+  const stageProfile = (profile: TerrainProfileImport): void => {
     setMappingRequest(undefined);
     setPendingImport(profile);
     setApplyObserverEndpoint(false);
@@ -428,16 +437,28 @@ export function MultiPointTerrainEditor({
             ve başlangıç-bitiş zemin yüksekliğinin deneye aktarılmasını sağlar.
           </p>
           <div className="terrain-import-metrics">
-            <div><small>Dosyadaki veri satırı</small><strong>{pendingImport.rowCount}</strong></div>
+            <div>
+              <small>{isGeoJsonProfile(pendingImport) ? 'GeoJSON koordinatı' : 'Dosyadaki veri satırı'}</small>
+              <strong>{isGeoJsonProfile(pendingImport) ? pendingImport.coordinateCount : pendingImport.rowCount}</strong>
+            </div>
             <div><small>Kullanılacak ara nokta</small><strong>{pendingImport.points.length}</strong></div>
             <div><small>Konumların birimi</small><strong>{distanceUnitLabel(pendingImport)}</strong></div>
-            <div><small>CSV'deki toplam rota</small><strong>{sourceDistanceLabel(pendingImport)}</strong></div>
+            <div><small>Dosyadaki toplam rota</small><strong>{sourceDistanceLabel(pendingImport)}</strong></div>
             <div><small>Başlangıç → bitiş yüksekliği</small><strong>{numberFormatter.format(pendingImport.observerEndpointElevationM)} → {numberFormatter.format(pendingImport.targetEndpointElevationM)} m</strong></div>
           </div>
-          <div className="terrain-import-columns">
-            <span>Rotadaki yer sütunu: <b>{pendingImport.distanceColumnHeader}</b></span>
-            <span>Arazi yüksekliği sütunu: <b>{pendingImport.elevationColumnHeader}</b></span>
-          </div>
+          {isGeoJsonProfile(pendingImport) ? (
+            <div className="terrain-import-columns">
+              <span>Geometri: <b>{pendingImport.geometryType}</b></span>
+              <span>Yükseklik kaynağı: <b>koordinatların üçüncü bileşeni (Z)</b></span>
+              <span>Başlangıç: <b>{pendingImport.startLatitudeDeg.toFixed(6)}°, {pendingImport.startLongitudeDeg.toFixed(6)}°</b></span>
+              <span>Bitiş: <b>{pendingImport.endLatitudeDeg.toFixed(6)}°, {pendingImport.endLongitudeDeg.toFixed(6)}°</b></span>
+            </div>
+          ) : (
+            <div className="terrain-import-columns">
+              <span>Rotadaki yer sütunu: <b>{pendingImport.distanceColumnHeader}</b></span>
+              <span>Arazi yüksekliği sütunu: <b>{pendingImport.elevationColumnHeader}</b></span>
+            </div>
+          )}
           <div className="terrain-endpoint-options">
             {allowRouteDistanceImport && pendingSourceDistanceKm !== null && (
               <label title="İşaretlenirse manuel yüzey mesafesi CSV dosyasının toplam rotasıyla değiştirilir">

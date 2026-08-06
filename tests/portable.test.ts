@@ -56,6 +56,7 @@ export const savedExperimentFixture: SavedExperiment = {
     appliedTargetEndpoint: true,
     distanceColumnHeader: 'distance_percent',
     elevationColumnHeader: 'elevation_m',
+    appliedRouteDistance: false,
     modifiedAfterImport: false
   },
   geodesic: {
@@ -165,13 +166,61 @@ describe('portable experiment format', () => {
     expect(file.schema).toBe(PORTABLE_EXPERIMENT_SCHEMA);
     expect(file.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
     expect(parsed.migrated).toBe(false);
-    expect(parsed.sourceVersion).toBe(5);
+    expect(parsed.sourceVersion).toBe(6);
     expect(parsed.experiment).toEqual(savedExperimentFixture);
     expect(parsed.experiment.terrainProfileSource?.fileName)
       .toBe('terrain-profile.csv');
   });
 
-  it('migrates a version 4 experiment without inventing CSV provenance', () => {
+  it('round-trips GeoJSON terrain provenance', () => {
+  const geoJsonSource = {
+    kind: 'geojson' as const,
+    fileName: 'route.geojson',
+    importedAtIso: '2026-08-05T12:06:00.000Z',
+    sourceDistanceM: 12_345,
+    observerEndpointElevationM: 4,
+    targetEndpointElevationM: 5,
+    appliedObserverEndpoint: true,
+    appliedTargetEndpoint: true,
+    appliedRouteDistance: true,
+    modifiedAfterImport: false,
+    geometryType: 'LineString' as const,
+    coordinateCount: 6,
+    startLongitudeDeg: 28.9784,
+    startLatitudeDeg: 41.0082,
+    endLongitudeDeg: 29.06,
+    endLatitudeDeg: 41.058,
+    elevationSource: 'coordinate-z' as const
+  };
+  const file = createPortableExperimentFile({
+    ...savedExperimentFixture,
+    terrainProfileSource: geoJsonSource
+  }, '0.9.0');
+  const parsed = parsePortableExperimentFile(file);
+
+  expect(parsed.migrated).toBe(false);
+  expect(parsed.experiment.terrainProfileSource).toEqual(geoJsonSource);
+});
+
+  it('migrates a version 5 CSV source and defaults route application metadata', () => {
+    const legacySource = { ...savedExperimentFixture.terrainProfileSource } as Record<string, unknown>;
+    delete legacySource.kind;
+    delete legacySource.appliedRouteDistance;
+    const parsed = parsePortableExperimentFile({
+      schema: PORTABLE_EXPERIMENT_SCHEMA,
+      schemaVersion: 5,
+      exportedAtIso: '2026-08-05T13:00:00.000Z',
+      application: { name: 'Geometrik Gözlem Laboratuvarı', version: '0.8.0' },
+      experiment: { ...savedExperimentFixture, terrainProfileSource: legacySource }
+    });
+
+    expect(parsed.migrated).toBe(true);
+    expect(parsed.sourceVersion).toBe(5);
+    expect(parsed.experiment.terrainProfileSource?.kind).toBe('csv');
+    expect(parsed.experiment.terrainProfileSource?.appliedRouteDistance).toBe(false);
+  });
+
+it('migrates a version 4 experiment without inventing CSV provenance', () => {
     const parsed = parsePortableExperimentFile({
       schema: PORTABLE_EXPERIMENT_SCHEMA,
       schemaVersion: 4,
@@ -252,7 +301,7 @@ describe('portable experiment format', () => {
     expect(parsed.migrated).toBe(true);
     expect(parsed.ignoredRecordCount).toBe(1);
     expect(parsed.store.schema).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA);
-    expect(parsed.store.schemaVersion).toBe(5);
+    expect(parsed.store.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
     expect(parsed.store.experiments[0]?.inputs.distanceSource).toBe('manual');
     expect(parsed.store.experiments[0]?.manualTerrainPoints).toHaveLength(1);
   });
@@ -266,7 +315,7 @@ describe('portable experiment format', () => {
 
     expect(parsed.migrated).toBe(false);
     expect(parsed.ignoredRecordCount).toBe(0);
-    expect(parsed.store.schemaVersion).toBe(5);
+    expect(parsed.store.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
     expect(parsed.store.experiments[0]?.geodesic?.method).toBe('vincenty');
     expect(parsed.store.experiments[0]?.manualTerrainPoints).toHaveLength(3);
     expect(parsed.store.experiments[0]?.terrainProfileSource)

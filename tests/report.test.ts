@@ -16,7 +16,7 @@ describe('experiment html report', () => {
     expect(html).toContain('Başlangıç azimutu');
     expect(html).toContain('wgs84:fixture');
     expect(html).toContain('Düşey Referans ve Arazi');
-    expect(html).toContain('Taşınabilir deney şeması v5');
+    expect(html).toContain('Taşınabilir deney şeması v6');
     expect(html).toContain('Ortalama deniz seviyesi');
     expect(html).toContain('Datum / gelgit ofseti');
     expect(html).toContain('3 ara noktalı manuel profil');
@@ -40,7 +40,38 @@ describe('experiment html report', () => {
     expect(html).toContain('@media print');
   });
 
-  it('uses manual distance to convert every route percentage', () => {
+  it('includes GeoJSON provenance and endpoint coordinates', () => {
+  const html = createExperimentHtmlReport({
+    ...savedExperimentFixture,
+    terrainProfileSource: {
+      kind: 'geojson',
+      fileName: 'terrain-route.geojson',
+      importedAtIso: '2026-08-05T12:05:00.000Z',
+      sourceDistanceM: 12_345,
+      observerEndpointElevationM: 4,
+      targetEndpointElevationM: 5,
+      appliedObserverEndpoint: true,
+      appliedTargetEndpoint: true,
+      appliedRouteDistance: true,
+      modifiedAfterImport: false,
+      geometryType: 'LineString',
+      coordinateCount: 6,
+      startLongitudeDeg: 28.9784,
+      startLatitudeDeg: 41.0082,
+      endLongitudeDeg: 29.06,
+      endLatitudeDeg: 41.058,
+      elevationSource: 'coordinate-z'
+    }
+  });
+
+  expect(html).toContain('GeoJSON kaynak kaydı');
+  expect(html).toContain('terrain-route.geojson');
+  expect(html).toContain('Koordinatların üçüncü bileşeni (Z)');
+  expect(html).toContain('Deney mesafesine uygulandı: Evet');
+  expect(html).toContain('41,0082°');
+});
+
+it('uses manual distance to convert every route percentage', () => {
     const html = createExperimentHtmlReport({
       ...savedExperimentFixture,
       inputs: {
