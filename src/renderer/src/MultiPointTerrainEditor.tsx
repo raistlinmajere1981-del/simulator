@@ -197,6 +197,12 @@ function sourceRecordLabel(profile: TerrainProfileImport): string {
   return 'Dosyadaki veri satırı';
 }
 
+function demDiagnosticLabel(status: ImportedDemTerrainProfile['diagnosticStatus']): string {
+  if (status === 'good') return 'iyi';
+  if (status === 'caution') return 'dikkat';
+  return 'sınırlı';
+}
+
 function sourceRecordCount(profile: TerrainProfileImport): number {
   if (isDemProfile(profile)) return profile.sampleCount;
   if (isGeoJsonProfile(profile)) return profile.coordinateCount;
@@ -709,6 +715,11 @@ export function MultiPointTerrainEditor({
               <span>Örnek sayısı modu: <b>{pendingImport.sampleCountMode === 'manual' ? 'manuel' : 'grid çözünürlüğüne göre otomatik'}</b></span>
               <span>Örnek aralığı: <b>{numberFormatter.format(pendingImport.sampleSpacingM)} m</b></span>
               <span>Jeodezik yöntem: <b>{pendingImport.geodesicMethod === 'vincenty' ? 'WGS84 Vincenty' : 'küresel yedek'}</b></span>
+              <span>Örnekleme tanısı: <b>{demDiagnosticLabel(pendingImport.diagnosticStatus)}</b></span>
+              <span>Etkili hücre genişliği: <b>{numberFormatter.format(pendingImport.effectiveCellSpanM)} m</b></span>
+              <span>Örnek / hücre oranı: <b>{numberFormatter.format(pendingImport.sampleSpacingToCellRatio)}</b></span>
+              <span>En yakın grid kenarı: <b>{numberFormatter.format(pendingImport.minimumCoverageMarginM)} m ({numberFormatter.format(pendingImport.coverageMarginCellRatio)} hücre)</b></span>
+              <span>Yükseklik aralığı: <b>{numberFormatter.format(pendingImport.minimumElevationM)} → {numberFormatter.format(pendingImport.maximumElevationM)} m (Δ {numberFormatter.format(pendingImport.elevationRangeM)} m)</b></span>
             </div>
           ) : isGeoJsonProfile(pendingImport) ? (
             <div className="terrain-import-columns">

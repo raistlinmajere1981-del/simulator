@@ -49,4 +49,17 @@ Dosya içeriği renderer sürecine gönderilmez. Ana süreç yalnız oluşturula
 noktalarını, grid çözünürlüğünü, kapsamı, örnekleme yöntemini ve kaynak dosya
 adını aktarır. Kaynak bilgileri deney kaydında ve HTML raporunda korunur.
 
+## Örnekleme tanısı
+
+Her DEM profili için aşağıdaki ölçümler üretilir:
+
+- rota örnek aralığının etkili grid hücre genişliğine oranı,
+- rotanın grid sınırına en yakın mesafesi ve bunun hücre cinsinden karşılığı,
+- rota üzerindeki en düşük, en yüksek ve toplam yükseklik aralığı,
+- `iyi`, `dikkat` veya `sınırlı` örnekleme tanısı.
+
+Tanı, DEM kaynağının mutlak doğruluğunu veya düşey datumunun doğruluğunu kanıtlamaz.
+Yalnız örnek yoğunluğu, grid kenar payı ve kullanılan enterpolasyon yöntemine dayalı
+koruyucu bir kalite göstergesidir. Ölçümler kayıt ve HTML raporunda korunur.
+
 Örnek dosya: `examples/dem-route-wgs84.asc`.

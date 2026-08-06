@@ -234,7 +234,14 @@ function terrainSourceSection(source: TerrainProfileSource | undefined): string 
     <tr><td>Rota örneği</td><td>${source.sampleCount} nokta · ${inputNumberFormatter.format(source.sampleSpacingM)} m aralık</td></tr>
     <tr><td>Örnek sayısı modu</td><td>${source.sampleCountMode === 'manual' ? 'Manuel' : 'Grid çözünürlüğüne göre otomatik'}</td></tr>
     <tr><td>Örnekleme</td><td>${source.samplingMethod === 'bilinear' ? 'İki doğrusal' : 'En yakın hücre'}</td></tr>
-    <tr><td>Jeodezik yöntem</td><td>${source.geodesicMethod === 'vincenty' ? 'WGS84 Vincenty' : 'Küresel yedek'}</td></tr>`;
+    <tr><td>Jeodezik yöntem</td><td>${source.geodesicMethod === 'vincenty' ? 'WGS84 Vincenty' : 'Küresel yedek'}</td></tr>
+    ${source.diagnosticStatus ? `
+    <tr><td>Örnekleme tanısı</td><td>${source.diagnosticStatus === 'good' ? 'İyi' : source.diagnosticStatus === 'caution' ? 'Dikkat' : 'Sınırlı'}</td></tr>
+    <tr><td>Etkili hücre genişliği</td><td>${inputNumberFormatter.format(source.effectiveCellSpanM ?? 0)} m</td></tr>
+    <tr><td>Örnek / hücre oranı</td><td>${inputNumberFormatter.format(source.sampleSpacingToCellRatio ?? 0)}</td></tr>
+    <tr><td>En yakın grid kenarı</td><td>${inputNumberFormatter.format(source.minimumCoverageMarginM ?? 0)} m · ${inputNumberFormatter.format(source.coverageMarginCellRatio ?? 0)} hücre</td></tr>
+    <tr><td>DEM yükseklik aralığı</td><td>${inputNumberFormatter.format(source.minimumElevationM ?? 0)} → ${inputNumberFormatter.format(source.maximumElevationM ?? 0)} m · Δ ${inputNumberFormatter.format(source.elevationRangeM ?? 0)} m</td></tr>` : `
+    <tr><td>Örnekleme tanısı</td><td>Bu eski kayıtta tanı ölçümleri bulunmuyor.</td></tr>`}`;
 
   return `
     <div class="source-card ${stateClass}">

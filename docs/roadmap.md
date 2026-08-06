@@ -264,6 +264,21 @@ Durum: tamamlandı
 - Saf seçenek doğrulama testleri
 - Uygulama sürümü `1.0.1`
 
+## Aşama 3.13 — DEM örnekleme ve kapsam tanısı
+
+Durum: tamamlandı
+
+- Etkili grid hücre genişliğinin metre olarak hesaplanması
+- Rota örnek aralığının hücre genişliğine oranı
+- Rota boyunca grid kenarına en yakın mesafe
+- Kenar payının hücre cinsinden karşılığı
+- En düşük, en yüksek ve toplam DEM yükseklik aralığı
+- İyi, dikkat ve sınırlı örnekleme tanısı
+- Seyrek örnekleme, grid kenarı ve en yakın hücre yöntemi uyarıları
+- Tanı ölçümlerinin inceleme kartı, kayıt ve HTML raporunda korunması
+- Eski v7 DEM kayıtlarıyla geriye dönük uyumluluk
+- Uygulama sürümü `1.0.2`
+
 ## Sonraki gerçek arazi işleri
 - Görüş hattı boyunca DEM örnekleme
 - Veri kaynağı ve çözünürlük izlenebilirliği

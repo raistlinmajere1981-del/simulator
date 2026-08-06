@@ -47,6 +47,13 @@ describe('DEM route terrain profile', () => {
     expect(profile.sampleCount).toBeLessThanOrEqual(2_002);
     expect(profile.sampleCountMode).toBe('automatic');
     expect(profile.sampleSpacingM).toBeGreaterThan(0);
+    expect(profile.effectiveCellSpanM).toBeGreaterThan(0);
+    expect(profile.sampleSpacingToCellRatio).toBeGreaterThan(0);
+    expect(profile.minimumCoverageMarginM).toBeGreaterThanOrEqual(0);
+    expect(profile.coverageMarginCellRatio).toBeGreaterThanOrEqual(0);
+    expect(profile.minimumElevationM).toBe(1);
+    expect(profile.maximumElevationM).toBe(3);
+    expect(profile.elevationRangeM).toBe(2);
   });
 
   it('rejects routes outside grid coverage or crossing NODATA', () => {
