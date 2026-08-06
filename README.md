@@ -139,6 +139,7 @@ Aynı kontroller pull request'lerde GitHub Actions üzerinde otomatik çalışı
 - [`docs/ui-design.md`](docs/ui-design.md)
 - [`docs/geodesy.md`](docs/geodesy.md)
 - [`docs/terrain-profile.md`](docs/terrain-profile.md)
+- [`docs/esri-ascii-dem.md`](docs/esri-ascii-dem.md)
 - [`docs/csv-terrain-profile.md`](docs/csv-terrain-profile.md)
 - [`docs/csv-profile-provenance.md`](docs/csv-profile-provenance.md)
 - [`docs/portable-format.md`](docs/portable-format.md)
