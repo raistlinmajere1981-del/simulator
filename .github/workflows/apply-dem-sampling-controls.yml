@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/apply-dem-sampling-controls.yml
       - scripts/apply-dem-sampling-controls.py
+      - scripts/fix-dem-sampling-generator.py
 
 permissions:
   contents: write
@@ -20,6 +21,9 @@ jobs:
         with:
           ref: agent/dem-sampling-controls
           fetch-depth: 0
+
+      - name: Prepare generator
+        run: python3 scripts/fix-dem-sampling-generator.py
 
       - name: Apply product changes
         run: python3 scripts/apply-dem-sampling-controls.py
@@ -36,8 +40,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Remove temporary patch script
-        run: rm -f scripts/apply-dem-sampling-controls.py
+      - name: Remove temporary patch scripts
+        run: rm -f scripts/apply-dem-sampling-controls.py scripts/fix-dem-sampling-generator.py
 
       - name: Commit product changes
         shell: bash
