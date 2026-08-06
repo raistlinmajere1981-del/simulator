@@ -24,7 +24,6 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           import textwrap
 
           workflow_path = Path('.github/workflows/apply-geojson-terrain-profile.yml')
@@ -35,25 +34,37 @@ jobs:
           end = raw.index(marker_end, start)
           script = textwrap.dedent(raw[start:end])
 
-          pattern = r"replace_once\(\n\s+simulator_path,\n\s+'''  importTerrainProfileWithMapping\(.*?\n\)\n\nhelper_path"
-          replacement = r'''replace_regex(
-              simulator_path,
-              r"  importTerrainProfileWithMapping\(\n    requestId: string,\n    mapping: TerrainProfileColumnMapping,\n    context: TerrainProfileImportContext\n  \): Promise<ImportTerrainProfileResult>;\n}",
-              '''  importTerrainProfileWithMapping(
-                requestId: string,
-                mapping: TerrainProfileColumnMapping,
-                context: TerrainProfileImportContext
-              ): Promise<ImportTerrainProfileResult>;
-              importGeoJsonTerrainProfile(
-                context: TerrainProfileImportContext
-              ): Promise<ImportTerrainProfileResult>;
-            }'''
-          )
+          block_start_token = "replace_once(\n    simulator_path,\n    '''  importTerrainProfileWithMapping("
+          block_end_token = "\n\nhelper_path = 'src/simulation/terrain-import-application.ts'"
+          block_start = script.index(block_start_token)
+          block_end = script.index(block_end_token, block_start)
 
-          helper_path'''
-          script, count = re.subn(pattern, lambda _match: replacement, script, count=1, flags=re.S)
-          if count != 1:
-              raise RuntimeError(f'Could not patch API replacement; matches={count}')
+          pattern = (
+              r"  importTerrainProfileWithMapping\(\n"
+              r"    requestId: string,\n"
+              r"    mapping: TerrainProfileColumnMapping,\n"
+              r"    context: TerrainProfileImportContext\n"
+              r"  \): Promise<ImportTerrainProfileResult>;\n}"
+          )
+          api_replacement = (
+              "  importTerrainProfileWithMapping(\n"
+              "    requestId: string,\n"
+              "    mapping: TerrainProfileColumnMapping,\n"
+              "    context: TerrainProfileImportContext\n"
+              "  ): Promise<ImportTerrainProfileResult>;\n"
+              "  importGeoJsonTerrainProfile(\n"
+              "    context: TerrainProfileImportContext\n"
+              "  ): Promise<ImportTerrainProfileResult>;\n"
+              "}"
+          )
+          replacement = (
+              "replace_regex(\n"
+              "    simulator_path,\n"
+              f"    {pattern!r},\n"
+              f"    {api_replacement!r}\n"
+              ")"
+          )
+          script = script[:block_start] + replacement + script[block_end:]
           exec(compile(script, 'geojson-stage.py', 'exec'))
           PY
 
