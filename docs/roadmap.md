@@ -252,6 +252,18 @@ Durum: tamamlandı
 - Örnek ESRI ASCII grid dosyası
 - Uygulama sürümü `1.0.0`
 
+## Aşama 3.12 — DEM örnekleme denetimleri
+
+Durum: tamamlandı
+
+- İki doğrusal ve en yakın hücre yöntemleri arasında seçim
+- Grid çözünürlüğüne göre otomatik örnek sayısı
+- 3…2.002 aralığında manuel örnek sayısı
+- Geçersiz manuel sayının dosya seçilmeden reddedilmesi
+- Otomatik/manüel örnek sayısı modunun kayıt ve raporda korunması
+- Saf seçenek doğrulama testleri
+- Uygulama sürümü `1.0.1`
+
 ## Sonraki gerçek arazi işleri
 - Görüş hattı boyunca DEM örnekleme
 - Veri kaynağı ve çözünürlük izlenebilirliği

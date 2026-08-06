@@ -95,6 +95,7 @@ it('includes ESRI ASCII DEM sampling provenance', () => {
       columnCount: 10,
       rowCount: 10,
       sampleCount: 101,
+      sampleCountMode: 'manual',
       sampleSpacingM: 225,
       cellSizeDeg: 0.03,
       noDataValue: -9999,
@@ -109,6 +110,8 @@ it('includes ESRI ASCII DEM sampling provenance', () => {
   expect(html).toContain('route-dem.asc');
   expect(html).toContain('10 × 10 hücre');
   expect(html).toContain('101 nokta');
+  expect(html).toContain('Örnek sayısı modu');
+  expect(html).toContain('Manuel');
   expect(html).toContain('İki doğrusal');
   expect(html).toContain('WGS84 Vincenty');
 });

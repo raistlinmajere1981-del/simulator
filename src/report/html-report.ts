@@ -232,6 +232,7 @@ function terrainSourceSection(source: TerrainProfileSource | undefined): string 
     <tr><td>Grid boyutu</td><td>${source.columnCount} × ${source.rowCount} hücre</td></tr>
     <tr><td>Hücre boyutu</td><td>${coordinateFormatter.format(source.cellSizeDeg)}°</td></tr>
     <tr><td>Rota örneği</td><td>${source.sampleCount} nokta · ${inputNumberFormatter.format(source.sampleSpacingM)} m aralık</td></tr>
+    <tr><td>Örnek sayısı modu</td><td>${source.sampleCountMode === 'manual' ? 'Manuel' : 'Grid çözünürlüğüne göre otomatik'}</td></tr>
     <tr><td>Örnekleme</td><td>${source.samplingMethod === 'bilinear' ? 'İki doğrusal' : 'En yakın hücre'}</td></tr>
     <tr><td>Jeodezik yöntem</td><td>${source.geodesicMethod === 'vincenty' ? 'WGS84 Vincenty' : 'Küresel yedek'}</td></tr>`;
 

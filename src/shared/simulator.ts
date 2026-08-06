@@ -6,6 +6,7 @@ export type TerrainMode = 'off' | 'manual-three-point' | 'manual-points';
 export type CsvTerrainDistanceUnit = 'percent' | 'm' | 'km';
 export type CsvTerrainDelimiter = 'comma' | 'semicolon' | 'tab';
 export type DemTerrainSamplingMethod = 'nearest' | 'bilinear';
+export type DemTerrainSampleCountMode = 'automatic' | 'manual';
 
 export interface SimulatorInputs {
   observerHeightM: number;
@@ -122,6 +123,7 @@ export interface DemTerrainProfileSource extends BaseTerrainProfileSource {
   columnCount: number;
   rowCount: number;
   sampleCount: number;
+  sampleCountMode?: DemTerrainSampleCountMode;
   sampleSpacingM: number;
   cellSizeDeg: number;
   noDataValue: number | null;
@@ -221,6 +223,7 @@ export interface ImportedDemTerrainProfile {
   columnCount: number;
   rowCount: number;
   sampleCount: number;
+  sampleCountMode: DemTerrainSampleCountMode;
   sampleSpacingM: number;
   cellSizeDeg: number;
   noDataValue: number | null;

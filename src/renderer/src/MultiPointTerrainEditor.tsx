@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import type {
   CsvTerrainDistanceUnit,
+  DemTerrainSamplingMethod,
   ImportedDemTerrainProfile,
   ImportedGeoJsonTerrainProfile,
   TerrainProfileImport,
@@ -22,6 +23,10 @@ import {
   getTerrainPointDragBounds,
   terrainPointFromDragDelta
 } from '../../simulation/terrain-profile-drag';
+import {
+  requestedDemSampleCount,
+  type DemSampleCountMode
+} from '../../simulation/dem-import-options';
 
 export type TerrainProfileImportOptions = TerrainProfileApplicationOptions;
 
@@ -230,6 +235,9 @@ export function MultiPointTerrainEditor({
   const [applyTargetEndpoint, setApplyTargetEndpoint] = useState(false);
   const [applyRouteDistance, setApplyRouteDistance] = useState(false);
   const [applyRouteCoordinates, setApplyRouteCoordinates] = useState(false);
+  const [demSamplingMethod, setDemSamplingMethod] = useState<DemTerrainSamplingMethod>('bilinear');
+  const [demSampleCountMode, setDemSampleCountMode] = useState<DemSampleCountMode>('automatic');
+  const [demManualSampleCount, setDemManualSampleCount] = useState(101);
   const [importMessage, setImportMessage] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const dragState = useRef<TerrainPointDragState | undefined>(undefined);
@@ -422,6 +430,15 @@ export function MultiPointTerrainEditor({
     }
     setOperationError('');
     setImportMessage('');
+    let sampleCount: number | undefined;
+    try {
+      sampleCount = requestedDemSampleCount(demSampleCountMode, demManualSampleCount);
+    } catch (error) {
+      setOperationError(
+        error instanceof Error ? error.message : 'DEM örnek sayısı geçersiz.'
+      );
+      return;
+    }
     setIsImporting(true);
     try {
       const result = await window.simulatorDesktop.importDemTerrainProfile({
@@ -429,7 +446,8 @@ export function MultiPointTerrainEditor({
         observerLongitudeDeg,
         targetLatitudeDeg,
         targetLongitudeDeg,
-        samplingMethod: 'bilinear'
+        samplingMethod: demSamplingMethod,
+        ...(sampleCount === undefined ? {} : { sampleCount })
       });
       if (result.status === 'cancelled') {
         setPendingImport(undefined);
@@ -547,6 +565,48 @@ export function MultiPointTerrainEditor({
         </div>
       </header>
 
+      {allowDemImport && (
+        <div className="terrain-mapping-controls terrain-dem-controls">
+          <label title="DEM hücrelerinden rota yüksekliği üretme yöntemi">
+            <span>DEM örnekleme yöntemi</span>
+            <select
+              value={demSamplingMethod}
+              onChange={(event) => setDemSamplingMethod(
+                event.currentTarget.value as DemTerrainSamplingMethod
+              )}
+            >
+              <option value="bilinear">İki doğrusal</option>
+              <option value="nearest">En yakın hücre</option>
+            </select>
+          </label>
+          <label title="Otomatik mod grid çözünürlüğüne göre örnek sayısını belirler">
+            <span>Rota örnek sayısı</span>
+            <select
+              value={demSampleCountMode}
+              onChange={(event) => setDemSampleCountMode(
+                event.currentTarget.value as DemSampleCountMode
+              )}
+            >
+              <option value="automatic">Grid çözünürlüğüne göre otomatik</option>
+              <option value="manual">Manuel sayı</option>
+            </select>
+          </label>
+          {demSampleCountMode === 'manual' && (
+            <label title="Başlangıç ve bitiş dahil 3…2002 rota örneği">
+              <span>Manuel örnek sayısı</span>
+              <input
+                max={2_002}
+                min={3}
+                step={1}
+                type="number"
+                value={demManualSampleCount}
+                onChange={(event) => setDemManualSampleCount(Number(event.currentTarget.value))}
+              />
+            </label>
+          )}
+        </div>
+      )}
+
       {mappingRequest && (
         <div className="terrain-mapping-review">
           <div className="terrain-import-review-heading">
@@ -646,6 +706,7 @@ export function MultiPointTerrainEditor({
               <span>Grid: <b>{pendingImport.columnCount} × {pendingImport.rowCount} hücre</b></span>
               <span>Hücre boyutu: <b>{pendingImport.cellSizeDeg.toFixed(8)}°</b></span>
               <span>Örnekleme: <b>{pendingImport.samplingMethod === 'bilinear' ? 'iki doğrusal' : 'en yakın hücre'}</b></span>
+              <span>Örnek sayısı modu: <b>{pendingImport.sampleCountMode === 'manual' ? 'manuel' : 'grid çözünürlüğüne göre otomatik'}</b></span>
               <span>Örnek aralığı: <b>{numberFormatter.format(pendingImport.sampleSpacingM)} m</b></span>
               <span>Jeodezik yöntem: <b>{pendingImport.geodesicMethod === 'vincenty' ? 'WGS84 Vincenty' : 'küresel yedek'}</b></span>
             </div>
