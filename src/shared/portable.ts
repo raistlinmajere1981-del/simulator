@@ -7,9 +7,12 @@ import type {
 } from './domain';
 import {
   DEFAULT_SIMULATOR_INPUTS,
+  type CsvTerrainDelimiter,
+  type CsvTerrainDistanceUnit,
   type SavedExperiment,
   type SavedGeodesicCalculation,
-  type SimulatorInputs
+  type SimulatorInputs,
+  type TerrainProfileSource
 } from './simulator';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 import {
@@ -19,16 +22,16 @@ import {
 } from '../simulation/manual-terrain-profile';
 
 export const PORTABLE_EXPERIMENT_SCHEMA = 'geometric-observation-laboratory/portable-experiment';
-export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 4;
+export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 5;
 export const LOCAL_EXPERIMENT_STORE_SCHEMA = 'geometric-observation-laboratory/local-experiment-store';
-export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 4;
+export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 5;
 
 export interface PortableApplicationInfo {
   name: 'Geometrik Gözlem Laboratuvarı';
   version: string;
 }
 
-export interface PortableExperimentFileV4 {
+export interface PortableExperimentFileV5 {
   schema: typeof PORTABLE_EXPERIMENT_SCHEMA;
   schemaVersion: typeof PORTABLE_EXPERIMENT_SCHEMA_VERSION;
   exportedAtIso: string;
@@ -36,7 +39,7 @@ export interface PortableExperimentFileV4 {
   experiment: SavedExperiment;
 }
 
-export interface LocalExperimentStoreV4 {
+export interface LocalExperimentStoreV5 {
   schema: typeof LOCAL_EXPERIMENT_STORE_SCHEMA;
   schemaVersion: typeof LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION;
   updatedAtIso: string;
@@ -50,7 +53,7 @@ export interface ParsedPortableExperiment {
 }
 
 export interface ParsedLocalExperimentStore {
-  store: LocalExperimentStoreV4;
+  store: LocalExperimentStoreV5;
   migrated: boolean;
   ignoredRecordCount: number;
 }
@@ -95,6 +98,14 @@ function isVerticalDatumKind(value: unknown): value is VerticalDatumKind {
   return value === 'orthometric-msl' || value === 'ellipsoidal-wgs84' || value === 'local';
 }
 
+function isCsvTerrainDelimiter(value: unknown): value is CsvTerrainDelimiter {
+  return value === 'comma' || value === 'semicolon' || value === 'tab';
+}
+
+function isCsvTerrainDistanceUnit(value: unknown): value is CsvTerrainDistanceUnit {
+  return value === 'percent' || value === 'm' || value === 'km';
+}
+
 function parseManualTerrainPoints(value: unknown): ManualTerrainPoint[] | null {
   if (!Array.isArray(value)) return null;
 
@@ -113,6 +124,45 @@ function parseManualTerrainPoints(value: unknown): ManualTerrainPoint[] | null {
 
   if (validateManualTerrainPoints(points).length > 0) return null;
   return sortManualTerrainPoints(points);
+}
+
+function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null {
+  if (!isRecord(value) || value.kind !== 'csv' ||
+    !isNonEmptyString(value.fileName) || !isIsoDate(value.importedAtIso) ||
+    !isCsvTerrainDelimiter(value.delimiter) ||
+    !isCsvTerrainDistanceUnit(value.distanceUnit) ||
+    !Number.isInteger(value.rowCount) || !inRange(value.rowCount, 2, 2_002) ||
+    !isFiniteNumber(value.observerEndpointElevationM) ||
+    !isFiniteNumber(value.targetEndpointElevationM) ||
+    typeof value.appliedObserverEndpoint !== 'boolean' ||
+    typeof value.appliedTargetEndpoint !== 'boolean' ||
+    !isNonEmptyString(value.distanceColumnHeader) ||
+    !isNonEmptyString(value.elevationColumnHeader) ||
+    typeof value.modifiedAfterImport !== 'boolean') {
+    return null;
+  }
+  if (value.sourceDistanceM !== null &&
+    (!isFiniteNumber(value.sourceDistanceM) || value.sourceDistanceM <= 0 ||
+      value.sourceDistanceM > 20_000_000)) {
+    return null;
+  }
+
+  return {
+    kind: 'csv',
+    fileName: value.fileName.trim(),
+    importedAtIso: value.importedAtIso,
+    delimiter: value.delimiter,
+    distanceUnit: value.distanceUnit,
+    sourceDistanceM: value.sourceDistanceM as number | null,
+    rowCount: value.rowCount as number,
+    observerEndpointElevationM: value.observerEndpointElevationM,
+    targetEndpointElevationM: value.targetEndpointElevationM,
+    appliedObserverEndpoint: value.appliedObserverEndpoint,
+    appliedTargetEndpoint: value.appliedTargetEndpoint,
+    distanceColumnHeader: value.distanceColumnHeader.trim(),
+    elevationColumnHeader: value.elevationColumnHeader.trim(),
+    modifiedAfterImport: value.modifiedAfterImport
+  };
 }
 
 function parseSimulatorInputs(value: unknown, allowLegacyFields: boolean): SimulatorInputs | null {
@@ -272,6 +322,11 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     : parseManualTerrainPoints(value.manualTerrainPoints);
   if (!manualTerrainPoints) return null;
 
+  const terrainProfileSource = value.terrainProfileSource === undefined
+    ? undefined
+    : parseTerrainProfileSource(value.terrainProfileSource);
+  if (value.terrainProfileSource !== undefined && !terrainProfileSource) return null;
+
   return {
     id: value.id,
     name: value.name.trim(),
@@ -279,6 +334,7 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     updatedAtIso: value.updatedAtIso,
     inputs,
     manualTerrainPoints,
+    terrainProfileSource,
     geodesic: value.geodesic === undefined ? undefined : normalizeGeodesic(value.geodesic),
     modelVersions: { ...value.modelVersions } as Record<string, string>,
     predictions: value.predictions.map((prediction) => ({
@@ -304,7 +360,7 @@ export function createPortableExperimentFile(
   experiment: SavedExperiment,
   applicationVersion: string,
   exportedAtIso = new Date().toISOString()
-): PortableExperimentFileV4 {
+): PortableExperimentFileV5 {
   return {
     schema: PORTABLE_EXPERIMENT_SCHEMA,
     schemaVersion: PORTABLE_EXPERIMENT_SCHEMA_VERSION,
@@ -325,7 +381,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
   }
 
   const version = value.schemaVersion;
-  if (version !== 1 && version !== 2 && version !== 3 &&
+  if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
     version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Deney dosyası şema sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
@@ -345,7 +401,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 export function createLocalExperimentStore(
   experiments: SavedExperiment[],
   updatedAtIso = new Date().toISOString()
-): LocalExperimentStoreV4 {
+): LocalExperimentStoreV5 {
   return {
     schema: LOCAL_EXPERIMENT_STORE_SCHEMA,
     schemaVersion: LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
@@ -370,7 +426,7 @@ export function parseLocalExperimentStore(value: unknown): ParsedLocalExperiment
     throw new PortableFormatError('Yerel deney deposunun şema kimliği tanınmıyor.');
   }
   const version = value.schemaVersion;
-  if (version !== 1 && version !== 2 && version !== 3 &&
+  if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
     version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Yerel deney deposu sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
