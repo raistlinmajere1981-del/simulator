@@ -52,7 +52,8 @@ describe('experiment html report', () => {
       targetEndpointElevationM: 5,
       appliedObserverEndpoint: true,
       appliedTargetEndpoint: true,
-      appliedRouteDistance: true,
+      appliedRouteDistance: false,
+      appliedRouteCoordinates: true,
       modifiedAfterImport: false,
       geometryType: 'LineString',
       coordinateCount: 6,
@@ -67,7 +68,9 @@ describe('experiment html report', () => {
   expect(html).toContain('GeoJSON kaynak kaydı');
   expect(html).toContain('terrain-route.geojson');
   expect(html).toContain('Koordinatların üçüncü bileşeni (Z)');
-  expect(html).toContain('Deney mesafesine uygulandı: Evet');
+  expect(html).toContain('Deney mesafesine uygulandı: Hayır');
+  expect(html).toContain('Rota koordinatları');
+  expect(html).toContain('Deneye uygulandı: Evet');
   expect(html).toContain('41,0082°');
 });
 

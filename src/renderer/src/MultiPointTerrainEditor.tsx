@@ -179,6 +179,7 @@ export function MultiPointTerrainEditor({
   const [applyObserverEndpoint, setApplyObserverEndpoint] = useState(false);
   const [applyTargetEndpoint, setApplyTargetEndpoint] = useState(false);
   const [applyRouteDistance, setApplyRouteDistance] = useState(false);
+  const [applyRouteCoordinates, setApplyRouteCoordinates] = useState(false);
   const [importMessage, setImportMessage] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const sortedPoints = useMemo(() => sortManualTerrainPoints(points), [points]);
@@ -236,6 +237,7 @@ export function MultiPointTerrainEditor({
     setApplyObserverEndpoint(false);
     setApplyTargetEndpoint(false);
     setApplyRouteDistance(false);
+    setApplyRouteCoordinates(false);
   };
 
   const chooseCsvProfile = async (): Promise<void> => {
@@ -269,6 +271,34 @@ export function MultiPointTerrainEditor({
       setMappingRequest(undefined);
       setOperationError(
         error instanceof Error ? error.message : 'CSV arazi profili okunamadı.'
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const chooseGeoJsonProfile = async (): Promise<void> => {
+    setOperationError('');
+    setImportMessage('');
+    setIsImporting(true);
+    try {
+      const result = await window.simulatorDesktop.importGeoJsonTerrainProfile({
+        routeDistanceM: routeDistanceKm * 1_000,
+        observerGroundElevationM,
+        targetGroundElevationM
+      });
+      if (result.status === 'cancelled') {
+        setPendingImport(undefined);
+        setMappingRequest(undefined);
+        setImportMessage(result.message);
+        return;
+      }
+      if (result.profile) stageProfile(result.profile);
+    } catch (error) {
+      setPendingImport(undefined);
+      setMappingRequest(undefined);
+      setOperationError(
+        error instanceof Error ? error.message : 'GeoJSON arazi profili okunamadı.'
       );
     } finally {
       setIsImporting(false);
@@ -310,7 +340,7 @@ export function MultiPointTerrainEditor({
     }
   };
 
-  const applyCsvProfile = (): void => {
+  const applyTerrainProfile = (): void => {
     if (!pendingImport) return;
     const imported = pendingImport;
     setOperationError('');
@@ -321,7 +351,8 @@ export function MultiPointTerrainEditor({
     onApplyImport(imported, {
       applyObserverEndpoint,
       applyTargetEndpoint,
-      applyRouteDistance
+      applyRouteDistance,
+      applyRouteCoordinates
     });
   };
 
@@ -341,6 +372,15 @@ export function MultiPointTerrainEditor({
             onClick={() => void chooseCsvProfile()}
           >
             {isImporting ? 'CSV okunuyor…' : 'CSV dosyasından al'}
+          </button>
+          <button
+            className="terrain-csv-button"
+            disabled={disabled || isImporting || routeDistanceKm <= 0}
+            title="WGS84 boylam, enlem ve yükseklik taşıyan bir GeoJSON rotasını kullan"
+            type="button"
+            onClick={() => void chooseGeoJsonProfile()}
+          >
+            {isImporting ? 'Dosya okunuyor…' : 'GeoJSON dosyasından al'}
           </button>
           <button
             disabled={disabled || sortedPoints.length >= MAX_EDITOR_POINTS}
@@ -433,7 +473,7 @@ export function MultiPointTerrainEditor({
             <span className="terrain-import-ready">UYGULAMAYA HAZIR</span>
           </div>
           <p className="terrain-plain-guide">
-            Ara noktalar dosyadan alınır. Aşağıdaki seçenekler CSV rota uzunluğunun
+            Ara noktalar dosyadan alınır. Aşağıdaki seçenekler kaynak rota bilgisinin
             ve başlangıç-bitiş zemin yüksekliğinin deneye aktarılmasını sağlar.
           </p>
           <div className="terrain-import-metrics">
@@ -460,14 +500,32 @@ export function MultiPointTerrainEditor({
             </div>
           )}
           <div className="terrain-endpoint-options">
+            {isGeoJsonProfile(pendingImport) && (
+              <label title="İşaretlenirse gözlemci ve hedef koordinatları GeoJSON rotasının uçlarından alınır ve mesafe WGS84 ile yeniden hesaplanır">
+                <input
+                  checked={applyRouteCoordinates}
+                  type="checkbox"
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked;
+                    setApplyRouteCoordinates(checked);
+                    if (checked) setApplyRouteDistance(false);
+                  }}
+                />
+                <span>
+                  Deney koordinatlarını GeoJSON rotasından al:
+                  <b> {pendingImport.startLatitudeDeg.toFixed(6)}°, {pendingImport.startLongitudeDeg.toFixed(6)}° → {pendingImport.endLatitudeDeg.toFixed(6)}°, {pendingImport.endLongitudeDeg.toFixed(6)}°</b>
+                </span>
+              </label>
+            )}
             {allowRouteDistanceImport && pendingSourceDistanceKm !== null && (
-              <label title="İşaretlenirse manuel yüzey mesafesi CSV dosyasının toplam rotasıyla değiştirilir">
+              <label title="İşaretlenirse manuel yüzey mesafesi dosyanın toplam rotasıyla değiştirilir">
                 <input
                   checked={applyRouteDistance}
+                  disabled={applyRouteCoordinates}
                   type="checkbox"
                   onChange={(event) => setApplyRouteDistance(event.currentTarget.checked)}
                 />
-                <span>Deney mesafesini CSV rotasına ayarla: <b>{numberFormatter.format(pendingSourceDistanceKm)} km</b></span>
+                <span>Deney mesafesini dosyadaki rotaya ayarla: <b>{numberFormatter.format(pendingSourceDistanceKm)} km</b></span>
               </label>
             )}
             <label title="İşaretlenirse üst bölümdeki Gözlemci zemin kotu bu değerle değiştirilir">
@@ -494,7 +552,7 @@ export function MultiPointTerrainEditor({
           )}
           <div className="terrain-import-actions">
             <button type="button" onClick={() => setPendingImport(undefined)}>Vazgeç</button>
-            <button className="apply" type="button" onClick={applyCsvProfile}>Arazi profilini uygula</button>
+            <button className="apply" type="button" onClick={applyTerrainProfile}>Arazi profilini uygula</button>
           </div>
         </div>
       )}

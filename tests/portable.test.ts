@@ -57,6 +57,7 @@ export const savedExperimentFixture: SavedExperiment = {
     distanceColumnHeader: 'distance_percent',
     elevationColumnHeader: 'elevation_m',
     appliedRouteDistance: false,
+    appliedRouteCoordinates: false,
     modifiedAfterImport: false
   },
   geodesic: {
@@ -182,7 +183,8 @@ describe('portable experiment format', () => {
     targetEndpointElevationM: 5,
     appliedObserverEndpoint: true,
     appliedTargetEndpoint: true,
-    appliedRouteDistance: true,
+    appliedRouteDistance: false,
+    appliedRouteCoordinates: true,
     modifiedAfterImport: false,
     geometryType: 'LineString' as const,
     coordinateCount: 6,
@@ -206,6 +208,7 @@ describe('portable experiment format', () => {
     const legacySource = { ...savedExperimentFixture.terrainProfileSource } as Record<string, unknown>;
     delete legacySource.kind;
     delete legacySource.appliedRouteDistance;
+    delete legacySource.appliedRouteCoordinates;
     const parsed = parsePortableExperimentFile({
       schema: PORTABLE_EXPERIMENT_SCHEMA,
       schemaVersion: 5,
@@ -218,6 +221,7 @@ describe('portable experiment format', () => {
     expect(parsed.sourceVersion).toBe(5);
     expect(parsed.experiment.terrainProfileSource?.kind).toBe('csv');
     expect(parsed.experiment.terrainProfileSource?.appliedRouteDistance).toBe(false);
+    expect(parsed.experiment.terrainProfileSource?.appliedRouteCoordinates).toBeUndefined();
   });
 
 it('migrates a version 4 experiment without inventing CSV provenance', () => {

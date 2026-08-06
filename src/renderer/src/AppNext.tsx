@@ -502,7 +502,7 @@ function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.El
 function isImportedGeoJsonTerrainProfile(
   profile: TerrainProfileImport
 ): profile is ImportedGeoJsonTerrainProfile {
-  return isImportedGeoJsonTerrainProfile(profile);
+  return 'kind' in profile && profile.kind === 'geojson';
 }
 
 function isCsvTerrainProfileSource(
@@ -582,7 +582,10 @@ function TerrainPanel({
             {isCsvTerrainProfileSource(source) ? (
               <span>{source.distanceColumnHeader} → mesafe · {source.elevationColumnHeader} → yükseklik · {source.rowCount} satır</span>
             ) : (
-              <span>{source.coordinateCount} koordinat · WGS84 LineString · Z → yükseklik</span>
+              <span>
+                {source.coordinateCount} koordinat · WGS84 LineString · Z → yükseklik
+                {source.appliedRouteCoordinates === true ? ' · deney koordinatlarına uygulandı' : ''}
+              </span>
             )}
           </div>
           <span>{source.modifiedAfterImport ? 'İÇE AKTARIMDAN SONRA DÜZENLENDİ' : 'KAYNAKLA EŞLEŞİYOR'}</span>
@@ -817,7 +820,11 @@ export function AppNext(): React.JSX.Element {
     if (!Number.isFinite(value)) return;
     if (key === 'observerGroundElevationM' ||
       key === 'targetGroundElevationM' ||
-      key === 'surfaceDistanceKm') {
+      key === 'surfaceDistanceKm' ||
+      key === 'observerLatitudeDeg' ||
+      key === 'observerLongitudeDeg' ||
+      key === 'targetLatitudeDeg' ||
+      key === 'targetLongitudeDeg') {
       markTerrainSourceModified();
     }
     updateInputs((current) => ({ ...current, [key]: clampInputValue(key, value) }));
@@ -827,7 +834,11 @@ export function AppNext(): React.JSX.Element {
     profile: TerrainProfileImport,
     options: TerrainProfileImportOptions
   ): void => {
+    const appliedRouteCoordinates = Boolean(
+      options.applyRouteCoordinates && isImportedGeoJsonTerrainProfile(profile)
+    );
     const appliedRouteDistance = Boolean(
+      !appliedRouteCoordinates &&
       options.applyRouteDistance &&
       inputs.distanceSource === 'manual' &&
       profile.sourceDistanceM !== null
@@ -841,6 +852,7 @@ export function AppNext(): React.JSX.Element {
       appliedObserverEndpoint: options.applyObserverEndpoint,
       appliedTargetEndpoint: options.applyTargetEndpoint,
       appliedRouteDistance,
+      appliedRouteCoordinates,
       modifiedAfterImport: false
     };
     const source: TerrainProfileSource = isImportedGeoJsonTerrainProfile(profile)

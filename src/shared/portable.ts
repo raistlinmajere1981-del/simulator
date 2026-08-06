@@ -150,6 +150,9 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
     appliedObserverEndpoint: value.appliedObserverEndpoint,
     appliedTargetEndpoint: value.appliedTargetEndpoint,
     appliedRouteDistance: value.appliedRouteDistance === true,
+    ...(typeof value.appliedRouteCoordinates === 'boolean'
+      ? { appliedRouteCoordinates: value.appliedRouteCoordinates }
+      : {}),
     modifiedAfterImport: value.modifiedAfterImport
   };
 

@@ -1,4 +1,5 @@
 import type {
+  ImportedGeoJsonTerrainProfile,
   SimulatorInputs,
   TerrainProfileImport
 } from '../shared/simulator';
@@ -9,6 +10,13 @@ export interface TerrainProfileApplicationOptions {
   applyObserverEndpoint: boolean;
   applyTargetEndpoint: boolean;
   applyRouteDistance: boolean;
+  applyRouteCoordinates: boolean;
+}
+
+function isGeoJsonProfile(
+  profile: TerrainProfileImport
+): profile is ImportedGeoJsonTerrainProfile {
+  return 'kind' in profile && profile.kind === 'geojson';
 }
 
 export function getApplicableImportedRouteDistanceKm(
@@ -26,7 +34,9 @@ export function applyImportedTerrainInputs(
   profile: TerrainProfileImport,
   options: TerrainProfileApplicationOptions
 ): SimulatorInputs {
-  const importedDistanceKm = options.applyRouteDistance &&
+  const applyRouteCoordinates = options.applyRouteCoordinates && isGeoJsonProfile(profile);
+  const importedDistanceKm = !applyRouteCoordinates &&
+    options.applyRouteDistance &&
     current.distanceSource === 'manual'
     ? getApplicableImportedRouteDistanceKm(profile)
     : null;
@@ -34,7 +44,20 @@ export function applyImportedTerrainInputs(
   return {
     ...current,
     terrainMode: 'manual-points',
+    distanceSource: applyRouteCoordinates ? 'coordinates' : current.distanceSource,
     surfaceDistanceKm: importedDistanceKm ?? current.surfaceDistanceKm,
+    observerLatitudeDeg: applyRouteCoordinates
+      ? profile.startLatitudeDeg
+      : current.observerLatitudeDeg,
+    observerLongitudeDeg: applyRouteCoordinates
+      ? profile.startLongitudeDeg
+      : current.observerLongitudeDeg,
+    targetLatitudeDeg: applyRouteCoordinates
+      ? profile.endLatitudeDeg
+      : current.targetLatitudeDeg,
+    targetLongitudeDeg: applyRouteCoordinates
+      ? profile.endLongitudeDeg
+      : current.targetLongitudeDeg,
     observerGroundElevationM: options.applyObserverEndpoint
       ? profile.observerEndpointElevationM
       : current.observerGroundElevationM,
