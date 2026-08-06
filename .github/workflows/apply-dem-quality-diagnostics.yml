@@ -1,0 +1,49 @@
+name: Apply DEM quality diagnostics
+
+on:
+  push:
+    branches:
+      - agent/dem-quality-diagnostics
+    paths:
+      - .github/workflows/apply-dem-quality-diagnostics.yml
+      - scripts/apply-dem-quality-diagnostics.py
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/dem-quality-diagnostics
+          fetch-depth: 0
+
+      - name: Apply product changes
+        run: python3 scripts/apply-dem-quality-diagnostics.py
+
+      - name: Install dependencies
+        run: npm install --package-lock=false
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Remove temporary patch script
+        run: rm -f scripts/apply-dem-quality-diagnostics.py
+
+      - name: Commit product changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- ':!.github/workflows'
+          git commit -m "add DEM sampling and coverage diagnostics"
+          git push origin HEAD:agent/dem-quality-diagnostics
