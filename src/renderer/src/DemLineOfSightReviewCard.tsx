@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { ImportedDemTerrainProfile } from '../../shared/simulator';
 import { reviewDemLineOfSight } from '../../simulation/dem-line-of-sight-review';
+import './dem-line-of-sight-review.css';
 
 interface DemLineOfSightReviewCardProps {
   profile: ImportedDemTerrainProfile;
