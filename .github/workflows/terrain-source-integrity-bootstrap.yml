@@ -1,0 +1,51 @@
+name: Validate terrain source integrity branch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/terrain-source-integrity-bootstrap.yml
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/terrain-source-integrity
+          fetch-depth: 0
+
+      - name: Apply product changes
+        run: python scripts/apply-terrain-source-integrity.py
+
+      - name: Install dependencies
+        run: npm install --package-lock=false
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Remove temporary branch files
+        shell: pwsh
+        run: |
+          Remove-Item scripts/apply-terrain-source-integrity.py -Force
+          Remove-Item .github/workflows/apply-terrain-source-integrity.yml -Force
+
+      - name: Commit product changes to branch
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "record terrain source file integrity"
+          git push origin HEAD:agent/terrain-source-integrity
