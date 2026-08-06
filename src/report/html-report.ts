@@ -4,7 +4,12 @@ import type {
   PredictionMetric,
   ResultStatus
 } from '../shared/domain';
-import type { SavedExperiment } from '../shared/simulator';
+import type {
+  CsvTerrainDelimiter,
+  CsvTerrainDistanceUnit,
+  SavedExperiment,
+  TerrainProfileSource
+} from '../shared/simulator';
 import type { VerticalDatumKind } from '../shared/terrain';
 import {
   migrateLegacyManualTerrainPoint,
@@ -28,6 +33,18 @@ const datumLabels: Record<VerticalDatumKind, string> = {
   'orthometric-msl': 'Ortalama deniz seviyesi',
   'ellipsoidal-wgs84': 'WGS84 elipsoidal yükseklik',
   local: 'Yerel düşey referans'
+};
+
+const delimiterLabels: Record<CsvTerrainDelimiter, string> = {
+  comma: 'Virgül',
+  semicolon: 'Noktalı virgül',
+  tab: 'Sekme'
+};
+
+const distanceUnitLabels: Record<CsvTerrainDistanceUnit, string> = {
+  percent: 'Rota yüzdesi',
+  m: 'Metre',
+  km: 'Kilometre'
 };
 
 const inputNumberFormatter = new Intl.NumberFormat('tr-TR', {
@@ -60,6 +77,10 @@ function formatDate(iso: string): string {
     dateStyle: 'long',
     timeStyle: 'medium'
   }).format(date));
+}
+
+function yesNo(value: boolean): string {
+  return value ? 'Evet' : 'Hayır';
 }
 
 function formatMetric(metric: PredictionMetric): string {
@@ -172,6 +193,40 @@ function geodesicSection(experiment: SavedExperiment): string {
     </section>`;
 }
 
+function terrainSourceSection(source: TerrainProfileSource | undefined): string {
+  if (!source) {
+    return '<p class="muted">Bu deneyde kayıtlı bir dış profil kaynağı bulunmuyor; profil manuel veya eski şemadan taşınmış olabilir.</p>';
+  }
+
+  const sourceRoute = source.sourceDistanceM === null
+    ? 'Yüzde tabanlı profil'
+    : `${inputNumberFormatter.format(source.sourceDistanceM / 1_000)} km`;
+  const stateClass = source.modifiedAfterImport ? 'source-modified' : 'source-matching';
+  const stateLabel = source.modifiedAfterImport
+    ? 'İçe aktarımdan sonra düzenlendi'
+    : 'Kayıt, içe aktarılan kaynakla eşleşiyor';
+
+  return `
+    <div class="source-card ${stateClass}">
+      <div class="source-card-heading">
+        <strong>CSV / TSV kaynak kaydı</strong>
+        <span>${escapeHtml(stateLabel)}</span>
+      </div>
+      <table><tbody>
+        <tr><td>Dosya adı</td><td>${escapeHtml(source.fileName)}</td></tr>
+        <tr><td>İçe aktarma zamanı</td><td>${formatDate(source.importedAtIso)}</td></tr>
+        <tr><td>Ayırıcı</td><td>${escapeHtml(delimiterLabels[source.delimiter])}</td></tr>
+        <tr><td>Mesafe birimi</td><td>${escapeHtml(distanceUnitLabels[source.distanceUnit])}</td></tr>
+        <tr><td>Kaynak rota</td><td>${sourceRoute}</td></tr>
+        <tr><td>Kaynak satır sayısı</td><td>${source.rowCount}</td></tr>
+        <tr><td>Mesafe sütunu</td><td>${escapeHtml(source.distanceColumnHeader)}</td></tr>
+        <tr><td>Kot sütunu</td><td>${escapeHtml(source.elevationColumnHeader)}</td></tr>
+        <tr><td>CSV gözlemci uç kotu</td><td>${inputNumberFormatter.format(source.observerEndpointElevationM)} m · Deneye uygulandı: ${yesNo(source.appliedObserverEndpoint)}</td></tr>
+        <tr><td>CSV hedef uç kotu</td><td>${inputNumberFormatter.format(source.targetEndpointElevationM)} m · Deneye uygulandı: ${yesNo(source.appliedTargetEndpoint)}</td></tr>
+      </tbody></table>
+    </div>`;
+}
+
 function verticalTerrainSection(experiment: SavedExperiment, effectiveDistanceKm: number): string {
   const inputs = experiment.inputs;
   const offset = inputs.verticalDatumOffsetM;
@@ -200,7 +255,7 @@ function verticalTerrainSection(experiment: SavedExperiment, effectiveDistanceKm
   return `
     <section class="model-section vertical-section">
       <header class="model-heading">
-        <div><h2>Düşey Referans ve Arazi</h2><span>Taşınabilir deney şeması v4</span></div>
+        <div><h2>Düşey Referans ve Arazi</h2><span>Taşınabilir deney şeması v5</span></div>
         <strong class="status ${terrainEnabled ? 'status-compatible' : 'status-indeterminate'}">${terrainEnabled ? `${manualPoints.length} ara noktalı manuel profil` : 'Profil kapalı'}</strong>
       </header>
       <p>Kotlar ortak bir düşey datumda tutulur. Datum ofseti bütün zemin ve arazi örneklerine aynı yönde uygulanır.</p>
@@ -222,6 +277,8 @@ function verticalTerrainSection(experiment: SavedExperiment, effectiveDistanceKm
           <p class="muted">Manuel ara noktalar rota yüzdesiyle saklanır; raporda kayıt anındaki gerçek rota mesafesine dönüştürülür. Uç kotları gözlemci ve hedeften otomatik türetilir.</p>
         </div>
       </div>
+      <h3>Profil kaynağı ve provenans</h3>
+      ${terrainSourceSection(experiment.terrainProfileSource)}
     </section>`;
 }
 
@@ -286,8 +343,13 @@ export function createExperimentHtmlReport(
     code { display: block; padding: 9px; overflow-wrap: anywhere; border: 1px solid #ccdce7; border-radius: 4px; background: #edf4f8; }
     .trace-result { display: inline-block; padding: 5px 8px; color: #155e2b; background: #e0f3e5; border-radius: 4px; font-weight: 700; }
     .trace-id, .muted { color: #71828f; font-size: 11px; overflow-wrap: anywhere; }
+    .source-card { padding: 14px; border: 1px solid #b9d9c1; border-left: 4px solid #4d985e; border-radius: 7px; background: #f3fbf5; }
+    .source-card.source-modified { border-color: #e0c98e; border-left-color: #c58c27; background: #fff9e9; }
+    .source-card-heading { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
+    .source-card-heading span { color: #4c7656; font-size: 12px; font-weight: 700; }
+    .source-modified .source-card-heading span { color: #87621d; }
     footer { padding: 16px 4px; color: #70818e; font-size: 11px; text-align: center; }
-    @media (max-width: 760px) { body { padding: 12px; } .input-grid, .two-column { grid-template-columns: 1fr; } .model-heading { display: block; } .status { display: inline-block; margin-top: 10px; } }
+    @media (max-width: 760px) { body { padding: 12px; } .input-grid, .two-column { grid-template-columns: 1fr; } .model-heading, .source-card-heading { display: block; } .status { display: inline-block; margin-top: 10px; } .source-card-heading span { display: block; margin-top: 6px; } }
     @media print { body { padding: 0; background: white; } .report-header, section { box-shadow: none; } .model-section { break-before: auto; } }
   </style>
 </head>
