@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type {
   CsvTerrainDistanceUnit,
   ImportedGeoJsonTerrainProfile,
@@ -17,6 +17,10 @@ import {
   updateManualTerrainPoint,
   validateManualTerrainPoints
 } from '../../simulation/manual-terrain-profile';
+import {
+  getTerrainPointDragBounds,
+  terrainPointFromDragDelta
+} from '../../simulation/terrain-profile-drag';
 
 export type TerrainProfileImportOptions = TerrainProfileApplicationOptions;
 
@@ -40,6 +44,18 @@ interface PreviewPoint {
   distancePercent: number;
   elevationM: number;
   endpoint: boolean;
+}
+
+interface TerrainPointDragState {
+  pointerId: number;
+  pointId: string;
+  startClientX: number;
+  startClientY: number;
+  startDistancePercent: number;
+  startElevationM: number;
+  minimumDistancePercent: number;
+  maximumDistancePercent: number;
+  elevationSpanM: number;
 }
 
 const MAX_EDITOR_POINTS = 2_000;
@@ -182,6 +198,7 @@ export function MultiPointTerrainEditor({
   const [applyRouteCoordinates, setApplyRouteCoordinates] = useState(false);
   const [importMessage, setImportMessage] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const dragState = useRef<TerrainPointDragState | undefined>(undefined);
   const sortedPoints = useMemo(() => sortManualTerrainPoints(points), [points]);
   const validationErrors = useMemo(
     () => validateManualTerrainPoints(sortedPoints),
@@ -210,6 +227,65 @@ export function MultiPointTerrainEditor({
     routeDistanceKm <= 0
     ? null
     : Math.min(100, Math.max(0, criticalDistanceM / (routeDistanceKm * 1_000) * 100));
+
+  const beginTerrainPointDrag = (
+    event: React.PointerEvent<SVGCircleElement>,
+    point: PreviewPoint
+  ): void => {
+    if (disabled || point.endpoint) return;
+    const bounds = getTerrainPointDragBounds(sortedPoints, point.id);
+    const elevationSpanM = Math.max(
+      10,
+      preview.maximumElevationM - preview.minimumElevationM
+    ) * 1.5;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragState.current = {
+      pointerId: event.pointerId,
+      pointId: point.id,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startDistancePercent: point.distancePercent,
+      startElevationM: point.elevationM,
+      minimumDistancePercent: bounds.minimumDistancePercent,
+      maximumDistancePercent: bounds.maximumDistancePercent,
+      elevationSpanM
+    };
+  };
+
+  const moveTerrainPointDrag = (
+    event: React.PointerEvent<SVGCircleElement>
+  ): void => {
+    const drag = dragState.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const svg = event.currentTarget.ownerSVGElement;
+    if (!svg) return;
+    const viewport = svg.getBoundingClientRect();
+    const patch = terrainPointFromDragDelta({
+      startDistancePercent: drag.startDistancePercent,
+      startElevationM: drag.startElevationM,
+      deltaXpx: event.clientX - drag.startClientX,
+      deltaYpx: event.clientY - drag.startClientY,
+      viewportWidthPx: viewport.width,
+      viewportHeightPx: viewport.height,
+      elevationSpanM: drag.elevationSpanM,
+      minimumDistancePercent: drag.minimumDistancePercent,
+      maximumDistancePercent: drag.maximumDistancePercent
+    });
+    event.preventDefault();
+    apply(() => updateManualTerrainPoint(sortedPoints, drag.pointId, patch));
+  };
+
+  const endTerrainPointDrag = (
+    event: React.PointerEvent<SVGCircleElement>
+  ): void => {
+    const drag = dragState.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragState.current = undefined;
+  };
 
   const apply = (operation: () => ManualTerrainPoint[]): void => {
     try {
@@ -567,11 +643,18 @@ export function MultiPointTerrainEditor({
             const y = 88 - (point.elevationM - preview.minimumElevationM) / range * 72;
             return (
               <circle
-                className={point.endpoint ? 'preview-endpoint' : 'preview-interior-point'}
+                aria-label={point.endpoint ? undefined : `Arazi noktası: rota yüzde ${numberFormatter.format(point.distancePercent)}, yükseklik ${numberFormatter.format(point.elevationM)} metre`}
+                className={point.endpoint ? 'preview-endpoint' : 'preview-interior-point draggable'}
                 cx={x}
                 cy={y}
                 key={point.id}
-                r={point.endpoint ? 1.8 : 1.45}
+                onPointerCancel={point.endpoint ? undefined : endTerrainPointDrag}
+                onPointerDown={point.endpoint ? undefined : (event) => beginTerrainPointDrag(event, point)}
+                onPointerMove={point.endpoint ? undefined : moveTerrainPointDrag}
+                onPointerUp={point.endpoint ? undefined : endTerrainPointDrag}
+                r={point.endpoint ? 1.8 : 1.8}
+                role={point.endpoint ? undefined : 'slider'}
+                style={point.endpoint ? undefined : { cursor: 'grab', touchAction: 'none' }}
               />
             );
           })}
