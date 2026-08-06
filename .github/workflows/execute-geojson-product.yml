@@ -54,6 +54,29 @@ jobs:
               "    \"app_path = 'src/renderer/src/AppNext.tsx'\\n\""
           )
 
+          portable_calls = [
+              i for i, line in enumerate(lines)
+              if line.startswith("replace_once(portable_path, 'PortableExperimentFileV5'")
+              or line.startswith("replace_once(portable_path, 'LocalExperimentStoreV5'")
+          ]
+          if len(portable_calls) != 4:
+              raise RuntimeError(f'Expected four portable type replacement calls, found {len(portable_calls)}')
+          portable_replacement = [
+              "portable_text = read(portable_path)",
+              "if portable_text.count('PortableExperimentFileV5') != 2:",
+              "    raise RuntimeError('Unexpected PortableExperimentFileV5 count')",
+              "if portable_text.count('LocalExperimentStoreV5') != 2:",
+              "    raise RuntimeError('Unexpected LocalExperimentStoreV5 count')",
+              "Path(portable_path).write_text(",
+              "    portable_text.replace('PortableExperimentFileV5', 'PortableExperimentFileV6')",
+              "    .replace('LocalExperimentStoreV5', 'LocalExperimentStoreV6'),",
+              "    encoding='utf-8'",
+              ")"
+          ]
+          first_portable = portable_calls[0]
+          last_portable = portable_calls[-1]
+          lines[first_portable:last_portable + 1] = portable_replacement
+
           exec(compile('\n'.join(lines) + '\n', 'geojson-retry.py', 'exec'))
           PY
 
