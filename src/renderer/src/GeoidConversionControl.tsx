@@ -193,8 +193,9 @@ export function GeoidConversionControl({
 
       <p>
         Aynı N değeri gözlemci, hedef ve bütün arazi örneklerine uygulanır. Değerin
-        iki uç ve rota boyunca geçerli olduğunu doğrulayın. Uygulama otomatik jeoit
-        modeli sorgulamaz.
+        iki uç ve rota boyunca geçerli olduğunu doğrulayın. Otomatik jeoit modeli
+        sorgulanmaz; mevcut datum / gelgit ofseti ayrı tutulur. Kaynak etiketi bu
+        sürümde henüz kalıcı deney provenansına yazılmaz.
       </p>
       <div className="geoid-conversion-actions">
         {message && <span role="status">{message}</span>}
