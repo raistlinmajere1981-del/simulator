@@ -47,4 +47,4 @@ jobs:
           git commit -m "preview DEM terrain along the line of sight"
           git push origin HEAD:agent/dem-line-of-sight-preview
 
-# Trigger validation
+# Registered workflow trigger 2
