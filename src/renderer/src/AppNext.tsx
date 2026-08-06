@@ -621,6 +621,11 @@ function TerrainPanel({
           targetLongitudeDeg={inputs.targetLongitudeDeg}
           observerGroundElevationM={inputs.observerGroundElevationM}
           targetGroundElevationM={inputs.targetGroundElevationM}
+          observerHeightM={inputs.observerHeightM}
+          targetHeightM={inputs.targetHeightM}
+          verticalDatumOffsetM={inputs.verticalDatumOffsetM}
+          useStandardRefraction={inputs.useStandardRefraction}
+          refractionCoefficient={inputs.refractionCoefficient}
           criticalDistanceM={criticalDistanceM}
           onChange={onPointsChange}
           onApplyImport={onApplyImport}
