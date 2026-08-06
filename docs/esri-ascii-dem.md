@@ -49,6 +49,28 @@ Dosya içeriği renderer sürecine gönderilmez. Ana süreç yalnız oluşturula
 noktalarını, grid çözünürlüğünü, kapsamı, örnekleme yöntemini ve kaynak dosya
 adını aktarır. Kaynak bilgileri deney kaydında ve HTML raporunda korunur.
 
+## Veri kaynağı ve çözünürlük izi
+
+İçe aktarma incelemesinde mevcut provenans alanları tek bir kaynak izi olarak
+özetlenir:
+
+- dosya boyutu ve SHA-256 bütünlük özeti,
+- doğal grid hücre boyutu,
+- rota orta enleminde metre cinsinden etkili hücre açıklığı,
+- rota örnek aralığının hücre açıklığına oranı,
+- coğrafi kapsam ve toplam grid hücre sayısı,
+- yatay ve düşey referans bilgisinin dayanağı.
+
+ESRI ASCII başlığı tek başına CRS veya düşey datum kanıtı taşımaz. Uygulama bu
+sürümde yatay koordinatları WGS 84 coğrafi derece içe aktarma sözleşmesine göre
+yorumlar; bu bilgi bir `.prj` yan dosyasından doğrulanmış sayılmaz. Düşey datum
+kaynak dosyadan bilinmiyor olarak açıkça gösterilir ve deneyde seçilen düşey
+referansla kullanıcı tarafından eşleştirilir.
+
+Kaynak izi `tam`, `kısmi` veya `eski` olarak sınıflandırılır. Tam sınıfı dosya
+bütünlüğü ile doğal/etkili çözünürlük bilgilerinin birlikte kayıtlı olduğunu
+belirtir; DEM'in bilimsel doğruluğunu veya gerçek düşey datumunu kanıtlamaz.
+
 ## Görüş hattı önizlemesi
 
 DEM dosyası arazi profiline uygulanmadan önce bütün iç rota örnekleri mevcut
