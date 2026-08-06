@@ -1,0 +1,49 @@
+name: Validate legacy v5 CSV migration
+
+on:
+  push:
+    branches:
+      - agent/geojson-terrain-profile-import
+    paths:
+      - .github/workflows/fix-v5-csv-migration.yml
+      - scripts/fix-v5-csv-migration.py
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/geojson-terrain-profile-import
+          fetch-depth: 0
+
+      - name: Apply migration fix
+        run: python3 scripts/fix-v5-csv-migration.py
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Remove temporary patch script
+        run: rm -f scripts/fix-v5-csv-migration.py
+
+      - name: Commit product changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- ':!.github/workflows'
+          git commit -m "preserve legacy v5 CSV provenance during v6 migration"
+          git push origin HEAD:agent/geojson-terrain-profile-import
