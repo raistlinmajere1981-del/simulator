@@ -165,6 +165,67 @@ jobs:
           if editor_count != 1:
               raise RuntimeError(f'Could not patch GeoJSON editor action; matches={editor_count}')
 
+          app_block_start_token = (
+              "replace_regex(\n    app_path,\n"
+              "    r\"    const source: TerrainProfileSource ="
+          )
+          app_block_end_token = "\n\nportable_path = 'src/shared/portable.ts'"
+          app_block_start = script.index(app_block_start_token)
+          app_block_end = script.index(app_block_end_token, app_block_start)
+          app_pattern = (
+              r"    const source: TerrainProfileSource = \{.*?"
+              r"      modifiedAfterImport: false\n    \};"
+          )
+          app_replacement_ts = """    const appliedRouteDistance = Boolean(
+      options.applyRouteDistance &&
+      inputs.distanceSource === 'manual' &&
+      profile.sourceDistanceM !== null
+    );
+    const commonSource = {
+      fileName: profile.fileName,
+      importedAtIso: new Date().toISOString(),
+      sourceDistanceM: profile.sourceDistanceM,
+      observerEndpointElevationM: profile.observerEndpointElevationM,
+      targetEndpointElevationM: profile.targetEndpointElevationM,
+      appliedObserverEndpoint: options.applyObserverEndpoint,
+      appliedTargetEndpoint: options.applyTargetEndpoint,
+      appliedRouteDistance,
+      modifiedAfterImport: false
+    };
+    const source: TerrainProfileSource = 'kind' in profile && profile.kind === 'geojson'
+      ? {
+          ...commonSource,
+          kind: 'geojson',
+          geometryType: profile.geometryType,
+          coordinateCount: profile.coordinateCount,
+          startLongitudeDeg: profile.startLongitudeDeg,
+          startLatitudeDeg: profile.startLatitudeDeg,
+          endLongitudeDeg: profile.endLongitudeDeg,
+          endLatitudeDeg: profile.endLatitudeDeg,
+          elevationSource: profile.elevationSource
+        }
+      : {
+          ...commonSource,
+          kind: 'csv',
+          delimiter: profile.delimiter,
+          distanceUnit: profile.distanceUnit,
+          rowCount: profile.rowCount,
+          distanceColumnHeader: profile.distanceColumnHeader,
+          elevationColumnHeader: profile.elevationColumnHeader
+        };"""
+          app_replacement_call = (
+              "replace_regex(\n"
+              "    app_path,\n"
+              f"    {app_pattern!r},\n"
+              f"    {app_replacement_ts!r}\n"
+              ")"
+          )
+          script = (
+              script[:app_block_start] +
+              app_replacement_call +
+              script[app_block_end:]
+          )
+
           exec(compile(script, 'geojson-stage.py', 'exec'))
           PY
 
