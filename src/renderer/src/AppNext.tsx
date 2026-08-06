@@ -44,6 +44,7 @@ import {
   MultiPointTerrainEditor,
   type TerrainProfileImportOptions
 } from './MultiPointTerrainEditor';
+import { GeoidConversionControl } from './GeoidConversionControl';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -530,6 +531,7 @@ function TerrainPanel({
   onModeChange,
   onNumberChange,
   onPointsChange,
+  onApplyGeoidConversion,
   onApplyImport
 }: {
   inputs: SimulatorInputs;
@@ -543,6 +545,12 @@ function TerrainPanel({
   onModeChange(mode: TerrainMode): void;
   onNumberChange(key: NumericInputKey, value: number): void;
   onPointsChange(points: ManualTerrainPoint[]): void;
+  onApplyGeoidConversion(
+    targetDatum: VerticalDatumKind,
+    observerGroundElevationM: number,
+    targetGroundElevationM: number,
+    points: ManualTerrainPoint[]
+  ): void;
   onApplyImport(
     profile: TerrainProfileImport,
     options: TerrainProfileImportOptions
@@ -583,6 +591,14 @@ function TerrainPanel({
         {datumLabels[inputs.verticalDatumKind]} · ofset {numberFormatter.format(inputs.verticalDatumOffsetM)} m · gözlemci mutlak göz kotu {numberFormatter.format(inputs.observerGroundElevationM + inputs.verticalDatumOffsetM + inputs.observerHeightM)} m · hedef tepe kotu {numberFormatter.format(inputs.targetGroundElevationM + inputs.verticalDatumOffsetM + inputs.targetHeightM)} m
         {terrainEnabled && ` · ${points.length} ara nokta · ${numberFormatter.format(effectiveDistanceKm)} km rota`}
       </p>
+
+      <GeoidConversionControl
+        currentDatum={inputs.verticalDatumKind}
+        observerGroundElevationM={inputs.observerGroundElevationM}
+        targetGroundElevationM={inputs.targetGroundElevationM}
+        points={points}
+        onApply={onApplyGeoidConversion}
+      />
 
       {source && (
         <div className={`terrain-source-strip ${source.modifiedAfterImport ? 'modified' : ''}`}>
@@ -841,6 +857,26 @@ export function AppNext(): React.JSX.Element {
     setManualTerrainPoints(points);
     markTerrainSourceModified();
     setIsDirty(true);
+  };
+
+  const applyGeoidConversion = (
+    targetDatum: VerticalDatumKind,
+    observerGroundElevationM: number,
+    targetGroundElevationM: number,
+    points: ManualTerrainPoint[]
+  ): void => {
+    setInputs((current) => ({
+      ...current,
+      verticalDatumKind: targetDatum,
+      observerGroundElevationM,
+      targetGroundElevationM
+    }));
+    setManualTerrainPoints(points);
+    markTerrainSourceModified();
+    setIsDirty(true);
+    setStorageMessage(
+      `Bütün zemin ve arazi kotları ${datumLabels[targetDatum]} datumuna dönüştürüldü.`
+    );
   };
 
   const handleNumberChange = (key: NumericInputKey, value: number): void => {
@@ -1109,6 +1145,7 @@ export function AppNext(): React.JSX.Element {
             onModeChange={(terrainMode) => updateInputs((current) => ({ ...current, terrainMode }))}
             onNumberChange={handleNumberChange}
             onPointsChange={updateTerrainPoints}
+            onApplyGeoidConversion={applyGeoidConversion}
             onApplyImport={applyTerrainImport}
           />
 
