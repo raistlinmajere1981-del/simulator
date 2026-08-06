@@ -23,164 +23,154 @@ Durum: tamamlandı
 - Atmosfer kapalı ve standart kırılma seçenekleri
 - Gözlem farkı ve belirsizlik değerlendirmesi
 - Etkileşimli arayüz girdileri
-- Linux/KDE masaüstünde 1920×1080 görsel doğrulama
-- Girdi sınırlandırması ve uygulanmayan kontrollerin açık işaretlenmesi
+- Linux/KDE 1920×1080 görsel doğrulama
+- Girdi sınırlandırması
 - Birim testleri ve üretim derlemesi
 
 ## Aşama 2 — Deney kaydetme ve izlenebilirlik
 
 Durum: tamamlandı
 
-- Deneyleri Electron kullanıcı veri klasöründe JSON olarak saklama
+- Yerel deney kayıtları
 - Kayıt oluşturma, güncelleme, yeniden açma ve silme
-- Model sürümleri ile sonuç anlık görüntüsünü kaydetme
-- Her model için formül, sayısal yerine koyma ve sonuç adımları
-- Model varsayımları görünümü
-- Hesap izi kimliği
-- Azimutal projeksiyon için eksik fiziksel kuralların izde açıklanması
-- Linux/KDE üzerinde kayıt, yeniden açma, güncelleme ve silme doğrulaması
+- Model sürümleri ve sonuç anlık görüntüleri
+- Formül, sayısal yerine koyma ve sonuç adımları
+- Varsayımlar ve hesap izi kimliği
+- Linux/KDE kayıt akışı doğrulaması
 
 ## Aşama 2.1 — Taşınabilir deneyler ve raporlar
 
 Durum: tamamlandı
 
-- Sürüm numaralı `.ggl.json` dışa aktarma ve içe aktarma
-- Eski yerel kayıt dizisinin otomatik taşınması
-- Derin çalışma zamanı doğrulaması
-- Bozuk ve desteklenmeyen dosyaların güvenli biçimde reddedilmesi
-- Kimlik çakışmasında güvenli yeni kayıt oluşturulması
-- Çevrimdışı, yazdırılabilir HTML deney raporu
-- Raporda girdiler, model sürümleri, sonuçlar, varsayımlar, uyarılar ve hesap izleri
-- Rapor sayılarında birime uygun okunabilir hassasiyet
-- Linux/KDE üzerinde dışa aktarma, yeniden içe aktarma ve rapor görünümü doğrulaması
+- Sürümlü `.ggl.json` dışa/içe aktarma
+- Eski kayıtların otomatik taşınması
+- Çalışma zamanı doğrulaması
+- Bozuk dosyaların güvenli reddi
+- Kimlik çakışması çözümü
+- Çevrimdışı ve yazdırılabilir HTML raporu
 - Şema taşıma ve HTML güvenlik testleri
 
 ## Aşama 3.1 — WGS84 gerçek konum girdileri
 
 Durum: tamamlandı
 
-- Gözlemci ve hedef için enlem/boylam girdileri
-- Manuel ve koordinattan hesaplanan mesafe arasında seçim
-- WGS84 elipsoidi üzerinde Vincenty ters jeodezik çözümü
-- Elipsoidal yüzey mesafesi
-- Başlangıç ve varış azimutları
-- Koordinat aralığı doğrulaması
-- Çakışan noktaların açık ele alınması
-- Yakın-antipodal yakınsama sorununda işaretli küresel yedek çözüm
-- Jeodezik varsayım, formül, iterasyon ve sonuç hesap izi
-- Koordinat ve jeodezik anlık görüntüsünün yerel kayda eklenmesi
-- Taşınabilir ve yerel kayıt şemalarının sürüm 2'ye taşınması
-- Sürüm 1 kayıtların manuel mesafe modunda geriye dönük açılması
-- HTML raporunda koordinat ve WGS84 jeodezik bölümü
-- Linux/KDE üzerinde manuel/koordinat geçişi, canlı sonuçlar, kayıt, JSON ve HTML raporu doğrulaması
+- Gözlemci ve hedef enlem/boylamları
+- Manuel ve koordinat mesafesi seçimi
+- WGS84 Vincenty ters jeodezik çözümü
+- Yüzey mesafesi ve uç azimutları
+- Yakın-antipodal durumda işaretli küresel yedek çözüm
+- Jeodezik hesap izi
+- Kayıt, JSON ve HTML raporu desteği
 - Referans, sınır ve taşıma testleri
 
 ## Aşama 3.2 — Düşey datum ve arazi temeli
 
 Durum: tamamlandı ve `main` dalına alındı
 
-- Ortometrik deniz seviyesi, WGS84 elipsoidal ve yerel düşey datum seçimi
-- Gelgit veya yerel benchmark için datum ofseti
-- Gözlemci zemin kotu ve hedef taban kotu
-- Gözlemci göz kotu ve hedef tepe kotunun ortak referansta türetilmesi
-- Manuel, içe aktarılan ve DEM kaynaklı genel profil sözleşmesi
-- Mesafe-yükseklik örneklerinin doğrulanması
-- Tek ara örnekli ilk manuel profil
-- Düzlem geometrisinde görüş hattı açıklığı
-- Küresel geometrinin yerel düşey doğrultularında görüş hattı açıklığı
-- Kritik engel ve minimum açıklık tespiti
-- Araziyi temizleyen minimum hedef kotunun sayısal çözümü
-- Eğrilik ve arazi etkilerinin hedef görünürlüğünde birlikte uygulanması
-- Etkin yarıçapın profil analizine yaklaşık yansıması
-- Model metrikleri, uyarıları ve hesap izinde arazi sonuçları
-- Kayıt ve taşınabilir dosya şemasının sürüm 3'e yükseltilmesi
-- Sürüm 1 ve 2 kayıtların güvenli varsayılanlarla taşınması
-- HTML raporunda düşey datum, uç kotları ve manuel profil bölümü
-- Atmosfer kontrolünün 1920×1080 yerleşimde görünür tutulması
+- Ortometrik deniz seviyesi, WGS84 elipsoidal ve yerel datum
+- Datum veya gelgit ofseti
+- Gözlemci zemin ve hedef taban kotları
+- Ortak referansta göz ve hedef tepe kotu
+- Genel arazi profil sözleşmesi
+- Düzlem ve kürede görüş hattı açıklığı
+- Kritik engel ve minimum açıklık
+- Araziyi temizleyen minimum hedef kotu
+- Kırılmanın arazi hesabına yaklaşık yansıması
+- Şema v3 ve eski kayıt taşıması
+- HTML raporunda düşey datum ve profil
 - Uygulama sürümü `0.5.0`
-- Linux/KDE yerel akış doğrulaması
 
 ## Aşama 3.3 — Çok noktalı manuel arazi profili
 
 Durum: tamamlandı ve `main` dalına alındı
 
-- Kimlik, yüzde konumu ve kot taşıyan `ManualTerrainPoint` sözleşmesi
-- En fazla 2.000 iç nokta
-- Nokta kimliği, yüzde aralığı, tekrar ve sonlu sayı doğrulaması
-- Noktaların artan rota yüzdesine göre deterministik sıralanması
-- Gözlemci ve hedef uçlarının otomatik eklenmesi
-- Yüzde konumundan gerçek metre mesafesine dönüşüm
-- Nokta ekleme, düzenleme ve silme yardımcıları
-- En büyük profil boşluğuna otomatik nokta ekleme
-- Yeni nokta kotunun komşu örneklerden doğrusal enterpolasyonu
+- Kimlik, yüzde konumu ve kot taşıyan iç noktalar
+- En fazla 2.000 nokta
+- Sıralama, tekrar ve sınır doğrulaması
+- Uçların zemin kotlarından otomatik eklenmesi
+- Nokta ekleme, düzenleme ve silme
+- En büyük boşluğa otomatik nokta ekleme
 - Canlı SVG profil önizlemesi
-- İdeal kürenin kritik arazi mesafesinin önizlemede işaretlenmesi
-- Nokta değişiminde küre ve düzlem hesaplarının canlı yenilenmesi
-- Kayıt açma, kaydetme ve varsayılana dönmede profil dizisinin korunması
-- Taşınabilir ve yerel kayıt şemasının sürüm 4'e yükseltilmesi
-- Sürüm 1, 2 ve 3 kayıtların sürüm 4'e taşınması
-- Sürüm 3 tek ara noktasının kayıpsız diziye dönüştürülmesi
-- HTML raporunda bütün noktaların sıra, yüzde, mesafe ve kot bilgisi
-- 1920×1080 yerleşimde üst panel, arazi düzenleyicisi ve model kartlarının çakışmadan akması
-- Çok noktalı çekirdek, taşıma ve rapor testleri
+- Kritik arazi mesafesi işareti
+- Küre ve düzlemin canlı yeniden hesaplanması
+- Şema v4 ve v1–v3 taşıması
+- HTML raporunda bütün noktalar
+- 1920×1080 panel akışı
 - Uygulama sürümü `0.6.0`
-- Linux/KDE yerel akış, kayıt, JSON ve HTML raporu doğrulaması
+- Linux/KDE, kayıt, JSON ve rapor doğrulaması
 
 ## Aşama 3.4 — CSV arazi profili içe aktarma
+
+Durum: tamamlandı ve `main` dalına alındı
+
+- CSV, TSV ve düz metin dosyaları
+- Electron ana sürecinde güvenli dosya okuma
+- 5 MB dosya ve 2.000 ara nokta sınırı
+- Virgül, noktalı virgül ve sekme algılama
+- Metre, kilometre ve rota yüzdesi sütunları
+- Türkçe başlıklar ve ondalık virgül
+- Gözlemci/hedef uç satırı doğrulaması
+- Artan ve tekrarsız mesafeler
+- Mutlak mesafelerin yüzdeye dönüştürülmesi
+- Kaynak rota ve uç kotu farkı uyarıları
+- İnceleme kartı
+- `Vazgeç` ve `Profili uygula`
+- Hata veya iptalde mevcut profil koruması
+- Canlı model yenilemesi
+- Örnek dosyalar ve parser testleri
+- Uygulama sürümü `0.7.0`
+- Linux/KDE yerel doğrulaması
+
+## Aşama 3.5 — CSV provenansı, uç kotları ve sütun eşleme
 
 Durum: çalışan sürüm tamamlandı, yerel doğrulama bekliyor
 
 Tamamlananlar:
 
-- CSV, TSV ve düz metin dosya seçimi
-- Dosyanın Electron ana sürecinde ve sandbox dışında güvenli okunması
-- 5 MB dosya sınırı
-- Virgül, noktalı virgül ve sekme ayırıcı algılama
-- `distance_m`, `distance_km` ve `distance_percent` sütunları
-- Türkçe başlık eşleri
-- Noktalı ve Türkçe ondalık virgüllü sayılar
-- Açıklama ve boş satır desteği
-- Gözlemci ve hedef uç satırlarının zorunlu doğrulanması
-- Artan ve tekrarsız mesafe kontrolü
-- Sonlu sayı, kot aralığı, toplam rota ve 2.000 ara nokta sınırı
-- Mutlak mesafelerin CSV toplamına göre rota yüzdesine dönüştürülmesi
-- Kaynak rota ile aktif deney mesafesi farkı uyarısı
-- CSV uç kotları ile aktif deney uç kotları farkı uyarısı
-- Hata veya iptal durumunda mevcut noktaları koruma
-- Dosya adı, satır sayısı, ara nokta sayısı, birim, kaynak rota ve uç kotlarını gösteren inceleme kartı
-- Açık `Vazgeç` ve `Profili uygula` eylemleri
-- Uygulanan noktaların mevcut canlı hesap, kayıt, JSON ve HTML raporu akışını kullanması
-- Yüzde ve metre tabanlı örnek CSV dosyaları
-- Parser, ayırıcı, ondalık, başlık, uç, sıra ve hata testleri
-- Uygulama sürümü `0.7.0`
+- CSV dosya adı ve içe aktarma zamanı kaydı
+- Ayırıcı, mesafe birimi ve kaynak rota kaydı
+- Kaynak satır sayısı ve eşlenen sütun başlıkları
+- CSV gözlemci/hedef uç kotlarının kaydı
+- Gözlemci uç kotunu bağımsız uygulama seçeneği
+- Hedef uç kotunu bağımsız uygulama seçeneği
+- Standart dışı başlıklarda sütun eşleme ekranı
+- Mesafe sütunu, birim ve kot sütunu seçimi
+- İlk beş satırlık güvenli önizleme
+- Ham dosya içeriğinin renderer'a verilmemesi
+- Ana süreçte rastgele istek kimliği ve 10 dakikalık süre
+- İçe aktarma sonrasında manuel değişiklik işareti
+- Kaynak durumunun arazi panelinde gösterilmesi
+- Şema v5 ve v1–v4 taşıması
+- V4 kayıtlarına uydurma provenans eklenmemesi
+- JSON ve HTML raporunda kaynak bilgisi
+- Eşleme gerektiren örnek CSV
+- Parser, şema, rapor ve güvenlik testleri
+- Uygulama sürümü `0.8.0`
 
 Yerel doğrulama:
 
-- Linux/KDE dosya seçicisi
-- Yüzde tabanlı örnek dosyanın inceleme kartı
-- Türkçe noktalı virgül ve ondalık virgül dosyası
-- İnceleme sırasında mevcut noktaların korunması
-- `Vazgeç` davranışı
-- `Profili uygula` sonrasında grafik ve nokta listesinin yenilenmesi
-- Küre ve düzlem sonuçlarının canlı değişmesi
-- Mesafe farkı uyarısı
-- Uç kotu farkı uyarısı
-- Bozuk başlık, tekrarlı mesafe ve eksik uçların reddedilmesi
-- Çok noktalı içe aktarımda nokta listesinin kendi içinde kayması
-- Deney kaydı, yeniden açma, JSON ve HTML raporu
+- Linux/KDE sütun eşleme kartı yerleşimi
+- `chainage → metre`, `terrain_height → kot` eşlemesi
+- Mesafe ve kot için aynı sütunun reddedilmesi
+- CSV uç kotlarını uygulamadan profil kullanma
+- Yalnız gözlemci ucunu uygulama
+- Yalnız hedef ucunu uygulama
+- İki ucu birlikte uygulama
+- Kaynak durumunun yeşil `Kaynakla eşleşiyor` görünümü
+- Nokta veya uç değişiminde sarı `İçe aktarımdan sonra düzenlendi` görünümü
+- Kayıt ve yeniden açmada provenansın korunması
+- Şema v5 JSON dışa/içe aktarma
+- HTML raporunda dosya, sütun, birim, rota, uç seçimleri ve değişiklik durumu
 
-Sonraki gerçek arazi işleri:
+## Sonraki gerçek arazi işleri
 
-- CSV uç kotlarını isteğe bağlı olarak deney alanlarına uygulama
 - CSV toplam mesafesini manuel deney mesafesine isteğe bağlı aktarma
-- CSV kaynak provenansını deney kaydında saklama
-- Sütun eşleme sihirbazı
 - GeoJSON profil içe aktarma
-- Noktaları grafik üzerinde sürükleyerek düzenleme
+- Noktaları grafik üzerinde sürükleme
 - Sayısal yükseklik modeli entegrasyonu
-- Görüş hattı boyunca DEM örneklemesi
-- Arazi veri kaynağı ve çözünürlük izlenebilirliği
-- Ortometrik ve elipsoidal yükseklik için isteğe bağlı jeoit dönüşümü
+- Görüş hattı boyunca DEM örnekleme
+- Veri kaynağı ve çözünürlük izlenebilirliği
+- Jeoit dönüşümü
 - Su seviyesi, gelgit zamanı ve dalga belirsizliği
 
 ## Aşama 4 — Gelişmiş atmosfer

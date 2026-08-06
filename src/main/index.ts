@@ -24,12 +24,25 @@ import type {
   ImportExperimentResult,
   ImportTerrainProfileResult,
   SavedExperiment,
+  TerrainProfileColumnMapping,
   TerrainProfileImportContext
 } from '../shared/simulator';
-import { parseTerrainProfileCsv } from '../simulation/csv-terrain-profile';
+import {
+  parseTerrainProfileCsv,
+  TerrainProfileColumnMappingRequiredError
+} from '../simulation/csv-terrain-profile';
 
 const EXPERIMENTS_FILE_NAME = 'experiments.json';
 const MAX_TERRAIN_CSV_BYTES = 5 * 1024 * 1024;
+const TERRAIN_MAPPING_TTL_MS = 10 * 60 * 1_000;
+
+interface PendingTerrainImport {
+  content: string;
+  fileName: string;
+  createdAtMs: number;
+}
+
+const pendingTerrainImports = new Map<string, PendingTerrainImport>();
 
 function experimentsFilePath(): string {
   return join(app.getPath('userData'), EXPERIMENTS_FILE_NAME);
@@ -144,6 +157,59 @@ function validateTerrainImportContext(value: unknown): TerrainProfileImportConte
     routeDistanceM: candidate.routeDistanceM as number,
     observerGroundElevationM: candidate.observerGroundElevationM as number,
     targetGroundElevationM: candidate.targetGroundElevationM as number
+  };
+}
+
+function validateTerrainColumnMapping(value: unknown): TerrainProfileColumnMapping {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('CSV sütun eşlemesi geçersiz.');
+  }
+  const candidate = value as Record<string, unknown>;
+  if (!Number.isInteger(candidate.distanceColumnIndex) ||
+    !Number.isInteger(candidate.elevationColumnIndex) ||
+    (candidate.distanceColumnIndex as number) < 0 ||
+    (candidate.elevationColumnIndex as number) < 0 ||
+    (candidate.distanceUnit !== 'percent' && candidate.distanceUnit !== 'm' &&
+      candidate.distanceUnit !== 'km')) {
+    throw new TypeError('CSV sütun eşlemesi geçersiz.');
+  }
+  return {
+    distanceColumnIndex: candidate.distanceColumnIndex as number,
+    elevationColumnIndex: candidate.elevationColumnIndex as number,
+    distanceUnit: candidate.distanceUnit
+  };
+}
+
+function purgeExpiredTerrainImports(): void {
+  const now = Date.now();
+  for (const [requestId, pending] of pendingTerrainImports) {
+    if (now - pending.createdAtMs > TERRAIN_MAPPING_TTL_MS) {
+      pendingTerrainImports.delete(requestId);
+    }
+  }
+}
+
+function terrainMappingResult(
+  error: TerrainProfileColumnMappingRequiredError,
+  content: string,
+  fileName: string,
+  filePath?: string
+): ImportTerrainProfileResult {
+  purgeExpiredTerrainImports();
+  const requestId = randomUUID();
+  pendingTerrainImports.set(requestId, {
+    content,
+    fileName,
+    createdAtMs: Date.now()
+  });
+  return {
+    status: 'success',
+    message: 'CSV sütunları otomatik belirlenemedi; eşleme gerekli.',
+    filePath,
+    mappingRequest: {
+      requestId,
+      ...error.inspection
+    }
   };
 }
 
@@ -305,11 +371,51 @@ function registerExperimentHandlers(): void {
       }
 
       const content = await fs.readFile(selectedPath, 'utf-8');
-      const profile = parseTerrainProfileCsv(content, selectedPath, context);
+      try {
+        const profile = parseTerrainProfileCsv(content, selectedPath, context);
+        return {
+          status: 'success',
+          message: `“${profile.fileName}” okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
+          filePath: selectedPath,
+          profile
+        };
+      } catch (error) {
+        if (error instanceof TerrainProfileColumnMappingRequiredError) {
+          return terrainMappingResult(error, content, selectedPath, selectedPath);
+        }
+        throw error;
+      }
+    }
+  );
+
+  ipcMain.handle(
+    'terrain:import-csv-mapped',
+    async (
+      _event,
+      rawRequestId: unknown,
+      rawMapping: unknown,
+      rawContext: unknown
+    ): Promise<ImportTerrainProfileResult> => {
+      purgeExpiredTerrainImports();
+      if (typeof rawRequestId !== 'string' || rawRequestId.length === 0) {
+        throw new TypeError('CSV eşleme isteği geçersiz.');
+      }
+      const pending = pendingTerrainImports.get(rawRequestId);
+      if (!pending) {
+        throw new Error('CSV eşleme isteğinin süresi doldu. Dosyayı yeniden seçin.');
+      }
+      const mapping = validateTerrainColumnMapping(rawMapping);
+      const context = validateTerrainImportContext(rawContext);
+      const profile = parseTerrainProfileCsv(
+        pending.content,
+        pending.fileName,
+        context,
+        mapping
+      );
+      pendingTerrainImports.delete(rawRequestId);
       return {
         status: 'success',
-        message: `“${profile.fileName}” okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
-        filePath: selectedPath,
+        message: `“${profile.fileName}” eşlenen sütunlarla okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
         profile
       };
     }

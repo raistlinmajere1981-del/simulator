@@ -9,9 +9,11 @@ import type {
 import {
   DEFAULT_SIMULATOR_INPUTS,
   type DistanceSource,
+  type ImportedTerrainProfile,
   type SavedExperiment,
   type SimulatorInputs,
-  type TerrainMode
+  type TerrainMode,
+  type TerrainProfileSource
 } from '../../shared/simulator';
 import type {
   ManualTerrainPoint,
@@ -35,7 +37,10 @@ import {
   SaveExperimentDialog,
   TraceDialog
 } from './dialogs';
-import { MultiPointTerrainEditor } from './MultiPointTerrainEditor';
+import {
+  MultiPointTerrainEditor,
+  type TerrainProfileImportOptions
+} from './MultiPointTerrainEditor';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -495,21 +500,28 @@ function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.El
 function TerrainPanel({
   inputs,
   points,
+  source,
   effectiveDistanceKm,
   criticalDistanceM,
   onDatumChange,
   onModeChange,
   onNumberChange,
-  onPointsChange
+  onPointsChange,
+  onApplyImport
 }: {
   inputs: SimulatorInputs;
   points: ManualTerrainPoint[];
+  source: TerrainProfileSource | undefined;
   effectiveDistanceKm: number;
   criticalDistanceM: number | null;
   onDatumChange(kind: VerticalDatumKind): void;
   onModeChange(mode: TerrainMode): void;
   onNumberChange(key: NumericInputKey, value: number): void;
   onPointsChange(points: ManualTerrainPoint[]): void;
+  onApplyImport(
+    profile: ImportedTerrainProfile,
+    options: TerrainProfileImportOptions
+  ): void;
 }): React.JSX.Element {
   const terrainEnabled = inputs.terrainMode !== 'off';
   return (
@@ -547,6 +559,16 @@ function TerrainPanel({
         {terrainEnabled && ` · ${points.length} ara nokta · ${numberFormatter.format(effectiveDistanceKm)} km rota`}
       </p>
 
+      {source && (
+        <div className={`terrain-source-strip ${source.modifiedAfterImport ? 'modified' : ''}`}>
+          <div>
+            <strong>CSV kaynağı: {source.fileName}</strong>
+            <span>{source.distanceColumnHeader} → mesafe · {source.elevationColumnHeader} → kot · {source.rowCount} satır</span>
+          </div>
+          <span>{source.modifiedAfterImport ? 'İÇE AKTARIMDAN SONRA DÜZENLENDİ' : 'KAYNAKLA EŞLEŞİYOR'}</span>
+        </div>
+      )}
+
       {terrainEnabled && (
         <MultiPointTerrainEditor
           points={points}
@@ -555,6 +577,7 @@ function TerrainPanel({
           targetGroundElevationM={inputs.targetGroundElevationM}
           criticalDistanceM={criticalDistanceM}
           onChange={onPointsChange}
+          onApplyImport={onApplyImport}
         />
       )}
     </section>
@@ -664,6 +687,7 @@ export function AppNext(): React.JSX.Element {
   const [manualTerrainPoints, setManualTerrainPoints] = useState<ManualTerrainPoint[]>(
     defaultTerrainPoints()
   );
+  const [terrainProfileSource, setTerrainProfileSource] = useState<TerrainProfileSource>();
   const [runs, setRuns] = useState<ModelRun[]>([]);
   const [savedExperiments, setSavedExperiments] = useState<SavedExperiment[]>([]);
   const [activeExperimentId, setActiveExperimentId] = useState<string>();
@@ -751,6 +775,12 @@ export function AppNext(): React.JSX.Element {
     return () => { cancelled = true; };
   }, [context, experiment]);
 
+  const markTerrainSourceModified = (): void => {
+    setTerrainProfileSource((current) => current
+      ? { ...current, modifiedAfterImport: true }
+      : current);
+  };
+
   const updateInputs = (updater: (current: SimulatorInputs) => SimulatorInputs): void => {
     setInputs(updater);
     setIsDirty(true);
@@ -758,17 +788,58 @@ export function AppNext(): React.JSX.Element {
 
   const updateTerrainPoints = (points: ManualTerrainPoint[]): void => {
     setManualTerrainPoints(points);
+    markTerrainSourceModified();
     setIsDirty(true);
   };
 
   const handleNumberChange = (key: NumericInputKey, value: number): void => {
     if (!Number.isFinite(value)) return;
+    if (key === 'observerGroundElevationM' || key === 'targetGroundElevationM') {
+      markTerrainSourceModified();
+    }
     updateInputs((current) => ({ ...current, [key]: clampInputValue(key, value) }));
+  };
+
+  const applyTerrainImport = (
+    profile: ImportedTerrainProfile,
+    options: TerrainProfileImportOptions
+  ): void => {
+    const source: TerrainProfileSource = {
+      kind: 'csv',
+      fileName: profile.fileName,
+      importedAtIso: new Date().toISOString(),
+      delimiter: profile.delimiter,
+      distanceUnit: profile.distanceUnit,
+      sourceDistanceM: profile.sourceDistanceM,
+      rowCount: profile.rowCount,
+      observerEndpointElevationM: profile.observerEndpointElevationM,
+      targetEndpointElevationM: profile.targetEndpointElevationM,
+      appliedObserverEndpoint: options.applyObserverEndpoint,
+      appliedTargetEndpoint: options.applyTargetEndpoint,
+      distanceColumnHeader: profile.distanceColumnHeader,
+      elevationColumnHeader: profile.elevationColumnHeader,
+      modifiedAfterImport: false
+    };
+
+    setManualTerrainPoints(profile.points);
+    setInputs((current) => ({
+      ...current,
+      terrainMode: 'manual-points',
+      observerGroundElevationM: options.applyObserverEndpoint
+        ? profile.observerEndpointElevationM
+        : current.observerGroundElevationM,
+      targetGroundElevationM: options.applyTargetEndpoint
+        ? profile.targetEndpointElevationM
+        : current.targetGroundElevationM
+    }));
+    setTerrainProfileSource(source);
+    setIsDirty(true);
   };
 
   const loadExperiment = (saved: SavedExperiment): void => {
     setInputs(saved.inputs);
     setManualTerrainPoints(saved.manualTerrainPoints ?? defaultTerrainPoints(saved.inputs));
+    setTerrainProfileSource(saved.terrainProfileSource);
     setActiveExperimentId(saved.id);
     setActiveExperimentName(saved.name);
     setIsDirty(false);
@@ -785,6 +856,7 @@ export function AppNext(): React.JSX.Element {
       updatedAtIso: now,
       inputs,
       manualTerrainPoints,
+      terrainProfileSource,
       geodesic,
       modelVersions: Object.fromEntries([
         ...simulationModels.map((model) => [model.metadata.id, model.metadata.version] as const),
@@ -799,6 +871,7 @@ export function AppNext(): React.JSX.Element {
       setActiveExperimentId(saved.id);
       setActiveExperimentName(saved.name);
       setManualTerrainPoints(saved.manualTerrainPoints ?? manualTerrainPoints);
+      setTerrainProfileSource(saved.terrainProfileSource);
       setIsDirty(false);
       setSaveDialogOpen(false);
       setStorageMessage(`“${saved.name}” cihazda kaydedildi.`);
@@ -905,6 +978,7 @@ export function AppNext(): React.JSX.Element {
               onReset={() => {
                 setInputs(DEFAULT_SIMULATOR_INPUTS);
                 setManualTerrainPoints(defaultTerrainPoints());
+                setTerrainProfileSource(undefined);
                 setActiveExperimentId(undefined);
                 setActiveExperimentName('');
                 setIsDirty(false);
@@ -919,12 +993,14 @@ export function AppNext(): React.JSX.Element {
           <TerrainPanel
             inputs={inputs}
             points={manualTerrainPoints}
+            source={terrainProfileSource}
             effectiveDistanceKm={effectiveDistanceKm}
             criticalDistanceM={criticalTerrainDistanceM}
             onDatumChange={(verticalDatumKind) => updateInputs((current) => ({ ...current, verticalDatumKind }))}
             onModeChange={(terrainMode) => updateInputs((current) => ({ ...current, terrainMode }))}
             onNumberChange={handleNumberChange}
             onPointsChange={updateTerrainPoints}
+            onApplyImport={applyTerrainImport}
           />
 
           <div className="model-grid">

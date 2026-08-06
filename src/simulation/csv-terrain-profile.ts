@@ -3,7 +3,9 @@ import type {
   CsvTerrainDelimiter,
   CsvTerrainDistanceUnit,
   ImportedTerrainProfile,
-  TerrainProfileImportContext
+  TerrainProfileColumnMapping,
+  TerrainProfileImportContext,
+  TerrainProfileMappingRequest
 } from '../shared/simulator';
 import type { ManualTerrainPoint } from '../shared/terrain';
 import { validateManualTerrainPoints } from './manual-terrain-profile';
@@ -13,6 +15,7 @@ const MAX_ROUTE_DISTANCE_M = 20_000_000;
 const MIN_ELEVATION_M = -12_000;
 const MAX_ELEVATION_M = 100_000;
 const ENDPOINT_TOLERANCE = 1e-7;
+const MAPPING_PREVIEW_ROWS = 5;
 
 interface ParsedCsvLine {
   lineNumber: number;
@@ -30,6 +33,18 @@ interface HeaderDefinition {
   elevationIndex: number;
   distanceUnit: CsvTerrainDistanceUnit;
   ambiguousDistanceHeader: boolean;
+}
+
+type MappingInspection = Omit<TerrainProfileMappingRequest, 'requestId'>;
+
+export class TerrainProfileColumnMappingRequiredError extends Error {
+  readonly inspection: MappingInspection;
+
+  constructor(inspection: MappingInspection) {
+    super(inspection.reason);
+    this.name = 'TerrainProfileColumnMappingRequiredError';
+    this.inspection = inspection;
+  }
 }
 
 const distanceHeaderAliases: Record<CsvTerrainDistanceUnit, Set<string>> = {
@@ -209,55 +224,107 @@ function parseLines(content: string): {
   return { delimiter, lines };
 }
 
-function parseHeader(headerCells: string[]): HeaderDefinition {
-  const normalized = headerCells.map(normalizeHeader);
-  let distanceIndex = -1;
-  let distanceUnit: CsvTerrainDistanceUnit | undefined;
-  let ambiguousDistanceHeader = false;
-
-  for (const unit of ['percent', 'm', 'km'] as const) {
-    const index = normalized.findIndex((header) => distanceHeaderAliases[unit].has(header));
-    if (index >= 0) {
-      if (distanceIndex >= 0) {
-        throw new Error('CSV başlığında birden fazla mesafe sütunu tanımlanmış.');
-      }
-      distanceIndex = index;
-      distanceUnit = unit;
-    }
+function explicitHeaderDefinition(
+  headerCells: string[],
+  mapping: TerrainProfileColumnMapping
+): HeaderDefinition {
+  const columnCount = headerCells.length;
+  const indexes = [mapping.distanceColumnIndex, mapping.elevationColumnIndex];
+  if (!indexes.every((index) => Number.isInteger(index) && index >= 0 && index < columnCount)) {
+    throw new RangeError('Seçilen CSV sütunlarından biri geçersiz.');
+  }
+  if (mapping.distanceColumnIndex === mapping.elevationColumnIndex) {
+    throw new RangeError('Mesafe ve kot için farklı CSV sütunları seçilmeli.');
+  }
+  if (mapping.distanceUnit !== 'percent' && mapping.distanceUnit !== 'm' &&
+    mapping.distanceUnit !== 'km') {
+    throw new RangeError('CSV mesafe birimi geçersiz.');
   }
 
-  if (distanceIndex < 0) {
-    const ambiguousIndex = normalized.findIndex((header) => ambiguousDistanceHeaders.has(header));
-    if (ambiguousIndex >= 0) {
-      distanceIndex = ambiguousIndex;
-      distanceUnit = 'm';
-      ambiguousDistanceHeader = true;
-    }
+  return {
+    distanceIndex: mapping.distanceColumnIndex,
+    elevationIndex: mapping.elevationColumnIndex,
+    distanceUnit: mapping.distanceUnit,
+    ambiguousDistanceHeader: false
+  };
+}
+
+function automaticHeaderDefinition(headerCells: string[]): HeaderDefinition | null {
+  const normalized = headerCells.map(normalizeHeader);
+  const distanceMatches: Array<{
+    index: number;
+    unit: CsvTerrainDistanceUnit;
+    ambiguous: boolean;
+  }> = [];
+
+  for (const unit of ['percent', 'm', 'km'] as const) {
+    normalized.forEach((header, index) => {
+      if (distanceHeaderAliases[unit].has(header)) {
+        distanceMatches.push({ index, unit, ambiguous: false });
+      }
+    });
+  }
+
+  if (distanceMatches.length === 0) {
+    normalized.forEach((header, index) => {
+      if (ambiguousDistanceHeaders.has(header)) {
+        distanceMatches.push({ index, unit: 'm', ambiguous: true });
+      }
+    });
   }
 
   const elevationIndexes = normalized
     .map((header, index) => elevationHeaderAliases.has(header) ? index : -1)
     .filter((index) => index >= 0);
 
-  if (distanceIndex < 0 || !distanceUnit) {
-    throw new Error(
-      'Mesafe sütunu bulunamadı. distance_m, distance_km veya distance_percent başlıklarından birini kullanın.'
-    );
-  }
-  if (elevationIndexes.length === 0) {
-    throw new Error('Kot sütunu bulunamadı. elevation_m veya kot_m başlığını kullanın.');
-  }
-  if (elevationIndexes.length > 1) {
-    throw new Error('CSV başlığında birden fazla kot sütunu tanımlanmış.');
-  }
-
+  if (distanceMatches.length !== 1 || elevationIndexes.length !== 1) return null;
+  const distance = distanceMatches[0];
   const elevationIndex = elevationIndexes[0];
-  if (elevationIndex === undefined) throw new Error('Kot sütunu bulunamadı.');
-  if (distanceIndex === elevationIndex) {
-    throw new Error('Mesafe ve kot aynı CSV sütununu kullanamaz.');
-  }
+  if (!distance || elevationIndex === undefined || distance.index === elevationIndex) return null;
 
-  return { distanceIndex, elevationIndex, distanceUnit, ambiguousDistanceHeader };
+  return {
+    distanceIndex: distance.index,
+    elevationIndex,
+    distanceUnit: distance.unit,
+    ambiguousDistanceHeader: distance.ambiguous
+  };
+}
+
+function mappingReason(headerCells: string[]): string {
+  const normalized = headerCells.map(normalizeHeader);
+  const recognizedDistanceCount = normalized.filter((header) =>
+    ambiguousDistanceHeaders.has(header) ||
+    Object.values(distanceHeaderAliases).some((aliases) => aliases.has(header))
+  ).length;
+  const recognizedElevationCount = normalized.filter((header) =>
+    elevationHeaderAliases.has(header)
+  ).length;
+
+  if (recognizedDistanceCount === 0 && recognizedElevationCount === 0) {
+    return 'Mesafe ve kot sütunları başlıklardan otomatik belirlenemedi.';
+  }
+  if (recognizedDistanceCount === 0) {
+    return 'Mesafe sütunu başlıktan otomatik belirlenemedi.';
+  }
+  if (recognizedElevationCount === 0) {
+    return 'Kot sütunu başlıktan otomatik belirlenemedi.';
+  }
+  return 'Birden fazla olası mesafe veya kot sütunu bulundu.';
+}
+
+function mappingInspection(
+  fileName: string,
+  delimiter: CsvTerrainDelimiter,
+  lines: ParsedCsvLine[]
+): MappingInspection {
+  const header = lines[0];
+  return {
+    fileName: basename(fileName),
+    delimiter,
+    headers: header?.cells ?? [],
+    previewRows: lines.slice(1, MAPPING_PREVIEW_ROWS + 1).map((line) => line.cells),
+    reason: mappingReason(header?.cells ?? [])
+  };
 }
 
 function normalizeNumericText(value: string, delimiter: CsvTerrainDelimiter): string {
@@ -380,13 +447,14 @@ function differenceWarning(
   unit = 'm'
 ): string | null {
   if (Math.abs(importedValue - currentValue) <= 0.01) return null;
-  return `CSV ${label} ${importedValue.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} ${unit}; mevcut deney ${currentValue.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} ${unit}. Mevcut deney değeri korunacak.`;
+  return `CSV ${label} ${importedValue.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} ${unit}; mevcut deney ${currentValue.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} ${unit}. Uygulama aşamasında hangi değerin kullanılacağı seçilebilir.`;
 }
 
 export function parseTerrainProfileCsv(
   content: string,
   fileName: string,
-  context: TerrainProfileImportContext
+  context: TerrainProfileImportContext,
+  mapping?: TerrainProfileColumnMapping
 ): ImportedTerrainProfile {
   validateContext(context);
   if (nonEmptyCsvLines(content).length === 0) throw new Error('CSV dosyası boş.');
@@ -394,15 +462,22 @@ export function parseTerrainProfileCsv(
   const { delimiter, lines } = parseLines(content);
   const header = lines[0];
   if (!header) throw new Error('CSV başlığı bulunamadı.');
-  const headerDefinition = parseHeader(header.cells);
-  const sourceRows: ParsedSourceRow[] = [];
+  const headerDefinition = mapping
+    ? explicitHeaderDefinition(header.cells, mapping)
+    : automaticHeaderDefinition(header.cells);
+  if (!headerDefinition) {
+    throw new TerrainProfileColumnMappingRequiredError(
+      mappingInspection(fileName, delimiter, lines)
+    );
+  }
 
+  const sourceRows: ParsedSourceRow[] = [];
   for (const line of lines.slice(1)) {
     const distanceCell = line.cells[headerDefinition.distanceIndex];
     const elevationCell = line.cells[headerDefinition.elevationIndex];
     if (distanceCell === undefined || elevationCell === undefined) {
       throw new Error(
-        `${line.lineNumber}. satır başlıktaki mesafe ve kot sütunlarını içermiyor.`
+        `${line.lineNumber}. satır seçilen mesafe ve kot sütunlarını içermiyor.`
       );
     }
     sourceRows.push({
@@ -465,6 +540,8 @@ export function parseTerrainProfileCsv(
     fileName: basename(fileName),
     delimiter,
     distanceUnit: headerDefinition.distanceUnit,
+    distanceColumnHeader: header.cells[headerDefinition.distanceIndex] ?? '',
+    elevationColumnHeader: header.cells[headerDefinition.elevationIndex] ?? '',
     rowCount: sourceRows.length,
     sourceDistanceM,
     observerEndpointElevationM: first.elevationM,

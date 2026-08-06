@@ -42,6 +42,22 @@ export const savedExperimentFixture: SavedExperiment = {
     { id: 'ridge-centre', distancePercent: 50, elevationM: 8.5 },
     { id: 'ridge-east', distancePercent: 75, elevationM: 4 }
   ],
+  terrainProfileSource: {
+    kind: 'csv',
+    fileName: 'terrain-profile.csv',
+    importedAtIso: '2026-08-05T12:05:00.000Z',
+    delimiter: 'comma',
+    distanceUnit: 'percent',
+    sourceDistanceM: null,
+    rowCount: 5,
+    observerEndpointElevationM: 2.4,
+    targetEndpointElevationM: 1.1,
+    appliedObserverEndpoint: true,
+    appliedTargetEndpoint: true,
+    distanceColumnHeader: 'distance_percent',
+    elevationColumnHeader: 'elevation_m',
+    modifiedAfterImport: false
+  },
   geodesic: {
     method: 'vincenty',
     converged: true,
@@ -94,8 +110,13 @@ export const savedExperimentFixture: SavedExperiment = {
   ]
 };
 
+function version4Experiment(): Record<string, unknown> {
+  const { terrainProfileSource, ...version4 } = savedExperimentFixture;
+  return version4;
+}
+
 function version3Experiment(): Record<string, unknown> {
-  const { manualTerrainPoints, ...version3 } = savedExperimentFixture;
+  const { manualTerrainPoints, ...version3 } = version4Experiment();
   return version3;
 }
 
@@ -131,10 +152,10 @@ function legacyExperiment(): Record<string, unknown> {
 }
 
 describe('portable experiment format', () => {
-  it('round-trips a current multi-point portable experiment file', () => {
+  it('round-trips a current experiment with CSV terrain provenance', () => {
     const file = createPortableExperimentFile(
       savedExperimentFixture,
-      '0.6.0',
+      '0.8.0',
       '2026-08-05T13:00:00.000Z'
     );
     const parsed = parsePortableExperimentFile(
@@ -144,8 +165,25 @@ describe('portable experiment format', () => {
     expect(file.schema).toBe(PORTABLE_EXPERIMENT_SCHEMA);
     expect(file.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
     expect(parsed.migrated).toBe(false);
-    expect(parsed.sourceVersion).toBe(4);
+    expect(parsed.sourceVersion).toBe(5);
     expect(parsed.experiment).toEqual(savedExperimentFixture);
+    expect(parsed.experiment.terrainProfileSource?.fileName)
+      .toBe('terrain-profile.csv');
+  });
+
+  it('migrates a version 4 experiment without inventing CSV provenance', () => {
+    const parsed = parsePortableExperimentFile({
+      schema: PORTABLE_EXPERIMENT_SCHEMA,
+      schemaVersion: 4,
+      exportedAtIso: '2026-08-05T13:00:00.000Z',
+      application: { name: 'Geometrik Gözlem Laboratuvarı', version: '0.7.0' },
+      experiment: version4Experiment()
+    });
+
+    expect(parsed.migrated).toBe(true);
+    expect(parsed.sourceVersion).toBe(4);
+    expect(parsed.experiment.manualTerrainPoints).toHaveLength(3);
+    expect(parsed.experiment.terrainProfileSource).toBeUndefined();
   });
 
   it('migrates a version 3 single point into an ordered point array', () => {
@@ -164,6 +202,7 @@ describe('portable experiment format', () => {
       distancePercent: 50,
       elevationM: 8.5
     }]);
+    expect(parsed.experiment.terrainProfileSource).toBeUndefined();
   });
 
   it('migrates a version 2 file with safe vertical defaults', () => {
@@ -213,12 +252,12 @@ describe('portable experiment format', () => {
     expect(parsed.migrated).toBe(true);
     expect(parsed.ignoredRecordCount).toBe(1);
     expect(parsed.store.schema).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA);
-    expect(parsed.store.schemaVersion).toBe(4);
+    expect(parsed.store.schemaVersion).toBe(5);
     expect(parsed.store.experiments[0]?.inputs.distanceSource).toBe('manual');
     expect(parsed.store.experiments[0]?.manualTerrainPoints).toHaveLength(1);
   });
 
-  it('creates a current versioned local store', () => {
+  it('creates a current versioned local store with provenance', () => {
     const store = createLocalExperimentStore(
       [savedExperimentFixture],
       '2026-08-05T13:00:00.000Z'
@@ -227,8 +266,11 @@ describe('portable experiment format', () => {
 
     expect(parsed.migrated).toBe(false);
     expect(parsed.ignoredRecordCount).toBe(0);
+    expect(parsed.store.schemaVersion).toBe(5);
     expect(parsed.store.experiments[0]?.geodesic?.method).toBe('vincenty');
     expect(parsed.store.experiments[0]?.manualTerrainPoints).toHaveLength(3);
+    expect(parsed.store.experiments[0]?.terrainProfileSource)
+      .toEqual(savedExperimentFixture.terrainProfileSource);
   });
 
   it('normalizes multi-point order during storage', () => {
@@ -244,14 +286,32 @@ describe('portable experiment format', () => {
       .toEqual(['early', 'late']);
   });
 
+  it('rejects invalid CSV provenance', () => {
+    const file = createPortableExperimentFile(savedExperimentFixture, '0.8.0');
+    const invalid = {
+      ...file,
+      experiment: {
+        ...file.experiment,
+        terrainProfileSource: {
+          ...file.experiment.terrainProfileSource,
+          distanceUnit: 'yards'
+        }
+      }
+    };
+
+    expect(() => parsePortableExperimentFile(invalid)).toThrow(
+      'beklenen aralıkların dışında'
+    );
+  });
+
   it('rejects an unsupported portable schema version', () => {
-    const file = createPortableExperimentFile(savedExperimentFixture, '0.6.0');
+    const file = createPortableExperimentFile(savedExperimentFixture, '0.8.0');
     expect(() => parsePortableExperimentFile({ ...file, schemaVersion: 99 }))
       .toThrow(PortableFormatError);
   });
 
   it('rejects out-of-range coordinates', () => {
-    const file = createPortableExperimentFile(savedExperimentFixture, '0.6.0');
+    const file = createPortableExperimentFile(savedExperimentFixture, '0.8.0');
     const invalid = {
       ...file,
       experiment: {
@@ -266,7 +326,7 @@ describe('portable experiment format', () => {
   });
 
   it('rejects an invalid legacy terrain sample position', () => {
-    const file = createPortableExperimentFile(savedExperimentFixture, '0.6.0');
+    const file = createPortableExperimentFile(savedExperimentFixture, '0.8.0');
     const invalid = {
       ...file,
       experiment: {
@@ -281,7 +341,7 @@ describe('portable experiment format', () => {
   });
 
   it('rejects duplicate multi-point positions', () => {
-    const file = createPortableExperimentFile(savedExperimentFixture, '0.6.0');
+    const file = createPortableExperimentFile(savedExperimentFixture, '0.8.0');
     const invalid = {
       ...file,
       experiment: {
