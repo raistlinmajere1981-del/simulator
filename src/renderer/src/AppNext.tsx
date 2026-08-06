@@ -9,6 +9,7 @@ import type {
 import {
   DEFAULT_SIMULATOR_INPUTS,
   type DistanceSource,
+  type ImportedDemTerrainProfile,
   type ImportedGeoJsonTerrainProfile,
   type TerrainProfileImport,
   type SavedExperiment,
@@ -499,6 +500,12 @@ function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.El
   );
 }
 
+function isImportedDemTerrainProfile(
+  profile: TerrainProfileImport
+): profile is ImportedDemTerrainProfile {
+  return 'kind' in profile && profile.kind === 'dem';
+}
+
 function isImportedGeoJsonTerrainProfile(
   profile: TerrainProfileImport
 ): profile is ImportedGeoJsonTerrainProfile {
@@ -518,6 +525,7 @@ function TerrainPanel({
   effectiveDistanceKm,
   criticalDistanceM,
   allowRouteDistanceImport,
+  allowDemImport,
   onDatumChange,
   onModeChange,
   onNumberChange,
@@ -530,6 +538,7 @@ function TerrainPanel({
   effectiveDistanceKm: number;
   criticalDistanceM: number | null;
   allowRouteDistanceImport: boolean;
+  allowDemImport: boolean;
   onDatumChange(kind: VerticalDatumKind): void;
   onModeChange(mode: TerrainMode): void;
   onNumberChange(key: NumericInputKey, value: number): void;
@@ -578,14 +587,16 @@ function TerrainPanel({
       {source && (
         <div className={`terrain-source-strip ${source.modifiedAfterImport ? 'modified' : ''}`}>
           <div>
-            <strong>{isCsvTerrainProfileSource(source) ? 'CSV kaynağı' : 'GeoJSON kaynağı'}: {source.fileName}</strong>
-            {isCsvTerrainProfileSource(source) ? (
+            <strong>{source.kind === 'csv' ? 'CSV kaynağı' : source.kind === 'geojson' ? 'GeoJSON kaynağı' : 'DEM kaynağı'}: {source.fileName}</strong>
+            {source.kind === 'csv' ? (
               <span>{source.distanceColumnHeader} → mesafe · {source.elevationColumnHeader} → yükseklik · {source.rowCount} satır</span>
-            ) : (
+            ) : source.kind === 'geojson' ? (
               <span>
                 {source.coordinateCount} koordinat · WGS84 LineString · Z → yükseklik
                 {source.appliedRouteCoordinates === true ? ' · deney koordinatlarına uygulandı' : ''}
               </span>
+            ) : (
+              <span>{source.sampleCount} rota örneği · {source.columnCount} × {source.rowCount} grid · {source.samplingMethod === 'bilinear' ? 'iki doğrusal' : 'en yakın hücre'}</span>
             )}
           </div>
           <span>{source.modifiedAfterImport ? 'İÇE AKTARIMDAN SONRA DÜZENLENDİ' : 'KAYNAKLA EŞLEŞİYOR'}</span>
@@ -597,6 +608,11 @@ function TerrainPanel({
           points={points}
           routeDistanceKm={effectiveDistanceKm}
           allowRouteDistanceImport={allowRouteDistanceImport}
+          allowDemImport={allowDemImport}
+          observerLatitudeDeg={inputs.observerLatitudeDeg}
+          observerLongitudeDeg={inputs.observerLongitudeDeg}
+          targetLatitudeDeg={inputs.targetLatitudeDeg}
+          targetLongitudeDeg={inputs.targetLongitudeDeg}
           observerGroundElevationM={inputs.observerGroundElevationM}
           targetGroundElevationM={inputs.targetGroundElevationM}
           criticalDistanceM={criticalDistanceM}
@@ -855,27 +871,45 @@ export function AppNext(): React.JSX.Element {
       appliedRouteCoordinates,
       modifiedAfterImport: false
     };
-    const source: TerrainProfileSource = isImportedGeoJsonTerrainProfile(profile)
+    const source: TerrainProfileSource = isImportedDemTerrainProfile(profile)
       ? {
           ...commonSource,
-          kind: 'geojson',
-          geometryType: profile.geometryType,
-          coordinateCount: profile.coordinateCount,
-          startLongitudeDeg: profile.startLongitudeDeg,
-          startLatitudeDeg: profile.startLatitudeDeg,
-          endLongitudeDeg: profile.endLongitudeDeg,
-          endLatitudeDeg: profile.endLatitudeDeg,
-          elevationSource: profile.elevationSource
-        }
-      : {
-          ...commonSource,
-          kind: 'csv',
-          delimiter: profile.delimiter,
-          distanceUnit: profile.distanceUnit,
+          kind: 'dem',
+          format: profile.format,
+          samplingMethod: profile.samplingMethod,
+          geodesicMethod: profile.geodesicMethod,
+          columnCount: profile.columnCount,
           rowCount: profile.rowCount,
-          distanceColumnHeader: profile.distanceColumnHeader,
-          elevationColumnHeader: profile.elevationColumnHeader
-        };
+          sampleCount: profile.sampleCount,
+          sampleSpacingM: profile.sampleSpacingM,
+          cellSizeDeg: profile.cellSizeDeg,
+          noDataValue: profile.noDataValue,
+          westBoundaryDeg: profile.westBoundaryDeg,
+          eastBoundaryDeg: profile.eastBoundaryDeg,
+          southBoundaryDeg: profile.southBoundaryDeg,
+          northBoundaryDeg: profile.northBoundaryDeg
+        }
+      : isImportedGeoJsonTerrainProfile(profile)
+        ? {
+            ...commonSource,
+            kind: 'geojson',
+            geometryType: profile.geometryType,
+            coordinateCount: profile.coordinateCount,
+            startLongitudeDeg: profile.startLongitudeDeg,
+            startLatitudeDeg: profile.startLatitudeDeg,
+            endLongitudeDeg: profile.endLongitudeDeg,
+            endLatitudeDeg: profile.endLatitudeDeg,
+            elevationSource: profile.elevationSource
+          }
+        : {
+            ...commonSource,
+            kind: 'csv',
+            delimiter: profile.delimiter,
+            distanceUnit: profile.distanceUnit,
+            rowCount: profile.rowCount,
+            distanceColumnHeader: profile.distanceColumnHeader,
+            elevationColumnHeader: profile.elevationColumnHeader
+          };
 
     setManualTerrainPoints(profile.points);
     setInputs((current) => applyImportedTerrainInputs(current, profile, options));
@@ -1047,6 +1081,7 @@ export function AppNext(): React.JSX.Element {
             effectiveDistanceKm={effectiveDistanceKm}
             criticalDistanceM={criticalTerrainDistanceM}
             allowRouteDistanceImport={inputs.distanceSource === 'manual'}
+            allowDemImport={inputs.distanceSource === 'coordinates'}
             onDatumChange={(verticalDatumKind) => updateInputs((current) => ({ ...current, verticalDatumKind }))}
             onModeChange={(terrainMode) => updateInputs((current) => ({ ...current, terrainMode }))}
             onNumberChange={handleNumberChange}

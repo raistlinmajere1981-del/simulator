@@ -236,8 +236,23 @@ Durum: tamamlandı
 - Saf parser ve örnekleme testleri
 - Uygulama sürümü `0.9.3`
 
+## Aşama 3.11 — ESRI ASCII DEM rota profili
+
+Durum: tamamlandı
+
+- Electron ana sürecinde 64 MB sınırla güvenli DEM dosya seçimi
+- Koordinat modundaki gözlemci-hedef rotasının WGS84 ters çözümü
+- Rota ara koordinatlarının Vincenty doğrudan çözümüyle üretilmesi
+- Grid çözünürlüğüne göre otomatik 3…2.002 örnek
+- Varsayılan iki doğrusal yükseklik örnekleme
+- Kapsam dışı veya NODATA örneğinde profil bütününün reddedilmesi
+- DEM uç yüksekliklerini bağımsız uygulama seçenekleri
+- Grid, örnekleme ve çözünürlük provenansının kayıt ve raporda korunması
+- Taşınabilir ve yerel kayıt şeması v7
+- Örnek ESRI ASCII grid dosyası
+- Uygulama sürümü `1.0.0`
+
 ## Sonraki gerçek arazi işleri
-- Sayısal yükseklik modeli dosya akışı
 - Görüş hattı boyunca DEM örnekleme
 - Veri kaynağı ve çözünürlük izlenebilirliği
 - Jeoit dönüşümü

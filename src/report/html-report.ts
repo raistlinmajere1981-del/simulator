@@ -219,7 +219,7 @@ function terrainSourceSection(source: TerrainProfileSource | undefined): string 
     <tr><td>Mesafe birimi</td><td>${escapeHtml(distanceUnitLabels[source.distanceUnit])}</td></tr>
     <tr><td>Kaynak satır sayısı</td><td>${source.rowCount}</td></tr>
     <tr><td>Mesafe sütunu</td><td>${escapeHtml(source.distanceColumnHeader)}</td></tr>
-    <tr><td>Yükseklik sütunu</td><td>${escapeHtml(source.elevationColumnHeader)}</td></tr>` : `
+    <tr><td>Yükseklik sütunu</td><td>${escapeHtml(source.elevationColumnHeader)}</td></tr>` : source.kind === 'geojson' ? `
     <tr><td>Kaynak türü</td><td>GeoJSON</td></tr>
     <tr><td>Geometri</td><td>${escapeHtml(source.geometryType)}</td></tr>
     <tr><td>Koordinat sayısı</td><td>${source.coordinateCount}</td></tr>
@@ -227,12 +227,18 @@ function terrainSourceSection(source: TerrainProfileSource | undefined): string 
     <tr><td>Yükseklik kaynağı</td><td>Koordinatların üçüncü bileşeni (Z)</td></tr>
     <tr><td>Başlangıç koordinatı</td><td>${coordinateFormatter.format(source.startLatitudeDeg)}°, ${coordinateFormatter.format(source.startLongitudeDeg)}°</td></tr>
     <tr><td>Bitiş koordinatı</td><td>${coordinateFormatter.format(source.endLatitudeDeg)}°, ${coordinateFormatter.format(source.endLongitudeDeg)}°</td></tr>
-    <tr><td>Rota koordinatları</td><td>Deneye uygulandı: ${yesNo(source.appliedRouteCoordinates === true)}</td></tr>`;
+    <tr><td>Rota koordinatları</td><td>Deneye uygulandı: ${yesNo(source.appliedRouteCoordinates === true)}</td></tr>` : `
+    <tr><td>Kaynak türü</td><td>ESRI ASCII DEM</td></tr>
+    <tr><td>Grid boyutu</td><td>${source.columnCount} × ${source.rowCount} hücre</td></tr>
+    <tr><td>Hücre boyutu</td><td>${coordinateFormatter.format(source.cellSizeDeg)}°</td></tr>
+    <tr><td>Rota örneği</td><td>${source.sampleCount} nokta · ${inputNumberFormatter.format(source.sampleSpacingM)} m aralık</td></tr>
+    <tr><td>Örnekleme</td><td>${source.samplingMethod === 'bilinear' ? 'İki doğrusal' : 'En yakın hücre'}</td></tr>
+    <tr><td>Jeodezik yöntem</td><td>${source.geodesicMethod === 'vincenty' ? 'WGS84 Vincenty' : 'Küresel yedek'}</td></tr>`;
 
   return `
     <div class="source-card ${stateClass}">
       <div class="source-card-heading">
-        <strong>${source.kind === 'csv' ? 'CSV / TSV kaynak kaydı' : 'GeoJSON kaynak kaydı'}</strong>
+        <strong>${source.kind === 'csv' ? 'CSV / TSV kaynak kaydı' : source.kind === 'geojson' ? 'GeoJSON kaynak kaydı' : 'ESRI ASCII DEM kaynak kaydı'}</strong>
         <span>${escapeHtml(stateLabel)}</span>
       </div>
       <table><tbody>${commonRows}${detailRows}</tbody></table>

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import type {
   CsvTerrainDistanceUnit,
+  ImportedDemTerrainProfile,
   ImportedGeoJsonTerrainProfile,
   TerrainProfileImport,
   TerrainProfileMappingRequest
@@ -28,6 +29,11 @@ interface MultiPointTerrainEditorProps {
   points: ManualTerrainPoint[];
   routeDistanceKm: number;
   allowRouteDistanceImport: boolean;
+  allowDemImport: boolean;
+  observerLatitudeDeg: number;
+  observerLongitudeDeg: number;
+  targetLatitudeDeg: number;
+  targetLongitudeDeg: number;
   observerGroundElevationM: number;
   targetGroundElevationM: number;
   criticalDistanceM?: number | null;
@@ -156,7 +162,14 @@ function isGeoJsonProfile(
   return 'kind' in profile && profile.kind === 'geojson';
 }
 
+function isDemProfile(
+  profile: TerrainProfileImport
+): profile is ImportedDemTerrainProfile {
+  return 'kind' in profile && profile.kind === 'dem';
+}
+
 function distanceUnitLabel(profile: TerrainProfileImport): string {
+  if (isDemProfile(profile)) return 'WGS84 rota örnekleri';
   if (isGeoJsonProfile(profile)) return 'WGS84 koordinatları';
   if (profile.distanceUnit === 'percent') return 'rotanın yüzdesi';
   if (profile.distanceUnit === 'km') return 'kilometre';
@@ -165,8 +178,24 @@ function distanceUnitLabel(profile: TerrainProfileImport): string {
 
 function sourceDistanceLabel(profile: TerrainProfileImport): string {
   if (profile.sourceDistanceM === null) return 'Konumlar yüzde olarak verilmiş';
-  const sourceLabel = isGeoJsonProfile(profile) ? 'GeoJSON rotası' : 'CSV rotası';
+  const sourceLabel = isDemProfile(profile)
+    ? 'DEM örnek rotası'
+    : isGeoJsonProfile(profile)
+      ? 'GeoJSON rotası'
+      : 'CSV rotası';
   return `${numberFormatter.format(profile.sourceDistanceM / 1_000)} km ${sourceLabel}`;
+}
+
+function sourceRecordLabel(profile: TerrainProfileImport): string {
+  if (isDemProfile(profile)) return 'DEM rota örneği';
+  if (isGeoJsonProfile(profile)) return 'GeoJSON koordinatı';
+  return 'Dosyadaki veri satırı';
+}
+
+function sourceRecordCount(profile: TerrainProfileImport): number {
+  if (isDemProfile(profile)) return profile.sampleCount;
+  if (isGeoJsonProfile(profile)) return profile.coordinateCount;
+  return profile.rowCount;
 }
 
 function delimiterLabel(request: TerrainProfileMappingRequest): string {
@@ -179,6 +208,11 @@ export function MultiPointTerrainEditor({
   points,
   routeDistanceKm,
   allowRouteDistanceImport,
+  allowDemImport,
+  observerLatitudeDeg,
+  observerLongitudeDeg,
+  targetLatitudeDeg,
+  targetLongitudeDeg,
   observerGroundElevationM,
   targetGroundElevationM,
   criticalDistanceM,
@@ -381,6 +415,40 @@ export function MultiPointTerrainEditor({
     }
   };
 
+  const chooseDemProfile = async (): Promise<void> => {
+    if (!allowDemImport) {
+      setOperationError('DEM profili için deney mesafe kaynağı koordinat olmalı.');
+      return;
+    }
+    setOperationError('');
+    setImportMessage('');
+    setIsImporting(true);
+    try {
+      const result = await window.simulatorDesktop.importDemTerrainProfile({
+        observerLatitudeDeg,
+        observerLongitudeDeg,
+        targetLatitudeDeg,
+        targetLongitudeDeg,
+        samplingMethod: 'bilinear'
+      });
+      if (result.status === 'cancelled') {
+        setPendingImport(undefined);
+        setMappingRequest(undefined);
+        setImportMessage(result.message);
+        return;
+      }
+      if (result.profile) stageProfile(result.profile);
+    } catch (error) {
+      setPendingImport(undefined);
+      setMappingRequest(undefined);
+      setOperationError(
+        error instanceof Error ? error.message : 'ESRI ASCII DEM profili oluşturulamadı.'
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const applyColumnMapping = async (): Promise<void> => {
     if (!mappingRequest) return;
     if (mappingDistanceIndex === mappingElevationIndex) {
@@ -457,6 +525,17 @@ export function MultiPointTerrainEditor({
             onClick={() => void chooseGeoJsonProfile()}
           >
             {isImporting ? 'Dosya okunuyor…' : 'GeoJSON dosyasından al'}
+          </button>
+          <button
+            className="terrain-csv-button"
+            disabled={disabled || isImporting || !allowDemImport}
+            title={allowDemImport
+              ? 'Geçerli gözlemci-hedef koordinatları boyunca ESRI ASCII DEM dosyasını iki doğrusal yöntemle örnekle'
+              : 'DEM profili için önce mesafe kaynağını koordinat yapın'}
+            type="button"
+            onClick={() => void chooseDemProfile()}
+          >
+            {isImporting ? 'Dosya okunuyor…' : 'DEM dosyasından al'}
           </button>
           <button
             disabled={disabled || sortedPoints.length >= MAX_EDITOR_POINTS}
@@ -554,15 +633,23 @@ export function MultiPointTerrainEditor({
           </p>
           <div className="terrain-import-metrics">
             <div>
-              <small>{isGeoJsonProfile(pendingImport) ? 'GeoJSON koordinatı' : 'Dosyadaki veri satırı'}</small>
-              <strong>{isGeoJsonProfile(pendingImport) ? pendingImport.coordinateCount : pendingImport.rowCount}</strong>
+              <small>{sourceRecordLabel(pendingImport)}</small>
+              <strong>{sourceRecordCount(pendingImport)}</strong>
             </div>
             <div><small>Kullanılacak ara nokta</small><strong>{pendingImport.points.length}</strong></div>
             <div><small>Konumların birimi</small><strong>{distanceUnitLabel(pendingImport)}</strong></div>
             <div><small>Dosyadaki toplam rota</small><strong>{sourceDistanceLabel(pendingImport)}</strong></div>
             <div><small>Başlangıç → bitiş yüksekliği</small><strong>{numberFormatter.format(pendingImport.observerEndpointElevationM)} → {numberFormatter.format(pendingImport.targetEndpointElevationM)} m</strong></div>
           </div>
-          {isGeoJsonProfile(pendingImport) ? (
+          {isDemProfile(pendingImport) ? (
+            <div className="terrain-import-columns">
+              <span>Grid: <b>{pendingImport.columnCount} × {pendingImport.rowCount} hücre</b></span>
+              <span>Hücre boyutu: <b>{pendingImport.cellSizeDeg.toFixed(8)}°</b></span>
+              <span>Örnekleme: <b>{pendingImport.samplingMethod === 'bilinear' ? 'iki doğrusal' : 'en yakın hücre'}</b></span>
+              <span>Örnek aralığı: <b>{numberFormatter.format(pendingImport.sampleSpacingM)} m</b></span>
+              <span>Jeodezik yöntem: <b>{pendingImport.geodesicMethod === 'vincenty' ? 'WGS84 Vincenty' : 'küresel yedek'}</b></span>
+            </div>
+          ) : isGeoJsonProfile(pendingImport) ? (
             <div className="terrain-import-columns">
               <span>Geometri: <b>{pendingImport.geometryType}</b></span>
               <span>Yükseklik kaynağı: <b>koordinatların üçüncü bileşeni (Z)</b></span>

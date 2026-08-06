@@ -5,6 +5,7 @@ export type DistanceSource = 'manual' | 'coordinates';
 export type TerrainMode = 'off' | 'manual-three-point' | 'manual-points';
 export type CsvTerrainDistanceUnit = 'percent' | 'm' | 'km';
 export type CsvTerrainDelimiter = 'comma' | 'semicolon' | 'tab';
+export type DemTerrainSamplingMethod = 'nearest' | 'bilinear';
 
 export interface SimulatorInputs {
   observerHeightM: number;
@@ -113,9 +114,27 @@ export interface GeoJsonTerrainProfileSource extends BaseTerrainProfileSource {
   elevationSource: 'coordinate-z';
 }
 
+export interface DemTerrainProfileSource extends BaseTerrainProfileSource {
+  kind: 'dem';
+  format: 'esri-ascii';
+  samplingMethod: DemTerrainSamplingMethod;
+  geodesicMethod: SavedGeodesicMethod;
+  columnCount: number;
+  rowCount: number;
+  sampleCount: number;
+  sampleSpacingM: number;
+  cellSizeDeg: number;
+  noDataValue: number | null;
+  westBoundaryDeg: number;
+  eastBoundaryDeg: number;
+  southBoundaryDeg: number;
+  northBoundaryDeg: number;
+}
+
 export type TerrainProfileSource =
   | CsvTerrainProfileSource
-  | GeoJsonTerrainProfileSource;
+  | GeoJsonTerrainProfileSource
+  | DemTerrainProfileSource;
 
 export interface SavedExperiment {
   id: string;
@@ -167,6 +186,15 @@ export interface ImportedTerrainProfile {
   warnings: string[];
 }
 
+export interface DemTerrainProfileImportContext {
+  observerLatitudeDeg: number;
+  observerLongitudeDeg: number;
+  targetLatitudeDeg: number;
+  targetLongitudeDeg: number;
+  samplingMethod: DemTerrainSamplingMethod;
+  sampleCount?: number;
+}
+
 export interface ImportedGeoJsonTerrainProfile {
   kind: 'geojson';
   fileName: string;
@@ -184,9 +212,33 @@ export interface ImportedGeoJsonTerrainProfile {
   warnings: string[];
 }
 
+export interface ImportedDemTerrainProfile {
+  kind: 'dem';
+  fileName: string;
+  format: 'esri-ascii';
+  samplingMethod: DemTerrainSamplingMethod;
+  geodesicMethod: SavedGeodesicMethod;
+  columnCount: number;
+  rowCount: number;
+  sampleCount: number;
+  sampleSpacingM: number;
+  cellSizeDeg: number;
+  noDataValue: number | null;
+  westBoundaryDeg: number;
+  eastBoundaryDeg: number;
+  southBoundaryDeg: number;
+  northBoundaryDeg: number;
+  sourceDistanceM: number;
+  observerEndpointElevationM: number;
+  targetEndpointElevationM: number;
+  points: ManualTerrainPoint[];
+  warnings: string[];
+}
+
 export type TerrainProfileImport =
   | ImportedTerrainProfile
-  | ImportedGeoJsonTerrainProfile;
+  | ImportedGeoJsonTerrainProfile
+  | ImportedDemTerrainProfile;
 
 export interface ImportTerrainProfileResult extends FileOperationResult {
   profile?: TerrainProfileImport;
@@ -212,5 +264,8 @@ export interface SimulatorDesktopApi {
   ): Promise<ImportTerrainProfileResult>;
   importGeoJsonTerrainProfile(
     context: TerrainProfileImportContext
+  ): Promise<ImportTerrainProfileResult>;
+  importDemTerrainProfile(
+    context: DemTerrainProfileImportContext
   ): Promise<ImportTerrainProfileResult>;
 }
