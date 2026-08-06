@@ -102,9 +102,7 @@ Durum: tamamlandı ve `main` dalına alındı
 
 ## Aşama 3.3 — Çok noktalı manuel arazi profili
 
-Durum: çalışan sürüm tamamlandı, yerel görsel doğrulama bekliyor
-
-Tamamlananlar:
+Durum: tamamlandı ve `main` dalına alındı
 
 - Kimlik, yüzde konumu ve kot taşıyan `ManualTerrainPoint` sözleşmesi
 - En fazla 2.000 iç nokta
@@ -123,27 +121,60 @@ Tamamlananlar:
 - Sürüm 1, 2 ve 3 kayıtların sürüm 4'e taşınması
 - Sürüm 3 tek ara noktasının kayıpsız diziye dönüştürülmesi
 - HTML raporunda bütün noktaların sıra, yüzde, mesafe ve kot bilgisi
+- 1920×1080 yerleşimde üst panel, arazi düzenleyicisi ve model kartlarının çakışmadan akması
 - Çok noktalı çekirdek, taşıma ve rapor testleri
-- TypeScript, test ve Electron üretim derlemesi
 - Uygulama sürümü `0.6.0`
+- Linux/KDE yerel akış, kayıt, JSON ve HTML raporu doğrulaması
+
+## Aşama 3.4 — CSV arazi profili içe aktarma
+
+Durum: çalışan sürüm tamamlandı, yerel doğrulama bekliyor
+
+Tamamlananlar:
+
+- CSV, TSV ve düz metin dosya seçimi
+- Dosyanın Electron ana sürecinde ve sandbox dışında güvenli okunması
+- 5 MB dosya sınırı
+- Virgül, noktalı virgül ve sekme ayırıcı algılama
+- `distance_m`, `distance_km` ve `distance_percent` sütunları
+- Türkçe başlık eşleri
+- Noktalı ve Türkçe ondalık virgüllü sayılar
+- Açıklama ve boş satır desteği
+- Gözlemci ve hedef uç satırlarının zorunlu doğrulanması
+- Artan ve tekrarsız mesafe kontrolü
+- Sonlu sayı, kot aralığı, toplam rota ve 2.000 ara nokta sınırı
+- Mutlak mesafelerin CSV toplamına göre rota yüzdesine dönüştürülmesi
+- Kaynak rota ile aktif deney mesafesi farkı uyarısı
+- CSV uç kotları ile aktif deney uç kotları farkı uyarısı
+- Hata veya iptal durumunda mevcut noktaları koruma
+- Dosya adı, satır sayısı, ara nokta sayısı, birim, kaynak rota ve uç kotlarını gösteren inceleme kartı
+- Açık `Vazgeç` ve `Profili uygula` eylemleri
+- Uygulanan noktaların mevcut canlı hesap, kayıt, JSON ve HTML raporu akışını kullanması
+- Yüzde ve metre tabanlı örnek CSV dosyaları
+- Parser, ayırıcı, ondalık, başlık, uç, sıra ve hata testleri
+- Uygulama sürümü `0.7.0`
 
 Yerel doğrulama:
 
-- Linux/KDE 1920×1080 panel yerleşimi
-- Nokta ekleme ve en büyük boşluğa yerleşme
-- Nokta yüzdesi değişince yeniden sıralama
-- Nokta kotu değişince iki modelin canlı güncellenmesi
-- Nokta silme ve sıfır ara noktalı profil
-- Kritik arazi işaretinin önizlemede görünmesi
-- Profil kapalı/açık geçişi
-- Atmosferik kırılma kontrolünün görünür kalması
-- Kayıt ve yeniden açmada bütün noktaların korunması
-- Şema v4 JSON dışa/içe aktarma
-- HTML raporunda bütün noktaların görünmesi
+- Linux/KDE dosya seçicisi
+- Yüzde tabanlı örnek dosyanın inceleme kartı
+- Türkçe noktalı virgül ve ondalık virgül dosyası
+- İnceleme sırasında mevcut noktaların korunması
+- `Vazgeç` davranışı
+- `Profili uygula` sonrasında grafik ve nokta listesinin yenilenmesi
+- Küre ve düzlem sonuçlarının canlı değişmesi
+- Mesafe farkı uyarısı
+- Uç kotu farkı uyarısı
+- Bozuk başlık, tekrarlı mesafe ve eksik uçların reddedilmesi
+- Çok noktalı içe aktarımda nokta listesinin kendi içinde kayması
+- Deney kaydı, yeniden açma, JSON ve HTML raporu
 
 Sonraki gerçek arazi işleri:
 
-- CSV profil içe aktarma
+- CSV uç kotlarını isteğe bağlı olarak deney alanlarına uygulama
+- CSV toplam mesafesini manuel deney mesafesine isteğe bağlı aktarma
+- CSV kaynak provenansını deney kaydında saklama
+- Sütun eşleme sihirbazı
 - GeoJSON profil içe aktarma
 - Noktaları grafik üzerinde sürükleyerek düzenleme
 - Sayısal yükseklik modeli entegrasyonu
