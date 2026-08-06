@@ -22,16 +22,16 @@ import {
 } from '../simulation/manual-terrain-profile';
 
 export const PORTABLE_EXPERIMENT_SCHEMA = 'geometric-observation-laboratory/portable-experiment';
-export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 6;
+export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 7;
 export const LOCAL_EXPERIMENT_STORE_SCHEMA = 'geometric-observation-laboratory/local-experiment-store';
-export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 6;
+export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 7;
 
 export interface PortableApplicationInfo {
   name: 'Geometrik Gözlem Laboratuvarı';
   version: string;
 }
 
-export interface PortableExperimentFileV6 {
+export interface PortableExperimentFileV7 {
   schema: typeof PORTABLE_EXPERIMENT_SCHEMA;
   schemaVersion: typeof PORTABLE_EXPERIMENT_SCHEMA_VERSION;
   exportedAtIso: string;
@@ -39,7 +39,7 @@ export interface PortableExperimentFileV6 {
   experiment: SavedExperiment;
 }
 
-export interface LocalExperimentStoreV6 {
+export interface LocalExperimentStoreV7 {
   schema: typeof LOCAL_EXPERIMENT_STORE_SCHEMA;
   schemaVersion: typeof LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION;
   updatedAtIso: string;
@@ -53,7 +53,7 @@ export interface ParsedPortableExperiment {
 }
 
 export interface ParsedLocalExperimentStore {
-  store: LocalExperimentStoreV6;
+  store: LocalExperimentStoreV7;
   migrated: boolean;
   ignoredRecordCount: number;
 }
@@ -198,6 +198,47 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
       endLongitudeDeg: value.endLongitudeDeg,
       endLatitudeDeg: value.endLatitudeDeg,
       elevationSource: 'coordinate-z'
+    };
+  }
+
+  if (value.kind === 'dem') {
+    const noDataValid = value.noDataValue === null || isFiniteNumber(value.noDataValue);
+    if (value.format !== 'esri-ascii' ||
+      (value.samplingMethod !== 'nearest' && value.samplingMethod !== 'bilinear') ||
+      (value.geodesicMethod !== 'vincenty' && value.geodesicMethod !== 'spherical-fallback') ||
+      !Number.isInteger(value.columnCount) || !inRange(value.columnCount, 1, 10_000) ||
+      !Number.isInteger(value.rowCount) || !inRange(value.rowCount, 1, 10_000) ||
+      (value.columnCount as number) * (value.rowCount as number) > 4_000_000 ||
+      !Number.isInteger(value.sampleCount) || !inRange(value.sampleCount, 3, 2_002) ||
+      !isFiniteNumber(value.sampleSpacingM) || value.sampleSpacingM <= 0 ||
+      !isFiniteNumber(value.cellSizeDeg) || value.cellSizeDeg <= 0 || value.cellSizeDeg > 180 ||
+      !noDataValid ||
+      !inRange(value.westBoundaryDeg, -180, 180) ||
+      !inRange(value.eastBoundaryDeg, -180, 180) ||
+      !inRange(value.southBoundaryDeg, -90, 90) ||
+      !inRange(value.northBoundaryDeg, -90, 90) ||
+      value.westBoundaryDeg >= value.eastBoundaryDeg ||
+      value.southBoundaryDeg >= value.northBoundaryDeg ||
+      !isFiniteNumber(value.sourceDistanceM) || value.sourceDistanceM <= 0) {
+      return null;
+    }
+    return {
+      ...common,
+      kind: 'dem',
+      sourceDistanceM: value.sourceDistanceM,
+      format: 'esri-ascii',
+      samplingMethod: value.samplingMethod,
+      geodesicMethod: value.geodesicMethod,
+      columnCount: value.columnCount as number,
+      rowCount: value.rowCount as number,
+      sampleCount: value.sampleCount as number,
+      sampleSpacingM: value.sampleSpacingM,
+      cellSizeDeg: value.cellSizeDeg,
+      noDataValue: value.noDataValue as number | null,
+      westBoundaryDeg: value.westBoundaryDeg,
+      eastBoundaryDeg: value.eastBoundaryDeg,
+      southBoundaryDeg: value.southBoundaryDeg,
+      northBoundaryDeg: value.northBoundaryDeg
     };
   }
 
@@ -401,7 +442,7 @@ export function createPortableExperimentFile(
   experiment: SavedExperiment,
   applicationVersion: string,
   exportedAtIso = new Date().toISOString()
-): PortableExperimentFileV6 {
+): PortableExperimentFileV7 {
   return {
     schema: PORTABLE_EXPERIMENT_SCHEMA,
     schemaVersion: PORTABLE_EXPERIMENT_SCHEMA_VERSION,
@@ -423,7 +464,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
-    version !== 5 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
+    version !== 5 && version !== 6 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Deney dosyası şema sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
@@ -442,7 +483,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 export function createLocalExperimentStore(
   experiments: SavedExperiment[],
   updatedAtIso = new Date().toISOString()
-): LocalExperimentStoreV6 {
+): LocalExperimentStoreV7 {
   return {
     schema: LOCAL_EXPERIMENT_STORE_SCHEMA,
     schemaVersion: LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
@@ -468,7 +509,7 @@ export function parseLocalExperimentStore(value: unknown): ParsedLocalExperiment
   }
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
-    version !== 5 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
+    version !== 5 && version !== 6 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Yerel deney deposu sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );

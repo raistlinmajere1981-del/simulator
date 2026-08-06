@@ -31,6 +31,19 @@ engeller.
 - bütün ızgara kapsamının WGS84 `-180…180° / -90…90°` sınırlarında kalması
 - veri satırı ve sütun sayısının başlıkla tam eşleşmesi
 
-Bu aşama yalnız ayrıştırma ve örnekleme çekirdeğidir. Sonraki aşamada Electron
-dosya seçimi, rota boyunca jeodezik örnek noktaları ve arazi profiline dönüşüm
-bu modülün üzerine bağlanacaktır.
+## Rota profili oluşturma
+
+DEM içe aktarma yalnız koordinat mesafe modunda kullanılabilir. Uygulama,
+gözlemci ve hedef arasında WGS84 ters jeodezik çözümü kurar; rota üzerindeki ara
+koordinatları Vincenty doğrudan çözümüyle üretir ve grid'i varsayılan olarak iki
+doğrusal yöntemle örnekler.
+
+Örnek sayısı grid hücre boyutuna göre otomatik belirlenir ve 3…2.002 aralığında
+sınırlandırılır. Rota kapsam dışına çıkarsa veya bir örnek NODATA hücresine denk
+gelirse profil bütünüyle reddedilir; eksik kısımlar sıfır yükseklikle doldurulmaz.
+
+Dosya içeriği renderer sürecine gönderilmez. Ana süreç yalnız oluşturulan arazi
+noktalarını, grid çözünürlüğünü, kapsamı, örnekleme yöntemini ve kaynak dosya
+adını aktarır. Kaynak bilgileri deney kaydında ve HTML raporunda korunur.
+
+Örnek dosya: `examples/dem-route-wgs84.asc`.

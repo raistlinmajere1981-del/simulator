@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
+  DemTerrainProfileImportContext,
   FileOperationResult,
   ImportExperimentResult,
   ImportTerrainProfileResult,
@@ -10,7 +11,7 @@ import type {
 } from '../shared/simulator';
 
 const api: SimulatorDesktopApi = {
-  version: '0.9.3',
+  version: '1.0.0',
   platform: process.platform,
   listExperiments: () =>
     ipcRenderer.invoke('experiments:list') as Promise<SavedExperiment[]>,
@@ -39,6 +40,11 @@ const api: SimulatorDesktopApi = {
   importGeoJsonTerrainProfile: (context: TerrainProfileImportContext) =>
     ipcRenderer.invoke(
       'terrain:import-geojson',
+      context
+    ) as Promise<ImportTerrainProfileResult>,
+  importDemTerrainProfile: (context: DemTerrainProfileImportContext) =>
+    ipcRenderer.invoke(
+      'terrain:import-dem',
       context
     ) as Promise<ImportTerrainProfileResult>
 };

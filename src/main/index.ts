@@ -20,6 +20,7 @@ import {
   parsePortableExperimentFile
 } from '../shared/portable';
 import type {
+  DemTerrainProfileImportContext,
   FileOperationResult,
   ImportExperimentResult,
   ImportTerrainProfileResult,
@@ -32,9 +33,12 @@ import {
   TerrainProfileColumnMappingRequiredError
 } from '../simulation/csv-terrain-profile';
 import { parseTerrainProfileGeoJson } from '../simulation/geojson-terrain-profile';
+import { buildTerrainProfileFromDem } from '../simulation/dem-route-profile';
+import { parseEsriAsciiGrid } from '../simulation/esri-ascii-grid';
 
 const EXPERIMENTS_FILE_NAME = 'experiments.json';
 const MAX_TERRAIN_PROFILE_BYTES = 5 * 1024 * 1024;
+const MAX_DEM_BYTES = 64 * 1024 * 1024;
 const TERRAIN_MAPPING_TTL_MS = 10 * 60 * 1_000;
 
 interface PendingTerrainImport {
@@ -158,6 +162,45 @@ function validateTerrainImportContext(value: unknown): TerrainProfileImportConte
     routeDistanceM: candidate.routeDistanceM as number,
     observerGroundElevationM: candidate.observerGroundElevationM as number,
     targetGroundElevationM: candidate.targetGroundElevationM as number
+  };
+}
+
+function validateDemImportContext(value: unknown): DemTerrainProfileImportContext {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('DEM profili için geçerli rota koordinatları gönderilmedi.');
+  }
+  const candidate = value as Record<string, unknown>;
+  const coordinates = [
+    candidate.observerLatitudeDeg,
+    candidate.observerLongitudeDeg,
+    candidate.targetLatitudeDeg,
+    candidate.targetLongitudeDeg
+  ];
+  if (!coordinates.every((coordinate) => Number.isFinite(coordinate)) ||
+    (candidate.observerLatitudeDeg as number) < -90 ||
+    (candidate.observerLatitudeDeg as number) > 90 ||
+    (candidate.targetLatitudeDeg as number) < -90 ||
+    (candidate.targetLatitudeDeg as number) > 90 ||
+    (candidate.observerLongitudeDeg as number) < -180 ||
+    (candidate.observerLongitudeDeg as number) > 180 ||
+    (candidate.targetLongitudeDeg as number) < -180 ||
+    (candidate.targetLongitudeDeg as number) > 180 ||
+    (candidate.samplingMethod !== 'nearest' && candidate.samplingMethod !== 'bilinear') ||
+    (candidate.sampleCount !== undefined &&
+      (!Number.isInteger(candidate.sampleCount) ||
+        (candidate.sampleCount as number) < 3 ||
+        (candidate.sampleCount as number) > 2_002))) {
+    throw new TypeError('DEM rota koordinatları, örnekleme yöntemi veya örnek sayısı geçersiz.');
+  }
+  return {
+    observerLatitudeDeg: candidate.observerLatitudeDeg as number,
+    observerLongitudeDeg: candidate.observerLongitudeDeg as number,
+    targetLatitudeDeg: candidate.targetLatitudeDeg as number,
+    targetLongitudeDeg: candidate.targetLongitudeDeg as number,
+    samplingMethod: candidate.samplingMethod,
+    ...(candidate.sampleCount === undefined
+      ? {}
+      : { sampleCount: candidate.sampleCount as number })
   };
 }
 
@@ -417,6 +460,42 @@ function registerExperimentHandlers(): void {
       return {
         status: 'success',
         message: `“${profile.fileName}” eşlenen sütunlarla okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
+        profile
+      };
+    }
+  );
+
+  ipcMain.handle(
+    'terrain:import-dem',
+    async (event, rawContext: unknown): Promise<ImportTerrainProfileResult> => {
+      const context = validateDemImportContext(rawContext);
+      const selection = await showOpenDialog(event, {
+        title: 'ESRI ASCII DEM Dosyasını İçe Aktar',
+        properties: ['openFile'],
+        filters: [
+          { name: 'ESRI ASCII Grid DEM', extensions: ['asc', 'txt'] },
+          { name: 'Tüm Dosyalar', extensions: ['*'] }
+        ]
+      });
+
+      const selectedPath = selection.filePaths[0];
+      if (selection.canceled || !selectedPath) {
+        return { status: 'cancelled', message: 'DEM içe aktarma iptal edildi.' };
+      }
+
+      const statistics = await fs.stat(selectedPath);
+      if (!statistics.isFile()) throw new Error('Seçilen yol normal bir dosya değil.');
+      if (statistics.size > MAX_DEM_BYTES) {
+        throw new Error('ESRI ASCII DEM dosyası 64 MB sınırını aşıyor.');
+      }
+
+      const content = await fs.readFile(selectedPath, 'utf-8');
+      const grid = parseEsriAsciiGrid(content, selectedPath);
+      const profile = buildTerrainProfileFromDem(grid, context);
+      return {
+        status: 'success',
+        message: `“${profile.fileName}” DEM rotası örneklendi: ${profile.points.length} ara nokta uygulamaya hazır.`,
+        filePath: selectedPath,
         profile
       };
     }

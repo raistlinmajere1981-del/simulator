@@ -167,7 +167,7 @@ describe('portable experiment format', () => {
     expect(file.schema).toBe(PORTABLE_EXPERIMENT_SCHEMA);
     expect(file.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
     expect(parsed.migrated).toBe(false);
-    expect(parsed.sourceVersion).toBe(6);
+    expect(parsed.sourceVersion).toBe(7);
     expect(parsed.experiment).toEqual(savedExperimentFixture);
     expect(parsed.experiment.terrainProfileSource?.fileName)
       .toBe('terrain-profile.csv');
@@ -203,6 +203,57 @@ describe('portable experiment format', () => {
   expect(parsed.migrated).toBe(false);
   expect(parsed.experiment.terrainProfileSource).toEqual(geoJsonSource);
 });
+
+  it('round-trips ESRI ASCII DEM terrain provenance', () => {
+    const demSource = {
+      kind: 'dem' as const,
+      fileName: 'istanbul.asc',
+      importedAtIso: '2026-08-06T15:00:00.000Z',
+      sourceDistanceM: 22_500,
+      observerEndpointElevationM: 12,
+      targetEndpointElevationM: 18,
+      appliedObserverEndpoint: true,
+      appliedTargetEndpoint: true,
+      appliedRouteDistance: false,
+      appliedRouteCoordinates: false,
+      modifiedAfterImport: false,
+      format: 'esri-ascii' as const,
+      samplingMethod: 'bilinear' as const,
+      geodesicMethod: 'vincenty' as const,
+      columnCount: 10,
+      rowCount: 10,
+      sampleCount: 101,
+      sampleSpacingM: 225,
+      cellSizeDeg: 0.03,
+      noDataValue: -9999,
+      westBoundaryDeg: 28.885,
+      eastBoundaryDeg: 29.185,
+      southBoundaryDeg: 40.885,
+      northBoundaryDeg: 41.185
+    };
+    const file = createPortableExperimentFile({
+      ...savedExperimentFixture,
+      terrainProfileSource: demSource
+    }, '1.0.0');
+    const parsed = parsePortableExperimentFile(file);
+
+    expect(parsed.migrated).toBe(false);
+    expect(parsed.experiment.terrainProfileSource).toEqual(demSource);
+  });
+
+  it('migrates a version 6 experiment into schema v7', () => {
+    const parsed = parsePortableExperimentFile({
+      schema: PORTABLE_EXPERIMENT_SCHEMA,
+      schemaVersion: 6,
+      exportedAtIso: '2026-08-06T15:00:00.000Z',
+      application: { name: 'Geometrik Gözlem Laboratuvarı', version: '0.9.3' },
+      experiment: savedExperimentFixture
+    });
+
+    expect(parsed.migrated).toBe(true);
+    expect(parsed.sourceVersion).toBe(6);
+    expect(parsed.experiment.terrainProfileSource?.kind).toBe('csv');
+  });
 
   it('migrates a version 5 CSV source and defaults route application metadata', () => {
     const legacySource = { ...savedExperimentFixture.terrainProfileSource } as Record<string, unknown>;

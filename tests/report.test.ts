@@ -16,7 +16,7 @@ describe('experiment html report', () => {
     expect(html).toContain('Başlangıç azimutu');
     expect(html).toContain('wgs84:fixture');
     expect(html).toContain('Düşey Referans ve Arazi');
-    expect(html).toContain('Taşınabilir deney şeması v6');
+    expect(html).toContain('Taşınabilir deney şeması v7');
     expect(html).toContain('Ortalama deniz seviyesi');
     expect(html).toContain('Datum / gelgit ofseti');
     expect(html).toContain('3 ara noktalı manuel profil');
@@ -72,6 +72,45 @@ describe('experiment html report', () => {
   expect(html).toContain('Rota koordinatları');
   expect(html).toContain('Deneye uygulandı: Evet');
   expect(html).toContain('41,0082°');
+});
+
+it('includes ESRI ASCII DEM sampling provenance', () => {
+  const html = createExperimentHtmlReport({
+    ...savedExperimentFixture,
+    terrainProfileSource: {
+      kind: 'dem',
+      fileName: 'route-dem.asc',
+      importedAtIso: '2026-08-06T15:00:00.000Z',
+      sourceDistanceM: 22_500,
+      observerEndpointElevationM: 12,
+      targetEndpointElevationM: 18,
+      appliedObserverEndpoint: true,
+      appliedTargetEndpoint: false,
+      appliedRouteDistance: false,
+      appliedRouteCoordinates: false,
+      modifiedAfterImport: false,
+      format: 'esri-ascii',
+      samplingMethod: 'bilinear',
+      geodesicMethod: 'vincenty',
+      columnCount: 10,
+      rowCount: 10,
+      sampleCount: 101,
+      sampleSpacingM: 225,
+      cellSizeDeg: 0.03,
+      noDataValue: -9999,
+      westBoundaryDeg: 28.885,
+      eastBoundaryDeg: 29.185,
+      southBoundaryDeg: 40.885,
+      northBoundaryDeg: 41.185
+    }
+  });
+
+  expect(html).toContain('ESRI ASCII DEM kaynak kaydı');
+  expect(html).toContain('route-dem.asc');
+  expect(html).toContain('10 × 10 hücre');
+  expect(html).toContain('101 nokta');
+  expect(html).toContain('İki doğrusal');
+  expect(html).toContain('WGS84 Vincenty');
 });
 
 it('uses manual distance to convert every route percentage', () => {
