@@ -24,6 +24,108 @@
   display: block;
 }
 
+.dem-source-traceability {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #42657c;
+  border-radius: 4px;
+  background: #0d2030;
+}
+
+.dem-source-traceability.partial {
+  border-color: #8b7446;
+  background: #2a2415;
+}
+
+.dem-source-traceability.legacy {
+  border-color: #7f5551;
+  background: #291918;
+}
+
+.dem-source-traceability-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dem-source-traceability-heading small {
+  display: block;
+  margin-bottom: 3px;
+  color: #7597ad;
+  font-size: 7px;
+}
+
+.dem-source-traceability-heading strong {
+  color: #d7e8f2;
+  font-size: 9px;
+}
+
+.dem-source-traceability-heading > b {
+  padding: 4px 8px;
+  border: 1px solid #527d97;
+  border-radius: 999px;
+  color: #c9e4f3;
+  background: #16364a;
+  font-size: 7px;
+}
+
+.dem-source-traceability.partial .dem-source-traceability-heading > b {
+  border-color: #9b8149;
+  color: #f0d99d;
+  background: #443817;
+}
+
+.dem-source-traceability.legacy .dem-source-traceability-heading > b {
+  border-color: #985f59;
+  color: #edbbb5;
+  background: #472421;
+}
+
+.dem-source-traceability-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.dem-source-traceability-metrics span {
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid rgba(77, 117, 143, .48);
+  border-radius: 3px;
+  color: #82a2b7;
+  background: rgba(5, 19, 29, .5);
+  font-size: 7px;
+}
+
+.dem-source-traceability-metrics b,
+.dem-source-traceability-metrics i {
+  display: block;
+  margin-top: 3px;
+}
+
+.dem-source-traceability-metrics b {
+  overflow: hidden;
+  color: #d4e6f0;
+  font-size: 8px;
+  text-overflow: ellipsis;
+}
+
+.dem-source-traceability-metrics i {
+  color: #6f8b9d;
+  font-size: 6.5px;
+  font-style: normal;
+  line-height: 1.3;
+}
+
+.dem-source-traceability > p {
+  margin: 0;
+  color: #7894a5;
+  font-size: 7px;
+  line-height: 1.4;
+}
+
 .dem-line-of-sight-heading {
   display: flex;
   align-items: center;
@@ -113,11 +215,13 @@
 }
 
 @media (max-width: 760px) {
+  .dem-source-traceability-heading,
   .dem-line-of-sight-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
+  .dem-source-traceability-metrics,
   .dem-line-of-sight-metrics {
     grid-template-columns: 1fr;
   }
