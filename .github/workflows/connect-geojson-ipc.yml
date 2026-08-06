@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/connect-geojson-ipc.yml
       - scripts/connect-geojson-ipc.py
+      - scripts/add-geojson-api.py
 
 permissions:
   contents: write
@@ -22,7 +23,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply IPC connection
-        run: python3 scripts/connect-geojson-ipc.py
+        run: |
+          python3 scripts/connect-geojson-ipc.py
+          python3 scripts/add-geojson-api.py
 
       - name: Install dependencies
         run: npm install
@@ -36,8 +39,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Remove temporary patch script
-        run: rm -f scripts/connect-geojson-ipc.py
+      - name: Remove temporary patch scripts
+        run: rm -f scripts/connect-geojson-ipc.py scripts/add-geojson-api.py
 
       - name: Commit product changes
         shell: bash
