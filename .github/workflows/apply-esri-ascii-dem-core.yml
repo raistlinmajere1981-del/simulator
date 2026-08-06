@@ -1,4 +1,4 @@
-name: Apply ESRI ASCII DEM core
+name: Validate strict ESRI ASCII origins
 
 on:
   push:
@@ -6,14 +6,13 @@ on:
       - agent/esri-ascii-dem-core
     paths:
       - .github/workflows/apply-esri-ascii-dem-core.yml
-      - scripts/apply-esri-ascii-dem-core.py
-      - scripts/fix-esri-dem-generator.py
+      - scripts/tighten-esri-ascii-origin.py
 
 permissions:
   contents: write
 
 jobs:
-  apply:
+  validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -22,11 +21,8 @@ jobs:
           ref: agent/esri-ascii-dem-core
           fetch-depth: 0
 
-      - name: Prepare generator
-        run: python3 scripts/fix-esri-dem-generator.py
-
-      - name: Apply product changes
-        run: python3 scripts/apply-esri-ascii-dem-core.py
+      - name: Tighten origin validation
+        run: python3 scripts/tighten-esri-ascii-origin.py
 
       - name: Install dependencies
         run: npm install --package-lock=false
@@ -40,8 +36,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Remove temporary patch scripts
-        run: rm -f scripts/apply-esri-ascii-dem-core.py scripts/fix-esri-dem-generator.py
+      - name: Remove temporary patch script
+        run: rm -f scripts/tighten-esri-ascii-origin.py
 
       - name: Commit product changes
         shell: bash
@@ -49,5 +45,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A -- ':!.github/workflows'
-          git commit -m "add ESRI ASCII DEM parsing and sampling core"
+          git commit -m "reject partial or mixed ESRI ASCII origins"
           git push origin HEAD:agent/esri-ascii-dem-core
