@@ -86,6 +86,42 @@ jobs:
               raise RuntimeError('Could not find repeated terrain import type patch')
           script = script.replace(repeated_old, repeated_new, 1)
 
+          preload_start_token = "replace_once(\n    preload_path,\n    '''  ) => ipcRenderer.invoke("
+          preload_end_token = "\n\nmain_path = 'src/main/index.ts'"
+          preload_start = script.index(preload_start_token)
+          preload_end = script.index(preload_end_token, preload_start)
+          preload_old = (
+              "  ) => ipcRenderer.invoke(\n"
+              "    'terrain:import-csv-mapped',\n"
+              "    requestId,\n"
+              "    mapping,\n"
+              "    context\n"
+              "  ) as Promise<ImportTerrainProfileResult>\n"
+              "};"
+          )
+          preload_new = (
+              "  ) => ipcRenderer.invoke(\n"
+              "    'terrain:import-csv-mapped',\n"
+              "    requestId,\n"
+              "    mapping,\n"
+              "    context\n"
+              "  ) as Promise<ImportTerrainProfileResult>,\n"
+              "  importGeoJsonTerrainProfile: (context: TerrainProfileImportContext) =>\n"
+              "    ipcRenderer.invoke(\n"
+              "      'terrain:import-geojson',\n"
+              "      context\n"
+              "    ) as Promise<ImportTerrainProfileResult>\n"
+              "};"
+          )
+          preload_replacement = (
+              "replace_once(\n"
+              "    preload_path,\n"
+              f"    {preload_old!r},\n"
+              f"    {preload_new!r}\n"
+              ")"
+          )
+          script = script[:preload_start] + preload_replacement + script[preload_end:]
+
           exec(compile(script, 'geojson-stage.py', 'exec'))
           PY
 
