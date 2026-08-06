@@ -153,7 +153,7 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
     modifiedAfterImport: value.modifiedAfterImport
   };
 
-  if (value.kind === 'csv') {
+  if (value.kind === 'csv' || value.kind === undefined) {
     if (!isCsvTerrainDelimiter(value.delimiter) ||
       !isCsvTerrainDistanceUnit(value.distanceUnit) ||
       !Number.isInteger(value.rowCount) || !inRange(value.rowCount, 2, 2_002) ||

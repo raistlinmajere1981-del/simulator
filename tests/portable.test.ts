@@ -204,6 +204,7 @@ describe('portable experiment format', () => {
 
   it('migrates a version 5 CSV source and defaults route application metadata', () => {
     const legacySource = { ...savedExperimentFixture.terrainProfileSource } as Record<string, unknown>;
+    delete legacySource.kind;
     delete legacySource.appliedRouteDistance;
     const parsed = parsePortableExperimentFile({
       schema: PORTABLE_EXPERIMENT_SCHEMA,
@@ -215,6 +216,7 @@ describe('portable experiment format', () => {
 
     expect(parsed.migrated).toBe(true);
     expect(parsed.sourceVersion).toBe(5);
+    expect(parsed.experiment.terrainProfileSource?.kind).toBe('csv');
     expect(parsed.experiment.terrainProfileSource?.appliedRouteDistance).toBe(false);
   });
 
