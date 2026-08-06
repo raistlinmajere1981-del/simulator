@@ -176,43 +176,45 @@ jobs:
               r"    const source: TerrainProfileSource = \{.*?"
               r"      modifiedAfterImport: false\n    \};"
           )
-          app_replacement_ts = """    const appliedRouteDistance = Boolean(
-      options.applyRouteDistance &&
-      inputs.distanceSource === 'manual' &&
-      profile.sourceDistanceM !== null
-    );
-    const commonSource = {
-      fileName: profile.fileName,
-      importedAtIso: new Date().toISOString(),
-      sourceDistanceM: profile.sourceDistanceM,
-      observerEndpointElevationM: profile.observerEndpointElevationM,
-      targetEndpointElevationM: profile.targetEndpointElevationM,
-      appliedObserverEndpoint: options.applyObserverEndpoint,
-      appliedTargetEndpoint: options.applyTargetEndpoint,
-      appliedRouteDistance,
-      modifiedAfterImport: false
-    };
-    const source: TerrainProfileSource = 'kind' in profile && profile.kind === 'geojson'
-      ? {
-          ...commonSource,
-          kind: 'geojson',
-          geometryType: profile.geometryType,
-          coordinateCount: profile.coordinateCount,
-          startLongitudeDeg: profile.startLongitudeDeg,
-          startLatitudeDeg: profile.startLatitudeDeg,
-          endLongitudeDeg: profile.endLongitudeDeg,
-          endLatitudeDeg: profile.endLatitudeDeg,
-          elevationSource: profile.elevationSource
-        }
-      : {
-          ...commonSource,
-          kind: 'csv',
-          delimiter: profile.delimiter,
-          distanceUnit: profile.distanceUnit,
-          rowCount: profile.rowCount,
-          distanceColumnHeader: profile.distanceColumnHeader,
-          elevationColumnHeader: profile.elevationColumnHeader
-        };"""
+          app_replacement_ts = (
+              "    const appliedRouteDistance = Boolean(\n"
+              "      options.applyRouteDistance &&\n"
+              "      inputs.distanceSource === 'manual' &&\n"
+              "      profile.sourceDistanceM !== null\n"
+              "    );\n"
+              "    const commonSource = {\n"
+              "      fileName: profile.fileName,\n"
+              "      importedAtIso: new Date().toISOString(),\n"
+              "      sourceDistanceM: profile.sourceDistanceM,\n"
+              "      observerEndpointElevationM: profile.observerEndpointElevationM,\n"
+              "      targetEndpointElevationM: profile.targetEndpointElevationM,\n"
+              "      appliedObserverEndpoint: options.applyObserverEndpoint,\n"
+              "      appliedTargetEndpoint: options.applyTargetEndpoint,\n"
+              "      appliedRouteDistance,\n"
+              "      modifiedAfterImport: false\n"
+              "    };\n"
+              "    const source: TerrainProfileSource = 'kind' in profile && profile.kind === 'geojson'\n"
+              "      ? {\n"
+              "          ...commonSource,\n"
+              "          kind: 'geojson',\n"
+              "          geometryType: profile.geometryType,\n"
+              "          coordinateCount: profile.coordinateCount,\n"
+              "          startLongitudeDeg: profile.startLongitudeDeg,\n"
+              "          startLatitudeDeg: profile.startLatitudeDeg,\n"
+              "          endLongitudeDeg: profile.endLongitudeDeg,\n"
+              "          endLatitudeDeg: profile.endLatitudeDeg,\n"
+              "          elevationSource: profile.elevationSource\n"
+              "        }\n"
+              "      : {\n"
+              "          ...commonSource,\n"
+              "          kind: 'csv',\n"
+              "          delimiter: profile.delimiter,\n"
+              "          distanceUnit: profile.distanceUnit,\n"
+              "          rowCount: profile.rowCount,\n"
+              "          distanceColumnHeader: profile.distanceColumnHeader,\n"
+              "          elevationColumnHeader: profile.elevationColumnHeader\n"
+              "        };"
+          )
           app_replacement_call = (
               "replace_regex(\n"
               "    app_path,\n"
