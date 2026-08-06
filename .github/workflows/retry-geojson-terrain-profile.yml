@@ -24,6 +24,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           import textwrap
 
           workflow_path = Path('.github/workflows/apply-geojson-terrain-profile.yml')
@@ -122,16 +123,6 @@ jobs:
           )
           script = script[:preload_start] + preload_replacement + script[preload_end:]
 
-          editor_button_start_token = (
-              "replace_once(\n    editor_path,\n    '''          <button\n"
-              "            disabled={disabled || sortedPoints.length >= MAX_EDITOR_POINTS}"
-          )
-          editor_button_end_token = (
-              "\n\nreplace_once(\n    editor_path,\n"
-              "    '''            Ara noktalar dosyadan alınır."
-          )
-          editor_button_start = script.index(editor_button_start_token)
-          editor_button_end = script.index(editor_button_end_token, editor_button_start)
           add_button = (
               "          <button\n"
               "            disabled={disabled || sortedPoints.length >= MAX_EDITOR_POINTS}\n"
@@ -152,18 +143,27 @@ jobs:
               "            GeoJSON'dan al\n"
               "          </button>\n"
           )
-          editor_button_replacement = (
+          editor_replacement_call = (
               "replace_once(\n"
               "    editor_path,\n"
               f"    {add_button!r},\n"
               f"    {(geo_button + add_button)!r}\n"
               ")"
           )
-          script = (
-              script[:editor_button_start] +
-              editor_button_replacement +
-              script[editor_button_end:]
+          editor_call_pattern = (
+              r"replace_once\(\n\s+editor_path,\n\s+'''          <button\n"
+              r"\s+disabled=\{disabled \|\| sortedPoints\.length >= MAX_EDITOR_POINTS\}"
+              r".*?\n\s+\)"
           )
+          script, editor_count = re.subn(
+              editor_call_pattern,
+              lambda _match: editor_replacement_call,
+              script,
+              count=1,
+              flags=re.S
+          )
+          if editor_count != 1:
+              raise RuntimeError(f'Could not patch GeoJSON editor action; matches={editor_count}')
 
           exec(compile(script, 'geojson-stage.py', 'exec'))
           PY
