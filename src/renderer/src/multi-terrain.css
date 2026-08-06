@@ -87,6 +87,22 @@
   background: #101f2c;
 }
 
+.terrain-plain-guide {
+  margin: 0;
+  padding: 7px 9px;
+  border-left: 3px solid #4f7892;
+  color: #b8cad5;
+  background: rgba(8, 24, 35, .58);
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.terrain-import-review .terrain-plain-guide {
+  border-left-color: #4f7a5a;
+  color: #bcd2c1;
+  background: rgba(8, 29, 18, .58);
+}
+
 .terrain-import-review-heading {
   display: flex;
   justify-content: space-between;
