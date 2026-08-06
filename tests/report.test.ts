@@ -3,7 +3,7 @@ import { createExperimentHtmlReport } from '../src/report/html-report';
 import { savedExperimentFixture } from './portable.test';
 
 describe('experiment html report', () => {
-  it('includes inputs, WGS84, vertical datum, all terrain points and model traces', () => {
+  it('includes inputs, WGS84, terrain points, CSV provenance and model traces', () => {
     const html = createExperimentHtmlReport(
       savedExperimentFixture,
       '2026-08-05T14:00:00.000Z'
@@ -16,7 +16,7 @@ describe('experiment html report', () => {
     expect(html).toContain('Başlangıç azimutu');
     expect(html).toContain('wgs84:fixture');
     expect(html).toContain('Düşey Referans ve Arazi');
-    expect(html).toContain('Taşınabilir deney şeması v4');
+    expect(html).toContain('Taşınabilir deney şeması v5');
     expect(html).toContain('Ortalama deniz seviyesi');
     expect(html).toContain('Datum / gelgit ofseti');
     expect(html).toContain('3 ara noktalı manuel profil');
@@ -27,6 +27,13 @@ describe('experiment html report', () => {
     expect(html).toContain('%50');
     expect(html).toContain('%75');
     expect(html).toContain('8,5 m');
+    expect(html).toContain('Profil kaynağı ve provenans');
+    expect(html).toContain('terrain-profile.csv');
+    expect(html).toContain('distance_percent');
+    expect(html).toContain('elevation_m');
+    expect(html).toContain('Rota yüzdesi');
+    expect(html).toContain('Deneye uygulandı: Evet');
+    expect(html).toContain('Kayıt, içe aktarılan kaynakla eşleşiyor');
     expect(html).toContain('%51,92');
     expect(html).toContain('Görünür hedef oranı');
     expect(html).toContain('ideal-sphere:experiment-1:standard');
@@ -53,6 +60,21 @@ describe('experiment html report', () => {
     expect(html).toContain('Düşey Referans ve Arazi');
   });
 
+  it('shows when an imported profile was modified later', () => {
+    const html = createExperimentHtmlReport({
+      ...savedExperimentFixture,
+      terrainProfileSource: {
+        ...savedExperimentFixture.terrainProfileSource!,
+        modifiedAfterImport: true,
+        appliedTargetEndpoint: false
+      }
+    });
+
+    expect(html).toContain('İçe aktarımdan sonra düzenlendi');
+    expect(html).toContain('Deneye uygulandı: Hayır');
+    expect(html).toContain('source-modified');
+  });
+
   it('describes the no-profile mode explicitly', () => {
     const html = createExperimentHtmlReport({
       ...savedExperimentFixture,
@@ -66,24 +88,32 @@ describe('experiment html report', () => {
     expect(html).toContain('yalnızca gözlemci ve hedef zemin kotları kullanıldı');
   });
 
-  it('falls back to the legacy single point when an old record has no point array', () => {
+  it('falls back to the legacy single point and reports no source metadata', () => {
     const html = createExperimentHtmlReport({
       ...savedExperimentFixture,
-      manualTerrainPoints: undefined
+      manualTerrainPoints: undefined,
+      terrainProfileSource: undefined
     });
 
     expect(html).toContain('1 ara noktalı manuel profil');
     expect(html).toContain('%50');
     expect(html).toContain('8,5 m');
+    expect(html).toContain('kayıtlı bir dış profil kaynağı bulunmuyor');
   });
 
-  it('escapes user-controlled text', () => {
+  it('escapes user-controlled source and experiment text', () => {
     const html = createExperimentHtmlReport({
       ...savedExperimentFixture,
-      name: '<script>alert("x")</script>'
+      name: '<script>alert("x")</script>',
+      terrainProfileSource: {
+        ...savedExperimentFixture.terrainProfileSource!,
+        fileName: '<img src=x onerror=alert(1)>.csv'
+      }
     });
 
     expect(html).not.toContain('<script>alert("x")</script>');
     expect(html).toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;');
+    expect(html).not.toContain('<img src=x onerror=alert(1)>');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;.csv');
   });
 });
