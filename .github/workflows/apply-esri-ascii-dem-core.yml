@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/apply-esri-ascii-dem-core.yml
       - scripts/apply-esri-ascii-dem-core.py
+      - scripts/fix-esri-dem-generator.py
 
 permissions:
   contents: write
@@ -20,6 +21,9 @@ jobs:
         with:
           ref: agent/esri-ascii-dem-core
           fetch-depth: 0
+
+      - name: Prepare generator
+        run: python3 scripts/fix-esri-dem-generator.py
 
       - name: Apply product changes
         run: python3 scripts/apply-esri-ascii-dem-core.py
@@ -36,8 +40,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Remove temporary patch script
-        run: rm -f scripts/apply-esri-ascii-dem-core.py
+      - name: Remove temporary patch scripts
+        run: rm -f scripts/apply-esri-ascii-dem-core.py scripts/fix-esri-dem-generator.py
 
       - name: Commit product changes
         shell: bash
