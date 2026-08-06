@@ -203,6 +203,29 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
 
   if (value.kind === 'dem') {
     const noDataValid = value.noDataValue === null || isFiniteNumber(value.noDataValue);
+    const diagnosticValues = [
+      value.diagnosticStatus,
+      value.effectiveCellSpanM,
+      value.sampleSpacingToCellRatio,
+      value.minimumCoverageMarginM,
+      value.coverageMarginCellRatio,
+      value.minimumElevationM,
+      value.maximumElevationM,
+      value.elevationRangeM
+    ];
+    const hasDiagnostics = diagnosticValues.some((item) => item !== undefined);
+    const diagnosticsValid = !hasDiagnostics || (
+      (value.diagnosticStatus === 'good' || value.diagnosticStatus === 'caution' ||
+        value.diagnosticStatus === 'limited') &&
+      isFiniteNumber(value.effectiveCellSpanM) && value.effectiveCellSpanM > 0 &&
+      isFiniteNumber(value.sampleSpacingToCellRatio) && value.sampleSpacingToCellRatio >= 0 &&
+      isFiniteNumber(value.minimumCoverageMarginM) && value.minimumCoverageMarginM >= 0 &&
+      isFiniteNumber(value.coverageMarginCellRatio) && value.coverageMarginCellRatio >= 0 &&
+      isFiniteNumber(value.minimumElevationM) &&
+      isFiniteNumber(value.maximumElevationM) &&
+      value.minimumElevationM <= value.maximumElevationM &&
+      isFiniteNumber(value.elevationRangeM) && value.elevationRangeM >= 0
+    );
     if (value.format !== 'esri-ascii' ||
       (value.samplingMethod !== 'nearest' && value.samplingMethod !== 'bilinear') ||
       (value.geodesicMethod !== 'vincenty' && value.geodesicMethod !== 'spherical-fallback') ||
@@ -221,6 +244,7 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
       !inRange(value.northBoundaryDeg, -90, 90) ||
       value.westBoundaryDeg >= value.eastBoundaryDeg ||
       value.southBoundaryDeg >= value.northBoundaryDeg ||
+      !diagnosticsValid ||
       !isFiniteNumber(value.sourceDistanceM) || value.sourceDistanceM <= 0) {
       return null;
     }
@@ -243,7 +267,17 @@ function parseTerrainProfileSource(value: unknown): TerrainProfileSource | null 
       westBoundaryDeg: value.westBoundaryDeg,
       eastBoundaryDeg: value.eastBoundaryDeg,
       southBoundaryDeg: value.southBoundaryDeg,
-      northBoundaryDeg: value.northBoundaryDeg
+      northBoundaryDeg: value.northBoundaryDeg,
+      ...(hasDiagnostics ? {
+        diagnosticStatus: value.diagnosticStatus as 'good' | 'caution' | 'limited',
+        effectiveCellSpanM: value.effectiveCellSpanM as number,
+        sampleSpacingToCellRatio: value.sampleSpacingToCellRatio as number,
+        minimumCoverageMarginM: value.minimumCoverageMarginM as number,
+        coverageMarginCellRatio: value.coverageMarginCellRatio as number,
+        minimumElevationM: value.minimumElevationM as number,
+        maximumElevationM: value.maximumElevationM as number,
+        elevationRangeM: value.elevationRangeM as number
+      } : {})
     };
   }
 

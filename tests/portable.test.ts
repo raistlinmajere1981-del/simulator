@@ -230,7 +230,15 @@ describe('portable experiment format', () => {
       westBoundaryDeg: 28.885,
       eastBoundaryDeg: 29.185,
       southBoundaryDeg: 40.885,
-      northBoundaryDeg: 41.185
+      northBoundaryDeg: 41.185,
+      diagnosticStatus: 'good' as const,
+      effectiveCellSpanM: 2_500,
+      sampleSpacingToCellRatio: 0.09,
+      minimumCoverageMarginM: 1_500,
+      coverageMarginCellRatio: 0.6,
+      minimumElevationM: 12,
+      maximumElevationM: 60,
+      elevationRangeM: 48
     };
     const file = createPortableExperimentFile({
       ...savedExperimentFixture,

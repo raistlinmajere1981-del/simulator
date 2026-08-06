@@ -596,7 +596,10 @@ function TerrainPanel({
                 {source.appliedRouteCoordinates === true ? ' · deney koordinatlarına uygulandı' : ''}
               </span>
             ) : (
-              <span>{source.sampleCount} rota örneği ({source.sampleCountMode === 'manual' ? 'manuel' : 'otomatik'}) · {source.columnCount} × {source.rowCount} grid · {source.samplingMethod === 'bilinear' ? 'iki doğrusal' : 'en yakın hücre'}</span>
+              <span>
+                {source.sampleCount} rota örneği ({source.sampleCountMode === 'manual' ? 'manuel' : 'otomatik'}) · {source.columnCount} × {source.rowCount} grid · {source.samplingMethod === 'bilinear' ? 'iki doğrusal' : 'en yakın hücre'}
+                {source.diagnosticStatus ? ` · tanı: ${source.diagnosticStatus === 'good' ? 'iyi' : source.diagnosticStatus === 'caution' ? 'dikkat' : 'sınırlı'}` : ''}
+              </span>
             )}
           </div>
           <span>{source.modifiedAfterImport ? 'İÇE AKTARIMDAN SONRA DÜZENLENDİ' : 'KAYNAKLA EŞLEŞİYOR'}</span>
@@ -888,7 +891,15 @@ export function AppNext(): React.JSX.Element {
           westBoundaryDeg: profile.westBoundaryDeg,
           eastBoundaryDeg: profile.eastBoundaryDeg,
           southBoundaryDeg: profile.southBoundaryDeg,
-          northBoundaryDeg: profile.northBoundaryDeg
+          northBoundaryDeg: profile.northBoundaryDeg,
+          diagnosticStatus: profile.diagnosticStatus,
+          effectiveCellSpanM: profile.effectiveCellSpanM,
+          sampleSpacingToCellRatio: profile.sampleSpacingToCellRatio,
+          minimumCoverageMarginM: profile.minimumCoverageMarginM,
+          coverageMarginCellRatio: profile.coverageMarginCellRatio,
+          minimumElevationM: profile.minimumElevationM,
+          maximumElevationM: profile.maximumElevationM,
+          elevationRangeM: profile.elevationRangeM
         }
       : isImportedGeoJsonTerrainProfile(profile)
         ? {

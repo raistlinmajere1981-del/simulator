@@ -12,6 +12,10 @@ import {
   createWgs84GeodesicPath
 } from './geodesic-path';
 import { validateManualTerrainPoints } from './manual-terrain-profile';
+import {
+  analyzeDemRouteQuality,
+  type DemQualityPoint
+} from './dem-quality-diagnostics';
 
 const MAX_PROFILE_SAMPLE_COUNT = 2_002;
 const MIN_PROFILE_SAMPLE_COUNT = 3;
@@ -93,6 +97,7 @@ export function buildTerrainProfileFromDem(
   );
   const sampleCount = requestedSampleCount ?? natural.sampleCount;
   const elevations: number[] = [];
+  const diagnosticPoints: DemQualityPoint[] = [];
   const warnings = [...grid.warnings, ...path.warnings];
   const directWarnings = new Set<string>();
 
@@ -111,7 +116,13 @@ export function buildTerrainProfileFromDem(
         `DEM rotanın %${(fraction * 100).toFixed(3)} konumunu kapsamıyor veya bu konum NODATA hücresine denk geliyor.`
       );
     }
-    elevations.push(validateElevation(elevationM, fraction * 100));
+    const validatedElevationM = validateElevation(elevationM, fraction * 100);
+    elevations.push(validatedElevationM);
+    diagnosticPoints.push({
+      latitudeDeg: pathPoint.coordinate.latitudeDeg,
+      longitudeDeg: pathPoint.coordinate.longitudeDeg,
+      elevationM: validatedElevationM
+    });
   }
 
   warnings.push(...directWarnings);
@@ -120,6 +131,18 @@ export function buildTerrainProfileFromDem(
       `Grid çözünürlüğüne göre gereken örnek sayısı ${MAX_PROFILE_SAMPLE_COUNT} sınırında kesildi.`
     );
   }
+  const sampleSpacingM = path.totalDistanceM / (sampleCount - 1);
+  const diagnostics = analyzeDemRouteQuality({
+    cellSizeDeg: grid.cellSizeDeg,
+    sampleSpacingM,
+    samplingMethod: context.samplingMethod,
+    westBoundaryDeg: grid.westBoundaryDeg,
+    eastBoundaryDeg: grid.eastBoundaryDeg,
+    southBoundaryDeg: grid.southBoundaryDeg,
+    northBoundaryDeg: grid.northBoundaryDeg,
+    points: diagnosticPoints
+  });
+  warnings.push(...diagnostics.warnings);
   warnings.push(
     'DEM yüksekliklerinin düşey datumu dosyadan doğrulanamadı; deneyde uygun düşey referans seçilmelidir.'
   );
@@ -144,13 +167,21 @@ export function buildTerrainProfileFromDem(
     rowCount: grid.rowCount,
     sampleCount,
     sampleCountMode: requestedSampleCount === undefined ? 'automatic' : 'manual',
-    sampleSpacingM: path.totalDistanceM / (sampleCount - 1),
+    sampleSpacingM,
     cellSizeDeg: grid.cellSizeDeg,
     noDataValue: grid.noDataValue,
     westBoundaryDeg: grid.westBoundaryDeg,
     eastBoundaryDeg: grid.eastBoundaryDeg,
     southBoundaryDeg: grid.southBoundaryDeg,
     northBoundaryDeg: grid.northBoundaryDeg,
+    diagnosticStatus: diagnostics.diagnosticStatus,
+    effectiveCellSpanM: diagnostics.effectiveCellSpanM,
+    sampleSpacingToCellRatio: diagnostics.sampleSpacingToCellRatio,
+    minimumCoverageMarginM: diagnostics.minimumCoverageMarginM,
+    coverageMarginCellRatio: diagnostics.coverageMarginCellRatio,
+    minimumElevationM: diagnostics.minimumElevationM,
+    maximumElevationM: diagnostics.maximumElevationM,
+    elevationRangeM: diagnostics.elevationRangeM,
     sourceDistanceM: path.totalDistanceM,
     observerEndpointElevationM: elevations[0] as number,
     targetEndpointElevationM: elevations[elevations.length - 1] as number,

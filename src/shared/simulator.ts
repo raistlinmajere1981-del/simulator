@@ -7,6 +7,7 @@ export type CsvTerrainDistanceUnit = 'percent' | 'm' | 'km';
 export type CsvTerrainDelimiter = 'comma' | 'semicolon' | 'tab';
 export type DemTerrainSamplingMethod = 'nearest' | 'bilinear';
 export type DemTerrainSampleCountMode = 'automatic' | 'manual';
+export type DemTerrainDiagnosticStatus = 'good' | 'caution' | 'limited';
 
 export interface SimulatorInputs {
   observerHeightM: number;
@@ -131,6 +132,14 @@ export interface DemTerrainProfileSource extends BaseTerrainProfileSource {
   eastBoundaryDeg: number;
   southBoundaryDeg: number;
   northBoundaryDeg: number;
+  diagnosticStatus?: DemTerrainDiagnosticStatus;
+  effectiveCellSpanM?: number;
+  sampleSpacingToCellRatio?: number;
+  minimumCoverageMarginM?: number;
+  coverageMarginCellRatio?: number;
+  minimumElevationM?: number;
+  maximumElevationM?: number;
+  elevationRangeM?: number;
 }
 
 export type TerrainProfileSource =
@@ -231,6 +240,14 @@ export interface ImportedDemTerrainProfile {
   eastBoundaryDeg: number;
   southBoundaryDeg: number;
   northBoundaryDeg: number;
+  diagnosticStatus: DemTerrainDiagnosticStatus;
+  effectiveCellSpanM: number;
+  sampleSpacingToCellRatio: number;
+  minimumCoverageMarginM: number;
+  coverageMarginCellRatio: number;
+  minimumElevationM: number;
+  maximumElevationM: number;
+  elevationRangeM: number;
   sourceDistanceM: number;
   observerEndpointElevationM: number;
   targetEndpointElevationM: number;

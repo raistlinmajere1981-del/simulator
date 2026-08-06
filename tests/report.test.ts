@@ -102,7 +102,15 @@ it('includes ESRI ASCII DEM sampling provenance', () => {
       westBoundaryDeg: 28.885,
       eastBoundaryDeg: 29.185,
       southBoundaryDeg: 40.885,
-      northBoundaryDeg: 41.185
+      northBoundaryDeg: 41.185,
+      diagnosticStatus: 'caution',
+      effectiveCellSpanM: 2_500,
+      sampleSpacingToCellRatio: 0.7,
+      minimumCoverageMarginM: 1_500,
+      coverageMarginCellRatio: 0.6,
+      minimumElevationM: 12,
+      maximumElevationM: 60,
+      elevationRangeM: 48
     }
   });
 
@@ -114,6 +122,10 @@ it('includes ESRI ASCII DEM sampling provenance', () => {
   expect(html).toContain('Manuel');
   expect(html).toContain('İki doğrusal');
   expect(html).toContain('WGS84 Vincenty');
+  expect(html).toContain('Örnekleme tanısı');
+  expect(html).toContain('Dikkat');
+  expect(html).toContain('Örnek / hücre oranı');
+  expect(html).toContain('DEM yükseklik aralığı');
 });
 
 it('uses manual distance to convert every route percentage', () => {
