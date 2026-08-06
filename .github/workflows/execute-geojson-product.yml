@@ -85,6 +85,17 @@ jobs:
               "portable_text = portable_text.replace(portable_old, portable_new).replace(local_old, local_new)",
               "Path(portable_path).write_text(portable_text, encoding='utf-8')"
           ])
+          portable_test_replacement_source = '\n'.join([
+              "portable_test_text = read(portable_test)",
+              "old_assertion = 'expect(parsed.store.schemaVersion).toBe(5);'",
+              "new_assertion = 'expect(parsed.store.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);'",
+              "if portable_test_text.count(old_assertion) != 2:",
+              "    raise RuntimeError('Unexpected portable store schema assertion count')",
+              "Path(portable_test).write_text(",
+              "    portable_test_text.replace(old_assertion, new_assertion),",
+              "    encoding='utf-8'",
+              ")"
+          ])
 
           nested_patch = [
               "portable_pattern = (",
@@ -117,6 +128,18 @@ jobs:
               ")",
               "if version_calls_count != 1:",
               "    raise RuntimeError(f'Expected one portable version migration block, found {version_calls_count}')",
+              "portable_test_calls_pattern = (",
+              "    r\"replace_once\\(\\s*portable_test,\\s*'expect\\(parsed\\.store\\.schemaVersion\\)\\.toBe\\(5\\);',\\s*\"",
+              "    r\"'expect\\(parsed\\.store\\.schemaVersion\\)\\.toBe\\(PORTABLE_EXPERIMENT_SCHEMA_VERSION\\);'\\s*\\)\\s*\"",
+              "    r\"replace_once\\(\\s*portable_test,\\s*'expect\\(parsed\\.store\\.schemaVersion\\)\\.toBe\\(5\\);',\\s*\"",
+              "    r\"'expect\\(parsed\\.store\\.schemaVersion\\)\\.toBe\\(PORTABLE_EXPERIMENT_SCHEMA_VERSION\\);'\\s*\\)\"",
+              ")",
+              f"portable_test_calls_replacement = {portable_test_replacement_source!r}",
+              "script, portable_test_calls_count = re.subn(",
+              "    portable_test_calls_pattern, lambda _match: portable_test_calls_replacement, script, count=1, flags=re.S",
+              ")",
+              "if portable_test_calls_count != 1:",
+              "    raise RuntimeError(f'Expected one repeated portable assertion block, found {portable_test_calls_count}')",
               ""
           ]
           lines[exec_index:exec_index] = nested_patch
