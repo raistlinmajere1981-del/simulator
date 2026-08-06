@@ -122,6 +122,49 @@ jobs:
           )
           script = script[:preload_start] + preload_replacement + script[preload_end:]
 
+          editor_button_start_token = (
+              "replace_once(\n    editor_path,\n    '''          <button\n"
+              "            disabled={disabled || sortedPoints.length >= MAX_EDITOR_POINTS}"
+          )
+          editor_button_end_token = (
+              "\n\nreplace_once(\n    editor_path,\n"
+              "    '''            Ara noktalar dosyadan alınır."
+          )
+          editor_button_start = script.index(editor_button_start_token)
+          editor_button_end = script.index(editor_button_end_token, editor_button_start)
+          add_button = (
+              "          <button\n"
+              "            disabled={disabled || sortedPoints.length >= MAX_EDITOR_POINTS}\n"
+              "            type=\"button\"\n"
+              "            onClick={addPoint}\n"
+              "          >\n"
+              "            + Nokta ekle\n"
+              "          </button>"
+          )
+          geo_button = (
+              "          <button\n"
+              "            className=\"terrain-csv-button\"\n"
+              "            disabled={disabled || isImporting || routeDistanceKm <= 0}\n"
+              "            title=\"WGS84 boylam, enlem ve yükseklik taşıyan 3B LineString kullan\"\n"
+              "            type=\"button\"\n"
+              "            onClick={() => void chooseGeoJsonProfile()}\n"
+              "          >\n"
+              "            GeoJSON'dan al\n"
+              "          </button>\n"
+          )
+          editor_button_replacement = (
+              "replace_once(\n"
+              "    editor_path,\n"
+              f"    {add_button!r},\n"
+              f"    {(geo_button + add_button)!r}\n"
+              ")"
+          )
+          script = (
+              script[:editor_button_start] +
+              editor_button_replacement +
+              script[editor_button_end:]
+          )
+
           exec(compile(script, 'geojson-stage.py', 'exec'))
           PY
 
