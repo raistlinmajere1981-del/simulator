@@ -1,6 +1,6 @@
 {
   "name": "geometric-observation-lab",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Farklı geometrik ve fiziksel modelleri ölçülebilir gözlemler üzerinden karşılaştıran masaüstü simülasyon laboratuvarı.",
   "main": "./out/main/index.js",

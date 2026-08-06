@@ -140,6 +140,7 @@ Aynı kontroller pull request'lerde GitHub Actions üzerinde otomatik çalışı
 - [`docs/geodesy.md`](docs/geodesy.md)
 - [`docs/terrain-profile.md`](docs/terrain-profile.md)
 - [`docs/esri-ascii-dem.md`](docs/esri-ascii-dem.md)
+- [`docs/terrain-source-integrity.md`](docs/terrain-source-integrity.md)
 
 Koordinat modunda ESRI ASCII Grid DEM dosyaları gözlemci-hedef rotası boyunca
 WGS84 ara koordinatlarında örneklenerek arazi profiline dönüştürülebilir.

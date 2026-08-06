@@ -47,5 +47,6 @@ describe('DEM source compatibility', () => {
     expect(source?.kind).toBe('dem');
     expect(source?.kind === 'dem' ? source.sampleCountMode : 'unexpected-source')
       .toBeUndefined();
+    expect(source?.sha256).toBeUndefined();
   });
 });

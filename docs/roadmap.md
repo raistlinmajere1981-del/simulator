@@ -279,6 +279,20 @@ Durum: tamamlandı
 - Eski v7 DEM kayıtlarıyla geriye dönük uyumluluk
 - Uygulama sürümü `1.0.2`
 
+## Aşama 3.14 — Arazi kaynak dosyası bütünlüğü
+
+Durum: tamamlandı
+
+- CSV, GeoJSON ve DEM ham dosya baytlarından SHA-256 özeti
+- Tam kaynak dosya boyutunun bayt olarak kaydı
+- CSV sütun eşleme önbelleğinde bütünlük bilgisinin korunması
+- Kısa özetin kaynak şeridinde gösterilmesi
+- Tam boyut ve SHA-256 değerinin JSON ve HTML raporunda korunması
+- Kısmi veya biçimi bozuk bütünlük provenansının reddedilmesi
+- Eski şema-v7 kayıtlarıyla geriye dönük uyumluluk
+- Bilinen SHA-256 test vektörü
+- Uygulama sürümü `1.0.3`
+
 ## Sonraki gerçek arazi işleri
 - Görüş hattı boyunca DEM örnekleme
 - Veri kaynağı ve çözünürlük izlenebilirliği

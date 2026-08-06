@@ -74,6 +74,11 @@ export interface TerrainProfileColumnMapping {
   distanceUnit: CsvTerrainDistanceUnit;
 }
 
+export interface TerrainSourceIntegrity {
+  fileSizeBytes: number;
+  sha256: string;
+}
+
 export interface TerrainProfileMappingRequest {
   requestId: string;
   fileName: string;
@@ -93,6 +98,8 @@ interface BaseTerrainProfileSource {
   appliedTargetEndpoint: boolean;
   appliedRouteDistance?: boolean;
   appliedRouteCoordinates?: boolean;
+  fileSizeBytes?: number;
+  sha256?: string;
   modifiedAfterImport: boolean;
 }
 
@@ -185,6 +192,8 @@ export interface TerrainProfileImportContext {
 
 export interface ImportedTerrainProfile {
   fileName: string;
+  fileSizeBytes?: number;
+  sha256?: string;
   delimiter: CsvTerrainDelimiter;
   distanceUnit: CsvTerrainDistanceUnit;
   distanceColumnHeader: string;
@@ -209,6 +218,8 @@ export interface DemTerrainProfileImportContext {
 export interface ImportedGeoJsonTerrainProfile {
   kind: 'geojson';
   fileName: string;
+  fileSizeBytes?: number;
+  sha256?: string;
   geometryType: 'LineString';
   coordinateCount: number;
   sourceDistanceM: number;
@@ -226,6 +237,8 @@ export interface ImportedGeoJsonTerrainProfile {
 export interface ImportedDemTerrainProfile {
   kind: 'dem';
   fileName: string;
+  fileSizeBytes?: number;
+  sha256?: string;
   format: 'esri-ascii';
   samplingMethod: DemTerrainSamplingMethod;
   geodesicMethod: SavedGeodesicMethod;

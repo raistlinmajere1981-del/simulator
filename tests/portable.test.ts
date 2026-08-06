@@ -58,6 +58,8 @@ export const savedExperimentFixture: SavedExperiment = {
     elevationColumnHeader: 'elevation_m',
     appliedRouteDistance: false,
     appliedRouteCoordinates: false,
+    fileSizeBytes: 128,
+    sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
     modifiedAfterImport: false
   },
   geodesic: {
@@ -185,6 +187,8 @@ describe('portable experiment format', () => {
     appliedTargetEndpoint: true,
     appliedRouteDistance: false,
     appliedRouteCoordinates: true,
+    fileSizeBytes: 256,
+    sha256: 'b'.repeat(64),
     modifiedAfterImport: false,
     geometryType: 'LineString' as const,
     coordinateCount: 6,
@@ -216,6 +220,8 @@ describe('portable experiment format', () => {
       appliedTargetEndpoint: true,
       appliedRouteDistance: false,
       appliedRouteCoordinates: false,
+      fileSizeBytes: 1_024,
+      sha256: 'c'.repeat(64),
       modifiedAfterImport: false,
       format: 'esri-ascii' as const,
       samplingMethod: 'bilinear' as const,
@@ -269,6 +275,8 @@ describe('portable experiment format', () => {
     delete legacySource.kind;
     delete legacySource.appliedRouteDistance;
     delete legacySource.appliedRouteCoordinates;
+    delete legacySource.fileSizeBytes;
+    delete legacySource.sha256;
     const parsed = parsePortableExperimentFile({
       schema: PORTABLE_EXPERIMENT_SCHEMA,
       schemaVersion: 5,
@@ -282,6 +290,7 @@ describe('portable experiment format', () => {
     expect(parsed.experiment.terrainProfileSource?.kind).toBe('csv');
     expect(parsed.experiment.terrainProfileSource?.appliedRouteDistance).toBe(false);
     expect(parsed.experiment.terrainProfileSource?.appliedRouteCoordinates).toBeUndefined();
+    expect(parsed.experiment.terrainProfileSource?.sha256).toBeUndefined();
   });
 
 it('migrates a version 4 experiment without inventing CSV provenance', () => {
