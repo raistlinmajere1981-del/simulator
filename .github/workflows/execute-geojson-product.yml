@@ -1,0 +1,73 @@
+name: Execute GeoJSON product implementation
+
+on:
+  push:
+    branches:
+      - agent/geojson-terrain-profile-import
+    paths:
+      - .github/workflows/execute-geojson-product.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/geojson-terrain-profile-import
+          fetch-depth: 0
+
+      - name: Apply GeoJSON product changes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          retry_path = Path('.github/workflows/retry-geojson-terrain-profile.yml')
+          raw = retry_path.read_text(encoding='utf-8')
+          marker_start = "          python3 - <<'PY'\n"
+          marker_end = "\n          PY\n"
+          start = raw.index(marker_start) + len(marker_start)
+          end = raw.index(marker_end, start)
+          code = textwrap.dedent(raw[start:end])
+
+          lines = code.splitlines()
+          matches = [i for i, line in enumerate(lines) if 'app_section_start = script.index' in line]
+          if len(matches) != 1:
+              raise RuntimeError(f'Expected one AppNext marker, found {len(matches)}')
+          index = matches[0]
+          lines[index:index + 3] = [
+              "app_block_end = script.index(\"\\n\\nportable_path = 'src/shared/portable.ts'\")",
+              "app_block_start = script.rfind(\"replace_regex(\", 0, app_block_end)",
+              "if app_block_start < 0:",
+              "    raise RuntimeError('AppNext source replacement block not found')"
+          ]
+          exec(compile('\n'.join(lines) + '\n', 'geojson-retry.py', 'exec'))
+          PY
+
+      - name: Preserve workflow files
+        run: git restore --source=HEAD -- .github/workflows
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit product changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- ':!.github/workflows'
+          git commit -m "add GeoJSON terrain profile import"
+          git push origin HEAD:agent/geojson-terrain-profile-import
