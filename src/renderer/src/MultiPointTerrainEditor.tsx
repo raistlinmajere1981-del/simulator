@@ -27,6 +27,7 @@ import {
   requestedDemSampleCount,
   type DemSampleCountMode
 } from '../../simulation/dem-import-options';
+import { DemLineOfSightReviewCard } from './DemLineOfSightReviewCard';
 
 export type TerrainProfileImportOptions = TerrainProfileApplicationOptions;
 
@@ -41,6 +42,11 @@ interface MultiPointTerrainEditorProps {
   targetLongitudeDeg: number;
   observerGroundElevationM: number;
   targetGroundElevationM: number;
+  observerHeightM: number;
+  targetHeightM: number;
+  verticalDatumOffsetM: number;
+  useStandardRefraction: boolean;
+  refractionCoefficient: number;
   criticalDistanceM?: number | null;
   disabled?: boolean;
   onChange(points: ManualTerrainPoint[]): void;
@@ -226,6 +232,11 @@ export function MultiPointTerrainEditor({
   targetLongitudeDeg,
   observerGroundElevationM,
   targetGroundElevationM,
+  observerHeightM,
+  targetHeightM,
+  verticalDatumOffsetM,
+  useStandardRefraction,
+  refractionCoefficient,
   criticalDistanceM,
   disabled = false,
   onChange,
@@ -780,6 +791,20 @@ export function MultiPointTerrainEditor({
               <span>Bitiş zemin yüksekliğini dosyadan al: <b>{numberFormatter.format(pendingImport.targetEndpointElevationM)} m</b></span>
             </label>
           </div>
+          {isDemProfile(pendingImport) && (
+            <DemLineOfSightReviewCard
+              profile={pendingImport}
+              applyObserverEndpoint={applyObserverEndpoint}
+              applyTargetEndpoint={applyTargetEndpoint}
+              observerGroundElevationM={observerGroundElevationM}
+              targetGroundElevationM={targetGroundElevationM}
+              observerHeightM={observerHeightM}
+              targetHeightM={targetHeightM}
+              verticalDatumOffsetM={verticalDatumOffsetM}
+              useStandardRefraction={useStandardRefraction}
+              refractionCoefficient={refractionCoefficient}
+            />
+          )}
           {pendingImport.warnings.length > 0 && (
             <ul className="terrain-import-warnings">
               {pendingImport.warnings.map((warning) => <li key={warning}>{warning}</li>)}
