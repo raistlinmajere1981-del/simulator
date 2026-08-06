@@ -14,7 +14,7 @@ export interface SimulatorInputs {
   verticalDatumKind: VerticalDatumKind;
   verticalDatumOffsetM: number;
   terrainMode: TerrainMode;
-  /** Legacy single-point fields retained while the multi-point editor lands. */
+  /** Legacy single-point fields retained for portable schema migration. */
   terrainIntermediateDistancePercent: number;
   terrainIntermediateElevationM: number;
   distanceSource: DistanceSource;
@@ -65,6 +65,40 @@ export interface SavedGeodesicCalculation {
   trace: CalculationTrace;
 }
 
+export interface TerrainProfileColumnMapping {
+  distanceColumnIndex: number;
+  elevationColumnIndex: number;
+  distanceUnit: CsvTerrainDistanceUnit;
+}
+
+export interface TerrainProfileMappingRequest {
+  requestId: string;
+  fileName: string;
+  delimiter: CsvTerrainDelimiter;
+  headers: string[];
+  previewRows: string[][];
+  reason: string;
+}
+
+export interface CsvTerrainProfileSource {
+  kind: 'csv';
+  fileName: string;
+  importedAtIso: string;
+  delimiter: CsvTerrainDelimiter;
+  distanceUnit: CsvTerrainDistanceUnit;
+  sourceDistanceM: number | null;
+  rowCount: number;
+  observerEndpointElevationM: number;
+  targetEndpointElevationM: number;
+  appliedObserverEndpoint: boolean;
+  appliedTargetEndpoint: boolean;
+  distanceColumnHeader: string;
+  elevationColumnHeader: string;
+  modifiedAfterImport: boolean;
+}
+
+export type TerrainProfileSource = CsvTerrainProfileSource;
+
 export interface SavedExperiment {
   id: string;
   name: string;
@@ -76,6 +110,8 @@ export interface SavedExperiment {
    * and target ground elevations.
    */
   manualTerrainPoints?: ManualTerrainPoint[];
+  /** Optional origin metadata for imported terrain data. */
+  terrainProfileSource?: TerrainProfileSource;
   geodesic?: SavedGeodesicCalculation;
   modelVersions: Record<string, string>;
   predictions: ModelPrediction[];
@@ -103,6 +139,8 @@ export interface ImportedTerrainProfile {
   fileName: string;
   delimiter: CsvTerrainDelimiter;
   distanceUnit: CsvTerrainDistanceUnit;
+  distanceColumnHeader: string;
+  elevationColumnHeader: string;
   rowCount: number;
   sourceDistanceM: number | null;
   observerEndpointElevationM: number;
@@ -113,6 +151,7 @@ export interface ImportedTerrainProfile {
 
 export interface ImportTerrainProfileResult extends FileOperationResult {
   profile?: ImportedTerrainProfile;
+  mappingRequest?: TerrainProfileMappingRequest;
 }
 
 export interface SimulatorDesktopApi {
@@ -125,6 +164,11 @@ export interface SimulatorDesktopApi {
   importExperiment(): Promise<ImportExperimentResult>;
   exportExperimentReport(id: string): Promise<FileOperationResult>;
   importTerrainProfile(
+    context: TerrainProfileImportContext
+  ): Promise<ImportTerrainProfileResult>;
+  importTerrainProfileWithMapping(
+    requestId: string,
+    mapping: TerrainProfileColumnMapping,
     context: TerrainProfileImportContext
   ): Promise<ImportTerrainProfileResult>;
 }
