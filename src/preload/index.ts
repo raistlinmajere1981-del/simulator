@@ -11,7 +11,7 @@ import type {
 } from '../shared/simulator';
 
 const api: SimulatorDesktopApi = {
-  version: '1.0.4',
+  version: '1.0.5',
   platform: process.platform,
   listExperiments: () =>
     ipcRenderer.invoke('experiments:list') as Promise<SavedExperiment[]>,
