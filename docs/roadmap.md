@@ -75,11 +75,9 @@ Durum: tamamlandı
 - Linux/KDE üzerinde manuel/koordinat geçişi, canlı sonuçlar, kayıt, JSON ve HTML raporu doğrulaması
 - Referans, sınır ve taşıma testleri
 
-## Aşama 3.2 — Düşey datum ve manuel arazi
+## Aşama 3.2 — Düşey datum ve arazi temeli
 
-Durum: çalışan ilk sürüm tamamlandı, yerel görsel doğrulama bekliyor
-
-Tamamlananlar:
+Durum: tamamlandı ve `main` dalına alındı
 
 - Ortometrik deniz seviyesi, WGS84 elipsoidal ve yerel düşey datum seçimi
 - Gelgit veya yerel benchmark için datum ofseti
@@ -87,7 +85,7 @@ Tamamlananlar:
 - Gözlemci göz kotu ve hedef tepe kotunun ortak referansta türetilmesi
 - Manuel, içe aktarılan ve DEM kaynaklı genel profil sözleşmesi
 - Mesafe-yükseklik örneklerinin doğrulanması
-- Tek ara örnekli manuel profil arayüzü
+- Tek ara örnekli ilk manuel profil
 - Düzlem geometrisinde görüş hattı açıklığı
 - Küresel geometrinin yerel düşey doğrultularında görüş hattı açıklığı
 - Kritik engel ve minimum açıklık tespiti
@@ -96,23 +94,58 @@ Tamamlananlar:
 - Etkin yarıçapın profil analizine yaklaşık yansıması
 - Model metrikleri, uyarıları ve hesap izinde arazi sonuçları
 - Kayıt ve taşınabilir dosya şemasının sürüm 3'e yükseltilmesi
-- Sürüm 1 ve 2 kayıtların profil kapalı güvenli varsayılanlarla taşınması
+- Sürüm 1 ve 2 kayıtların güvenli varsayılanlarla taşınması
 - HTML raporunda düşey datum, uç kotları ve manuel profil bölümü
+- Atmosfer kontrolünün 1920×1080 yerleşimde görünür tutulması
 - Uygulama sürümü `0.5.0`
-- Profil, model, taşıma ve rapor testleri
+- Linux/KDE yerel akış doğrulaması
 
-Kalan doğrulama:
+## Aşama 3.3 — Çok noktalı manuel arazi profili
 
-- Linux/KDE 1920×1080 yerleşimi
-- Profil kapalıyken önceki sonuçların korunması
-- Manuel profil değişiminde iki modelin canlı güncellenmesi
-- Arazi hesap izi ve sonuç tablosu
-- Kayıt, yeniden açma, JSON ve HTML raporu
+Durum: çalışan sürüm tamamlandı, yerel görsel doğrulama bekliyor
+
+Tamamlananlar:
+
+- Kimlik, yüzde konumu ve kot taşıyan `ManualTerrainPoint` sözleşmesi
+- En fazla 2.000 iç nokta
+- Nokta kimliği, yüzde aralığı, tekrar ve sonlu sayı doğrulaması
+- Noktaların artan rota yüzdesine göre deterministik sıralanması
+- Gözlemci ve hedef uçlarının otomatik eklenmesi
+- Yüzde konumundan gerçek metre mesafesine dönüşüm
+- Nokta ekleme, düzenleme ve silme yardımcıları
+- En büyük profil boşluğuna otomatik nokta ekleme
+- Yeni nokta kotunun komşu örneklerden doğrusal enterpolasyonu
+- Canlı SVG profil önizlemesi
+- İdeal kürenin kritik arazi mesafesinin önizlemede işaretlenmesi
+- Nokta değişiminde küre ve düzlem hesaplarının canlı yenilenmesi
+- Kayıt açma, kaydetme ve varsayılana dönmede profil dizisinin korunması
+- Taşınabilir ve yerel kayıt şemasının sürüm 4'e yükseltilmesi
+- Sürüm 1, 2 ve 3 kayıtların sürüm 4'e taşınması
+- Sürüm 3 tek ara noktasının kayıpsız diziye dönüştürülmesi
+- HTML raporunda bütün noktaların sıra, yüzde, mesafe ve kot bilgisi
+- Çok noktalı çekirdek, taşıma ve rapor testleri
+- TypeScript, test ve Electron üretim derlemesi
+- Uygulama sürümü `0.6.0`
+
+Yerel doğrulama:
+
+- Linux/KDE 1920×1080 panel yerleşimi
+- Nokta ekleme ve en büyük boşluğa yerleşme
+- Nokta yüzdesi değişince yeniden sıralama
+- Nokta kotu değişince iki modelin canlı güncellenmesi
+- Nokta silme ve sıfır ara noktalı profil
+- Kritik arazi işaretinin önizlemede görünmesi
+- Profil kapalı/açık geçişi
+- Atmosferik kırılma kontrolünün görünür kalması
+- Kayıt ve yeniden açmada bütün noktaların korunması
+- Şema v4 JSON dışa/içe aktarma
+- HTML raporunda bütün noktaların görünmesi
 
 Sonraki gerçek arazi işleri:
 
-- Birden fazla manuel profil noktası
-- CSV veya GeoJSON profil içe aktarma
+- CSV profil içe aktarma
+- GeoJSON profil içe aktarma
+- Noktaları grafik üzerinde sürükleyerek düzenleme
 - Sayısal yükseklik modeli entegrasyonu
 - Görüş hattı boyunca DEM örneklemesi
 - Arazi veri kaynağı ve çözünürlük izlenebilirliği

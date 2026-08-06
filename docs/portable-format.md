@@ -32,7 +32,7 @@ geometric-observation-laboratory/portable-experiment
 Güncel şema sürümü:
 
 ```text
-3
+4
 ```
 
 Üst düzey yapı:
@@ -40,11 +40,11 @@ Güncel şema sürümü:
 ```json
 {
   "schema": "geometric-observation-laboratory/portable-experiment",
-  "schemaVersion": 3,
-  "exportedAtIso": "2026-08-05T15:00:00.000Z",
+  "schemaVersion": 4,
+  "exportedAtIso": "2026-08-05T20:00:00.000Z",
   "application": {
     "name": "Geometrik Gözlem Laboratuvarı",
-    "version": "0.5.0"
+    "version": "0.6.0"
   },
   "experiment": {
     "id": "...",
@@ -52,6 +52,7 @@ Güncel şema sürümü:
     "createdAtIso": "...",
     "updatedAtIso": "...",
     "inputs": {},
+    "manualTerrainPoints": [],
     "geodesic": {},
     "modelVersions": {},
     "predictions": []
@@ -72,7 +73,6 @@ Güncel şema sürümü:
 - düşey datum türü,
 - datum, gelgit veya yerel benchmark ofseti,
 - arazi profili modu,
-- manuel ara noktanın yüzde konumu ve kotu,
 - `manual` veya `coordinates` mesafe kaynağı,
 - manuel yüzey mesafesi,
 - gözlemci enlem ve boylamı,
@@ -81,6 +81,8 @@ Güncel şema sürümü:
 - gözlem belirsizliği,
 - standart kırılma seçimi,
 - kırılma katsayısı.
+
+Sürüm 3 ile uyumluluk için tek noktalı eski alanlar `inputs` içinde korunur. Yeni çok noktalı profil için esas veri `experiment.manualTerrainPoints` dizisidir.
 
 Düşey datum türleri:
 
@@ -95,9 +97,35 @@ Arazi profili modları:
 ```text
 off
 manual-three-point
+manual-points
 ```
 
-Manuel ara nokta yüzdesi açık aralıkta `0…100` arasında olmalıdır; uç noktalar gözlemci ve hedef kotları tarafından temsil edilir. Enlemler `-90…90°`, boylamlar `-180…180°` aralığında doğrulanır. Bütün sayısal alanlar sonlu olmalıdır.
+## Çok noktalı profil dizisi
+
+Her iç profil noktası:
+
+```json
+{
+  "id": "ridge-centre",
+  "distancePercent": 50,
+  "elevationM": 8.5
+}
+```
+
+biçimindedir.
+
+Doğrulama kuralları:
+
+- `id` boş olamaz ve bütün dizide benzersiz olmalıdır.
+- `distancePercent`, açık aralıkta `0 < değer < 100` olmalıdır.
+- Yüzde konumları tekrarsız olmalıdır.
+- `distancePercent` ve `elevationM` sonlu sayı olmalıdır.
+- Dizi en fazla 2.000 iç nokta taşıyabilir.
+- Geçerli noktalar depolama sırasında yüzde konumuna göre artan sıraya getirilir.
+
+Gözlemci ve hedef uçları bu dizide saklanmaz. Uç örnekleri `inputs.observerGroundElevationM` ve `inputs.targetGroundElevationM` alanlarından otomatik türetilir.
+
+Enlemler `-90…90°`, boylamlar `-180…180°` aralığında doğrulanır. Bütün sayısal alanlar sonlu olmalıdır.
 
 ## Jeodezik anlık görüntü
 
@@ -147,15 +175,16 @@ Dosyadaki sonuç anlık görüntüsü yeni uygulama sürümü tarafından sessiz
 3. Şema sürümünün desteklendiği doğrulanır.
 4. Deney kimliği, tarihler ve ad kontrol edilir.
 5. Sayısal girdiler, koordinatlar, düşey datum ve profil alanları izin verilen aralıklarda olmalıdır.
-6. Varsa jeodezik anlık görüntü bütün alanlarıyla doğrulanır.
-7. Model sonuçları, metrikler ve hesap izi adımları doğrulanır.
-8. Hatalı dosya yerel kayıt deposunu değiştirmeden reddedilir.
+6. Çok noktalı profil kimlik, yüzde, tekrar, kot ve kapasite kurallarıyla doğrulanır.
+7. Varsa jeodezik anlık görüntü bütün alanlarıyla doğrulanır.
+8. Model sonuçları, metrikler ve hesap izi adımları doğrulanır.
+9. Hatalı dosya yerel kayıt deposunu değiştirmeden reddedilir.
 
 İçe aktarılan deney kimliği yerel bir kayıtla çakışırsa yeni bir kimlik üretilir ve kayıt adına `İçe aktarıldı` açıklaması eklenir.
 
 ## Eski dosya desteği
 
-### Sürüm 1 → sürüm 3
+### Sürüm 1 → sürüm 4
 
 Sürüm 1 dosyalarında koordinat, mesafe kaynağı ve düşey arazi alanları yoktur. Taşıma sırasında:
 
@@ -165,9 +194,10 @@ Sürüm 1 dosyalarında koordinat, mesafe kaynağı ve düşey arazi alanları y
 - jeodezik anlık görüntü oluşturulmaz,
 - zemin kotları ve datum ofseti `0 m` olur,
 - datum `orthometric-msl` olur,
-- arazi profili `off` olur.
+- arazi profili `off` olur,
+- güvenli varsayılan tek ara nokta diziye eklenir.
 
-### Sürüm 2 → sürüm 3
+### Sürüm 2 → sürüm 4
 
 Sürüm 2 koordinat ve jeodezik verileri korur. Yeni düşey ve arazi alanları:
 
@@ -177,9 +207,28 @@ Sürüm 2 koordinat ve jeodezik verileri korur. Yeni düşey ve arazi alanları:
 - arazi profili `off`,
 - ara nokta varsayılan olarak `%50` ve `0 m`
 
-ile tamamlanır.
+ile tamamlanır ve tek elemanlı diziye dönüştürülür.
 
-Bu varsayılanlar eski deneylerin önceki görünürlük sonuçlarını değiştirmeden açılmasını amaçlar.
+### Sürüm 3 → sürüm 4
+
+Sürüm 3 düşey datum ve tek ara noktalı profil içerir. Eski:
+
+```text
+terrainIntermediateDistancePercent
+terrainIntermediateElevationM
+```
+
+alanları şu noktaya dönüştürülür:
+
+```json
+{
+  "id": "legacy-intermediate-1",
+  "distancePercent": "eski yüzde",
+  "elevationM": "eski kot"
+}
+```
+
+Böylece kayıt anındaki profil ve görünürlük davranışı korunur.
 
 Şema kapsayıcısı bulunmayan tek bir geçerli eski deney nesnesi sürüm `0` kabul edilerek aynı kurallarla taşınabilir. Desteklenmeyen gelecekteki şema sürümleri sessizce yorumlanmaz; açık hata ile reddedilir.
 
@@ -196,10 +245,10 @@ geometric-observation-laboratory/local-experiment-store
 Güncel sürüm:
 
 ```text
-3
+4
 ```
 
-Sürüm 1 ve 2 kapsayıcıları ile daha eski düz JSON dizileri ilk okumada sürüm 3 yapısına taşınır ve atomik yazımla kaydedilir. Doğrulanamayan kayıtlar yüklenmez ve sayıları taşıma sonucunda raporlanır.
+Sürüm 1, 2 ve 3 kapsayıcıları ile daha eski düz JSON dizileri ilk okumada sürüm 4 yapısına taşınır ve atomik yazımla kaydedilir. Doğrulanamayan kayıtlar yüklenmez ve sayıları taşıma sonucunda raporlanır.
 
 ## HTML raporu
 
@@ -218,8 +267,12 @@ Düşey referans ve arazi bölümünde:
 - datum ve ofset,
 - gözlemci zemin ve mutlak göz kotu,
 - hedef taban ve tepe kotu,
-- profil modu,
-- manuel profil örnekleri
+- profil modu ve ara nokta sayısı,
+- gözlemci ve hedef uçları,
+- bütün ara noktaların sıra numarası,
+- yüzde konumu,
+- kayıt mesafesine göre hesaplanan gerçek rota mesafesi,
+- ham kot
 
 gösterilir. Model bölümleri arazi metriklerini ve hesap adımlarını kendi sonuç anlık görüntülerinden sunar.
 

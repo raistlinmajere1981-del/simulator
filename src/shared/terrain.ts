@@ -22,6 +22,17 @@ export interface TerrainSample {
   elevationM: number;
 }
 
+/**
+ * User-editable interior profile point. Endpoints are always derived from the
+ * observer ground and target base elevations, so percentages must stay in the
+ * open interval (0, 100).
+ */
+export interface ManualTerrainPoint {
+  id: string;
+  distancePercent: number;
+  elevationM: number;
+}
+
 export interface TerrainProfile {
   id: string;
   label: string;

@@ -31,7 +31,9 @@ Hedef görünürlüğü deneyi şu yeteneklere sahiptir:
 - WGS84 elipsoidi üzerinde koordinattan yüzey mesafesi
 - Başlangıç ve varış azimutları
 - Manuel ve koordinat mesafesi arasında seçim
-- Tek ara örnekli manuel arazi profili
+- Sıralı ve düzenlenebilir çok noktalı manuel arazi profili
+- Profil noktası ekleme, düzenleme ve silme
+- Canlı SVG profil önizlemesi ve kritik arazi mesafesi işareti
 - Küre ve düzlemde ayrı arazi görüş hattı çözümü
 - Kritik arazi noktası, minimum açıklık ve araziyi temizleyen hedef kotu
 - Gözlenen görünürlük ve belirsizlik
@@ -45,7 +47,7 @@ Hedef görünürlüğü deneyi şu yeteneklere sahiptir:
 
 Koordinat modu WGS84 ters jeodezik problemini Vincenty iterasyonuyla çözer. Yakın-antipodal durumda iterasyon yakınsamazsa sonuç sessizce elipsoidal sonuç gibi sunulmaz; ortalama Dünya yarıçaplı küresel yedek çözüm açık uyarıyla işaretlenir.
 
-Standart kırılma bu aşamada etkin yarıçap yaklaşımıyla hesaplanır. Manuel arazi profili iki uç zemin kotu ve tek ara örnekten oluşur. DEM, dalga yüzeyi, jeoit dönüşümü ve gelişmiş atmosfer profili henüz dahil değildir.
+Standart kırılma bu aşamada etkin yarıçap yaklaşımıyla hesaplanır. Manuel profil ara noktaları rota yüzdesi ve ortak datumdaki kotlarıyla saklanır; gözlemci ve hedef uçları zemin kotlarından otomatik türetilir. DEM, dalga yüzeyi, jeoit dönüşümü ve gelişmiş atmosfer profili henüz dahil değildir.
 
 ## Deney kayıtları
 
@@ -56,19 +58,21 @@ Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama şu işlemle
 - kayıtları yeniden açma,
 - kayıt silme,
 - koordinat ve jeodezik hesap anlık görüntüsünü saklama,
-- düşey datum, zemin kotları ve manuel profil girdilerini saklama,
+- düşey datum, zemin kotları ve bütün manuel profil noktalarını saklama,
 - model sürümleri ve sonuç anlık görüntülerini saklama.
 
 ## Taşınabilir dosyalar ve raporlar
 
-`0.5.0` geliştirme sürümünde:
+`0.6.0` geliştirme sürümünde:
 
 - deneyler sürümlemeli `.ggl.json` dosyası olarak dışa aktarılabilir,
 - taşınabilir deney dosyaları doğrulanarak içe aktarılabilir,
-- sürüm 1 ve 2 kayıtlar güvenli varsayılanlarla şema sürüm 3'e taşınabilir,
-- eski kayıtlar manuel mesafe ve kapalı arazi profili davranışını korur,
+- sürüm 1, 2 ve 3 kayıtlar güvenli varsayılanlarla şema sürüm 4'e taşınabilir,
+- sürüm 3'ün tek ara noktası deterministik biçimde çok noktalı diziye dönüştürülür,
+- nokta kimlikleri, yüzde konumları, tekrarlar ve kotlar doğrulanır,
+- eski kayıtlar manuel mesafe ve profil davranışını korur,
 - kimlik çakışmaları güvenli yeni kayıt oluşturarak çözülür,
-- girdiler, koordinatlar, jeodezik sonuçlar, düşey datum, arazi profili, model sonuçları ve hesap izleri çevrimdışı HTML raporuna dönüştürülebilir.
+- girdiler, koordinatlar, jeodezik sonuçlar, düşey datum, bütün profil noktaları, model sonuçları ve hesap izleri çevrimdışı HTML raporuna dönüştürülebilir.
 
 HTML raporu okunabilir ve yazdırılabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı `.ggl.json` dosyasıdır.
 
@@ -111,4 +115,4 @@ Aynı kontroller pull request'lerde GitHub Actions üzerinde otomatik çalışı
 
 ## Durum
 
-Hedef görünürlüğü motoru, yerel kayıtlar, taşınabilir dosyalar, çevrimdışı raporlama ve WGS84 koordinat girdileri `main` dalındadır. Düşey datum ve manuel arazi profili sürümü `agent/vertical-datum-and-terrain-foundation` dalında otomatik ve yerel doğrulama aşamasındadır.
+Hedef görünürlüğü motoru, yerel kayıtlar, taşınabilir dosyalar, çevrimdışı raporlama, WGS84 koordinat girdileri, düşey datum ve tek noktalı arazi temeli `main` dalındadır. Çok noktalı manuel profil sürümü `agent/multi-point-terrain-profiles` dalında otomatik doğrulamadan geçmiş ve Linux/KDE yerel görsel doğrulamasını beklemektedir.

@@ -1,8 +1,8 @@
 import type { CalculationTrace, ModelPrediction } from './domain';
-import type { VerticalDatumKind } from './terrain';
+import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 
 export type DistanceSource = 'manual' | 'coordinates';
-export type TerrainMode = 'off' | 'manual-three-point';
+export type TerrainMode = 'off' | 'manual-three-point' | 'manual-points';
 
 export interface SimulatorInputs {
   observerHeightM: number;
@@ -12,6 +12,7 @@ export interface SimulatorInputs {
   verticalDatumKind: VerticalDatumKind;
   verticalDatumOffsetM: number;
   terrainMode: TerrainMode;
+  /** Legacy single-point fields retained while the multi-point editor lands. */
   terrainIntermediateDistancePercent: number;
   terrainIntermediateElevationM: number;
   distanceSource: DistanceSource;
@@ -68,6 +69,11 @@ export interface SavedExperiment {
   createdAtIso: string;
   updatedAtIso: string;
   inputs: SimulatorInputs;
+  /**
+   * Ordered interior terrain points. Optional in the TypeScript transition so
+   * v3-era UI code can still save; storage normalization always materializes it.
+   */
+  manualTerrainPoints?: ManualTerrainPoint[];
   geodesic?: SavedGeodesicCalculation;
   modelVersions: Record<string, string>;
   predictions: ModelPrediction[];

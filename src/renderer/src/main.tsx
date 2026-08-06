@@ -7,6 +7,7 @@ import './dialogs.css';
 import './portable.css';
 import './geodesy.css';
 import './terrain.css';
+import './multi-terrain.css';
 
 const root = document.getElementById('root');
 

@@ -1,17 +1,40 @@
 .geodesic-top-grid {
-  grid-template-rows: max-content;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  grid-template-rows: auto;
+  align-items: start;
+  flex: 0 0 auto;
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+}
+
+.main-content > .terrain-panel,
+.main-content > .model-grid,
+.main-content > .bottom-grid {
+  flex: 0 0 auto;
+}
+
+.coordinate-summary,
+.geodesic-top-grid > .observation {
+  align-self: start;
+  min-height: 0;
+  height: auto;
 }
 
 .coordinate-summary {
-  height: max-content;
+  position: relative;
+  z-index: 2;
   overflow: visible;
 }
 
 .coordinate-summary .refraction-control {
-  min-height: 28px;
+  position: relative;
+  z-index: 3;
+  display: flex;
+  min-height: 30px;
   margin: 8px 0 0;
-  padding: 6px 8px;
+  padding: 7px 9px;
   border: 1px solid #304354;
   border-radius: 3px;
   background: #0b1822;
@@ -19,9 +42,11 @@
 
 .terrain-panel {
   position: relative;
-  z-index: 0;
+  z-index: 1;
   display: grid;
   gap: 8px;
+  min-height: 0;
+  margin-top: 0;
   padding: 10px 12px;
   border-color: #2d4658;
   background: #0d1b25;
@@ -79,6 +104,10 @@
   align-items: end;
 }
 
+.terrain-control-grid-compact {
+  grid-template-columns: 1.35fr repeat(3, minmax(0, 1fr));
+}
+
 .terrain-select select {
   width: 100%;
   min-height: 28px;
@@ -110,8 +139,15 @@
 }
 
 @media (max-width: 1500px) {
-  .terrain-control-grid {
+  .terrain-control-grid,
+  .terrain-control-grid-compact {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .geodesic-top-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -125,7 +161,8 @@
     align-self: flex-start;
   }
 
-  .terrain-control-grid {
+  .terrain-control-grid,
+  .terrain-control-grid-compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

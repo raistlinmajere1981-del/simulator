@@ -13,11 +13,19 @@ import {
   type SimulatorInputs,
   type TerrainMode
 } from '../../shared/simulator';
-import type { TerrainProfile, VerticalDatumKind } from '../../shared/terrain';
+import type {
+  ManualTerrainPoint,
+  TerrainProfile,
+  VerticalDatumKind
+} from '../../shared/terrain';
 import {
   inverseWgs84Geodesic,
   type GeodesicResult
 } from '../../simulation/geodesy';
+import {
+  buildManualTerrainProfile,
+  migrateLegacyManualTerrainPoint
+} from '../../simulation/manual-terrain-profile';
 import {
   runSimulationModels,
   type ModelRun
@@ -27,6 +35,7 @@ import {
   SaveExperimentDialog,
   TraceDialog
 } from './dialogs';
+import { MultiPointTerrainEditor } from './MultiPointTerrainEditor';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -164,31 +173,33 @@ function defaultExperimentName(): string {
   }).format(new Date())}`;
 }
 
+function defaultTerrainPoints(inputs = DEFAULT_SIMULATOR_INPUTS): ManualTerrainPoint[] {
+  return migrateLegacyManualTerrainPoint(
+    inputs.terrainIntermediateDistancePercent,
+    inputs.terrainIntermediateElevationM
+  );
+}
+
 function buildTerrainProfile(
   inputs: SimulatorInputs,
-  effectiveDistanceM: number
+  effectiveDistanceM: number,
+  manualTerrainPoints: ManualTerrainPoint[]
 ): TerrainProfile | undefined {
   if (inputs.terrainMode === 'off' || effectiveDistanceM <= 0) return undefined;
 
-  return {
-    id: 'interactive-manual-three-point',
-    label: 'Manuel üç noktalı arazi profili',
-    source: 'manual',
+  return buildManualTerrainProfile({
+    id: 'interactive-manual-points',
+    label: `Manuel ${manualTerrainPoints.length} ara noktalı profil`,
     datum: {
       kind: inputs.verticalDatumKind,
       label: datumLabels[inputs.verticalDatumKind],
       offsetM: inputs.verticalDatumOffsetM
     },
     totalDistanceM: effectiveDistanceM,
-    samples: [
-      { distanceM: 0, elevationM: inputs.observerGroundElevationM },
-      {
-        distanceM: effectiveDistanceM * inputs.terrainIntermediateDistancePercent / 100,
-        elevationM: inputs.terrainIntermediateElevationM
-      },
-      { distanceM: effectiveDistanceM, elevationM: inputs.targetGroundElevationM }
-    ]
-  };
+    observerGroundElevationM: inputs.observerGroundElevationM,
+    targetGroundElevationM: inputs.targetGroundElevationM,
+    points: manualTerrainPoints
+  });
 }
 
 function geodesicPrediction(result: GeodesicResult | undefined): ModelPrediction | undefined {
@@ -483,32 +494,38 @@ function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.El
 
 function TerrainPanel({
   inputs,
+  points,
   effectiveDistanceKm,
+  criticalDistanceM,
   onDatumChange,
   onModeChange,
-  onNumberChange
+  onNumberChange,
+  onPointsChange
 }: {
   inputs: SimulatorInputs;
+  points: ManualTerrainPoint[];
   effectiveDistanceKm: number;
+  criticalDistanceM: number | null;
   onDatumChange(kind: VerticalDatumKind): void;
   onModeChange(mode: TerrainMode): void;
   onNumberChange(key: NumericInputKey, value: number): void;
+  onPointsChange(points: ManualTerrainPoint[]): void;
 }): React.JSX.Element {
-  const terrainEnabled = inputs.terrainMode === 'manual-three-point';
+  const terrainEnabled = inputs.terrainMode !== 'off';
   return (
     <section className={`terrain-panel panel ${terrainEnabled ? 'enabled' : ''}`}>
       <div className="terrain-heading">
         <div>
           <span className="eyebrow">Düşey referans ve arazi</span>
-          <strong>{terrainEnabled ? 'Manuel üç noktalı profil' : 'Yalnız uç zemin kotları'}</strong>
+          <strong>{terrainEnabled ? `${points.length} ara noktalı manuel profil` : 'Yalnız uç zemin kotları'}</strong>
         </div>
         <div className="terrain-mode-buttons">
           <button className={!terrainEnabled ? 'selected' : ''} type="button" onClick={() => onModeChange('off')}>Profil kapalı</button>
-          <button className={terrainEnabled ? 'selected' : ''} type="button" onClick={() => onModeChange('manual-three-point')}>Manuel profil</button>
+          <button className={terrainEnabled ? 'selected' : ''} type="button" onClick={() => onModeChange('manual-points')}>Manuel profil</button>
         </div>
       </div>
 
-      <div className="terrain-control-grid">
+      <div className="terrain-control-grid terrain-control-grid-compact">
         <label className="input-field terrain-select">
           <span>Düşey datum</span>
           <select
@@ -523,14 +540,23 @@ function TerrainPanel({
         <NumericField inputKey="observerGroundElevationM" label="Gözlemci zemin kotu" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
         <NumericField inputKey="targetGroundElevationM" label="Hedef taban kotu" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
         <NumericField inputKey="verticalDatumOffsetM" label="Datum / gelgit ofseti" unit="m" step={0.01} inputs={inputs} onNumberChange={onNumberChange} />
-        <NumericField inputKey="terrainIntermediateDistancePercent" label="Ara nokta konumu" unit="%" step={0.1} inputs={inputs} disabled={!terrainEnabled} onNumberChange={onNumberChange} />
-        <NumericField inputKey="terrainIntermediateElevationM" label="Ara nokta kotu" unit="m" step={0.1} inputs={inputs} disabled={!terrainEnabled} onNumberChange={onNumberChange} />
       </div>
 
       <p className="terrain-summary">
         {datumLabels[inputs.verticalDatumKind]} · ofset {numberFormatter.format(inputs.verticalDatumOffsetM)} m · gözlemci mutlak göz kotu {numberFormatter.format(inputs.observerGroundElevationM + inputs.verticalDatumOffsetM + inputs.observerHeightM)} m · hedef tepe kotu {numberFormatter.format(inputs.targetGroundElevationM + inputs.verticalDatumOffsetM + inputs.targetHeightM)} m
-        {terrainEnabled && ` · ara örnek ${numberFormatter.format(effectiveDistanceKm * inputs.terrainIntermediateDistancePercent / 100)} km konumunda`}
+        {terrainEnabled && ` · ${points.length} ara nokta · ${numberFormatter.format(effectiveDistanceKm)} km rota`}
       </p>
+
+      {terrainEnabled && (
+        <MultiPointTerrainEditor
+          points={points}
+          routeDistanceKm={effectiveDistanceKm}
+          observerGroundElevationM={inputs.observerGroundElevationM}
+          targetGroundElevationM={inputs.targetGroundElevationM}
+          criticalDistanceM={criticalDistanceM}
+          onChange={onPointsChange}
+        />
+      )}
     </section>
   );
 }
@@ -585,7 +611,7 @@ function ModelCard({
           <div className="profile-label left">Gözlemci<br /><b>{numberFormatter.format(inputs.observerGroundElevationM + inputs.observerHeightM)} m</b></div>
           <div className="profile-label right">Hedef tepesi<br /><b>{numberFormatter.format(inputs.targetGroundElevationM + inputs.targetHeightM)} m</b></div>
           <span className="line-of-sight" /><span className={`surface ${presentation.shape}`} />
-          {inputs.terrainMode !== 'off' && <span className="terrain-obstacle" title="Manuel arazi örneği" />}
+          {inputs.terrainMode !== 'off' && <span className="terrain-obstacle" title="Manuel arazi profili" />}
         </div>
       )}
       <div className={`metric-grid ${isProjection ? 'unsupported-metrics' : ''}`}>
@@ -635,6 +661,9 @@ function ResultsTable({ runs, onShowTrace }: { runs: ModelRun[]; onShowTrace(mod
 
 export function AppNext(): React.JSX.Element {
   const [inputs, setInputs] = useState<SimulatorInputs>(DEFAULT_SIMULATOR_INPUTS);
+  const [manualTerrainPoints, setManualTerrainPoints] = useState<ManualTerrainPoint[]>(
+    defaultTerrainPoints()
+  );
   const [runs, setRuns] = useState<ModelRun[]>([]);
   const [savedExperiments, setSavedExperiments] = useState<SavedExperiment[]>([]);
   const [activeExperimentId, setActiveExperimentId] = useState<string>();
@@ -668,8 +697,8 @@ export function AppNext(): React.JSX.Element {
     surfaceDistanceKm: effectiveDistanceKm
   }), [effectiveDistanceKm, inputs]);
   const terrainProfile = useMemo(
-    () => buildTerrainProfile(inputs, effectiveDistanceKm * 1_000),
-    [effectiveDistanceKm, inputs]
+    () => buildTerrainProfile(inputs, effectiveDistanceKm * 1_000, manualTerrainPoints),
+    [effectiveDistanceKm, inputs, manualTerrainPoints]
   );
 
   const experiment = useMemo<ExperimentDefinition>(() => ({
@@ -727,6 +756,11 @@ export function AppNext(): React.JSX.Element {
     setIsDirty(true);
   };
 
+  const updateTerrainPoints = (points: ManualTerrainPoint[]): void => {
+    setManualTerrainPoints(points);
+    setIsDirty(true);
+  };
+
   const handleNumberChange = (key: NumericInputKey, value: number): void => {
     if (!Number.isFinite(value)) return;
     updateInputs((current) => ({ ...current, [key]: clampInputValue(key, value) }));
@@ -734,6 +768,7 @@ export function AppNext(): React.JSX.Element {
 
   const loadExperiment = (saved: SavedExperiment): void => {
     setInputs(saved.inputs);
+    setManualTerrainPoints(saved.manualTerrainPoints ?? defaultTerrainPoints(saved.inputs));
     setActiveExperimentId(saved.id);
     setActiveExperimentName(saved.name);
     setIsDirty(false);
@@ -749,6 +784,7 @@ export function AppNext(): React.JSX.Element {
       createdAtIso: existing?.createdAtIso ?? now,
       updatedAtIso: now,
       inputs,
+      manualTerrainPoints,
       geodesic,
       modelVersions: Object.fromEntries([
         ...simulationModels.map((model) => [model.metadata.id, model.metadata.version] as const),
@@ -762,6 +798,7 @@ export function AppNext(): React.JSX.Element {
       setSavedExperiments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       setActiveExperimentId(saved.id);
       setActiveExperimentName(saved.name);
+      setManualTerrainPoints(saved.manualTerrainPoints ?? manualTerrainPoints);
       setIsDirty(false);
       setSaveDialogOpen(false);
       setStorageMessage(`“${saved.name}” cihazda kaydedildi.`);
@@ -826,6 +863,13 @@ export function AppNext(): React.JSX.Element {
   const selectedPrediction = traceModelId === geodesicMetadata.id
     ? geoPrediction
     : modelRun?.prediction;
+  const idealSpherePrediction = runs.find(
+    (run) => run.metadata.id === 'ideal-sphere'
+  )?.prediction;
+  const criticalTerrainDistanceM = getMetric(
+    idealSpherePrediction,
+    'terrainCriticalDistanceM'
+  );
 
   return (
     <div className="app-shell">
@@ -860,6 +904,7 @@ export function AppNext(): React.JSX.Element {
               onRefractionChange={(enabled) => updateInputs((current) => ({ ...current, useStandardRefraction: enabled }))}
               onReset={() => {
                 setInputs(DEFAULT_SIMULATOR_INPUTS);
+                setManualTerrainPoints(defaultTerrainPoints());
                 setActiveExperimentId(undefined);
                 setActiveExperimentName('');
                 setIsDirty(false);
@@ -873,10 +918,13 @@ export function AppNext(): React.JSX.Element {
 
           <TerrainPanel
             inputs={inputs}
+            points={manualTerrainPoints}
             effectiveDistanceKm={effectiveDistanceKm}
+            criticalDistanceM={criticalTerrainDistanceM}
             onDatumChange={(verticalDatumKind) => updateInputs((current) => ({ ...current, verticalDatumKind }))}
             onModeChange={(terrainMode) => updateInputs((current) => ({ ...current, terrainMode }))}
             onNumberChange={handleNumberChange}
+            onPointsChange={updateTerrainPoints}
           />
 
           <div className="model-grid">
@@ -898,7 +946,7 @@ export function AppNext(): React.JSX.Element {
               <ul>
                 <li>Koordinat modu WGS84 ters jeodezik çözümünü kullanır.</li>
                 <li>Zemin ve hedef kotları seçilen ortak düşey datumda yorumlanır.</li>
-                <li>Manuel profil bir ara örnek ile iki uç kotunu birleştirir.</li>
+                <li>Manuel profil sıralı ve düzenlenebilir ara noktaları iki uç kotuyla birleştirir.</li>
                 <li>Küre ve düzlem aynı profili kendi geometrilerinde ayrı çözer.</li>
                 <li>Standart kırılma yalnızca kürede etkin yarıçap yaklaşımıdır.</li>
                 <li>Azimutal gösterim yalnızca kartografik referanstır.</li>

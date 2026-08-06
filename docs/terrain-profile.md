@@ -30,7 +30,7 @@ Uygulama bu aşamada ortometrik ve elipsoidal yükseklik arasında otomatik jeoi
 
 ## Uç kotları
 
-Gözlemci ve hedef yüksekliği artık zemin kotundan ayrıdır:
+Gözlemci ve hedef yüksekliği zemin kotundan ayrıdır:
 
 ```text
 gözlemci göz kotu = gözlemci zemin kotu + datum ofseti + göz yüksekliği
@@ -55,21 +55,53 @@ artan sırada mesafe-yükseklik örnekleri
 
 İlk örnek `0 m`, son örnek deneyin toplam yüzey mesafesinde olmalıdır. Örnek mesafeleri tekrarsız ve kesin artan sırada tutulur.
 
-## İlk manuel profil arayüzü
+## Çok noktalı manuel profil
 
-`0.5.0` sürümündeki manuel profil üç örnekten oluşur:
+`0.6.0` sürümünde manuel profil şu bileşenlerden oluşur:
 
-1. gözlemci zemin kotu,
-2. kullanıcı tarafından yüzde konumuyla belirlenen tek arazi noktası,
-3. hedef taban kotu.
+1. gözlemci zemin kotundan otomatik türetilen başlangıç ucu,
+2. kullanıcı tarafından eklenen sıralı ara noktalar,
+3. hedef taban kotundan otomatik türetilen bitiş ucu.
 
-Ara noktanın mesafesi:
+Her ara nokta şunları saklar:
+
+```text
+id
+rota üzerindeki yüzde konumu
+düşey datuma göre kot
+```
+
+Ara noktanın gerçek mesafesi:
 
 ```text
 ara mesafe = toplam yüzey mesafesi × ara konum yüzdesi / 100
 ```
 
-Bu düzenleyici, arazi motorunu ve veri akışını doğrulamak için bilinçli olarak sınırlıdır. Gerçek topografyayı tek ara noktayla temsil ettiği iddia edilmez.
+olarak hesaplanır. Bu nedenle manuel ve koordinat mesafesi arasında geçiş yapıldığında profil noktaları rota üzerindeki göreli konumlarını korur.
+
+### Nokta kuralları
+
+- Konum açık aralıkta `0 < yüzde < 100` olmalıdır.
+- Nokta kimlikleri boş veya tekrarlı olamaz.
+- Yüzde konumları tekrarsız olmalıdır.
+- Kot ve yüzde değerleri sonlu sayılar olmalıdır.
+- Noktalar hesaplama öncesinde artan yüzde sırasına dizilir.
+- Manuel profil en fazla 2.000 ara nokta kabul eder.
+
+## Düzenleyici davranışı
+
+Arayüz:
+
+- en büyük boşluğun ortasına yeni bir nokta ekler,
+- yeni noktanın başlangıç kotunu komşu noktalar arasında doğrusal enterpolasyonla üretir,
+- yüzde konumu ve kotu düzenlemeye izin verir,
+- noktayı silmeye izin verir,
+- düzenlemeden sonra noktaları yeniden sıralar,
+- geçersiz veya tekrarlı konumları açık hata olarak gösterir,
+- profilin SVG önizlemesini çizer,
+- ideal küre sonucundaki kritik arazi mesafesini kesikli işaretle gösterir.
+
+Nokta ekleme, düzenleme veya silme işlemi deney durumunu değiştirir ve küre ile düzlem hesaplarını canlı olarak yeniden çalıştırır.
 
 ## Görüş hattı açıklığı
 
@@ -116,6 +148,20 @@ Küresel görünürlük için eğrilikten gelen minimum hedef kotu ile araziden 
 
 Standart kırılma etkinse arazi çözümüne de etkin yarıçap verilir. Bu, katmanlı atmosfer ışın izlemesi değil; mevcut standart kırılma yaklaşımının tutarlı biçimde arazi hesabına uygulanmasıdır.
 
+## Kayıt ve geriye dönük taşıma
+
+Çok noktalı profil `SavedExperiment.manualTerrainPoints` alanında saklanır. Nokta dizisi kayıt, `.ggl.json` ve HTML raporu boyunca korunur.
+
+Şema v3 kayıtlarında yalnız tek ara nokta bulunur. Şema v4'e taşınırken bu değer:
+
+```text
+id = legacy-intermediate-1
+distancePercent = eski ara nokta yüzdesi
+elevationM = eski ara nokta kotu
+```
+
+şeklinde tek elemanlı diziye dönüştürülür. Böylece önceki deney davranışı korunur.
+
 ## İzlenebilirlik
 
 Model sonuçları ve hesap izleri şunları içerir:
@@ -129,14 +175,14 @@ Model sonuçları ve hesap izleri şunları içerir:
 - araziyi temizleyen minimum hedef kotu,
 - arazi ve eğrilik sonrasında görünür hedef oranı.
 
-Aynı bilgiler kayıt, `.ggl.json` dışa aktarma ve HTML raporunda korunur.
+HTML raporu bütün ara noktaları sıra numarası, yüzde konumu, gerçek rota mesafesi ve ham kotuyla gösterir.
 
 ## Mevcut sınırlar
 
 Mevcut sürüm şunları içermez:
 
-- birden fazla ara noktayı elle ekleme,
 - CSV veya GeoJSON profil içe aktarma,
+- profil noktalarını grafik üzerinde sürükleyerek düzenleme,
 - çevrimiçi DEM indirme,
 - jeoit modeliyle datum dönüşümü,
 - su yüzeyi, dalga ve gelgit zaman modeli,
