@@ -51,6 +51,25 @@ cellsize 0.5
     expect(grid.warnings).toHaveLength(1);
   });
 
+  it('rejects partial and mixed lower-left origin headers', () => {
+    expect(() => parseEsriAsciiGrid(`ncols 1
+nrows 1
+xllcorner 0
+yllcenter 0
+cellsize 1
+1
+`, 'mixed.asc')).toThrow('eksiksiz');
+
+    expect(() => parseEsriAsciiGrid(`ncols 1
+nrows 1
+xllcorner 0
+yllcorner 0
+xllcenter 0.5
+cellsize 1
+1
+`, 'partial-extra.asc')).toThrow('eksiksiz');
+  });
+
   it('returns null outside coverage or when interpolation touches NODATA', () => {
     const grid = parseEsriAsciiGrid(`ncols 2
 nrows 2

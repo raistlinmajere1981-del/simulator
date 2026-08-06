@@ -132,10 +132,16 @@ export function parseEsriAsciiGrid(
     throw new RangeError('cellsize 0…180 derece aralığında olmalı.');
   }
   const cellSizeDeg = header.cellsize;
+  const hasAnyCornerOrigin = finite(header.xllcorner) || finite(header.yllcorner);
+  const hasAnyCenterOrigin = finite(header.xllcenter) || finite(header.yllcenter);
   const hasCornerOrigin = finite(header.xllcorner) && finite(header.yllcorner);
   const hasCenterOrigin = finite(header.xllcenter) && finite(header.yllcenter);
-  if (hasCornerOrigin === hasCenterOrigin) {
-    throw new Error('Tam olarak bir xllcorner/yllcorner veya xllcenter/yllcenter çifti gerekli.');
+  if ((hasAnyCornerOrigin && !hasCornerOrigin) ||
+    (hasAnyCenterOrigin && !hasCenterOrigin) ||
+    hasCornerOrigin === hasCenterOrigin) {
+    throw new Error(
+      'Tam olarak bir eksiksiz xllcorner/yllcorner veya xllcenter/yllcenter çifti gerekli.'
+    );
   }
 
   const originMode: EsriAsciiGridOriginMode = hasCornerOrigin ? 'corner' : 'center';
