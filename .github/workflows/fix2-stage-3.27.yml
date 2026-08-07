@@ -1,0 +1,29 @@
+name: Final stage 3.27 typing fix
+
+on:
+  push:
+    branches:
+      - agent/scenario-horizon-long-distance
+    paths:
+      - scripts/fix2_stage_3_27.py
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/scenario-horizon-long-distance
+          fetch-depth: 0
+      - run: python scripts/fix2_stage_3_27.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/renderer/src/AppNext.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: explicitly type scenario experiments"
+          git push origin HEAD:agent/scenario-horizon-long-distance
