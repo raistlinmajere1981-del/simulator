@@ -1,0 +1,72 @@
+name: Patch model viewport
+
+on:
+  push:
+    branches:
+      - agent/model-visualization-three
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/model-visualization-three
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch AppNext model viewport
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/renderer/src/AppNext.tsx')
+          text = path.read_text()
+
+          import_anchor = "import { WaterSurfaceControl } from './WaterSurfaceControl';"
+          import_replacement = import_anchor + "\nimport { WorldModelViewport } from './WorldModelViewport';"
+          if "from './WorldModelViewport'" not in text:
+              if import_anchor not in text:
+                  raise SystemExit('WorldModelViewport import anchor not found')
+              text = text.replace(import_anchor, import_replacement, 1)
+
+          old = '''      <div className={`world-visual ${presentation.shape} ${isProjection ? 'projection-only' : ''}`}>
+            <span className="observer-pin">●</span><span className="target-pin">●</span><span className="route" />
+            {isProjection && (
+              <div className="projection-overlay">
+                <strong>HARİTA PROJEKSİYONU</strong>
+                <span>Konumları gösterebilir; fiziksel görüş tahmini üretemez.</span>
+              </div>
+            )}
+          </div>'''
+          new = '''      <WorldModelViewport
+            kind={presentation.shape === 'disk' ? 'plane' : presentation.shape}
+            observerLatitudeDeg={inputs.observerLatitudeDeg}
+            observerLongitudeDeg={inputs.observerLongitudeDeg}
+            targetLatitudeDeg={inputs.targetLatitudeDeg}
+            targetLongitudeDeg={inputs.targetLongitudeDeg}
+          />'''
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif '<WorldModelViewport' not in text:
+              raise SystemExit('Legacy world visual block not found')
+
+          path.write_text(text)
+          PY
+      - name: Commit isolated source patch
+        run: |
+          if git diff --quiet; then
+            echo "No patch required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/renderer/src/AppNext.tsx
+          git commit -m "feat: connect model cards to interactive viewports"
+          git push origin HEAD:agent/model-visualization-three
