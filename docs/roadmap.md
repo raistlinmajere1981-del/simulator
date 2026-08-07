@@ -295,14 +295,41 @@ Durum: tamamlandı · `1.2.0`
 
 Ayrıntı: [`roadmap-stage-3.27.md`](roadmap-stage-3.27.md)
 
+# Aşama 4 — Gelişmiş atmosfer
+
+## Aşama 4.1 — Katmanlı meteorolojik atmosfer profili çekirdeği
+
+Durum: tamamlandı · `1.2.1`
+
+- yükseklik, sıcaklık, basınç ve bağıl nem örnek sözleşmesi
+- kaynak etiketi ve açık saat dilimli gözlem zamanı
+- fiziksel aralık, örnek sırası ve su buharı basıncı doğrulaması
+- katman gradyanları
+- profil kapsamı içinde doğrusal enterpolasyon
+- Buck tipi doygun su buharı basıncı ve kısmi basınç yardımcıları
+- nemli hava yoğunluğu
+- ölçülmeyen yüksekliklere otomatik ekstrapolasyon yapmama
+
+Bu aşama mevcut standart `k` etkin-yarıçap yaklaşımını değiştirmez ve henüz optik ışın izleme yapmaz.
+
+Ayrıntı: [`roadmap-stage-4.1.md`](roadmap-stage-4.1.md)
+
+## Aşama 4.2 — Optik kırılma indisi ve katmanlı ışın izi
+
+- görünür ışık için açık dalga boyu seçimi
+- formülü ve geçerlilik sınırları izlenebilir optik kırılma indisi
+- katman sınırlarında ışın ilerleme hesabı
+- küresel ve düzlemsel yüzey geometrisinden ayrı atmosfer çözümü
+- standart `k` yaklaşımıyla karşılaştırma
+
+## Aşama 4.3 — Atmosfer profili arayüzü ve kayıt
+
+- profil noktası editörü
+- profil görsel katmanı
+- deney kaydı / yeniden açma / taşınabilir provenans
+- standart ve gelişmiş atmosfer sonuçlarının yan yana gösterimi
+
 # Sıradaki ana ürün aşamaları
-
-## Aşama 4 — Gelişmiş atmosfer
-
-- sıcaklık, basınç ve nem girdileri
-- dikey atmosfer profili
-- katmanlı ışın izleme
-- standart ve gelişmiş sonuç karşılaştırması
 
 ## Aşama 5 — Fotoğraf kalibrasyonu
 
