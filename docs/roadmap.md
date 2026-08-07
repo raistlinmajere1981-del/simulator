@@ -251,26 +251,30 @@ Durum: tamamlandı · `1.1.0`
 
 Ayrıntı: [`roadmap-stage-3.24.md`](roadmap-stage-3.24.md)
 
+## Aşama 3.25 — Çevrimdışı coğrafi görsel katmanlar
+
+Durum: tamamlandı · `1.1.1`
+
+- Natural Earth 110m tabanlı çevrimdışı ülke/kıyı sınırları
+- aynı sınır verisinin küre ve azimutal kartografik referansta gösterimi
+- kıta/ülke sınırı ve ızgara katmanlarını ayrı açma/kapatma
+- katman değişikliklerinde kamera durumunu koruyan anlık yeniden çizim
+- model görünümünü başlangıç kamerasına döndüren sıfırlama kontrolü
+- tanımlı düzlem modeline küresel coğrafi projeksiyon uydurmama
+- coğrafi çizgi ayrıştırma doğrulaması ve birim testleri
+
+Ayrıntı: [`roadmap-stage-3.25.md`](roadmap-stage-3.25.md)
+
 # Sıradaki ana ürün aşamaları
 
-## Aşama 3.25 — Görsel coğrafi katmanlar
+## Aşama 3.26 — Arazi profilinin 3B sahneyle ilişkilendirilmesi
 
 Durum: sıradaki
-
-Hedef:
-
-- çevrimdışı kıta / kıyı / ülke sınırları
-- küre ve azimutal referansta aynı veri kaynağından çizim
-- topografya için görsel katman altyapısı
-- katman açma/kapatma kontrolleri
-- ızgara ve rota yardımcı katmanlarının kullanıcı kontrolüne alınması
-- görsel veri kaynağının fiziksel hesap motorundan ayrı tutulması
-
-## Aşama 3.26 — Arazi profilinin 3B sahneyle ilişkilendirilmesi
 
 - rota boyunca arazi yükseklik şeridi
 - DEM/manuel profil kaynağının 3B sahnede açık gösterimi
 - görünürlük hesabı ile görsel yükseltme ölçeğinin birbirine karıştırılmaması
+- topografya katmanı için görsel kaynak/ölçek bilgisi
 
 ## Aşama 3.27 — Ayrı ufuk ve uzun mesafe görüş senaryoları
 

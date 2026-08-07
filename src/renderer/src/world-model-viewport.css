@@ -42,6 +42,27 @@
   outline: none;
 }
 
+.world-model-reset {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  border: 1px solid rgba(114, 158, 181, 0.28);
+  border-radius: 6px;
+  padding: 5px 7px;
+  background: rgba(7, 16, 23, 0.72);
+  color: #9eb4c1;
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.world-model-reset:hover {
+  border-color: rgba(120, 190, 215, 0.52);
+  color: #d4edf6;
+}
+
 .world-model-legend {
   display: flex;
   align-items: center;
@@ -78,6 +99,12 @@
   background: #58d6ff;
 }
 
+.world-model-legend .boundary-state {
+  border-left: 1px solid rgba(116, 149, 169, 0.18);
+  padding-left: 9px;
+  color: #85adba;
+}
+
 .world-model-legend .world-model-mode {
   margin-left: auto;
   min-width: 0;
@@ -110,6 +137,7 @@
     min-height: 165px;
   }
 
+  .world-model-legend .boundary-state,
   .world-model-legend .world-model-mode {
     display: none;
   }
