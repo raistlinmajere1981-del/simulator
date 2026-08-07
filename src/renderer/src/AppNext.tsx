@@ -605,34 +605,6 @@ function terrainVisualizationSourceLabel(source: TerrainProfileSource | undefine
   return `CSV · ${source.fileName}`;
 }
 
-function terrainVisualizationSourceLabel(source: TerrainProfileSource | undefined): string {
-  if (!source) return 'Manuel profil';
-  if (source.kind === 'dem') return `DEM · ${source.fileName}`;
-  if (source.kind === 'geojson') return `GeoJSON · ${source.fileName}`;
-  return `CSV · ${source.fileName}`;
-}
-
-function terrainVisualizationSourceLabel(source: TerrainProfileSource | undefined): string {
-  if (!source) return 'Manuel profil';
-  if (source.kind === 'dem') return `DEM · ${source.fileName}`;
-  if (source.kind === 'geojson') return `GeoJSON · ${source.fileName}`;
-  return `CSV · ${source.fileName}`;
-}
-
-function terrainVisualizationSourceLabel(source: TerrainProfileSource | undefined): string {
-  if (!source) return 'Manuel profil';
-  if (source.kind === 'dem') return `DEM · ${source.fileName}`;
-  if (source.kind === 'geojson') return `GeoJSON · ${source.fileName}`;
-  return `CSV · ${source.fileName}`;
-}
-
-function terrainVisualizationSourceLabel(source: TerrainProfileSource | undefined): string {
-  if (!source) return 'Manuel profil';
-  if (source.kind === 'dem') return `DEM · ${source.fileName}`;
-  if (source.kind === 'geojson') return `GeoJSON · ${source.fileName}`;
-  return `CSV · ${source.fileName}`;
-}
-
 function TerrainPanel({
   experimentId,
   inputs,
