@@ -147,6 +147,21 @@ function toPathSample(
   };
 }
 
+function isDescendingTowardReferenceSurface(
+  state: RayState,
+  earthRadiusM: number,
+  profileMinimumAltitudeM: number
+): boolean {
+  if (profileMinimumAltitudeM > 0) return false;
+  const radiusM = Math.hypot(state.xM, state.yM);
+  const altitudeM = radiusM - earthRadiusM;
+  if (altitudeM < 0) return false;
+  const radialX = state.xM / radiusM;
+  const radialY = state.yM / radiusM;
+  const radialDirection = state.tx * radialX + state.ty * radialY;
+  return radialDirection < 0;
+}
+
 export function traceLayeredAtmosphereRay(
   profile: LayeredAtmosphereProfile,
   options: LayeredRayTraceOptions
@@ -208,8 +223,15 @@ export function traceLayeredAtmosphereRay(
       next = rk4Step(state, currentStepM, opticalProfile, earthRadiusM);
     } catch (error) {
       if (error instanceof Error && error.message.includes('profil')) {
-        terminationReason = 'profile-limit';
-        warnings.push('Işın atmosfer profilinin ölçülmüş yükseklik kapsamına ulaştığı için izleme durduruldu.');
+        if (isDescendingTowardReferenceSurface(state, earthRadiusM, first.altitudeM)) {
+          terminationReason = 'surface-intersection';
+          warnings.push(
+            'RK4 alt adımı 0 m referans yüzeyinin altına geçmeden önce sonlandırıldı; bu alt profil sınırı fiziksel yüzey kesişimi olarak yorumlandı.'
+          );
+        } else {
+          terminationReason = 'profile-limit';
+          warnings.push('Işın atmosfer profilinin ölçülmüş yükseklik kapsamına ulaştığı için izleme durduruldu.');
+        }
         break;
       }
       throw error;
@@ -229,8 +251,15 @@ export function traceLayeredAtmosphereRay(
       samples.push(toPathSample(state, pathDistanceM, opticalProfile, earthRadiusM));
     } catch (error) {
       if (error instanceof Error && error.message.includes('profil')) {
-        terminationReason = 'profile-limit';
-        warnings.push('Işın atmosfer profilinin ölçülmüş yükseklik kapsamına ulaştığı için izleme durduruldu.');
+        if (isDescendingTowardReferenceSurface(state, earthRadiusM, first.altitudeM)) {
+          terminationReason = 'surface-intersection';
+          warnings.push(
+            'Işın 0 m referans yüzeyini adım içinde geçti; yüzey kesişimi son geçerli optik örnekten sınırlandırıldı.'
+          );
+        } else {
+          terminationReason = 'profile-limit';
+          warnings.push('Işın atmosfer profilinin ölçülmüş yükseklik kapsamına ulaştığı için izleme durduruldu.');
+        }
         break;
       }
       throw error;
