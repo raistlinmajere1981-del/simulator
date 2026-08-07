@@ -13,7 +13,7 @@ export class AzimuthalProjectionReference implements SimulationModel {
   readonly metadata: ModelMetadata = {
     id: 'azimuthal-projection',
     name: 'Azimutal Gösterim',
-    version: '0.2.0',
+    version: '0.2.1',
     description:
       'Harita projeksiyonu referansı. Tek başına fiziksel yüzey veya ışık modeli değildir.',
     capabilities: ['surface-distance'],
@@ -27,9 +27,11 @@ export class AzimuthalProjectionReference implements SimulationModel {
     return this.metadata.capabilities.includes(capability);
   }
 
-  validateExperiment(_experiment: ExperimentDefinition): string[] {
+  validateExperiment(experiment: ExperimentDefinition): string[] {
     return [
-      'Azimutal projeksiyon tek başına hedef görünürlüğü tahmini üretemez.'
+      experiment.type === 'horizon'
+        ? 'Azimutal projeksiyon tek başına fiziksel ufuk mesafesi üretemez.'
+        : 'Azimutal projeksiyon tek başına hedef görünürlüğü tahmini üretemez.'
     ];
   }
 
@@ -46,7 +48,7 @@ export class AzimuthalProjectionReference implements SimulationModel {
       traceId: `${this.metadata.id}:${experiment.id}:unsupported`,
       trace: {
         summary:
-          'Projeksiyon konumları harita düzlemine dönüştürür; hedef görünürlüğü için gerekli fiziksel kuralları tanımlamaz.',
+          'Projeksiyon konumları harita düzlemine dönüştürür; görünürlük veya fiziksel ufuk için gerekli yüzey ve ışık kurallarını tanımlamaz.',
         assumptions: this.metadata.assumptions,
         steps: [
           {

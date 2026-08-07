@@ -47,7 +47,7 @@ export class IdealSphereModel implements SimulationModel {
   readonly metadata: ModelMetadata = {
     id: 'ideal-sphere',
     name: 'İdeal Küre',
-    version: '0.3.0',
+    version: '0.4.0',
     description:
       'Ortalama yarıçaplı küresel yüzey üzerinde görüş hattı, ufuk ve isteğe bağlı arazi profili hesabı.',
     capabilities: [
@@ -73,17 +73,19 @@ export class IdealSphereModel implements SimulationModel {
     const errors: string[] = [];
     const distance = getMeasurement(experiment, 'surfaceDistanceM', 'm');
 
-    if (experiment.type !== 'target-visibility') {
-      errors.push('Bu sürüm yalnızca hedef görünürlüğü deneyini destekler.');
+    if (experiment.type !== 'target-visibility' && experiment.type !== 'horizon') {
+      errors.push('Bu sürüm hedef görünürlüğü ve ufuk deneylerini destekler.');
     }
-    if (!experiment.target) errors.push('Hedef bilgisi zorunludur.');
-    if (!distance || distance.value < 0) {
-      errors.push('Metre biriminde geçerli surfaceDistanceM ölçümü zorunludur.');
-    }
-    if (experiment.terrainProfile) {
-      errors.push(...validateTerrainProfile(experiment.terrainProfile));
-      if (distance && Math.abs(experiment.terrainProfile.totalDistanceM - distance.value) > 1e-6) {
-        errors.push('Arazi profili ile deney yüzey mesafesi aynı olmalıdır.');
+    if (experiment.type === 'target-visibility') {
+      if (!experiment.target) errors.push('Hedef bilgisi zorunludur.');
+      if (!distance || distance.value < 0) {
+        errors.push('Metre biriminde geçerli surfaceDistanceM ölçümü zorunludur.');
+      }
+      if (experiment.terrainProfile) {
+        errors.push(...validateTerrainProfile(experiment.terrainProfile));
+        if (distance && Math.abs(experiment.terrainProfile.totalDistanceM - distance.value) > 1e-6) {
+          errors.push('Arazi profili ile deney yüzey mesafesi aynı olmalıdır.');
+        }
       }
     }
 
@@ -99,7 +101,7 @@ export class IdealSphereModel implements SimulationModel {
       validationErrors.push('Atmosfer profiliyle ışın izleme henüz uygulanmadı.');
     }
 
-    if (validationErrors.length > 0 || !experiment.target) {
+    if (validationErrors.length > 0) {
       return {
         modelId: this.metadata.id,
         experimentId: experiment.id,
@@ -115,9 +117,6 @@ export class IdealSphereModel implements SimulationModel {
       };
     }
 
-    const distanceMeasurement = getMeasurement(experiment, 'surfaceDistanceM', 'm');
-    if (!distanceMeasurement) throw new Error('Yüzey mesafesi bulunamadı.');
-
     const warnings: string[] = [];
     const baseRadiusM = MEAN_EARTH_RADIUS_M;
     let radiusM = baseRadiusM;
@@ -131,6 +130,48 @@ export class IdealSphereModel implements SimulationModel {
     }
 
     const observerHeightM = experiment.observer.elevationM + experiment.observer.eyeHeightM;
+
+    if (experiment.type === 'horizon') {
+      const horizonSurfaceDistanceM = surfaceHorizonDistanceM(observerHeightM, radiusM);
+      return {
+        modelId: this.metadata.id,
+        experimentId: experiment.id,
+        status: 'compatible',
+        metrics: [
+          metric('horizonSurfaceDistanceM', 'Geometrik ufuk mesafesi', horizonSurfaceDistanceM, 'm'),
+          metric('observerTotalElevationM', 'Gözlemci toplam kotu', observerHeightM, 'm'),
+          metric('effectiveRadiusM', 'Kullanılan etkin yarıçap', radiusM, 'm')
+        ],
+        warnings,
+        traceId: `${this.metadata.id}:${experiment.id}:horizon`,
+        trace: {
+          summary: 'Küresel yüzeyde gözlemcinin toplam kotundan geometrik ufuk yüzey mesafesi hesaplandı.',
+          assumptions: this.metadata.assumptions,
+          steps: [
+            {
+              id: 'effective-radius',
+              title: 'Kullanılan yarıçap',
+              formula: context.atmosphereMode === 'standard' ? 'Rₑ = R / (1 - k)' : 'Rₑ = R',
+              substitution: context.atmosphereMode === 'standard'
+                ? `${format(baseRadiusM)} / (1 - ${format(coefficient)})`
+                : `${format(baseRadiusM)}`,
+              result: `${format(radiusM)} m`
+            },
+            {
+              id: 'horizon-distance',
+              title: 'Geometrik ufuk mesafesi',
+              formula: 'sₕ = Rₑ · acos(Rₑ / (Rₑ + hₒ))',
+              substitution: `hₒ=${format(observerHeightM)} m, Rₑ=${format(radiusM)} m`,
+              result: `${format(horizonSurfaceDistanceM)} m`
+            }
+          ]
+        }
+      };
+    }
+
+    if (!experiment.target) throw new Error('Hedef bilgisi bulunamadı.');
+    const distanceMeasurement = getMeasurement(experiment, 'surfaceDistanceM', 'm');
+    if (!distanceMeasurement) throw new Error('Yüzey mesafesi bulunamadı.');
     const targetBaseHeightM = experiment.target.elevationM;
     const targetTopHeightM = targetBaseHeightM + experiment.target.heightM;
     const surfaceDistanceM = distanceMeasurement.value;

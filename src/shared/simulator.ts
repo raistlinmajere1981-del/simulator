@@ -1,4 +1,5 @@
 import type { CalculationTrace, ModelPrediction } from './domain';
+import type { SimulationScenarioId } from './scenario';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 
 export type DistanceSource = 'manual' | 'coordinates';
@@ -159,6 +160,8 @@ export interface SavedExperiment {
   name: string;
   createdAtIso: string;
   updatedAtIso: string;
+  /** Scenario identity; older records default to target visibility. */
+  scenarioId?: SimulationScenarioId;
   inputs: SimulatorInputs;
   /**
    * Ordered interior terrain points. Endpoints are derived from the observer

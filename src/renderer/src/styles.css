@@ -121,3 +121,33 @@ td:first-child { min-width: 180px; } td small { display: block; margin-top: 3px;
   .world-visual { height: 205px; }
   .model-grid { min-height: 500px; }
 }
+
+
+/* Stage 3.27 scenario workflows */
+.scenario-list button.available { background: rgba(19, 39, 55, .42); color: #c5d4df; }
+.scenario-list button.available:hover { background: #183149; }
+.scenario-list button.unavailable { opacity: .48; cursor: default; }
+.scenario-list .nav-state { margin-left: auto; font-size: 8px; letter-spacing: .06em; color: #87a0b5; }
+.scenario-list button.active .nav-state { color: #a9d0ff; }
+.horizon-input-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.horizon-datum-field select { width: 100%; min-height: 32px; border: 1px solid #2a4052; border-radius: 3px; background: #0b1721; color: #dce7ef; padding: 5px 7px; }
+.scenario-scope-note { margin: 9px 0 0; padding: 8px 10px; border: 1px solid #31516a; border-radius: 3px; background: rgba(25, 55, 76, .35); color: #b9cad7; font-size: 10px; line-height: 1.45; }
+.horizon-reference-panel { display: flex; flex-direction: column; }
+.horizon-reference-visual { flex: 1; min-height: 112px; position: relative; overflow: hidden; margin-top: 7px; border: 1px solid #34495c; background: radial-gradient(circle at 50% 115%, #214c68 0 37%, #0a1b2a 38% 100%); }
+.horizon-reference-arc { position: absolute; width: 330px; height: 150px; left: 50%; bottom: -104px; transform: translateX(-50%); border: 2px solid #5e9cc5; border-radius: 50% 50% 0 0; }
+.horizon-reference-observer { position: absolute; width: 8px; height: 28px; left: 50%; bottom: 39px; transform: translateX(-4px); background: #ffad52; box-shadow: 0 0 8px #ffad52aa; }
+.horizon-reference-observer::after { content: ''; position: absolute; width: 10px; height: 10px; left: -1px; top: -7px; border-radius: 50%; background: #ffad52; }
+.horizon-reference-tangent { position: absolute; width: 44%; left: 50%; bottom: 64px; border-top: 1px dashed #f0dd72; transform-origin: left center; transform: rotate(-7deg); }
+.horizon-reference-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 6px; }
+.horizon-reference-metrics > div { padding: 7px; border: 1px solid #293a49; border-radius: 3px; background: #101e2b; }
+.horizon-reference-metrics small { display: block; color: #8fa2b4; font-size: 8px; }
+.horizon-reference-metrics strong { display: block; margin-top: 5px; font-size: 10px; font-weight: 550; }
+.horizon-analysis-view { height: 145px; position: relative; overflow: hidden; border-top: 1px solid #2a3b48; border-bottom: 1px solid #243745; background: linear-gradient(#0b1824, #102234); }
+.horizon-analysis-surface { position: absolute; width: 115%; height: 130px; left: -7.5%; top: 86px; background: linear-gradient(#193f66, #08203a); border-top: 1px solid #5d9ed2; }
+.horizon-analysis-surface.globe { top: 72px; border-radius: 50% 50% 0 0; }
+.horizon-analysis-surface.disk { top: 94px; }
+.horizon-analysis-observer { position: absolute; z-index: 3; width: 5px; height: 27px; left: 28%; top: 52px; background: #ffad52; box-shadow: 0 0 7px #ffad52aa; }
+.horizon-analysis-observer::after { content: ''; position: absolute; width: 9px; height: 9px; left: -2px; top: -6px; border-radius: 50%; background: #ffad52; }
+.horizon-analysis-tangent { position: absolute; z-index: 2; left: 28%; right: 10%; top: 51px; border-top: 1px dashed #f0dd72; transform-origin: left center; transform: rotate(-4deg); }
+.horizon-analysis-view p { position: absolute; left: 12px; right: 12px; bottom: 6px; z-index: 4; margin: 0; color: #aebdca; font-size: 9px; }
+.metric-grid.horizon-metrics strong { font-size: 14px; }
