@@ -48,8 +48,8 @@ describe('layered atmosphere profile', () => {
       ...profile,
       observedAtIso: '2026-08-07T16:00:00',
       samples: [
-        profile.samples[0],
-        { ...profile.samples[1], altitudeM: 0, relativeHumidityPercent: 120 }
+        profile.samples[0]!,
+        { ...profile.samples[1]!, altitudeM: 0, relativeHumidityPercent: 120 }
       ]
     };
 
@@ -72,10 +72,10 @@ describe('layered atmosphere profile', () => {
   it('derives layer gradients without changing measured samples', () => {
     const layers = buildAtmosphereLayers(profile);
     expect(layers).toHaveLength(2);
-    expect(layers[0].thicknessM).toBe(50);
-    expect(layers[0].temperatureGradientKPerKm).toBeCloseTo(-10, 9);
-    expect(layers[0].pressureGradientHpaPerKm).toBeCloseTo(-119, 9);
-    expect(profile.samples[1].temperatureC).toBe(19.5);
+    expect(layers[0]!.thicknessM).toBe(50);
+    expect(layers[0]!.temperatureGradientKPerKm).toBeCloseTo(-10, 9);
+    expect(layers[0]!.pressureGradientHpaPerKm).toBeCloseTo(-119, 9);
+    expect(profile.samples[1]!.temperatureC).toBe(19.5);
   });
 
   it('computes vapor pressure and moist-air density as meteorological derived values', () => {
