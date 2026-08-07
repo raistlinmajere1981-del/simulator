@@ -40,6 +40,19 @@ import {
   type ModelRun
 } from '../../simulation/runner';
 import {
+  WATER_SURFACE_APPLICATION_MODEL_ID,
+  type WaterSurfaceApplicationResult
+} from '../../simulation/water-surface-application';
+import {
+  WATER_SURFACE_OBSERVATION_MODEL_ID,
+  type WaterSurfaceObservationRecord
+} from '../../simulation/water-surface-observation';
+import {
+  markWaterSurfaceApplicationHistorical,
+  readStoredWaterSurfaceState,
+  type StoredWaterSurfaceRecord
+} from '../../simulation/water-surface-ui-state';
+import {
   DataManagerDialog,
   SaveExperimentDialog,
   TraceDialog
@@ -49,6 +62,7 @@ import {
   type TerrainProfileImportOptions
 } from './MultiPointTerrainEditor';
 import { GeoidConversionControl } from './GeoidConversionControl';
+import { WaterSurfaceControl } from './WaterSurfaceControl';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -107,6 +121,24 @@ const geodesicMetadata: ModelMetadata = {
     'Referans elipsoidi WGS84’tür.',
     'Ters problem Vincenty iterasyonuyla çözülür.'
   ]
+};
+
+const waterObservationMetadata: ModelMetadata = {
+  id: WATER_SURFACE_OBSERVATION_MODEL_ID,
+  name: 'Su Yüzeyi Gözlem Kaydı',
+  version: '0.1.0',
+  description: 'Su seviyesi, gelgit, dalga bağlamı ve düşey belirsizlik provenansı.',
+  capabilities: ['water-surface-observation'],
+  assumptions: ['Su yüzeyi seçilen düşey datumda yorumlanır.']
+};
+
+const waterApplicationMetadata: ModelMetadata = {
+  id: WATER_SURFACE_APPLICATION_MODEL_ID,
+  name: 'Su Yüzeyi Fiziksel Uygulaması',
+  version: '0.1.0',
+  description: 'Kayıtlı su yüzeyini seçilen deney uç kotlarına kontrollü uygular.',
+  capabilities: ['water-surface-application'],
+  assumptions: ['Uygulama yalnız seçilen uç zemin kotlarını değiştirir.']
 };
 
 const statusLabels: Record<ResultStatus, string> = {
@@ -763,10 +795,13 @@ export function AppNext(): React.JSX.Element {
   );
   const [terrainProfileSource, setTerrainProfileSource] = useState<TerrainProfileSource>();
   const [geoidConversionRecord, setGeoidConversionRecord] = useState<GeoidConversionRecordState>();
+  const [waterObservationRecord, setWaterObservationRecord] = useState<StoredWaterSurfaceRecord>();
+  const [waterApplicationRecord, setWaterApplicationRecord] = useState<StoredWaterSurfaceRecord>();
   const [runs, setRuns] = useState<ModelRun[]>([]);
   const [savedExperiments, setSavedExperiments] = useState<SavedExperiment[]>([]);
-  const [activeExperimentId, setActiveExperimentId] = useState<string>();
+  const [activeExperimentId, setActiveExperimentId] = useState(() => crypto.randomUUID());
   const [activeExperimentName, setActiveExperimentName] = useState('');
+  const [experimentObservedAtIso, setExperimentObservedAtIso] = useState(() => new Date().toISOString());
   const [isCalculating, setIsCalculating] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -801,7 +836,7 @@ export function AppNext(): React.JSX.Element {
   );
 
   const experiment = useMemo<ExperimentDefinition>(() => ({
-    id: activeExperimentId ?? 'interactive-target-visibility',
+    id: activeExperimentId,
     title: activeExperimentName || 'Etkileşimli hedef görünürlüğü deneyi',
     type: 'target-visibility',
     observer: {
@@ -818,12 +853,12 @@ export function AppNext(): React.JSX.Element {
       heightM: inputs.targetHeightM
     },
     terrainProfile,
-    observedAtIso: new Date().toISOString(),
+    observedAtIso: experimentObservedAtIso,
     measurements: {
       surfaceDistanceM: { value: effectiveDistanceKm * 1_000, uncertainty: inputs.distanceSource === 'coordinates' ? 0.01 : 20, unit: 'm' },
       visibleFraction: { value: inputs.observedVisiblePercent / 100, uncertainty: inputs.observationUncertaintyPercent / 100, unit: 'fraction' }
     }
-  }), [activeExperimentId, activeExperimentName, effectiveDistanceKm, inputs, terrainProfile]);
+  }), [activeExperimentId, activeExperimentName, effectiveDistanceKm, experimentObservedAtIso, inputs, terrainProfile]);
 
   const context = useMemo(() => ({
     atmosphereMode: inputs.useStandardRefraction ? 'standard' as const : 'off' as const,
@@ -872,6 +907,10 @@ export function AppNext(): React.JSX.Element {
       : current);
   };
 
+  const markWaterApplicationModified = (): void => {
+    setWaterApplicationRecord((current) => markWaterSurfaceApplicationHistorical(current));
+  };
+
   const updateInputs = (updater: (current: SimulatorInputs) => SimulatorInputs): void => {
     setInputs(updater);
     setIsDirty(true);
@@ -885,6 +924,7 @@ export function AppNext(): React.JSX.Element {
   };
 
   const applyGeoidConversion = (application: GeoidConversionApplication): void => {
+    markWaterApplicationModified();
     setInputs((current) => ({
       ...current,
       verticalDatumKind: application.targetDatum,
@@ -903,6 +943,32 @@ export function AppNext(): React.JSX.Element {
     );
   };
 
+  const recordWaterSurface = (record: WaterSurfaceObservationRecord): void => {
+    setWaterObservationRecord({
+      prediction: record.prediction,
+      modelVersion: record.modelVersion
+    });
+    setWaterApplicationRecord(undefined);
+    setIsDirty(true);
+    setStorageMessage('Su yüzeyi gözlem kaydı deneye eklendi.');
+  };
+
+  const applyWaterSurface = (result: WaterSurfaceApplicationResult): void => {
+    setInputs((current) => ({
+      ...current,
+      observerGroundElevationM: result.observerGroundElevationM,
+      targetGroundElevationM: result.targetGroundElevationM
+    }));
+    setWaterApplicationRecord({
+      prediction: result.prediction,
+      modelVersion: result.modelVersion
+    });
+    markTerrainSourceModified();
+    markGeoidConversionModified();
+    setIsDirty(true);
+    setStorageMessage(`Su yüzeyi ${numberFormatter.format(result.appliedWaterSurfaceM)} m olarak seçilen uçlara uygulandı.`);
+  };
+
   const handleNumberChange = (key: NumericInputKey, value: number): void => {
     if (!Number.isFinite(value)) return;
     if (key === 'observerGroundElevationM' ||
@@ -916,6 +982,10 @@ export function AppNext(): React.JSX.Element {
     }
     if (key === 'observerGroundElevationM' || key === 'targetGroundElevationM') {
       markGeoidConversionModified();
+      markWaterApplicationModified();
+    }
+    if (key === 'verticalDatumOffsetM') {
+      markWaterApplicationModified();
     }
     updateInputs((current) => ({ ...current, [key]: clampInputValue(key, value) }));
   };
@@ -997,6 +1067,9 @@ export function AppNext(): React.JSX.Element {
             elevationColumnHeader: profile.elevationColumnHeader
           };
 
+    if (options.applyObserverEndpoint || options.applyTargetEndpoint) {
+      markWaterApplicationModified();
+    }
     setManualTerrainPoints(profile.points);
     setInputs((current) => applyImportedTerrainInputs(current, profile, options));
     setTerrainProfileSource(source);
@@ -1008,6 +1081,7 @@ export function AppNext(): React.JSX.Element {
     const geoidPrediction = saved.predictions.find(
       (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
     );
+    const storedWater = readStoredWaterSurfaceState(saved.predictions, saved.modelVersions);
     setInputs(saved.inputs);
     setManualTerrainPoints(saved.manualTerrainPoints ?? defaultTerrainPoints(saved.inputs));
     setTerrainProfileSource(saved.terrainProfileSource);
@@ -1017,8 +1091,11 @@ export function AppNext(): React.JSX.Element {
           modelVersion: saved.modelVersions[GEOID_CONVERSION_MODEL_ID] ?? 'bilinmiyor'
         }
       : undefined);
+    setWaterObservationRecord(storedWater.observation);
+    setWaterApplicationRecord(storedWater.application);
     setActiveExperimentId(saved.id);
     setActiveExperimentName(saved.name);
+    setExperimentObservedAtIso(saved.createdAtIso);
     setIsDirty(false);
     setStorageMessage(`“${saved.name}” açıldı.`);
   };
@@ -1027,9 +1104,9 @@ export function AppNext(): React.JSX.Element {
     const now = new Date().toISOString();
     const existing = savedExperiments.find((item) => item.id === activeExperimentId);
     const record: SavedExperiment = {
-      id: activeExperimentId ?? crypto.randomUUID(),
+      id: activeExperimentId,
       name,
-      createdAtIso: existing?.createdAtIso ?? now,
+      createdAtIso: existing?.createdAtIso ?? experimentObservedAtIso,
       updatedAtIso: now,
       inputs,
       manualTerrainPoints,
@@ -1040,11 +1117,19 @@ export function AppNext(): React.JSX.Element {
         [geodesicMetadata.id, geodesicMetadata.version],
         ...(geoidConversionRecord
           ? [[GEOID_CONVERSION_MODEL_ID, geoidConversionRecord.modelVersion] as const]
+          : []),
+        ...(waterObservationRecord
+          ? [[WATER_SURFACE_OBSERVATION_MODEL_ID, waterObservationRecord.modelVersion] as const]
+          : []),
+        ...(waterApplicationRecord
+          ? [[WATER_SURFACE_APPLICATION_MODEL_ID, waterApplicationRecord.modelVersion] as const]
           : [])
       ]),
       predictions: [
         ...runs.map((run) => run.prediction),
-        ...(geoidConversionRecord ? [geoidConversionRecord.prediction] : [])
+        ...(geoidConversionRecord ? [geoidConversionRecord.prediction] : []),
+        ...(waterObservationRecord ? [waterObservationRecord.prediction] : []),
+        ...(waterApplicationRecord ? [waterApplicationRecord.prediction] : [])
       ]
     };
 
@@ -1053,9 +1138,11 @@ export function AppNext(): React.JSX.Element {
       const savedGeoidPrediction = saved.predictions.find(
         (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
       );
+      const savedWater = readStoredWaterSurfaceState(saved.predictions, saved.modelVersions);
       setSavedExperiments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       setActiveExperimentId(saved.id);
       setActiveExperimentName(saved.name);
+      setExperimentObservedAtIso(saved.createdAtIso);
       setManualTerrainPoints(saved.manualTerrainPoints ?? manualTerrainPoints);
       setTerrainProfileSource(saved.terrainProfileSource);
       setGeoidConversionRecord(savedGeoidPrediction
@@ -1065,6 +1152,8 @@ export function AppNext(): React.JSX.Element {
               geoidConversionRecord?.modelVersion ?? 'bilinmiyor'
           }
         : undefined);
+      setWaterObservationRecord(savedWater.observation);
+      setWaterApplicationRecord(savedWater.application);
       setIsDirty(false);
       setSaveDialogOpen(false);
       setStorageMessage(`“${saved.name}” cihazda kaydedildi.`);
@@ -1079,9 +1168,12 @@ export function AppNext(): React.JSX.Element {
       if (!deleted) return;
       setSavedExperiments((current) => current.filter((item) => item.id !== saved.id));
       if (activeExperimentId === saved.id) {
-        setActiveExperimentId(undefined);
+        setActiveExperimentId(crypto.randomUUID());
         setActiveExperimentName('');
+        setExperimentObservedAtIso(new Date().toISOString());
         setGeoidConversionRecord(undefined);
+        setWaterObservationRecord(undefined);
+        setWaterApplicationRecord(undefined);
         setIsDirty(true);
       }
       setStorageMessage(`“${saved.name}” silindi.`);
@@ -1126,10 +1218,18 @@ export function AppNext(): React.JSX.Element {
   const geoPrediction = geodesicPrediction(geodesic);
   const selectedMetadata = traceModelId === geodesicMetadata.id
     ? geodesicMetadata
-    : modelRun?.metadata;
+    : traceModelId === WATER_SURFACE_OBSERVATION_MODEL_ID
+      ? waterObservationMetadata
+      : traceModelId === WATER_SURFACE_APPLICATION_MODEL_ID
+        ? waterApplicationMetadata
+        : modelRun?.metadata;
   const selectedPrediction = traceModelId === geodesicMetadata.id
     ? geoPrediction
-    : modelRun?.prediction;
+    : traceModelId === WATER_SURFACE_OBSERVATION_MODEL_ID
+      ? waterObservationRecord?.prediction
+      : traceModelId === WATER_SURFACE_APPLICATION_MODEL_ID
+        ? waterApplicationRecord?.prediction
+        : modelRun?.prediction;
   const idealSpherePrediction = runs.find(
     (run) => run.metadata.id === 'ideal-sphere'
   )?.prediction;
@@ -1177,8 +1277,11 @@ export function AppNext(): React.JSX.Element {
                 setManualTerrainPoints(defaultTerrainPoints());
                 setTerrainProfileSource(undefined);
                 setGeoidConversionRecord(undefined);
-                setActiveExperimentId(undefined);
+                setWaterObservationRecord(undefined);
+                setWaterApplicationRecord(undefined);
+                setActiveExperimentId(crypto.randomUUID());
                 setActiveExperimentName('');
+                setExperimentObservedAtIso(new Date().toISOString());
                 setIsDirty(false);
                 setStorageMessage('Yeni deney hazırlandı.');
               }}
@@ -1189,7 +1292,7 @@ export function AppNext(): React.JSX.Element {
           </div>
 
           <TerrainPanel
-            experimentId={activeExperimentId ?? 'interactive-target-visibility'}
+            experimentId={activeExperimentId}
             inputs={inputs}
             points={manualTerrainPoints}
             source={terrainProfileSource}
@@ -1199,6 +1302,7 @@ export function AppNext(): React.JSX.Element {
             allowDemImport={inputs.distanceSource === 'coordinates'}
             onDatumChange={(verticalDatumKind) => {
               markGeoidConversionModified();
+              markWaterApplicationModified();
               updateInputs((current) => ({ ...current, verticalDatumKind }));
             }}
             onModeChange={(terrainMode) => updateInputs((current) => ({ ...current, terrainMode }))}
@@ -1206,6 +1310,19 @@ export function AppNext(): React.JSX.Element {
             onPointsChange={updateTerrainPoints}
             onApplyGeoidConversion={applyGeoidConversion}
             onApplyImport={applyTerrainImport}
+          />
+
+          <WaterSurfaceControl
+            experimentId={activeExperimentId}
+            experimentObservedAtIso={experimentObservedAtIso}
+            verticalDatumKind={inputs.verticalDatumKind}
+            observerGroundElevationM={inputs.observerGroundElevationM}
+            targetGroundElevationM={inputs.targetGroundElevationM}
+            observationRecord={waterObservationRecord}
+            applicationRecord={waterApplicationRecord}
+            onRecord={recordWaterSurface}
+            onApply={applyWaterSurface}
+            onShowTrace={setTraceModelId}
           />
 
           <div className="model-grid">
@@ -1227,13 +1344,14 @@ export function AppNext(): React.JSX.Element {
               <ul>
                 <li>Koordinat modu WGS84 ters jeodezik çözümünü kullanır.</li>
                 <li>Zemin ve hedef kotları seçilen ortak düşey datumda yorumlanır.</li>
-                <li>Manuel profil sıralı ve düzenlenebilir ara noktaları iki uç kotuyla birleştirir.</li>
+                <li>Manuel, CSV, GeoJSON ve ESRI ASCII DEM profilleri aynı arazi sözleşmesine bağlanır.</li>
                 <li>Jeoit profil dönüşümü kaynak, sürüm/epok, N, belirsizlik ve hesap izini deney sonucunda korur.</li>
+                <li>Su yüzeyi kaydı gelgit/dalga belirsizliğini provenans olarak tutar ve yalnız seçilen uç kotlarına kontrollü uygulanır.</li>
                 <li>Küre ve düzlem aynı profili kendi geometrilerinde ayrı çözer.</li>
                 <li>Standart kırılma yalnızca kürede etkin yarıçap yaklaşımıdır.</li>
                 <li>Azimutal gösterim yalnızca kartografik referanstır.</li>
               </ul>
-              <p>DEM verisi, dalga yüzeyi, kamera kalibrasyonu ve katmanlı atmosfer profili henüz hesaba dahil değildir.</p>
+              <p>Kamera kalibrasyonu, katmanlı atmosfer ışın izleme ve dalga yüzeyinin rota boyunca dinamik geometrisi henüz hesaba dahil değildir.</p>
             </section>
           </div>
         </main>
