@@ -341,13 +341,13 @@ function solveClearRayToAltitude(
       const middleAngle = (low.angleDeg + high.angleDeg) / 2;
       const middle = evaluateTargetRay(input, middleAngle, stepM, earthRadiusM, maxPathLengthM);
       if (middle.status !== 'clear' || middle.endpointAltitudeM === null) {
-        low = { ...low, angleDeg: middleAngle };
-        continue;
+        return null;
       }
-      const residual = middle.endpointAltitudeM - targetAltitudeM;
-      if (Math.abs(residual) <= 1e-5) return middle;
-      if ((low.endpointAltitudeM - targetAltitudeM) * residual <= 0) high = middle;
-      else low = middle;
+      const clearMiddle = middle as RayEvaluation & { endpointAltitudeM: number };
+      const residual = clearMiddle.endpointAltitudeM - targetAltitudeM;
+      if (Math.abs(residual) <= 1e-5) return clearMiddle;
+      if ((low.endpointAltitudeM - targetAltitudeM) * residual <= 0) high = clearMiddle;
+      else low = clearMiddle;
     }
     return Math.abs(low.endpointAltitudeM - targetAltitudeM) <=
       Math.abs(high.endpointAltitudeM - targetAltitudeM) ? low : high;
