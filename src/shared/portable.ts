@@ -466,7 +466,9 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     name: value.name.trim(),
     createdAtIso: value.createdAtIso,
     updatedAtIso: value.updatedAtIso,
-    scenarioId: normalizeSimulationScenarioId(value.scenarioId),
+    ...(value.scenarioId === undefined
+      ? {}
+      : { scenarioId: normalizeSimulationScenarioId(value.scenarioId) }),
     inputs,
     manualTerrainPoints,
     terrainProfileSource,

@@ -66,6 +66,8 @@ describe('scenario workflow contracts', () => {
 
     const legacy = { ...saved } as Record<string, unknown>;
     delete legacy.scenarioId;
-    expect(parsePortableExperimentFile(legacy).experiment.scenarioId).toBe('target-visibility');
+    const parsedLegacy = parsePortableExperimentFile(legacy).experiment;
+    expect(parsedLegacy.scenarioId).toBeUndefined();
+    expect(normalizeSimulationScenarioId(parsedLegacy.scenarioId)).toBe('target-visibility');
   });
 });

@@ -34,7 +34,7 @@ Ayrı bir senaryo kimliği ve ekran akışı kullanır; fiziksel hesap çekirde�
 - `SavedExperiment` isteğe bağlı `scenarioId` alanı taşır.
 - Yeni kayıtlar aktif senaryo kimliğini korur.
 - Yerel kayıt ve `.ggl.json` taşınabilir akışı senaryo kimliğini yeniden açmada kullanır.
-- Eski kayıtlarda `scenarioId` yoksa kayıt güvenli biçimde `target-visibility` olarak yorumlanır.
+- Eski kayıtlarda olmayan `scenarioId` alanı parse sırasında uydurulmaz; uygulama açarken eksik değer güvenli biçimde `target-visibility` olarak yorumlanır.
 - Mevcut taşınabilir şema sürümü bozulmadı; alan geriye uyumlu ve isteğe bağlıdır.
 
 ## Model sürümleri
