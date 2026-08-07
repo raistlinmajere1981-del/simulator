@@ -177,7 +177,12 @@
   height: 2px;
   border-radius: 2px;
   color: #e9f2f5;
-  background: #e9f2f5;
+  background: repeating-linear-gradient(
+    90deg,
+    #e9f2f5 0 4px,
+    transparent 4px 6px
+  );
+  box-shadow: none;
 }
 
 .world-model-legend .atmosphere-state {

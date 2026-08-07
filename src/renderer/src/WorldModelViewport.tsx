@@ -64,6 +64,63 @@ function line(
   return new THREE.Line(geometry, material);
 }
 
+function dashedLine(
+  points: THREE.Vector3[],
+  color: number,
+  opacity = 1,
+  dashSize = 0.05,
+  gapSize = 0.035
+): THREE.Line {
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.LineDashedMaterial({
+    color,
+    transparent: opacity < 1,
+    opacity,
+    dashSize,
+    gapSize,
+    depthWrite: false
+  });
+  const result = new THREE.Line(geometry, material);
+  result.computeLineDistances();
+  return result;
+}
+
+function rayPoints(
+  points: THREE.Vector3[],
+  color: number,
+  opacity = 0.95
+): THREE.Points {
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.PointsMaterial({
+    color,
+    size: 0.035,
+    sizeAttenuation: true,
+    transparent: opacity < 1,
+    opacity,
+    depthWrite: false
+  });
+  return new THREE.Points(geometry, material);
+}
+
+function globeCameraPosition(
+  observerCoordinate: { latitudeDeg: number; longitudeDeg: number },
+  targetCoordinate: { latitudeDeg: number; longitudeDeg: number },
+  showTarget: boolean,
+  distance = 4.55
+): THREE.Vector3 {
+  const observerDirection = vector(
+    latitudeLongitudeToSpherePoint(observerCoordinate, 1)
+  ).normalize();
+  if (!showTarget) return observerDirection.multiplyScalar(distance);
+
+  const targetDirection = vector(
+    latitudeLongitudeToSpherePoint(targetCoordinate, 1)
+  ).normalize();
+  const focusDirection = observerDirection.clone().add(targetDirection);
+  if (focusDirection.lengthSq() < 1e-8) focusDirection.copy(observerDirection);
+  return focusDirection.normalize().multiplyScalar(distance);
+}
+
 function pin(position: THREE.Vector3, color: number): THREE.Group {
   const group = new THREE.Group();
   const stemGeometry = new THREE.CylinderGeometry(0.012, 0.012, 0.16, 10);
@@ -307,24 +364,31 @@ function addAtmosphereVisualization(
   const last = samples[samples.length - 1];
   if (!first || !last || last.altitudeM <= first.altitudeM) return;
 
-  const shellStride = Math.max(1, Math.ceil(samples.length / 6));
-  samples.forEach((sample, index) => {
-    if (index !== 0 && index !== samples.length - 1 && index % shellStride !== 0) return;
+  const lastSampleIndex = samples.length - 1;
+  const shellIndices = Array.from(new Set([
+    0,
+    Math.round(lastSampleIndex / 3),
+    Math.round(lastSampleIndex * 2 / 3),
+    lastSampleIndex
+  ]));
+  shellIndices.forEach((index) => {
+    const sample = samples[index]!;
     const shellRadius = radius * atmosphereVisualRadiusScale(
       sample.altitudeM,
       first.altitudeM,
       last.altitudeM
     );
     const shell = new THREE.Mesh(
-      new THREE.SphereGeometry(shellRadius, 32, 18),
+      new THREE.SphereGeometry(shellRadius, 20, 12),
       new THREE.MeshBasicMaterial({
         color: 0x69d9ee,
         wireframe: true,
         transparent: true,
-        opacity: index === samples.length - 1 ? 0.075 : 0.032,
+        opacity: index === lastSampleIndex ? 0.05 : 0.018,
         depthWrite: false
       })
     );
+    shell.renderOrder = 1;
     group.add(shell);
   });
 
@@ -369,7 +433,17 @@ function addAtmosphereVisualization(
     const opticalPoints = visual.points.map((sample) =>
       vector(sample.point).multiplyScalar(radius)
     );
-    group.add(line(opticalPoints, 0x64f1df, 0.98));
+    const opticalLine = line(opticalPoints, 0x70ffe3, 1);
+    opticalLine.renderOrder = 4;
+    group.add(opticalLine);
+
+    const markerStride = Math.max(1, Math.ceil(opticalPoints.length / 34));
+    const opticalMarkers = opticalPoints.filter((_, index) =>
+      index === 0 || index === opticalPoints.length - 1 || index % markerStride === 0
+    );
+    const markerCloud = rayPoints(opticalMarkers, 0x70ffe3, 0.92);
+    markerCloud.renderOrder = 5;
+    group.add(markerCloud);
 
     if (showTarget) {
       const observerPoint = vector(latitudeLongitudeToSpherePoint(
@@ -388,7 +462,15 @@ function addAtmosphereVisualization(
           last.altitudeM
         )
       ));
-      group.add(line([observerPoint, targetPoint], 0xe9f2f5, 0.62));
+      const geometricLine = dashedLine(
+        [observerPoint, targetPoint],
+        0xf2fbff,
+        0.9,
+        0.055,
+        0.032
+      );
+      geometricLine.renderOrder = 3;
+      group.add(geometricLine);
     }
   } catch {
     // The physical model already reports profile/coverage errors. Visualization never invents a fallback ray.
@@ -586,7 +668,12 @@ export function WorldModelViewport({
             world.add(line([observerPosition, targetPosition], 0xf2dc72, 0.75));
           }
         }
-        camera.position.set(0.8, 1.25, 4.3);
+        camera.position.copy(globeCameraPosition(
+          observerCoordinate,
+          targetCoordinate,
+          showTarget
+        ));
+        camera.lookAt(0, 0, 0);
       } else {
         const radius = 1.46;
         const disk = new THREE.Mesh(
