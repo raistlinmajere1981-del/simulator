@@ -25,6 +25,15 @@ export interface OpticalAtmosphereSettings {
   carbonDioxidePpm: number;
 }
 
+export type AtmosphereMode = 'off' | 'standard' | 'profile';
+
+export interface AtmosphereExperimentState {
+  mode: AtmosphereMode;
+  profile: LayeredAtmosphereProfile;
+  opticalSettings: OpticalAtmosphereSettings;
+  rayTraceStepM: number;
+}
+
 export const DEFAULT_OPTICAL_ATMOSPHERE_SETTINGS: OpticalAtmosphereSettings = {
   wavelengthNm: 550,
   carbonDioxidePpm: 450
@@ -50,3 +59,17 @@ export const DEFAULT_ATMOSPHERE_PROFILE: LayeredAtmosphereProfile = {
     }
   ]
 };
+
+export function createDefaultAtmosphereExperimentState(
+  mode: AtmosphereMode = 'standard'
+): AtmosphereExperimentState {
+  return {
+    mode,
+    profile: {
+      ...DEFAULT_ATMOSPHERE_PROFILE,
+      samples: DEFAULT_ATMOSPHERE_PROFILE.samples.map((sample) => ({ ...sample }))
+    },
+    opticalSettings: { ...DEFAULT_OPTICAL_ATMOSPHERE_SETTINGS },
+    rayTraceStepM: 25
+  };
+}
