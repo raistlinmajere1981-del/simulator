@@ -142,9 +142,11 @@ Anlamlı dalga yüksekliği otomatik geometri düzeltmesine dönüştürülmez. 
 - profil modunun standart `k` katsayısından ayrı tutulması,
 - ölçülmeyen yüksekliklere otomatik meteorolojik ekstrapolasyon yapmama,
 - profil kapsamı yetersizse sonlu/uydurma sonuç yerine açık `indeterminate` sonucu,
-- atmosfer state'inin yerel ve taşınabilir deney kayıtlarında korunması.
+- atmosfer state'inin yerel ve taşınabilir deney kayıtlarında korunması,
+- İdeal Küre 3B sahnesinde ölçülmüş profil yüksekliği kabukları, katmanlı optik ışın ve geometrik LOS karşılaştırması,
+- uzun RK4 yollarında yalnız çizim için uçları koruyan örnek azaltma.
 
-Tanımlı Düzlem modeline, model sözleşmesinde bulunmayan bir atmosfer kırılma kuralı eklenmez. Atmosfer profili görsel katmanı da henüz hesap sonucunun kaynağı değildir; 3B optik yol görselleştirmesi ayrı aşamadır.
+Tanımlı Düzlem modeline, model sözleşmesinde bulunmayan bir atmosfer kırılma kuralı eklenmez. Atmosfer görsel katmanı yalnız İdeal Küre sahnesinde etkinleşir ve hesap motoruna geri besleme yapmaz. Profil yüksekliği dünya yarıçapına göre okunamayacak kadar küçük olduğundan yalnız 3B sahnede abartılı ölçeklenir; fizik hesabındaki metre değerleri değişmez. Görsel ışın yeniden üretilemezse sahte bir fallback ışını çizilmez.
 
 ## Arazi veri biçimleri
 
@@ -201,7 +203,7 @@ HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı 
 
 ## Henüz tamamlanmayan ana ürün işleri
 
-- Gece ışıkları ve atmosfer/optik ışın görsel katmanları
+- Gece ışıkları görsel katmanı
 - Fotoğraf ve kamera/lens kalibrasyonu
 - Güneş, Ay, yıldız ve tutulma deneyleri
 - Toroidal ve içbükey gibi ek geometrik model sözleşmeleri
@@ -263,7 +265,8 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-4.2.md`](docs/roadmap-stage-4.2.md)
 - [`docs/roadmap-stage-4.3.md`](docs/roadmap-stage-4.3.md)
 - [`docs/roadmap-stage-4.4.md`](docs/roadmap-stage-4.4.md)
+- [`docs/roadmap-stage-4.5.md`](docs/roadmap-stage-4.5.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.3.1`dir. Üç görünürlük senaryosu, kayıt/raporlama, WGS84, arazi/DEM, jeoit ve su yüzeyi akışlarına ek olarak katmanlı meteorolojik atmosferin Ciddor/RK4 fizik yolu İdeal Küre görünürlük ve ufuk sonuçlarına bağlanmıştır. Sıradaki teknik aşama atmosfer katmanları ile geometrik/optik ışın yollarını 3B model sahnesinde yalnız görselleştirme amacıyla göstermektir.
+Aktif geliştirme sürümü `1.3.2`dir. Üç görünürlük senaryosu, kayıt/raporlama, WGS84, arazi/DEM, jeoit ve su yüzeyi akışlarına ek olarak katmanlı meteorolojik atmosferin Ciddor/RK4 fizik yolu İdeal Küre görünürlük ve ufuk sonuçlarına bağlanmış; atmosfer kabukları, optik ışın ve geometrik LOS 3B sahnede hesap motorundan bağımsız bir görsel katman olarak kullanılabilir hale gelmiştir. Sıradaki ana fiziksel ürün aşaması fotoğraf ve kamera/lens kalibrasyonudur.

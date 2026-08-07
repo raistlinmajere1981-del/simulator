@@ -355,10 +355,20 @@ Ayrıntı: [`roadmap-stage-4.4.md`](roadmap-stage-4.4.md)
 
 ## Aşama 4.5 — Atmosfer ve optik ışın görsel katmanı
 
-- Atmosfer Profili görsel anahtarını etkinleştirme
-- model sahnesinde profil katman yüksekliği işaretleri
-- İdeal Küre üzerinde geometrik görüş hattı ile katmanlı optik ışın yolunu ayrı gösterme
-- görselleştirmenin hesap motoruna geri besleme yapmaması
+Durum: tamamlandı · `1.3.2`
+
+- Atmosfer Profili anahtarını yalnız Katmanlı profil modunda etkinleştirme
+- İdeal Küre sahnesinde ölçülmüş profil yüksekliklerini yarı saydam kabuklarla gösterme
+- 4.4 tahminindeki hedef-tepe/sınır başlangıç açısıyla aynı Ciddor + RK4 ışınını yalnız çizim için yeniden örnekleme
+- hedefli deneyde geometrik LOS ile katmanlı optik ışın yolunu ayrı gösterme
+- hedefli ışını mevcut WGS84 gözlemci-hedef rotasına görsel olarak ankrajlama
+- Ufuk Analizi için hedef koordinatı uydurmayan yerel büyük-daire kesiti
+- uzun ışın yollarını yalnız çizim amacıyla en fazla 420 noktaya düşürme
+- atmosfer yüksekliğini yalnız sahnede okunabilirlik için abartma ve bunu legend'de açıkça belirtme
+- Tanımlı Düzlem / azimutal referansa tanımsız fiziksel kırılma yolu uydurmama
+- görselleştirmenin fiziksel hesap motoruna geri besleme yapmaması
+
+Ayrıntı: [`roadmap-stage-4.5.md`](roadmap-stage-4.5.md)
 
 # Sıradaki ana ürün aşamaları
 

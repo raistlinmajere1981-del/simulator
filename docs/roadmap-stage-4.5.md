@@ -1,6 +1,6 @@
 # Aşama 4.5 — Atmosfer ve optik ışın görsel katmanı
 
-Durum: tamamlanma adayı · `1.3.2`
+Durum: tamamlandı · `1.3.2`
 
 ## Amaç
 
