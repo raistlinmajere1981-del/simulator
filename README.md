@@ -32,6 +32,22 @@ Kullanıcı bir gözlem veya deney tanımlar; seçilen modeller aynı girdilerle
 - Gözlem ile tahmin arasındaki fark
 - Model ve jeodezik çözüm için yeniden üretilebilir hesap izleri
 
+### Etkileşimli model görselleştirmesi
+
+`1.1.0` ile model kartları Three.js tabanlı etkileşimli WebGL sahneleri kullanır:
+
+- ideal küre için gerçek 3B küre,
+- WGS84 gözlemci ve hedef konumları,
+- mevcut jeodezik çözümden örneklenen rota çizgisi,
+- enlem/boylam yardımcı ızgarası,
+- fare/pointer ile döndürme ve tekerlekle yakınlaştırma,
+- tanımlı düzlem için küresel harita projeksiyonu uydurmayan yerel düzlem şeması,
+- azimutal gösterim için kuzey kutup merkezli kartografik referans,
+- WebGL kullanılamadığında açık hata görünümü,
+- sahne kapandığında GPU kaynaklarının temizlenmesi.
+
+Görselleştirme fiziksel hesap motorunun kaynağı değildir. Özellikle tanımlı düzlem modeline, model sözleşmesinde bulunmayan küresel konum haritası uydurulmaz. Azimutal görünüm de fiziksel tahmin üretmeyen kartografik referans olarak kalır.
+
 ### Konum ve jeodezi
 
 - Manuel yüzey mesafesi
@@ -72,8 +88,6 @@ Kullanıcı bir gözlem veya deney tanımlar; seçilen modeller aynı girdilerle
 - Sonradan datum veya kot değişikliğinde tarihsel işlem uyarısı
 
 ### Su seviyesi, gelgit ve dalga
-
-`1.0.11` ile su yüzeyi motoru aktif hedef görünürlüğü arayüzüne bağlanmıştır:
 
 - manuel gözlem, gelgit ölçer, gelgit tahmini veya ölçme/nivelman kaynağı
 - saat dilimli gözlem zamanı
@@ -147,8 +161,8 @@ HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı 
 
 ## Henüz tamamlanmayan ana ürün işleri
 
-- Gerçek harita / döndürülebilir küre görselleştirme altyapısı
-- Kıta / ülke sınırları ve topografya görsel katmanları
+- Kıta / ülke / kıyı sınırları ve topografya görsel katmanları
+- Arazi profilini 3B model sahnesiyle daha ayrıntılı ilişkilendirme
 - Ufuk analizi ve uzun mesafe görüş için ayrı deney senaryoları
 - Gelişmiş sıcaklık / basınç / nem atmosfer profili ve katmanlı ışın izleme
 - Fotoğraf ve kamera/lens kalibrasyonu
@@ -162,6 +176,7 @@ Son kullanıcı kurulum paketi ve dağıtım işlemleri ürün işlevleri tamaml
 - Electron
 - React
 - TypeScript
+- Three.js
 - electron-vite
 - Vitest
 
@@ -202,7 +217,8 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/portable-format.md`](docs/portable-format.md)
 - [`docs/roadmap.md`](docs/roadmap.md)
 - [`docs/roadmap-stage-3.23.md`](docs/roadmap-stage-3.23.md)
+- [`docs/roadmap-stage-3.24.md`](docs/roadmap-stage-3.24.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.0.11`dir. Hedef görünürlüğü motoru, kayıt/raporlama, WGS84 koordinatları, manuel/CSV/GeoJSON/DEM arazi profilleri, jeoit dönüşümü ve kontrollü su yüzeyi uygulaması aynı deney akışında çalışmaktadır. Sıradaki ana ürün aşaması gerçek harita/küre görselleştirme altyapısıdır.
+Aktif geliştirme sürümü `1.1.0`dır. Hedef görünürlüğü motoru, kayıt/raporlama, WGS84 koordinatları, manuel/CSV/GeoJSON/DEM arazi profilleri, jeoit dönüşümü, kontrollü su yüzeyi uygulaması ve Three.js tabanlı etkileşimli model sahneleri aynı deney akışında çalışmaktadır. Sıradaki ana ürün aşaması çevrimdışı coğrafi görsel katmanlardır.

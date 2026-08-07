@@ -63,6 +63,7 @@ import {
 } from './MultiPointTerrainEditor';
 import { GeoidConversionControl } from './GeoidConversionControl';
 import { WaterSurfaceControl } from './WaterSurfaceControl';
+import { WorldModelViewport } from './WorldModelViewport';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -721,15 +722,13 @@ function ModelCard({
           <span className={`status-pill status-${status}`}>{statusLabels[status]}</span>
         </div>
       </header>
-      <div className={`world-visual ${presentation.shape} ${isProjection ? 'projection-only' : ''}`}>
-        <span className="observer-pin">●</span><span className="target-pin">●</span><span className="route" />
-        {isProjection && (
-          <div className="projection-overlay">
-            <strong>HARİTA PROJEKSİYONU</strong>
-            <span>Konumları gösterebilir; fiziksel görüş tahmini üretemez.</span>
-          </div>
-        )}
-      </div>
+      <WorldModelViewport
+  kind={presentation.shape === 'disk' ? 'plane' : presentation.shape}
+  observerLatitudeDeg={inputs.observerLatitudeDeg}
+  observerLongitudeDeg={inputs.observerLongitudeDeg}
+  targetLatitudeDeg={inputs.targetLatitudeDeg}
+  targetLongitudeDeg={inputs.targetLongitudeDeg}
+/>
       {isProjection ? (
         <div className="projection-explanation">
           <strong>Hesaplama yapılmadı</strong>

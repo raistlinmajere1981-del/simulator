@@ -1,0 +1,116 @@
+.world-model-viewport {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(185px, 1fr) auto;
+  min-height: 225px;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(116, 149, 169, 0.16);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(49, 89, 107, 0.18), transparent 55%),
+    linear-gradient(180deg, rgba(6, 15, 22, 0.94), rgba(8, 19, 27, 0.78));
+}
+
+.world-model-viewport.plane {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(121, 98, 49, 0.13), transparent 58%),
+    linear-gradient(180deg, rgba(18, 16, 11, 0.92), rgba(13, 17, 20, 0.78));
+}
+
+.world-model-viewport.gleason {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(104, 78, 145, 0.16), transparent 58%),
+    linear-gradient(180deg, rgba(15, 12, 24, 0.94), rgba(12, 15, 23, 0.8));
+}
+
+.world-model-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 185px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.world-model-stage:active {
+  cursor: grabbing;
+}
+
+.world-model-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+.world-model-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  border-top: 1px solid rgba(116, 149, 169, 0.12);
+  padding: 7px 9px;
+  background: rgba(7, 16, 23, 0.72);
+  color: #8fa4b2;
+  font-size: 9px;
+}
+
+.world-model-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.world-model-legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-shadow: 0 0 7px currentColor;
+}
+
+.world-model-legend i.observer {
+  color: #ffa94d;
+  background: #ffa94d;
+}
+
+.world-model-legend i.target {
+  color: #58d6ff;
+  background: #58d6ff;
+}
+
+.world-model-legend .world-model-mode {
+  margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #6f8493;
+  text-overflow: ellipsis;
+}
+
+.world-model-error {
+  position: absolute;
+  inset: 10px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(213, 131, 98, 0.35);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(44, 20, 15, 0.88);
+  color: #e1ab94;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+@media (max-width: 820px) {
+  .world-model-viewport {
+    min-height: 205px;
+  }
+
+  .world-model-stage {
+    min-height: 165px;
+  }
+
+  .world-model-legend .world-model-mode {
+    display: none;
+  }
+}

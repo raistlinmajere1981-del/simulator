@@ -236,30 +236,43 @@ Durum: tamamlandı · `1.0.11`
 
 Ayrıntı: [`roadmap-stage-3.23.md`](roadmap-stage-3.23.md)
 
+## Aşama 3.24 — Etkileşimli model görselleştirme altyapısı
+
+Durum: tamamlandı · `1.1.0`
+
+- Three.js tabanlı WebGL sahneleri
+- ideal kürede gerçek 3B geometri
+- WGS84 gözlemci/hedef konumları ve jeodezik rota çizgisi
+- döndürme ve yakınlaştırma
+- tanımlı düzlem için küresel konum haritası uydurmayan yerel şema
+- kuzey kutup merkezli azimutal kartografik referans
+- WebGL hata görünümü ve GPU kaynak temizliği
+- görsel koordinat dönüşümleri için saf testler
+
+Ayrıntı: [`roadmap-stage-3.24.md`](roadmap-stage-3.24.md)
+
 # Sıradaki ana ürün aşamaları
 
-## Aşama 3.24 — Gerçek harita ve küre görselleştirme altyapısı
+## Aşama 3.25 — Görsel coğrafi katmanlar
 
 Durum: sıradaki
 
 Hedef:
 
-- WGS84 koordinatlarının gerçek harita/küre sahnesinde gösterilmesi
-- gözlemci, hedef ve rota işaretleri
-- küresel model ve düzlem modelinin aynı deney için ayrı görsel sahneleri
-- arazi profilinin görsel sahneyle ilişkilendirilmesi
-- görsel katman mimarisinin model hesap motorundan ayrı tutulması
+- çevrimdışı kıta / kıyı / ülke sınırları
+- küre ve azimutal referansta aynı veri kaynağından çizim
+- topografya için görsel katman altyapısı
+- katman açma/kapatma kontrolleri
+- ızgara ve rota yardımcı katmanlarının kullanıcı kontrolüne alınması
+- görsel veri kaynağının fiziksel hesap motorundan ayrı tutulması
 
-Teknoloji seçimi bu aşamanın başında doğrulanacaktır; görselleştirme kütüphanesi fiziksel model hesabının kaynağı olmayacaktır.
+## Aşama 3.26 — Arazi profilinin 3B sahneyle ilişkilendirilmesi
 
-## Aşama 3.25 — Görsel coğrafi katmanlar
+- rota boyunca arazi yükseklik şeridi
+- DEM/manuel profil kaynağının 3B sahnede açık gösterimi
+- görünürlük hesabı ile görsel yükseltme ölçeğinin birbirine karıştırılmaması
 
-- kıta / ülke sınırları
-- topografya görünümü
-- ızgara ve rota yardımcı katmanları
-- gerektiğinde gece ışıkları gibi yalnız görsel katmanlar
-
-## Aşama 3.26 — Ayrı ufuk ve uzun mesafe görüş senaryoları
+## Aşama 3.27 — Ayrı ufuk ve uzun mesafe görüş senaryoları
 
 - mevcut motorun özel deney akışlarına ayrılması
 - senaryo bazlı giriş ve sonuç panelleri
