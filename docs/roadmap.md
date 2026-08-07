@@ -265,16 +265,22 @@ Durum: tamamlandı · `1.1.1`
 
 Ayrıntı: [`roadmap-stage-3.25.md`](roadmap-stage-3.25.md)
 
-# Sıradaki ana ürün aşamaları
-
 ## Aşama 3.26 — Arazi profilinin 3B sahneyle ilişkilendirilmesi
 
-Durum: sıradaki
+Durum: tamamlandı · `1.1.2`
 
-- rota boyunca arazi yükseklik şeridi
-- DEM/manuel profil kaynağının 3B sahnede açık gösterimi
-- görünürlük hesabı ile görsel yükseltme ölçeğinin birbirine karıştırılmaması
-- topografya katmanı için görsel kaynak/ölçek bilgisi
+- rota boyunca göreli arazi yükseklik şeridi
+- manuel/CSV/GeoJSON/DEM kaynak etiketinin görsel katmanda korunması
+- kürede WGS84 jeodezik rota üzerinde arazi çizimi
+- tanımlı düzlemde yerel rota ekseninde arazi çizimi
+- azimutal kartografik referansta yalnız veri şeridi olarak gösterim
+- metre kotlarının hesap motorunda değişmeden korunması
+- görsel yükseltmenin fiziksel geometri olmadığına dair açık etiket
+- topografya katmanını bağımsız açma/kapatma
+
+Ayrıntı: [`roadmap-stage-3.26.md`](roadmap-stage-3.26.md)
+
+# Sıradaki ana ürün aşamaları
 
 ## Aşama 3.27 — Ayrı ufuk ve uzun mesafe görüş senaryoları
 

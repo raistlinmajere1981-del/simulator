@@ -34,7 +34,7 @@ Kullanıcı bir gözlem veya deney tanımlar; seçilen modeller aynı girdilerle
 
 ### Etkileşimli model görselleştirmesi
 
-`1.1.1` ile model kartları Three.js tabanlı etkileşimli WebGL sahneleri ve çevrimdışı coğrafi yardımcı katmanlar kullanır:
+`1.1.2` ile model kartları Three.js tabanlı etkileşimli WebGL sahneleri, çevrimdışı coğrafi yardımcı katmanlar ve rota tabanlı arazi görselleştirmesi kullanır:
 
 - ideal küre için gerçek 3B küre,
 - WGS84 gözlemci ve hedef konumları,
@@ -44,11 +44,13 @@ Kullanıcı bir gözlem veya deney tanımlar; seçilen modeller aynı girdilerle
 - aynı sınır verisinin küre ve kuzey kutup merkezli azimutal kartografik referansta gösterimi,
 - fare/pointer ile döndürme ve tekerlekle yakınlaştırma,
 - tek tıklamayla başlangıç kamera görünümüne dönme,
+- manuel/CSV/GeoJSON/DEM profilinden rota boyunca göreli arazi yükselti şeridi,
+- topografya katmanını bağımsız açma/kapatma ve kaynak türünü sahnede belirtme,
 - tanımlı düzlem için küresel harita projeksiyonu uydurmayan yerel düzlem şeması,
 - WebGL kullanılamadığında açık hata görünümü,
 - sahne kapandığında GPU kaynaklarının temizlenmesi.
 
-Görselleştirme fiziksel hesap motorunun kaynağı değildir. Coğrafi sınırlar ve ızgara deney girdilerini veya model tahminlerini değiştirmez. Özellikle tanımlı düzlem modeline, model sözleşmesinde bulunmayan küresel konum haritası uydurulmaz. Azimutal görünüm de fiziksel tahmin üretmeyen kartografik referans olarak kalır. Natural Earth 110m sınırları dünya ölçeğinde görsel yönlendirme içindir; hassas mesafe, kıyı veya idari sınır analizi verisi değildir.
+Görselleştirme fiziksel hesap motorunun kaynağı değildir. Coğrafi sınırlar, ızgara ve topografya şeridi deney girdilerini veya model tahminlerini değiştirmez. Arazi kotları hesap motorunda metre olarak korunur; 3B sahnedeki yükseklik yalnız göreli biçimi görünür kılmak için sınırlı olarak ölçeklenir. Özellikle tanımlı düzlem modeline, model sözleşmesinde bulunmayan küresel konum haritası uydurulmaz. Azimutal görünüm de fiziksel tahmin üretmeyen kartografik referans olarak kalır. Natural Earth 110m sınırları dünya ölçeğinde görsel yönlendirme içindir; hassas mesafe, kıyı veya idari sınır analizi verisi değildir.
 
 ### Konum ve jeodezi
 
@@ -163,7 +165,6 @@ HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı 
 
 ## Henüz tamamlanmayan ana ürün işleri
 
-- Arazi profilini 3B model sahnesiyle ilişkilendirme ve topografya görsel katmanı
 - Gece ışıkları ve atmosfer profili görsel katmanları
 - Ufuk analizi ve uzun mesafe görüş için ayrı deney senaryoları
 - Gelişmiş sıcaklık / basınç / nem atmosfer profili ve katmanlı ışın izleme
@@ -222,7 +223,8 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-3.23.md`](docs/roadmap-stage-3.23.md)
 - [`docs/roadmap-stage-3.24.md`](docs/roadmap-stage-3.24.md)
 - [`docs/roadmap-stage-3.25.md`](docs/roadmap-stage-3.25.md)
+- [`docs/roadmap-stage-3.26.md`](docs/roadmap-stage-3.26.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.1.1`dir. Hedef görünürlüğü motoru, kayıt/raporlama, WGS84 koordinatları, manuel/CSV/GeoJSON/DEM arazi profilleri, jeoit dönüşümü, kontrollü su yüzeyi uygulaması, Three.js tabanlı etkileşimli model sahneleri ve çevrimdışı ülke/kıyı sınırı ile ızgara katmanları aynı deney akışında çalışmaktadır. Sıradaki ana ürün aşaması arazi profilinin ve DEM kaynağının 3B sahneyle ilişkilendirilmesidir.
+Aktif geliştirme sürümü `1.1.2`dir. Hedef görünürlüğü motoru, kayıt/raporlama, WGS84 koordinatları, manuel/CSV/GeoJSON/DEM arazi profilleri, jeoit dönüşümü, kontrollü su yüzeyi uygulaması, Three.js tabanlı etkileşimli model sahneleri, çevrimdışı ülke/kıyı sınırı, ızgara ve rota tabanlı topografya görselleştirmesi aynı deney akışında çalışmaktadır. Sıradaki ana ürün aşaması ayrı ufuk ve uzun mesafe görüş senaryolarıdır.
