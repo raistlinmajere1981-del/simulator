@@ -1,0 +1,79 @@
+.photo-angular-comparison {
+  margin-top: 8px;
+}
+
+.photo-angular-comparison-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.photo-angular-comparison-heading strong {
+  display: block;
+  margin-top: 4px;
+  color: #dbeaf1;
+}
+
+.photo-angular-independent {
+  padding: 5px 8px;
+  border: 1px solid #2f7181;
+  border-radius: 999px;
+  color: #8bdbe4;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+.photo-angular-note,
+.photo-angular-footnote {
+  margin: 8px 0 12px;
+  color: #8da3af;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.photo-angular-footnote {
+  margin-bottom: 0;
+}
+
+.photo-compare-status {
+  display: inline-block;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.photo-compare-status.status-compatible {
+  color: #8fe5a0;
+  background: rgba(44, 151, 72, .18);
+}
+
+.photo-compare-status.status-incompatible {
+  color: #ff9a89;
+  background: rgba(184, 70, 48, .2);
+}
+
+.photo-compare-status.status-indeterminate {
+  color: #e8c86d;
+  background: rgba(175, 132, 32, .18);
+}
+
+.photo-compare-status.status-unsupported {
+  color: #c9a3e5;
+  background: rgba(126, 75, 158, .2);
+}
+
+@media (max-width: 900px) {
+  .photo-angular-comparison-heading {
+    display: block;
+  }
+
+  .photo-angular-independent {
+    display: inline-block;
+    margin-top: 8px;
+  }
+}
