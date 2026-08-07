@@ -164,4 +164,18 @@ describe('layered spherical optical ray tracing', () => {
     expect(bentFinal.altitudeM).toBeLessThan(straightFinal.altitudeM);
     expect(straightFinal.altitudeM - bentFinal.altitudeM).toBeGreaterThan(1);
   });
+
+  it('classifies a downward RK4 boundary exit at a 0 m profile floor as a surface hit', () => {
+    const result = traceLayeredAtmosphereRay(typicalProfile, {
+      settings: opticalSettings,
+      observerAltitudeM: 10,
+      initialElevationDeg: -1,
+      maxPathLengthM: 5_000,
+      stepM: 25
+    });
+
+    expect(result.terminationReason).toBe('surface-intersection');
+    expect(result.samples[result.samples.length - 1]!.altitudeM).toBeGreaterThanOrEqual(0);
+    expect(result.warnings.some((warning) => warning.includes('yüzey'))).toBe(true);
+  });
 });
