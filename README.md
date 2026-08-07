@@ -22,7 +22,7 @@ Kullanıcı bir gözlem veya deney tanımlar; seçilen modeller aynı girdilerle
 `1.2.0` ile üç ayrı görünürlük senaryosu etkin durumdadır:
 
 - **Hedef Görünürlüğü:** hedefin görünür/gizli bölümünü ölçüm ve belirsizlikle karşılaştırır.
-- **Ufuk Analizi:** hedef, rota ve arazi gerektirmeden modelin geometrik ufuk tanımını hesaplar. İdeal kürede sonlu ufuk, tanımlı sonsuz düzlemde `∞`, azimutal kartografik referansta `unsupported` sonucu üretilir.
+- **Ufuk Analizi:** hedef, rota ve arazi gerektirmeden modelin ufuk tanımını hesaplar. İdeal kürede atmosfer moduna göre geometrik/standart-k/katmanlı optik ufuk, tanımlı sonsuz düzlemde `∞`, azimutal kartografik referansta `unsupported` sonucu üretilir.
 - **Uzun Mesafe Görüş:** rota, arazi ve uzak hedef bağlamını ayrı bir deney kimliği altında yönetir; fiziksel hesapları mevcut hedef görünürlüğü çekirdeğini kopyalamadan yeniden kullanır.
 
 Senaryo kimliği yerel ve taşınabilir deney kayıtlarında korunur. Eski kayıtlarda senaryo alanı yoksa kayıt `Hedef Görünürlüğü` olarak açılır.
@@ -34,8 +34,9 @@ Senaryo kimliği yerel ve taşınabilir deney kayıtlarında korunur. Eski kayı
 - Azimutal projeksiyon için fiziksel model değildir / `unsupported` sonucu
 - Gözlemci göz yüksekliği ve hedef yüksekliği
 - Gözlenen görünürlük ve ölçüm belirsizliği
-- Atmosfer kapalı veya standart kırılma
-- Düzenlenebilir kırılma katsayısı
+- Atmosfer kapalı, standart `k` veya katmanlı meteorolojik profil
+- Düzenlenebilir standart kırılma katsayısı
+- Katmanlı profilde Ciddor görünür ışık kırılma indisi ve küresel RK4 ışın izi
 - Görünür ve gizlenen hedef oranı
 - Ufuk mesafesi
 - Hedef tepe görüş açısı
@@ -121,20 +122,29 @@ Görselleştirme fiziksel hesap motorunun kaynağı değildir. Coğrafi sınırl
 
 Anlamlı dalga yüksekliği otomatik geometri düzeltmesine dönüştürülmez. Su yüzeyi bu aşamada rota boyunca dinamik bir dalga yüzeyi olarak modellenmez; yalnız kullanıcının açıkça seçtiği uç zemin kotlarına uygulanır.
 
-### Katmanlı atmosfer profili çekirdeği
+### Gelişmiş katmanlı atmosfer
 
-`1.2.1` ile gelişmiş atmosferin veri çekirdeği eklendi:
+`1.3.1` ile katmanlı atmosfer veri, arayüz ve İdeal Küre fiziksel hesap yolu birlikte çalışır:
 
 - yükseklik, sıcaklık, basınç ve bağıl nemden oluşan sıralı profil örnekleri,
 - kaynak etiketi ve açık saat dilimli isteğe bağlı gözlem zamanı,
 - fiziksel aralık ve örnek sırası doğrulaması,
 - profil kapsamı içinde doğrusal enterpolasyon,
 - katman sıcaklık/basınç/nem gradyanları,
-- doygun su buharı basıncı ve su buharı kısmi basıncı,
-- nemli hava yoğunluğu yardımcı hesabı,
-- ölçülmeyen yüksekliklere otomatik ekstrapolasyon yapmama.
+- doygun su buharı basıncı, su buharı kısmi basıncı ve nemli hava yoğunluğu yardımcıları,
+- Ciddor görünür/yakın KIZÖ faz kırılma indisi,
+- optik `n`, `N`, `dn/dh`, `dN/dh` ve yerel `k` tanıları,
+- vakum dalga boyu ve CO₂ ayarları,
+- küresel/radyal atmosferde RK4 ışın izleme,
+- İdeal Küre hedef görünürlüğünde minimum açık optik ışın ve hedef-tepe atış çözümü,
+- arazi örneklerini aynı optik ışın üzerinde açıklık açısından sınama,
+- İdeal Küre için katmanlı optik ufuk,
+- profil modunun standart `k` katsayısından ayrı tutulması,
+- ölçülmeyen yüksekliklere otomatik meteorolojik ekstrapolasyon yapmama,
+- profil kapsamı yetersizse sonlu/uydurma sonuç yerine açık `indeterminate` sonucu,
+- atmosfer state'inin yerel ve taşınabilir deney kayıtlarında korunması.
 
-Bu çekirdek henüz optik ışın izleme değildir ve mevcut standart `k` kırılma yaklaşımını değiştirmez. Görünür ışık için dalga boyuna bağlı kırılma indisi modeli ayrı aşamada bağlanacaktır; radyo-refraktivite formülleri optik görünürlük sonucu gibi kullanılmayacaktır.
+Tanımlı Düzlem modeline, model sözleşmesinde bulunmayan bir atmosfer kırılma kuralı eklenmez. Atmosfer profili görsel katmanı da henüz hesap sonucunun kaynağı değildir; 3B optik yol görselleştirmesi ayrı aşamadır.
 
 ## Arazi veri biçimleri
 
@@ -173,6 +183,7 @@ Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama:
 - CSV / GeoJSON / DEM kaynak provenansı,
 - jeoit dönüşüm provenansı,
 - su yüzeyi gözlem ve uygulama provenansı,
+- atmosfer modu, meteorolojik profil ve optik ayarlar,
 - model sürümleri ve sonuç anlık görüntülerini
 
 korur.
@@ -190,8 +201,7 @@ HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı 
 
 ## Henüz tamamlanmayan ana ürün işleri
 
-- Gece ışıkları ve atmosfer profili görsel katmanları
-- Atmosfer profili arayüzü, görünür ışık kırılma indisi ve katmanlı ışın izleme
+- Gece ışıkları ve atmosfer/optik ışın görsel katmanları
 - Fotoğraf ve kamera/lens kalibrasyonu
 - Güneş, Ay, yıldız ve tutulma deneyleri
 - Toroidal ve içbükey gibi ek geometrik model sözleşmeleri
@@ -251,7 +261,9 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-3.27.md`](docs/roadmap-stage-3.27.md)
 - [`docs/roadmap-stage-4.1.md`](docs/roadmap-stage-4.1.md)
 - [`docs/roadmap-stage-4.2.md`](docs/roadmap-stage-4.2.md)
+- [`docs/roadmap-stage-4.3.md`](docs/roadmap-stage-4.3.md)
+- [`docs/roadmap-stage-4.4.md`](docs/roadmap-stage-4.4.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.3.0`dir. Üç görünürlük senaryosu, kayıt/raporlama, WGS84, arazi/DEM, jeoit ve su yüzeyi akışlarına ek olarak katmanlı meteorolojik atmosfer profilinin doğrulama ve enterpolasyon çekirdeği hazırdır. Sıradaki teknik aşama görünür ışık kırılma indisi ve katmanlı ışın izleme çekirdeğidir.
+Aktif geliştirme sürümü `1.3.1`dir. Üç görünürlük senaryosu, kayıt/raporlama, WGS84, arazi/DEM, jeoit ve su yüzeyi akışlarına ek olarak katmanlı meteorolojik atmosferin Ciddor/RK4 fizik yolu İdeal Küre görünürlük ve ufuk sonuçlarına bağlanmıştır. Sıradaki teknik aşama atmosfer katmanları ile geometrik/optik ışın yollarını 3B model sahnesinde yalnız görselleştirme amacıyla göstermektir.
