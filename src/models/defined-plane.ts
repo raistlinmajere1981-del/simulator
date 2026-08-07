@@ -38,7 +38,7 @@ export class DefinedPlaneModel implements SimulationModel {
   readonly metadata: ModelMetadata = {
     id: 'defined-plane',
     name: 'Tanımlı Düzlem',
-    version: '0.3.0',
+    version: '0.4.0',
     description:
       'Düz yüzey ve doğrusal ışık varsayımıyla, isteğe bağlı arazi profili üzerinden görüş hesabı.',
     capabilities: ['surface-distance', 'line-of-sight', 'horizon', 'terrain-profile'],
@@ -59,17 +59,19 @@ export class DefinedPlaneModel implements SimulationModel {
     const errors: string[] = [];
     const distance = getMeasurement(experiment, 'surfaceDistanceM', 'm');
 
-    if (experiment.type !== 'target-visibility') {
-      errors.push('Bu sürüm yalnızca hedef görünürlüğü deneyini destekler.');
+    if (experiment.type !== 'target-visibility' && experiment.type !== 'horizon') {
+      errors.push('Bu sürüm hedef görünürlüğü ve ufuk deneylerini destekler.');
     }
-    if (!experiment.target) errors.push('Hedef bilgisi zorunludur.');
-    if (!distance || distance.value < 0) {
-      errors.push('Metre biriminde geçerli surfaceDistanceM ölçümü zorunludur.');
-    }
-    if (experiment.terrainProfile) {
-      errors.push(...validateTerrainProfile(experiment.terrainProfile));
-      if (distance && Math.abs(experiment.terrainProfile.totalDistanceM - distance.value) > 1e-6) {
-        errors.push('Arazi profili ile deney yüzey mesafesi aynı olmalıdır.');
+    if (experiment.type === 'target-visibility') {
+      if (!experiment.target) errors.push('Hedef bilgisi zorunludur.');
+      if (!distance || distance.value < 0) {
+        errors.push('Metre biriminde geçerli surfaceDistanceM ölçümü zorunludur.');
+      }
+      if (experiment.terrainProfile) {
+        errors.push(...validateTerrainProfile(experiment.terrainProfile));
+        if (distance && Math.abs(experiment.terrainProfile.totalDistanceM - distance.value) > 1e-6) {
+          errors.push('Arazi profili ile deney yüzey mesafesi aynı olmalıdır.');
+        }
       }
     }
 
@@ -82,7 +84,7 @@ export class DefinedPlaneModel implements SimulationModel {
   ): Promise<ModelPrediction> {
     const validationErrors = this.validateExperiment(experiment);
 
-    if (validationErrors.length > 0 || !experiment.target) {
+    if (validationErrors.length > 0) {
       return {
         modelId: this.metadata.id,
         experimentId: experiment.id,
@@ -98,9 +100,6 @@ export class DefinedPlaneModel implements SimulationModel {
       };
     }
 
-    const distanceMeasurement = getMeasurement(experiment, 'surfaceDistanceM', 'm');
-    if (!distanceMeasurement) throw new Error('Yüzey mesafesi bulunamadı.');
-
     const warnings: string[] = [];
     if (context.atmosphereMode !== 'off') {
       warnings.push(
@@ -109,6 +108,38 @@ export class DefinedPlaneModel implements SimulationModel {
     }
 
     const observerHeightM = experiment.observer.elevationM + experiment.observer.eyeHeightM;
+
+    if (experiment.type === 'horizon') {
+      return {
+        modelId: this.metadata.id,
+        experimentId: experiment.id,
+        status: 'compatible',
+        metrics: [
+          metric('horizonSurfaceDistanceM', 'Geometrik ufuk mesafesi', null, 'm'),
+          metric('observerTotalElevationM', 'Gözlemci toplam kotu', observerHeightM, 'm')
+        ],
+        warnings,
+        traceId: `${this.metadata.id}:${experiment.id}:horizon`,
+        trace: {
+          summary: 'Tanımlı sonsuz düzlemde yüzey eğriliğinden kaynaklanan sonlu geometrik ufuk yoktur.',
+          assumptions: this.metadata.assumptions,
+          steps: [
+            {
+              id: 'horizon',
+              title: 'Geometrik ufuk',
+              formula: 'sₕ = ∞',
+              substitution: 'Yüzey sonsuz düzlem ve ışık doğrusal tanımlıdır.',
+              result: '∞',
+              note: 'Yerel arazi veya fiziksel engeller bu geometrik tanımdan ayrı değerlendirilir.'
+            }
+          ]
+        }
+      };
+    }
+
+    if (!experiment.target) throw new Error('Hedef bilgisi bulunamadı.');
+    const distanceMeasurement = getMeasurement(experiment, 'surfaceDistanceM', 'm');
+    if (!distanceMeasurement) throw new Error('Yüzey mesafesi bulunamadı.');
     const targetBaseHeightM = experiment.target.elevationM;
     const targetTopHeightM = targetBaseHeightM + experiment.target.heightM;
 

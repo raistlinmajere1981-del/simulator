@@ -26,6 +26,7 @@ export interface WorldModelViewportProps {
   targetLatitudeDeg: number;
   targetLongitudeDeg: number;
   showGeographicBoundaries: boolean;
+  showTarget: boolean;
   showTerrain: boolean;
   showGrid: boolean;
   terrainProfile?: TerrainProfile;
@@ -299,6 +300,7 @@ export function WorldModelViewport({
   targetLatitudeDeg,
   targetLongitudeDeg,
   showGeographicBoundaries,
+  showTarget,
   showTerrain,
   showGrid,
   terrainProfile,
@@ -409,27 +411,26 @@ export function WorldModelViewport({
           observerCoordinate,
           radius * 1.02
         ));
-        const targetPosition = vector(latitudeLongitudeToSpherePoint(
-          targetCoordinate,
-          radius * 1.02
-        ));
-        world.add(
-          pin(observerPosition, 0xffa94d),
-          pin(targetPosition, 0x58d6ff)
-        );
-
-        try {
-          const route = buildWgs84VisualizationRoute(
-            observerCoordinate,
+        world.add(pin(observerPosition, 0xffa94d));
+        if (showTarget) {
+          const targetPosition = vector(latitudeLongitudeToSpherePoint(
             targetCoordinate,
-            72
-          ).map((coordinate) => vector(latitudeLongitudeToSpherePoint(
-            coordinate,
-            radius * 1.025
-          )));
-          world.add(line(route, 0xf2dc72, 0.96));
-        } catch {
-          world.add(line([observerPosition, targetPosition], 0xf2dc72, 0.75));
+            radius * 1.02
+          ));
+          world.add(pin(targetPosition, 0x58d6ff));
+          try {
+            const route = buildWgs84VisualizationRoute(
+              observerCoordinate,
+              targetCoordinate,
+              72
+            ).map((coordinate) => vector(latitudeLongitudeToSpherePoint(
+              coordinate,
+              radius * 1.025
+            )));
+            world.add(line(route, 0xf2dc72, 0.96));
+          } catch {
+            world.add(line([observerPosition, targetPosition], 0xf2dc72, 0.75));
+          }
         }
         camera.position.set(0.8, 1.25, 4.3);
       } else {
@@ -464,16 +465,16 @@ export function WorldModelViewport({
               radius
             );
           }
-          const observerPosition = new THREE.Vector3(-0.92, 0.025, 0);
-          const targetPosition = new THREE.Vector3(0.92, 0.025, 0);
-          world.add(
-            pin(observerPosition, 0xffa94d),
-            pin(targetPosition, 0x58d6ff)
-          );
-          world.add(line([
-            new THREE.Vector3(-0.92, 0.035, 0),
-            new THREE.Vector3(0.92, 0.035, 0)
-          ], 0xf2dc72, 0.96));
+          const observerPosition = new THREE.Vector3(showTarget ? -0.92 : 0, 0.025, 0);
+          world.add(pin(observerPosition, 0xffa94d));
+          if (showTarget) {
+            const targetPosition = new THREE.Vector3(0.92, 0.025, 0);
+            world.add(pin(targetPosition, 0x58d6ff));
+            world.add(line([
+              new THREE.Vector3(-0.92, 0.035, 0),
+              new THREE.Vector3(0.92, 0.035, 0)
+            ], 0xf2dc72, 0.96));
+          }
         } else {
           addGeographicBoundaries(boundaryGroup, 'gleason', radius);
           if (terrainProfile) {
@@ -493,37 +494,36 @@ export function WorldModelViewport({
               radius * 0.94
             )
           );
-          const targetPosition = vector(
-            latitudeLongitudeToNorthPolarAzimuthalPoint(
-              targetCoordinate,
-              radius * 0.94
-            )
-          );
           observerPosition.y = 0.025;
-          targetPosition.y = 0.025;
-          world.add(
-            pin(observerPosition, 0xffa94d),
-            pin(targetPosition, 0x58d6ff)
-          );
-
-          try {
-            const route = buildWgs84VisualizationRoute(
-              observerCoordinate,
-              targetCoordinate,
-              72
-            ).map((coordinate) => {
-              const point = vector(
-                latitudeLongitudeToNorthPolarAzimuthalPoint(
-                  coordinate,
-                  radius * 0.94
-                )
-              );
-              point.y = 0.035;
-              return point;
-            });
-            world.add(line(route, 0xf2dc72, 0.96));
-          } catch {
-            world.add(line([observerPosition, targetPosition], 0xf2dc72, 0.75));
+          world.add(pin(observerPosition, 0xffa94d));
+          if (showTarget) {
+            const targetPosition = vector(
+              latitudeLongitudeToNorthPolarAzimuthalPoint(
+                targetCoordinate,
+                radius * 0.94
+              )
+            );
+            targetPosition.y = 0.025;
+            world.add(pin(targetPosition, 0x58d6ff));
+            try {
+              const route = buildWgs84VisualizationRoute(
+                observerCoordinate,
+                targetCoordinate,
+                72
+              ).map((coordinate) => {
+                const point = vector(
+                  latitudeLongitudeToNorthPolarAzimuthalPoint(
+                    coordinate,
+                    radius * 0.94
+                  )
+                );
+                point.y = 0.035;
+                return point;
+              });
+              world.add(line(route, 0xf2dc72, 0.96));
+            } catch {
+              world.add(line([observerPosition, targetPosition], 0xf2dc72, 0.75));
+            }
           }
         }
 
@@ -603,6 +603,7 @@ export function WorldModelViewport({
     observerLongitudeDeg,
     targetLatitudeDeg,
     targetLongitudeDeg,
+    showTarget,
     terrainProfile
   ]);
 
@@ -619,7 +620,7 @@ export function WorldModelViewport({
       </button>
       <div className="world-model-legend">
         <span><i className="observer" /> Gözlemci</span>
-        <span><i className="target" /> Hedef</span>
+        {showTarget && <span><i className="target" /> Hedef</span>}
         {showTerrain && terrainProfile && (
           <span
             className="terrain-state"

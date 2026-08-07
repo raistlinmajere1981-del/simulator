@@ -23,6 +23,12 @@ import type {
   VerticalDatumKind
 } from '../../shared/terrain';
 import {
+  VISIBILITY_SCENARIOS,
+  getSimulationScenario,
+  normalizeSimulationScenarioId,
+  type SimulationScenarioId
+} from '../../shared/scenario';
+import {
   inverseWgs84Geodesic,
   type GeodesicResult
 } from '../../simulation/geodesy';
@@ -81,6 +87,7 @@ interface ModelPresentation {
 }
 
 interface ScenarioDefinition {
+  id?: SimulationScenarioId;
   label: string;
   icon: string;
   enabled: boolean;
@@ -98,9 +105,12 @@ interface VisualLayerState {
 }
 
 const scenarios: ScenarioDefinition[] = [
-  { label: 'Hedef Görünürlüğü', icon: '▰', enabled: true },
-  { label: 'Ufuk Analizi', icon: '◫', enabled: false },
-  { label: 'Uzun Mesafe Görüş', icon: '⌁', enabled: false },
+  ...VISIBILITY_SCENARIOS.map((scenario) => ({
+    id: scenario.id,
+    label: scenario.label,
+    icon: scenario.icon,
+    enabled: true
+  })),
   { label: 'Güneş ve Ay Gözlemleri', icon: '☀', enabled: false },
   { label: 'Yıldız Gözlemleri', icon: '✦', enabled: false },
   { label: 'Tutulma Simülasyonları', icon: '◐', enabled: false }
@@ -223,8 +233,8 @@ function clampInputValue(key: NumericInputKey, value: number): number {
   return Math.min(range.max, Math.max(range.min, value));
 }
 
-function defaultExperimentName(): string {
-  return `Hedef Görünürlüğü ${new Intl.DateTimeFormat('tr-TR', {
+function defaultExperimentName(scenarioId: SimulationScenarioId): string {
+  return `${getSimulationScenario(scenarioId).label} ${new Intl.DateTimeFormat('tr-TR', {
     dateStyle: 'short',
     timeStyle: 'short'
   }).format(new Date())}`;
@@ -279,12 +289,16 @@ function geodesicPrediction(result: GeodesicResult | undefined): ModelPrediction
 
 function Sidebar({
   experiments,
+  activeScenarioId,
   visualLayers,
+  onScenarioChange,
   onLoadExperiment,
   onVisualLayerChange
 }: {
   experiments: SavedExperiment[];
+  activeScenarioId: SimulationScenarioId;
   visualLayers: VisualLayerState;
+  onScenarioChange(scenarioId: SimulationScenarioId): void;
   onLoadExperiment(experiment: SavedExperiment): void;
   onVisualLayerChange(key: keyof VisualLayerState, enabled: boolean): void;
 }): React.JSX.Element {
@@ -293,21 +307,28 @@ function Sidebar({
       <section className="side-section">
         <div className="section-heading">
           <span>Test senaryoları</span>
-          <span className="section-state">1 / 6 hazır</span>
+          <span className="section-state">3 / 6 hazır</span>
         </div>
         <nav className="scenario-list">
-          {scenarios.map((scenario) => (
-            <button
-              className={scenario.enabled ? 'active' : 'unavailable'}
-              disabled={!scenario.enabled}
-              key={scenario.label}
-              title={scenario.enabled ? 'Aktif deney' : 'Bu deney henüz uygulanmadı'}
-            >
-              <span className="nav-icon">{scenario.icon}</span>
-              <span className="nav-label">{scenario.label}</span>
-              <span className="nav-state">{scenario.enabled ? 'AKTİF' : 'YAKINDA'}</span>
-            </button>
-          ))}
+          {scenarios.map((scenario) => {
+            const isActive = scenario.id === activeScenarioId;
+            return (
+              <button
+                className={!scenario.enabled ? 'unavailable' : isActive ? 'active' : 'available'}
+                disabled={!scenario.enabled}
+                key={scenario.label}
+                title={!scenario.enabled
+                  ? 'Bu deney henüz uygulanmadı'
+                  : getSimulationScenario(scenario.id!).description}
+                type="button"
+                onClick={() => scenario.id && onScenarioChange(scenario.id)}
+              >
+                <span className="nav-icon">{scenario.icon}</span>
+                <span className="nav-label">{scenario.label}</span>
+                <span className="nav-state">{!scenario.enabled ? 'YAKINDA' : isActive ? 'AKTİF' : 'HAZIR'}</span>
+              </button>
+            );
+          })}
         </nav>
       </section>
 
@@ -381,11 +402,17 @@ function Sidebar({
           />
           <span className="switch" />
         </label>
-        <label className="switch-row" title="Arazi profili etkin olduğunda rota boyunca göreli yükselti şeridini gösterir">
+        <label
+          className={`switch-row ${activeScenarioId === 'horizon' ? 'unavailable-layer' : ''}`}
+          title={activeScenarioId === 'horizon'
+            ? 'Ufuk Analizi yerel arazi profilini kullanmaz'
+            : 'Arazi profili etkin olduğunda rota boyunca göreli yükselti şeridini gösterir'}
+        >
           <span>Topografya Görselleştirme</span>
           <input
             type="checkbox"
-            checked={visualLayers.terrain}
+            disabled={activeScenarioId === 'horizon'}
+            checked={activeScenarioId !== 'horizon' && visualLayers.terrain}
             onChange={(event) => onVisualLayerChange('terrain', event.currentTarget.checked)}
           />
           <span className="switch" />
@@ -456,36 +483,42 @@ function NumericField({
 }
 
 function ScenarioSummary({
+  scenarioId,
   activeName,
   inputs,
   effectiveDistanceKm,
   geodesic,
   isDirty,
   onDistanceSourceChange,
+  onDatumChange,
   onNumberChange,
   onRefractionChange,
   onReset,
   onSave,
   onShowGeodesicTrace
 }: {
+  scenarioId: SimulationScenarioId;
   activeName: string;
   inputs: SimulatorInputs;
   effectiveDistanceKm: number;
   geodesic: GeodesicResult | undefined;
   isDirty: boolean;
   onDistanceSourceChange(source: DistanceSource): void;
+  onDatumChange(kind: VerticalDatumKind): void;
   onNumberChange(key: NumericInputKey, value: number): void;
   onRefractionChange(enabled: boolean): void;
   onReset(): void;
   onSave(): void;
   onShowGeodesicTrace(): void;
 }): React.JSX.Element {
+  const scenario = getSimulationScenario(scenarioId);
+  const isHorizon = scenarioId === 'horizon';
   return (
     <section className="scenario-summary panel coordinate-summary">
       <div className="panel-title-row">
         <div>
           <span className="eyebrow">Aktif senaryo</span>
-          <h2>{activeName || 'Hedef Görünürlüğü'}</h2>
+          <h2>{activeName || scenario.label}</h2>
         </div>
         <div className="title-actions">
           {isDirty && <span className="dirty-badge">KAYDEDİLMEDİ</span>}
@@ -495,15 +528,32 @@ function ScenarioSummary({
         </div>
       </div>
 
-      <div className="input-grid base-input-grid">
+      <div className={`input-grid base-input-grid ${isHorizon ? 'horizon-input-grid' : ''}`}>
         <NumericField inputKey="observerHeightM" label="Göz yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
-        <NumericField inputKey="targetHeightM" label="Hedef yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
-        <NumericField inputKey="observedVisiblePercent" label="Gözlenen görünürlük" unit="%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
-        <NumericField inputKey="observationUncertaintyPercent" label="Gözlem belirsizliği" unit="±%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
+        {isHorizon ? (
+          <>
+            <NumericField inputKey="observerGroundElevationM" label="Gözlemci zemin kotu" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+            <NumericField inputKey="verticalDatumOffsetM" label="Datum / yerel ofset" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+            <label className="input-field horizon-datum-field">
+              <span>Düşey datum</span>
+              <select value={inputs.verticalDatumKind} onChange={(event) => onDatumChange(event.currentTarget.value as VerticalDatumKind)}>
+                <option value="orthometric-msl">Ortalama deniz seviyesi</option>
+                <option value="ellipsoidal-wgs84">WGS84 elipsoidal</option>
+                <option value="local">Yerel düşey datum</option>
+              </select>
+            </label>
+          </>
+        ) : (
+          <>
+            <NumericField inputKey="targetHeightM" label="Hedef yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+            <NumericField inputKey="observedVisiblePercent" label="Gözlenen görünürlük" unit="%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
+            <NumericField inputKey="observationUncertaintyPercent" label="Gözlem belirsizliği" unit="±%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
+          </>
+        )}
         <NumericField inputKey="refractionCoefficient" label="Kırılma katsayısı" unit="k" step={0.01} inputs={inputs} disabled={!inputs.useStandardRefraction} onNumberChange={onNumberChange} />
       </div>
 
-      <div className="distance-source-panel">
+      {!isHorizon && <div className="distance-source-panel">
         <div className="distance-source-heading">
           <div>
             <span className="eyebrow">Mesafe kaynağı</span>
@@ -540,7 +590,14 @@ function ScenarioSummary({
             </p>
           </>
         )}
-      </div>
+      </div>}
+
+      {isHorizon && (
+        <p className="scenario-scope-note">
+          Ufuk Analizi hedef, rota ve arazi profilini kullanmaz. Sonuç yalnız gözlemci toplam kotu,
+          seçilen yüzey geometrisi ve desteklenen atmosfer varsayımından üretilir.
+        </p>
+      )}
 
       <label className="refraction-control">
         <input
@@ -576,6 +633,30 @@ function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.El
       <p className="engine-note">
         Görsel açıklayıcıdır. Karşılaştırma, sayısal görünürlük ve belirsizlik girdileriyle yapılır.
       </p>
+    </section>
+  );
+}
+
+function HorizonReferencePanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.Element {
+  const observerTotalElevationM = inputs.observerGroundElevationM +
+    inputs.verticalDatumOffsetM + inputs.observerHeightM;
+  return (
+    <section className="observation panel horizon-reference-panel">
+      <div className="observation-heading">
+        <span className="eyebrow">Ufuk deney özeti</span>
+        <span className="reference-mode">GEOMETRİK HESAP</span>
+      </div>
+      <div className="horizon-reference-visual">
+        <span className="horizon-reference-observer" />
+        <span className="horizon-reference-tangent" />
+        <span className="horizon-reference-arc" />
+      </div>
+      <div className="horizon-reference-metrics">
+        <div><small>Toplam gözlemci kotu</small><strong>{formatMetres(observerTotalElevationM)}</strong></div>
+        <div><small>Düşey datum</small><strong>{datumLabels[inputs.verticalDatumKind]}</strong></div>
+        <div><small>Atmosfer</small><strong>{inputs.useStandardRefraction ? `Standart k=${numberFormatter.format(inputs.refractionCoefficient)}` : 'Kapalı'}</strong></div>
+      </div>
+      <p className="engine-note">Bu senaryoda hedef görünürlük yüzdesi ölçümü yapılmaz; modellerin geometrik ufuk tanımları karşılaştırılır.</p>
     </section>
   );
 }
@@ -736,6 +817,7 @@ function TerrainPanel({
 }
 
 function ModelCard({
+  scenarioId,
   metadata,
   run,
   inputs,
@@ -744,6 +826,7 @@ function ModelCard({
   visualLayers,
   onShowTrace
 }: {
+  scenarioId: SimulationScenarioId;
   metadata: ModelMetadata;
   run: ModelRun | undefined;
   inputs: SimulatorInputs;
@@ -760,8 +843,12 @@ function ModelCard({
   const horizonDistanceM = getMetric(prediction, 'horizonSurfaceDistanceM');
   const targetAngleDeg = getMetric(prediction, 'targetTopElevationDeg');
   const terrainClearanceM = getMetric(prediction, 'terrainMinimumClearanceM');
+  const observerTotalElevationM = getMetric(prediction, 'observerTotalElevationM');
+  const effectiveRadiusM = getMetric(prediction, 'effectiveRadiusM');
   const warning = prediction?.warnings[0];
   const isProjection = metadata.id === 'azimuthal-projection';
+  const isHorizon = scenarioId === 'horizon';
+  const statusLabel = isHorizon && status !== 'unsupported' ? 'Hesaplandı' : statusLabels[status];
 
   return (
     <article className={`model-card ${presentation.tone} ${isProjection ? 'projection-card' : ''}`}>
@@ -769,7 +856,7 @@ function ModelCard({
         <h3>{metadata.name}</h3>
         <div className="model-header-actions">
           <button className="trace-button" disabled={!prediction} type="button" onClick={onShowTrace}>Hesap izi</button>
-          <span className={`status-pill status-${status}`}>{statusLabels[status]}</span>
+          <span className={`status-pill status-${status}`}>{statusLabel}</span>
         </div>
       </header>
       <WorldModelViewport
@@ -779,15 +866,23 @@ function ModelCard({
   targetLatitudeDeg={inputs.targetLatitudeDeg}
   targetLongitudeDeg={inputs.targetLongitudeDeg}
   showGeographicBoundaries={visualLayers.geographicBoundaries}
-  showTerrain={visualLayers.terrain}
+  showTarget={!isHorizon}
+  showTerrain={!isHorizon && visualLayers.terrain}
   showGrid={visualLayers.grid}
-  terrainProfile={terrainProfile}
+  terrainProfile={isHorizon ? undefined : terrainProfile}
   terrainSourceLabel={terrainSourceLabel}
 />
       {isProjection ? (
         <div className="projection-explanation">
           <strong>Hesaplama yapılmadı</strong>
           <p>Yüzey geometrisi, yerel dikey yön ve ışık ilerleme kuralları tanımlanmadan sayısal sonuç üretilemez.</p>
+        </div>
+      ) : isHorizon ? (
+        <div className="horizon-analysis-view">
+          <span className="horizon-analysis-observer" />
+          <span className={`horizon-analysis-surface ${presentation.shape}`} />
+          <span className="horizon-analysis-tangent" />
+          <p>Hedef ve rota kullanılmadan geometrik ufuk tanımı değerlendirilir.</p>
         </div>
       ) : (
         <div className="profile-view">
@@ -797,18 +892,69 @@ function ModelCard({
           {inputs.terrainMode !== 'off' && <span className="terrain-obstacle" title="Manuel arazi profili" />}
         </div>
       )}
-      <div className={`metric-grid ${isProjection ? 'unsupported-metrics' : ''}`}>
-        <div><small>Beklenen görünürlük</small><strong>{formatPercent(visibleFraction)}</strong></div>
-        <div><small>Gizlenen kısım</small><strong>{formatPercent(hiddenFraction)}</strong></div>
-        <div><small>Ufuk mesafesi</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane')}</strong></div>
-        <div><small>{terrainClearanceM === null ? 'Hedef tepe açısı' : 'Arazi açıklığı'}</small><strong>{terrainClearanceM === null ? formatAngle(targetAngleDeg) : formatMetres(terrainClearanceM)}</strong></div>
+      <div className={`metric-grid ${isProjection ? 'unsupported-metrics' : ''} ${isHorizon ? 'horizon-metrics' : ''}`}>
+        {isHorizon ? (
+          <>
+            <div><small>Geometrik ufuk</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane')}</strong></div>
+            <div><small>Gözlemci toplam kotu</small><strong>{formatMetres(observerTotalElevationM)}</strong></div>
+            <div><small>Etkin yarıçap</small><strong>{effectiveRadiusM === null ? (metadata.id === 'defined-plane' ? 'Düzlem' : '—') : formatDistance(effectiveRadiusM)}</strong></div>
+            <div><small>Senaryo</small><strong>{statusLabel}</strong></div>
+          </>
+        ) : (
+          <>
+            <div><small>Beklenen görünürlük</small><strong>{formatPercent(visibleFraction)}</strong></div>
+            <div><small>Gizlenen kısım</small><strong>{formatPercent(hiddenFraction)}</strong></div>
+            <div><small>Ufuk mesafesi</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane')}</strong></div>
+            <div><small>{terrainClearanceM === null ? 'Hedef tepe açısı' : 'Arazi açıklığı'}</small><strong>{terrainClearanceM === null ? formatAngle(targetAngleDeg) : formatMetres(terrainClearanceM)}</strong></div>
+          </>
+        )}
       </div>
       <div className="model-warning">{warning ?? metadata.assumptions[0]}</div>
     </article>
   );
 }
 
-function ResultsTable({ runs, onShowTrace }: { runs: ModelRun[]; onShowTrace(modelId: string): void }): React.JSX.Element {
+function ResultsTable({
+  runs,
+  scenarioId,
+  onShowTrace
+}: {
+  runs: ModelRun[];
+  scenarioId: SimulationScenarioId;
+  onShowTrace(modelId: string): void;
+}): React.JSX.Element {
+  if (scenarioId === 'horizon') {
+    return (
+      <section className="results panel">
+        <span className="eyebrow">Ufuk sonucu karşılaştırma</span>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Model / gösterim</th><th>Geometrik ufuk</th><th>Gözlemci toplam kotu</th><th>Etkin yarıçap</th><th>Durum</th><th>İz</th></tr></thead>
+            <tbody>
+              {simulationModels.map((model) => {
+                const run = runs.find((candidate) => candidate.metadata.id === model.metadata.id);
+                const prediction = run?.prediction;
+                const presentation = getPresentation(model.metadata.id);
+                const status = prediction?.status ?? 'indeterminate';
+                const isProjection = model.metadata.id === 'azimuthal-projection';
+                return (
+                  <tr className={isProjection ? 'projection-row' : ''} key={model.metadata.id}>
+                    <td><span className={`model-dot ${presentation.tone}`} />{model.metadata.name}<small>{isProjection ? 'Kartografik referans' : 'Fiziksel model'}</small></td>
+                    <td>{formatDistance(getMetric(prediction, 'horizonSurfaceDistanceM'), model.metadata.id === 'defined-plane')}</td>
+                    <td>{formatMetres(getMetric(prediction, 'observerTotalElevationM'))}</td>
+                    <td>{getMetric(prediction, 'effectiveRadiusM') === null ? (model.metadata.id === 'defined-plane' ? 'Düzlem' : '—') : formatDistance(getMetric(prediction, 'effectiveRadiusM'))}</td>
+                    <td>{status === 'unsupported' ? statusLabels[status] : 'Hesaplandı'}</td>
+                    <td><button className="table-trace-button" disabled={!prediction} type="button" onClick={() => onShowTrace(model.metadata.id)}>Aç</button></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="results panel">
       <span className="eyebrow">Sonuç karşılaştırma</span>
@@ -844,6 +990,7 @@ function ResultsTable({ runs, onShowTrace }: { runs: ModelRun[]; onShowTrace(mod
 
 export function AppNext(): React.JSX.Element {
   const [inputs, setInputs] = useState<SimulatorInputs>(DEFAULT_SIMULATOR_INPUTS);
+  const [activeScenarioId, setActiveScenarioId] = useState<SimulationScenarioId>('target-visibility');
   const [manualTerrainPoints, setManualTerrainPoints] = useState<ManualTerrainPoint[]>(
     defaultTerrainPoints()
   );
@@ -894,30 +1041,48 @@ export function AppNext(): React.JSX.Element {
     [effectiveDistanceKm, inputs, manualTerrainPoints]
   );
 
-  const experiment = useMemo<ExperimentDefinition>(() => ({
-    id: activeExperimentId,
-    title: activeExperimentName || 'Etkileşimli hedef görünürlüğü deneyi',
-    type: 'target-visibility',
-    observer: {
+  const experiment = useMemo<ExperimentDefinition>(() => {
+    const scenario = getSimulationScenario(activeScenarioId);
+    const observer = {
       latitudeDeg: inputs.observerLatitudeDeg,
       longitudeDeg: inputs.observerLongitudeDeg,
       elevationM: inputs.observerGroundElevationM + inputs.verticalDatumOffsetM,
       eyeHeightM: inputs.observerHeightM
-    },
-    target: {
-      label: 'Hedef',
-      latitudeDeg: inputs.targetLatitudeDeg,
-      longitudeDeg: inputs.targetLongitudeDeg,
-      elevationM: inputs.targetGroundElevationM + inputs.verticalDatumOffsetM,
-      heightM: inputs.targetHeightM
-    },
-    terrainProfile,
-    observedAtIso: experimentObservedAtIso,
-    measurements: {
-      surfaceDistanceM: { value: effectiveDistanceKm * 1_000, uncertainty: inputs.distanceSource === 'coordinates' ? 0.01 : 20, unit: 'm' },
-      visibleFraction: { value: inputs.observedVisiblePercent / 100, uncertainty: inputs.observationUncertaintyPercent / 100, unit: 'fraction' }
+    };
+
+    if (activeScenarioId === 'horizon') {
+      const horizonExperiment: ExperimentDefinition = {
+        id: activeExperimentId,
+        title: activeExperimentName || `Etkileşimli ${scenario.label.toLocaleLowerCase('tr-TR')} deneyi`,
+        type: 'horizon',
+        observer,
+        observedAtIso: experimentObservedAtIso,
+        measurements: {}
+      };
+      return horizonExperiment;
     }
-  }), [activeExperimentId, activeExperimentName, effectiveDistanceKm, experimentObservedAtIso, inputs, terrainProfile]);
+
+    const targetExperiment: ExperimentDefinition = {
+      id: activeExperimentId,
+      title: activeExperimentName || `Etkileşimli ${scenario.label.toLocaleLowerCase('tr-TR')} deneyi`,
+      type: 'target-visibility',
+      observer,
+      target: {
+        label: 'Hedef',
+        latitudeDeg: inputs.targetLatitudeDeg,
+        longitudeDeg: inputs.targetLongitudeDeg,
+        elevationM: inputs.targetGroundElevationM + inputs.verticalDatumOffsetM,
+        heightM: inputs.targetHeightM
+      },
+      terrainProfile,
+      observedAtIso: experimentObservedAtIso,
+      measurements: {
+        surfaceDistanceM: { value: effectiveDistanceKm * 1_000, uncertainty: inputs.distanceSource === 'coordinates' ? 0.01 : 20, unit: 'm' },
+        visibleFraction: { value: inputs.observedVisiblePercent / 100, uncertainty: inputs.observationUncertaintyPercent / 100, unit: 'fraction' }
+      }
+    };
+    return targetExperiment;
+  }, [activeExperimentId, activeExperimentName, activeScenarioId, effectiveDistanceKm, experimentObservedAtIso, inputs, terrainProfile]);
 
   const context = useMemo(() => ({
     atmosphereMode: inputs.useStandardRefraction ? 'standard' as const : 'off' as const,
@@ -1141,6 +1306,7 @@ export function AppNext(): React.JSX.Element {
       (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
     );
     const storedWater = readStoredWaterSurfaceState(saved.predictions, saved.modelVersions);
+    setActiveScenarioId(normalizeSimulationScenarioId(saved.scenarioId));
     setInputs(saved.inputs);
     setManualTerrainPoints(saved.manualTerrainPoints ?? defaultTerrainPoints(saved.inputs));
     setTerrainProfileSource(saved.terrainProfileSource);
@@ -1167,6 +1333,7 @@ export function AppNext(): React.JSX.Element {
       name,
       createdAtIso: existing?.createdAtIso ?? experimentObservedAtIso,
       updatedAtIso: now,
+      scenarioId: activeScenarioId,
       inputs,
       manualTerrainPoints,
       terrainProfileSource,
@@ -1318,7 +1485,20 @@ export function AppNext(): React.JSX.Element {
       <div className="workspace">
         <Sidebar
           experiments={savedExperiments}
+          activeScenarioId={activeScenarioId}
           visualLayers={visualLayers}
+          onScenarioChange={(scenarioId) => {
+            if (scenarioId === activeScenarioId) return;
+            setActiveScenarioId(scenarioId);
+            setActiveExperimentId(crypto.randomUUID());
+            setActiveExperimentName('');
+            setExperimentObservedAtIso(new Date().toISOString());
+            setGeoidConversionRecord(undefined);
+            setWaterObservationRecord(undefined);
+            setWaterApplicationRecord(undefined);
+            setIsDirty(false);
+            setStorageMessage(`${getSimulationScenario(scenarioId).label} senaryosu hazırlandı.`);
+          }}
           onLoadExperiment={loadExperiment}
           onVisualLayerChange={(key, enabled) => {
             setVisualLayers((current) => ({ ...current, [key]: enabled }));
@@ -1327,6 +1507,7 @@ export function AppNext(): React.JSX.Element {
         <main className="main-content">
           <div className="top-grid geodesic-top-grid">
             <ScenarioSummary
+              scenarioId={activeScenarioId}
               activeName={activeExperimentName}
               inputs={inputs}
               effectiveDistanceKm={effectiveDistanceKm}
@@ -1335,6 +1516,11 @@ export function AppNext(): React.JSX.Element {
               onDistanceSourceChange={(distanceSource) => {
                 markTerrainSourceModified();
                 updateInputs((current) => ({ ...current, distanceSource }));
+              }}
+              onDatumChange={(verticalDatumKind) => {
+                markGeoidConversionModified();
+                markWaterApplicationModified();
+                updateInputs((current) => ({ ...current, verticalDatumKind }));
               }}
               onNumberChange={handleNumberChange}
               onRefractionChange={(enabled) => updateInputs((current) => ({ ...current, useStandardRefraction: enabled }))}
@@ -1354,10 +1540,12 @@ export function AppNext(): React.JSX.Element {
               onSave={() => setSaveDialogOpen(true)}
               onShowGeodesicTrace={() => setTraceModelId(geodesicMetadata.id)}
             />
-            <ObservationPanel inputs={inputs} />
+            {activeScenarioId === 'horizon'
+              ? <HorizonReferencePanel inputs={inputs} />
+              : <ObservationPanel inputs={inputs} />}
           </div>
 
-          <TerrainPanel
+          {activeScenarioId !== 'horizon' && <TerrainPanel
             experimentId={activeExperimentId}
             inputs={inputs}
             points={manualTerrainPoints}
@@ -1376,9 +1564,9 @@ export function AppNext(): React.JSX.Element {
             onPointsChange={updateTerrainPoints}
             onApplyGeoidConversion={applyGeoidConversion}
             onApplyImport={applyTerrainImport}
-          />
+          />}
 
-          <WaterSurfaceControl
+          {activeScenarioId !== 'horizon' && <WaterSurfaceControl
             experimentId={activeExperimentId}
             experimentObservedAtIso={experimentObservedAtIso}
             verticalDatumKind={inputs.verticalDatumKind}
@@ -1389,12 +1577,13 @@ export function AppNext(): React.JSX.Element {
             onRecord={recordWaterSurface}
             onApply={applyWaterSurface}
             onShowTrace={setTraceModelId}
-          />
+          />}
 
           <div className="model-grid">
             {simulationModels.map((model) => (
               <ModelCard
                 key={model.metadata.id}
+                scenarioId={activeScenarioId}
                 metadata={model.metadata}
                 run={runs.find((candidate) => candidate.metadata.id === model.metadata.id)}
                 inputs={effectiveInputs}
@@ -1407,7 +1596,7 @@ export function AppNext(): React.JSX.Element {
           </div>
 
           <div className="bottom-grid">
-            <ResultsTable runs={runs} onShowTrace={setTraceModelId} />
+            <ResultsTable runs={runs} scenarioId={activeScenarioId} onShowTrace={setTraceModelId} />
             <section className="notes panel">
               <span className="eyebrow">Hesaplama kapsamı</span>
               <ul>
@@ -1427,7 +1616,7 @@ export function AppNext(): React.JSX.Element {
       </div>
 
       <SaveExperimentDialog
-        initialName={activeExperimentName || defaultExperimentName()}
+        initialName={activeExperimentName || defaultExperimentName(activeScenarioId)}
         open={saveDialogOpen}
         onCancel={() => setSaveDialogOpen(false)}
         onSave={saveExperiment}

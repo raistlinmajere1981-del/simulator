@@ -15,6 +15,7 @@ import {
   type TerrainProfileSource
 } from './simulator';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
+import { normalizeSimulationScenarioId } from './scenario';
 import {
   migrateLegacyManualTerrainPoint,
   sortManualTerrainPoints,
@@ -465,6 +466,9 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     name: value.name.trim(),
     createdAtIso: value.createdAtIso,
     updatedAtIso: value.updatedAtIso,
+    ...(value.scenarioId === undefined
+      ? {}
+      : { scenarioId: normalizeSimulationScenarioId(value.scenarioId) }),
     inputs,
     manualTerrainPoints,
     terrainProfileSource,
