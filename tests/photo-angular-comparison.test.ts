@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ModelPrediction } from '../src/shared/domain';
 import {
+  PHOTO_TARGET_BASE_VISIBILITY_TOLERANCE_M,
   comparePhotoAngularObservation,
   photoAngularComparisonModelId
 } from '../src/simulation/photo-angular-comparison';
@@ -81,6 +82,28 @@ describe('photo angular comparison', () => {
       'targetBase',
       'targetTop'
     ]);
+    expect(result.prediction.status).toBe('compatible');
+  });
+
+  it('accepts sub-centimetre layered-solver residual as a visible physical base', () => {
+    const model = prediction('ideal-sphere', [
+      { key: 'targetBaseElevationDeg', value: -0.1 },
+      { key: 'targetTopElevationDeg', value: 0.85 },
+      { key: 'targetAngularHeightDeg', value: 0.95 },
+      { key: 'hiddenHeightM', value: PHOTO_TARGET_BASE_VISIBILITY_TOLERANCE_M * 0.75 },
+      { key: 'visibleFraction', value: 0.9999 }
+    ]);
+
+    const result = comparePhotoAngularObservation({
+      experimentId: 'exp-1',
+      sourceModelId: 'ideal-sphere',
+      sourceModelName: 'İdeal Küre',
+      modelPrediction: model,
+      photoPrediction: photo,
+      referenceKind: 'visual-reference'
+    });
+
+    expect(result.channels.map((channel) => channel.key)).toEqual(['targetAngularHeight']);
     expect(result.prediction.status).toBe('compatible');
   });
 
