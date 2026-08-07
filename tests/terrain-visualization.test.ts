@@ -22,14 +22,18 @@ describe('buildTerrainVisualizationProfile', () => {
       { distanceM: 1_000, elevationM: 20 }
     ]));
 
+    const first = result.samples[0]!;
+    const high = result.samples[1]!;
+    const low = result.samples[2]!;
+
     expect(result.minimumElevationM).toBe(5);
     expect(result.maximumElevationM).toBe(30);
-    expect(result.samples[0].normalizedRelief).toBe(0);
+    expect(first.normalizedRelief).toBe(0);
     expect(result.samples.at(-1)?.normalizedRelief).toBe(0);
-    expect(result.samples[1].reliefM).toBeCloseTo(17.5, 8);
-    expect(result.samples[2].reliefM).toBeCloseTo(-10, 8);
-    expect(result.samples[1].normalizedRelief).toBe(1);
-    expect(result.samples[2].normalizedRelief).toBeCloseTo(-10 / 17.5, 8);
+    expect(high.reliefM).toBeCloseTo(17.5, 8);
+    expect(low.reliefM).toBeCloseTo(-10, 8);
+    expect(high.normalizedRelief).toBe(1);
+    expect(low.normalizedRelief).toBeCloseTo(-10 / 17.5, 8);
   });
 
   it('keeps a flat or linearly sloping profile visually neutral', () => {
