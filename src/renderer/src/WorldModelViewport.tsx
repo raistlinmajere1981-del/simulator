@@ -165,11 +165,18 @@ function terrainRibbon(
   ridgePoints: THREE.Vector3[],
   color: number
 ): THREE.Mesh {
+  if (basePoints.length !== ridgePoints.length) {
+    throw new RangeError('Arazi şeridi taban ve sırt örnekleri eşleşmeli.');
+  }
+
   const positions: number[] = [];
   const indices: number[] = [];
 
   for (let index = 0; index < basePoints.length; index += 1) {
-    positions.push(...basePoints[index].toArray(), ...ridgePoints[index].toArray());
+    positions.push(
+      ...basePoints[index]!.toArray(),
+      ...ridgePoints[index]!.toArray()
+    );
     if (index < basePoints.length - 1) {
       const baseIndex = index * 2;
       indices.push(
