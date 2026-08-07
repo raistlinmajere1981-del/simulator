@@ -370,7 +370,6 @@ export function PhotoCalibrationControl({
     setMessage('Fotoğraf kalibrasyonu deney kaydına hazırlandı. Deneyi kaydettiğinde provenans ve hesap izi korunacak.');
   };
 
-  const displayRecord = isDirty ? candidate.record : candidate.record ?? (savedPrediction ? undefined : candidate.record);
   const displayedPrediction = isDirty ? candidate.record?.prediction : savedPrediction ?? candidate.record?.prediction;
   const metrics = displayedPrediction ? Object.fromEntries(
     displayedPrediction.metrics.map((metric) => [metric.key, metric])

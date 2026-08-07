@@ -3,6 +3,7 @@ import type {
   DemTerrainProfileImportContext,
   FileOperationResult,
   ImportExperimentResult,
+  ImportObservationPhotoResult,
   ImportTerrainProfileResult,
   SavedExperiment,
   SimulatorDesktopApi,
@@ -25,6 +26,8 @@ const api: SimulatorDesktopApi = {
     ipcRenderer.invoke('experiments:import') as Promise<ImportExperimentResult>,
   exportExperimentReport: (id) =>
     ipcRenderer.invoke('experiments:report', id) as Promise<FileOperationResult>,
+  importObservationPhoto: () =>
+    ipcRenderer.invoke('photo:import') as Promise<ImportObservationPhotoResult>,
   importTerrainProfile: (context: TerrainProfileImportContext) =>
     ipcRenderer.invoke('terrain:import-csv', context) as Promise<ImportTerrainProfileResult>,
   importTerrainProfileWithMapping: (

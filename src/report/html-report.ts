@@ -27,7 +27,8 @@ const statusLabels: Record<ResultStatus, string> = {
 const modelNames: Record<string, string> = {
   'ideal-sphere': 'İdeal Küre',
   'defined-plane': 'Tanımlı Düzlem',
-  'azimuthal-projection': 'Azimutal Gösterim'
+  'azimuthal-projection': 'Azimutal Gösterim',
+  'photo-calibration': 'Fotoğraf / Kamera Kalibrasyonu'
 };
 
 const datumLabels: Record<VerticalDatumKind, string> = {
@@ -314,6 +315,57 @@ function verticalTerrainSection(experiment: SavedExperiment, effectiveDistanceKm
     </section>`;
 }
 
+
+function photoCalibrationSection(experiment: SavedExperiment): string {
+  const calibration = experiment.photoCalibration;
+  if (!calibration) return '';
+  const source = calibration.source;
+  const cameraRows = calibration.calibration.sourceKind === 'field-of-view'
+    ? `<tr><td>Kalibrasyon yöntemi</td><td>Yatay / düşey FOV</td></tr>
+       <tr><td>Yatay FOV</td><td>${metricNumberFormatters.degree.format(calibration.calibration.horizontalFovDeg)}°</td></tr>
+       <tr><td>Düşey FOV</td><td>${metricNumberFormatters.degree.format(calibration.calibration.verticalFovDeg)}°</td></tr>`
+    : `<tr><td>Kalibrasyon yöntemi</td><td>Sensör + odak uzaklığı</td></tr>
+       <tr><td>Odak uzaklığı</td><td>${inputNumberFormatter.format(calibration.calibration.focalLengthMm)} mm</td></tr>
+       <tr><td>Sensör</td><td>${inputNumberFormatter.format(calibration.calibration.sensorWidthMm)} × ${inputNumberFormatter.format(calibration.calibration.sensorHeightMm)} mm</td></tr>`;
+  const markRows = Object.entries({
+    'Ufuk / referans sol': calibration.marks.horizonStart,
+    'Ufuk / referans sağ': calibration.marks.horizonEnd,
+    'Hedef tabanı': calibration.marks.targetBase,
+    'Hedef tepesi': calibration.marks.targetTop
+  }).map(([label, mark]) => `<tr><td>${escapeHtml(label)}</td><td>${inputNumberFormatter.format(mark.xPx)}, ${inputNumberFormatter.format(mark.yPx)} px${mark.uncertaintyPx === undefined ? '' : ` · ±${inputNumberFormatter.format(mark.uncertaintyPx)} px`}</td></tr>`).join('');
+
+  return `
+    <section class="model-section vertical-section">
+      <header class="model-heading">
+        <div><h2>Fotoğraf kaynak ve işaretleme provenansı</h2><span>Görüntü baytları rapora veya deney JSON’una gömülmez</span></div>
+        <strong class="status status-compatible">Kalibrasyon kaydı</strong>
+      </header>
+      <div class="two-column">
+        <div>
+          <h3>Kaynak fotoğraf</h3>
+          <table><tbody>
+            <tr><td>Dosya adı</td><td>${escapeHtml(source.fileName)}</td></tr>
+            <tr><td>Görüntü boyutu</td><td>${source.imageWidthPx} × ${source.imageHeightPx} px</td></tr>
+            <tr><td>Dosya boyutu</td><td>${inputNumberFormatter.format(source.fileSizeBytes)} bayt</td></tr>
+            <tr><td>MIME</td><td>${escapeHtml(source.mimeType)}</td></tr>
+            <tr><td>İçe aktarma</td><td>${formatDate(source.importedAtIso)}</td></tr>
+            <tr><td>SHA-256</td><td><code>${escapeHtml(source.sha256)}</code></td></tr>
+            ${cameraRows}
+            <tr><td>Asal nokta</td><td>${calibration.principalPointXPx === undefined || calibration.principalPointYPx === undefined ? 'Görüntü merkezi (varsayılan)' : `${inputNumberFormatter.format(calibration.principalPointXPx)}, ${inputNumberFormatter.format(calibration.principalPointYPx)} px`}</td></tr>
+            <tr><td>Distorsiyon önceden düzeltildi</td><td>${yesNo(calibration.distortionCorrected)}</td></tr>
+            <tr><td>Varsayılan işaret belirsizliği</td><td>±${inputNumberFormatter.format(calibration.defaultMarkUncertaintyPx)} px</td></tr>
+          </tbody></table>
+        </div>
+        <div>
+          <h3>İşaretler</h3>
+          <table><tbody>${markRows}</tbody></table>
+          <p class="muted">Kalibrasyon kayıt zamanı: ${formatDate(calibration.recordedAtIso)}</p>
+          ${calibration.notes ? `<p>${escapeHtml(calibration.notes)}</p>` : ''}
+        </div>
+      </div>
+    </section>`;
+}
+
 export function createExperimentHtmlReport(
   experiment: SavedExperiment,
   generatedAtIso = new Date().toISOString()
@@ -410,6 +462,7 @@ export function createExperimentHtmlReport(
 
     ${geodesicSection(experiment)}
     ${verticalTerrainSection(experiment, effectiveDistanceKm)}
+    ${photoCalibrationSection(experiment)}
     ${experiment.predictions.map((prediction) => predictionSection(
       prediction,
       experiment.modelVersions[prediction.modelId]
