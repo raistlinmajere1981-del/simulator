@@ -81,4 +81,4 @@ CI üzerinde aşağıdakiler birlikte doğrulandı:
 
 ## Sonraki adım
 
-Aşama 4.5'te Atmosfer Profili görsel katmanı etkinleştirilebilir: katman yükseklikleri, optik ışın yolu ve geometrik görüş hattı yalnız görselleştirme amacıyla model sahnesinde gösterilir. Görsel katman fiziksel hesabın kaynağı olmayacaktır.
+Aşama 4.5 tamamlandı: Atmosfer Profili görsel katmanı katman yüksekliklerini, optik ışın yolunu ve geometrik görüş hattını İdeal Küre sahnesinde hesap motorundan bağımsız olarak gösterir. Sonraki ana fiziksel ürün aşaması Aşama 5 fotoğraf/kamera kalibrasyonudur.

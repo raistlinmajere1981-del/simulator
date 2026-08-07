@@ -156,3 +156,38 @@
   color: #90cdbb;
   text-overflow: ellipsis;
 }
+
+
+.world-model-legend i.atmosphere {
+  border-radius: 2px;
+  color: #69d9ee;
+  background: rgba(105, 217, 238, 0.52);
+}
+
+.world-model-legend i.optical-ray {
+  width: 12px;
+  height: 2px;
+  border-radius: 2px;
+  color: #64f1df;
+  background: #64f1df;
+}
+
+.world-model-legend i.geometric-ray {
+  width: 12px;
+  height: 2px;
+  border-radius: 2px;
+  color: #e9f2f5;
+  background: #e9f2f5;
+}
+
+.world-model-legend .atmosphere-state {
+  color: #83dbea;
+}
+
+.world-model-legend .optical-ray-state {
+  color: #8de9dd;
+}
+
+.world-model-legend .geometric-ray-state {
+  color: #c6d4d9;
+}

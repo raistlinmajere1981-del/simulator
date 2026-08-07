@@ -111,6 +111,7 @@ interface GeoidConversionRecordState {
 interface VisualLayerState {
   geographicBoundaries: boolean;
   terrain: boolean;
+  atmosphere: boolean;
   grid: boolean;
 }
 
@@ -300,6 +301,7 @@ function geodesicPrediction(result: GeodesicResult | undefined): ModelPrediction
 function Sidebar({
   experiments,
   activeScenarioId,
+  atmosphereMode,
   visualLayers,
   onScenarioChange,
   onLoadExperiment,
@@ -307,6 +309,7 @@ function Sidebar({
 }: {
   experiments: SavedExperiment[];
   activeScenarioId: SimulationScenarioId;
+  atmosphereMode: AtmosphereMode;
   visualLayers: VisualLayerState;
   onScenarioChange(scenarioId: SimulationScenarioId): void;
   onLoadExperiment(experiment: SavedExperiment): void;
@@ -401,7 +404,7 @@ function Sidebar({
       <section className="side-section compact grow">
         <div className="section-heading">
           <span>Görsel katmanlar</span>
-          <span className="section-state">3 / 5 hazır</span>
+          <span className="section-state">4 / 5 hazır</span>
         </div>
         <label className="switch-row">
           <span>Kıta / Ülke Sınırları</span>
@@ -427,11 +430,24 @@ function Sidebar({
           />
           <span className="switch" />
         </label>
-        {['Gece Işıkları', 'Atmosfer Profili'].map((item) => (
-          <label className="switch-row unavailable-layer" key={item}>
-            <span>{item}</span><input type="checkbox" disabled /><span className="switch" />
-          </label>
-        ))}
+        <label className="switch-row unavailable-layer">
+          <span>Gece Işıkları</span><input type="checkbox" disabled /><span className="switch" />
+        </label>
+        <label
+          className={`switch-row ${atmosphereMode !== 'profile' ? 'unavailable-layer' : ''}`}
+          title={atmosphereMode === 'profile'
+            ? 'Ölçülmüş atmosfer katmanlarını ve İdeal Küre optik ışın yolunu görselleştirir'
+            : 'Atmosfer Profili görsel katmanı için Katmanlı profil modunu seçin'}
+        >
+          <span>Atmosfer Profili</span>
+          <input
+            type="checkbox"
+            disabled={atmosphereMode !== 'profile'}
+            checked={atmosphereMode === 'profile' && visualLayers.atmosphere}
+            onChange={(event) => onVisualLayerChange('atmosphere', event.currentTarget.checked)}
+          />
+          <span className="switch" />
+        </label>
         <label className="switch-row">
           <span>Izgara</span>
           <input
@@ -826,6 +842,7 @@ function ModelCard({
   metadata,
   run,
   inputs,
+  atmosphereState,
   terrainProfile,
   terrainSourceLabel,
   visualLayers,
@@ -835,6 +852,7 @@ function ModelCard({
   metadata: ModelMetadata;
   run: ModelRun | undefined;
   inputs: SimulatorInputs;
+  atmosphereState: AtmosphereExperimentState;
   terrainProfile: TerrainProfile | undefined;
   terrainSourceLabel: string;
   visualLayers: VisualLayerState;
@@ -873,7 +891,13 @@ function ModelCard({
   showGeographicBoundaries={visualLayers.geographicBoundaries}
   showTarget={!isHorizon}
   showTerrain={!isHorizon && visualLayers.terrain}
+  showAtmosphere={visualLayers.atmosphere && atmosphereState.mode === 'profile' && metadata.id === 'ideal-sphere'}
   showGrid={visualLayers.grid}
+  atmosphereState={atmosphereState}
+  atmospherePrediction={prediction}
+  observerAltitudeM={inputs.observerGroundElevationM + inputs.verticalDatumOffsetM + inputs.observerHeightM}
+  targetTopAltitudeM={inputs.targetGroundElevationM + inputs.verticalDatumOffsetM + inputs.targetHeightM}
+  targetSurfaceDistanceM={inputs.surfaceDistanceKm * 1_000}
   terrainProfile={isHorizon ? undefined : terrainProfile}
   terrainSourceLabel={terrainSourceLabel}
 />
@@ -1020,6 +1044,7 @@ export function AppNext(): React.JSX.Element {
   const [visualLayers, setVisualLayers] = useState<VisualLayerState>({
     geographicBoundaries: true,
     terrain: false,
+    atmosphere: false,
     grid: true
   });
 
@@ -1507,6 +1532,7 @@ export function AppNext(): React.JSX.Element {
         <Sidebar
           experiments={savedExperiments}
           activeScenarioId={activeScenarioId}
+          atmosphereMode={atmosphereState.mode}
           visualLayers={visualLayers}
           onScenarioChange={(scenarioId) => {
             if (scenarioId === activeScenarioId) return;
@@ -1622,6 +1648,7 @@ export function AppNext(): React.JSX.Element {
                 metadata={model.metadata}
                 run={runs.find((candidate) => candidate.metadata.id === model.metadata.id)}
                 inputs={effectiveInputs}
+                atmosphereState={atmosphereState}
                 terrainProfile={terrainProfile}
                 terrainSourceLabel={terrainVisualizationSourceLabel(terrainProfileSource)}
                 visualLayers={visualLayers}

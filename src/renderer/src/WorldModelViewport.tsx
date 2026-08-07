@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mesh } from 'topojson-client';
 import worldAtlas from 'world-atlas/countries-110m.json';
+import type { AtmosphereExperimentState } from '../../shared/atmosphere';
+import type { ModelPrediction } from '../../shared/domain';
 import type { TerrainProfile } from '../../shared/terrain';
 import {
   coordinateAtWgs84PathFraction,
@@ -10,6 +12,11 @@ import {
 } from '../../simulation/geodesic-path';
 import { extractGeographicLineStrings } from '../../simulation/geographic-visualization';
 import { buildTerrainVisualizationProfile } from '../../simulation/terrain-visualization';
+import {
+  atmosphereVisualRadiusScale,
+  buildAtmosphereVisualizationPath
+} from '../../simulation/atmosphere-visualization';
+import { traceLayeredAtmosphereRay } from '../../simulation/layered-ray-tracing';
 import {
   buildWgs84VisualizationRoute,
   latitudeLongitudeToNorthPolarAzimuthalPoint,
@@ -28,7 +35,13 @@ export interface WorldModelViewportProps {
   showGeographicBoundaries: boolean;
   showTarget: boolean;
   showTerrain: boolean;
+  showAtmosphere: boolean;
   showGrid: boolean;
+  atmosphereState: AtmosphereExperimentState;
+  atmospherePrediction?: ModelPrediction;
+  observerAltitudeM: number;
+  targetTopAltitudeM: number;
+  targetSurfaceDistanceM: number;
   terrainProfile?: TerrainProfile;
   terrainSourceLabel?: string;
 }
@@ -268,6 +281,120 @@ function addTerrainVisualization(
   group.add(line(ridgePoints, 0x8ff0cf, 0.98));
 }
 
+
+function predictionMetric(
+  prediction: ModelPrediction | undefined,
+  key: string
+): number | null {
+  return prediction?.metrics.find((metric) => metric.key === key)?.value ?? null;
+}
+
+function addAtmosphereVisualization(
+  group: THREE.Group,
+  atmosphereState: AtmosphereExperimentState,
+  prediction: ModelPrediction | undefined,
+  observerCoordinate: { latitudeDeg: number; longitudeDeg: number },
+  targetCoordinate: { latitudeDeg: number; longitudeDeg: number },
+  showTarget: boolean,
+  observerAltitudeM: number,
+  targetTopAltitudeM: number,
+  targetSurfaceDistanceM: number,
+  radius: number
+): void {
+  if (atmosphereState.mode !== 'profile') return;
+  const samples = atmosphereState.profile.samples;
+  const first = samples[0];
+  const last = samples[samples.length - 1];
+  if (!first || !last || last.altitudeM <= first.altitudeM) return;
+
+  const shellStride = Math.max(1, Math.ceil(samples.length / 6));
+  samples.forEach((sample, index) => {
+    if (index !== 0 && index !== samples.length - 1 && index % shellStride !== 0) return;
+    const shellRadius = radius * atmosphereVisualRadiusScale(
+      sample.altitudeM,
+      first.altitudeM,
+      last.altitudeM
+    );
+    const shell = new THREE.Mesh(
+      new THREE.SphereGeometry(shellRadius, 32, 18),
+      new THREE.MeshBasicMaterial({
+        color: 0x69d9ee,
+        wireframe: true,
+        transparent: true,
+        opacity: index === samples.length - 1 ? 0.075 : 0.032,
+        depthWrite: false
+      })
+    );
+    group.add(shell);
+  });
+
+  const initialElevationDeg = showTarget
+    ? predictionMetric(prediction, 'targetTopElevationDeg') ??
+      predictionMetric(prediction, 'profileGrazingElevationDeg')
+    : predictionMetric(prediction, 'profileGrazingElevationDeg');
+  const surfaceDistanceM = showTarget
+    ? targetSurfaceDistanceM
+    : predictionMetric(prediction, 'horizonSurfaceDistanceM');
+  if (initialElevationDeg === null || surfaceDistanceM === null || surfaceDistanceM <= 0) return;
+
+  try {
+    const trace = traceLayeredAtmosphereRay(atmosphereState.profile, {
+      settings: atmosphereState.opticalSettings,
+      observerAltitudeM,
+      initialElevationDeg,
+      maxPathLengthM: Math.max(
+        atmosphereState.rayTraceStepM * 4,
+        surfaceDistanceM * 1.08 + atmosphereState.rayTraceStepM * 4
+      ),
+      stepM: atmosphereState.rayTraceStepM
+    });
+    const boundedSamples = showTarget
+      ? trace.samples.filter((sample) =>
+          sample.surfaceDistanceM <= surfaceDistanceM + atmosphereState.rayTraceStepM * 2
+        )
+      : trace.samples;
+    if (boundedSamples.length < 2) return;
+
+    const visual = buildAtmosphereVisualizationPath({
+      samples: boundedSamples,
+      observerCoordinate,
+      ...(showTarget ? {
+        targetCoordinate,
+        targetSurfaceDistanceM: surfaceDistanceM
+      } : {}),
+      profileMinimumAltitudeM: first.altitudeM,
+      profileMaximumAltitudeM: last.altitudeM,
+      maxPoints: 420
+    });
+    const opticalPoints = visual.points.map((sample) =>
+      vector(sample.point).multiplyScalar(radius)
+    );
+    group.add(line(opticalPoints, 0x64f1df, 0.98));
+
+    if (showTarget) {
+      const observerPoint = vector(latitudeLongitudeToSpherePoint(
+        observerCoordinate,
+        radius * atmosphereVisualRadiusScale(
+          observerAltitudeM,
+          first.altitudeM,
+          last.altitudeM
+        )
+      ));
+      const targetPoint = vector(latitudeLongitudeToSpherePoint(
+        targetCoordinate,
+        radius * atmosphereVisualRadiusScale(
+          targetTopAltitudeM,
+          first.altitudeM,
+          last.altitudeM
+        )
+      ));
+      group.add(line([observerPoint, targetPoint], 0xe9f2f5, 0.62));
+    }
+  } catch {
+    // The physical model already reports profile/coverage errors. Visualization never invents a fallback ray.
+  }
+}
+
 function disposeScene(scene: THREE.Scene): void {
   scene.traverse((object) => {
     const renderable = object as THREE.Mesh & {
@@ -302,7 +429,13 @@ export function WorldModelViewport({
   showGeographicBoundaries,
   showTarget,
   showTerrain,
+  showAtmosphere,
   showGrid,
+  atmosphereState,
+  atmospherePrediction,
+  observerAltitudeM,
+  targetTopAltitudeM,
+  targetSurfaceDistanceM,
   terrainProfile,
   terrainSourceLabel
 }: WorldModelViewportProps): React.JSX.Element {
@@ -311,6 +444,7 @@ export function WorldModelViewport({
   const gridGroupRef = useRef<THREE.Group | null>(null);
   const boundaryGroupRef = useRef<THREE.Group | null>(null);
   const terrainGroupRef = useRef<THREE.Group | null>(null);
+  const atmosphereGroupRef = useRef<THREE.Group | null>(null);
   const renderRef = useRef<() => void>(() => undefined);
   const [error, setError] = useState('');
 
@@ -330,6 +464,11 @@ export function WorldModelViewport({
     if (terrainGroupRef.current) terrainGroupRef.current.visible = showTerrain;
     renderRef.current();
   }, [showTerrain]);
+
+  useEffect(() => {
+    if (atmosphereGroupRef.current) atmosphereGroupRef.current.visible = showAtmosphere;
+    renderRef.current();
+  }, [showAtmosphere]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -358,13 +497,16 @@ export function WorldModelViewport({
       const gridGroup = new THREE.Group();
       const boundaryGroup = new THREE.Group();
       const terrainGroup = new THREE.Group();
+      const atmosphereGroup = new THREE.Group();
       gridGroup.visible = showGrid;
       boundaryGroup.visible = showGeographicBoundaries;
       terrainGroup.visible = showTerrain;
+      atmosphereGroup.visible = showAtmosphere;
       gridGroupRef.current = gridGroup;
       boundaryGroupRef.current = boundaryGroup;
       terrainGroupRef.current = terrainGroup;
-      world.add(gridGroup, boundaryGroup, terrainGroup);
+      atmosphereGroupRef.current = atmosphereGroup;
+      world.add(gridGroup, boundaryGroup, terrainGroup, atmosphereGroup);
       scene.add(world);
 
       scene.add(new THREE.HemisphereLight(0xbfe8ff, 0x17212b, 1.5));
@@ -406,6 +548,18 @@ export function WorldModelViewport({
             radius
           );
         }
+        addAtmosphereVisualization(
+          atmosphereGroup,
+          atmosphereState,
+          atmospherePrediction,
+          observerCoordinate,
+          targetCoordinate,
+          showTarget,
+          observerAltitudeM,
+          targetTopAltitudeM,
+          targetSurfaceDistanceM,
+          radius
+        );
 
         const observerPosition = vector(latitudeLongitudeToSpherePoint(
           observerCoordinate,
@@ -575,6 +729,7 @@ export function WorldModelViewport({
         gridGroupRef.current = null;
         boundaryGroupRef.current = null;
         terrainGroupRef.current = null;
+        atmosphereGroupRef.current = null;
         renderRef.current = () => undefined;
         if (scene) disposeScene(scene);
         renderer?.dispose();
@@ -604,7 +759,12 @@ export function WorldModelViewport({
     targetLatitudeDeg,
     targetLongitudeDeg,
     showTarget,
-    terrainProfile
+    terrainProfile,
+    atmosphereState,
+    atmospherePrediction,
+    observerAltitudeM,
+    targetTopAltitudeM,
+    targetSurfaceDistanceM
   ]);
 
   return (
@@ -628,6 +788,15 @@ export function WorldModelViewport({
           >
             <i className="terrain" /> Arazi · görsel yükseltme
           </span>
+        )}
+        {showAtmosphere && atmosphereState.mode === 'profile' && kind === 'globe' && (
+          <>
+            <span className="atmosphere-state" title="Atmosfer yükseklikleri okunabilirlik için sahnede abartılı ölçeklenir; hesap motorundaki metre değerleri değişmez">
+              <i className="atmosphere" /> Atmosfer · görsel ölçek
+            </span>
+            <span className="optical-ray-state"><i className="optical-ray" /> Optik ışın</span>
+            {showTarget && <span className="geometric-ray-state"><i className="geometric-ray" /> Geometrik LOS</span>}
+          </>
         )}
         {showGeographicBoundaries && kind !== 'plane' && (
           <span className="boundary-state">Sınırlar açık</span>
