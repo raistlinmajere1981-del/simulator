@@ -1,0 +1,33 @@
+name: Cleanup stage 3.26 sources
+
+on:
+  push:
+    branches:
+      - agent/terrain-3d-visualization
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/terrain-3d-visualization
+          fetch-depth: 0
+      - name: Deduplicate AppNext helper
+        run: python scripts/cleanup_stage_3_26.py
+      - name: Commit cleanup
+        run: |
+          if git diff --quiet; then
+            echo "No cleanup required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/renderer/src/AppNext.tsx
+          git commit -m "fix: deduplicate terrain visualization source helper"
+          git push origin HEAD:agent/terrain-3d-visualization
