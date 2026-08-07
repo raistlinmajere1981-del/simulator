@@ -93,6 +93,7 @@ interface GeoidConversionRecordState {
 
 interface VisualLayerState {
   geographicBoundaries: boolean;
+  terrain: boolean;
   grid: boolean;
 }
 
@@ -369,7 +370,7 @@ function Sidebar({
       <section className="side-section compact grow">
         <div className="section-heading">
           <span>Görsel katmanlar</span>
-          <span className="section-state">2 / 5 hazır</span>
+          <span className="section-state">3 / 5 hazır</span>
         </div>
         <label className="switch-row">
           <span>Kıta / Ülke Sınırları</span>
@@ -380,7 +381,16 @@ function Sidebar({
           />
           <span className="switch" />
         </label>
-        {['Topografya Görselleştirme', 'Gece Işıkları', 'Atmosfer Profili'].map((item) => (
+        <label className="switch-row" title="Arazi profili etkin olduğunda rota boyunca göreli yükselti şeridini gösterir">
+          <span>Topografya Görselleştirme</span>
+          <input
+            type="checkbox"
+            checked={visualLayers.terrain}
+            onChange={(event) => onVisualLayerChange('terrain', event.currentTarget.checked)}
+          />
+          <span className="switch" />
+        </label>
+        {['Gece Işıkları', 'Atmosfer Profili'].map((item) => (
           <label className="switch-row unavailable-layer" key={item}>
             <span>{item}</span><input type="checkbox" disabled /><span className="switch" />
           </label>
@@ -588,6 +598,13 @@ function isCsvTerrainProfileSource(
   return source.kind === 'csv';
 }
 
+function terrainVisualizationSourceLabel(source: TerrainProfileSource | undefined): string {
+  if (!source) return 'Manuel profil';
+  if (source.kind === 'dem') return `DEM · ${source.fileName}`;
+  if (source.kind === 'geojson') return `GeoJSON · ${source.fileName}`;
+  return `CSV · ${source.fileName}`;
+}
+
 function TerrainPanel({
   experimentId,
   inputs,
@@ -722,12 +739,16 @@ function ModelCard({
   metadata,
   run,
   inputs,
+  terrainProfile,
+  terrainSourceLabel,
   visualLayers,
   onShowTrace
 }: {
   metadata: ModelMetadata;
   run: ModelRun | undefined;
   inputs: SimulatorInputs;
+  terrainProfile: TerrainProfile | undefined;
+  terrainSourceLabel: string;
   visualLayers: VisualLayerState;
   onShowTrace(): void;
 }): React.JSX.Element {
@@ -758,7 +779,10 @@ function ModelCard({
   targetLatitudeDeg={inputs.targetLatitudeDeg}
   targetLongitudeDeg={inputs.targetLongitudeDeg}
   showGeographicBoundaries={visualLayers.geographicBoundaries}
+  showTerrain={visualLayers.terrain}
   showGrid={visualLayers.grid}
+  terrainProfile={terrainProfile}
+  terrainSourceLabel={terrainSourceLabel}
 />
       {isProjection ? (
         <div className="projection-explanation">
@@ -840,6 +864,7 @@ export function AppNext(): React.JSX.Element {
   const [storageMessage, setStorageMessage] = useState('');
   const [visualLayers, setVisualLayers] = useState<VisualLayerState>({
     geographicBoundaries: true,
+    terrain: false,
     grid: true
   });
 
@@ -1373,6 +1398,8 @@ export function AppNext(): React.JSX.Element {
                 metadata={model.metadata}
                 run={runs.find((candidate) => candidate.metadata.id === model.metadata.id)}
                 inputs={effectiveInputs}
+                terrainProfile={terrainProfile}
+                terrainSourceLabel={terrainVisualizationSourceLabel(terrainProfileSource)}
                 visualLayers={visualLayers}
                 onShowTrace={() => setTraceModelId(model.metadata.id)}
               />

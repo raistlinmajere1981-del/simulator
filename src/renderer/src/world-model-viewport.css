@@ -142,3 +142,17 @@
     display: none;
   }
 }
+
+
+.world-model-legend i.terrain {
+  border-radius: 2px;
+  color: #8ff0cf;
+  background: #8ff0cf;
+}
+
+.world-model-legend .terrain-state {
+  max-width: 150px;
+  overflow: hidden;
+  color: #90cdbb;
+  text-overflow: ellipsis;
+}
