@@ -204,7 +204,7 @@ HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı 
 ## Henüz tamamlanmayan ana ürün işleri
 
 - Gece ışıkları görsel katmanı
-- Fotoğraf ve kamera/lens kalibrasyonu
+- Fotoğraf yükleme ve etkileşimli kamera/işaretleme arayüzü
 - Güneş, Ay, yıldız ve tutulma deneyleri
 - Toroidal ve içbükey gibi ek geometrik model sözleşmeleri
 
@@ -266,7 +266,8 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-4.3.md`](docs/roadmap-stage-4.3.md)
 - [`docs/roadmap-stage-4.4.md`](docs/roadmap-stage-4.4.md)
 - [`docs/roadmap-stage-4.5.md`](docs/roadmap-stage-4.5.md)
+- [`docs/roadmap-stage-5.1.md`](docs/roadmap-stage-5.1.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.3.2`dir. Üç görünürlük senaryosu, kayıt/raporlama, WGS84, arazi/DEM, jeoit ve su yüzeyi akışlarına ek olarak katmanlı meteorolojik atmosferin Ciddor/RK4 fizik yolu İdeal Küre görünürlük ve ufuk sonuçlarına bağlanmış; atmosfer kabukları, optik ışın ve geometrik LOS 3B sahnede hesap motorundan bağımsız bir görsel katman olarak kullanılabilir hale gelmiştir. Sıradaki ana fiziksel ürün aşaması fotoğraf ve kamera/lens kalibrasyonudur.
+Aktif geliştirme sürümü `1.3.3`tür. Üç görünürlük senaryosu, kayıt/raporlama, WGS84, arazi/DEM, jeoit, su yüzeyi ve katmanlı atmosfer akışlarına ek olarak fotoğraf kalibrasyon çekirdeği; pinhole kamera iç parametreleri, iki noktalı görüntü referans çizgisi, piksel-açı dönüşümü ve koruyucu işaret belirsizliği zarfını hesaplayabilir. Sıradaki ürün aşaması bu çekirdeği yerel fotoğraf yükleme ve etkileşimli işaretleme arayüzüne bağlamaktır.

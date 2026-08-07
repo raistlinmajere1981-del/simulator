@@ -370,14 +370,32 @@ Durum: tamamlandı · `1.3.2`
 
 Ayrıntı: [`roadmap-stage-4.5.md`](roadmap-stage-4.5.md)
 
+# Aşama 5 — Fotoğraf kalibrasyonu
+
+## Aşama 5.1 — Fotoğraf ve kamera kalibrasyonu çekirdeği
+
+Durum: tamamlandı · `1.3.3`
+
+- sensör + odak uzaklığı veya yatay/düşey FOV ile pinhole iç parametre çözümü
+- piksel → kamera ışını ve piksel → düşey açı dönüşümü
+- iki noktalı ufuk/referans çizgisinden roll ve yerel açı referansı
+- hedef tabanı / hedef tepesi için referansa göre açılar ve hedef açısal yüksekliği
+- işaret belirsizliğini 256 uç durumla koruyucu açı zarfına yayma
+- düzeltilmemiş lens distorsiyonunu açık sistematik hata uyarısı olarak koruma
+- işaretlenen çizgiyi otomatik fiziksel/astronomik ufuk saymama
+- ModelPrediction provenansı ve hesap izi
+
+Ayrıntı: [`roadmap-stage-5.1.md`](roadmap-stage-5.1.md)
+
 # Sıradaki ana ürün aşamaları
 
-## Aşama 5 — Fotoğraf kalibrasyonu
+## Aşama 5.2 — Fotoğraf yükleme ve etkileşimli işaretleme
 
-- kamera ve lens bilgileri
-- ufuk, hedef tabanı ve hedef tepesi işaretleme
-- piksel-açı dönüşümü
-- ölçüm belirsizliği üretimi
+- yerel fotoğraf yükleme ve kaynak provenansı
+- kamera/lens parametre editörü
+- ufuk başlangıç/son, hedef tabanı ve hedef tepesi işaretleme
+- 5.1 açı/belirsizlik sonuçlarının deney kaydına bağlanması
+- `.ggl.json` ve HTML rapor koruması
 
 ## Aşama 6 — Güneş, Ay ve gökyüzü deneyleri
 
