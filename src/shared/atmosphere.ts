@@ -20,6 +20,16 @@ export interface InterpolatedAtmosphereState {
   relativeHumidityPercent: number;
 }
 
+export interface OpticalAtmosphereSettings {
+  wavelengthNm: number;
+  carbonDioxidePpm: number;
+}
+
+export const DEFAULT_OPTICAL_ATMOSPHERE_SETTINGS: OpticalAtmosphereSettings = {
+  wavelengthNm: 550,
+  carbonDioxidePpm: 450
+};
+
 export const DEFAULT_ATMOSPHERE_PROFILE: LayeredAtmosphereProfile = {
   kind: 'layered-meteorological',
   sourceLabel: 'Manuel atmosfer profili',
