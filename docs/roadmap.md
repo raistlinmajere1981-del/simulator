@@ -314,20 +314,30 @@ Bu aşama mevcut standart `k` etkin-yarıçap yaklaşımını değiştirmez ve h
 
 Ayrıntı: [`roadmap-stage-4.1.md`](roadmap-stage-4.1.md)
 
-## Aşama 4.2 — Optik kırılma indisi ve katmanlı ışın izi
+## Aşama 4.2 — Optik kırılma ve katmanlı ışın izi
 
-- görünür ışık için açık dalga boyu seçimi
-- formülü ve geçerlilik sınırları izlenebilir optik kırılma indisi
-- katman sınırlarında ışın ilerleme hesabı
-- küresel ve düzlemsel yüzey geometrisinden ayrı atmosfer çözümü
-- standart `k` yaklaşımıyla karşılaştırma
+Durum: tamamlandı · `1.2.2`
 
-## Aşama 4.3 — Atmosfer profili arayüzü ve kayıt
+- Ciddor görünür/yakın KIZÖ faz kırılma indisi
+- meteorolojik profilden `n`, `N`, `dn/dh`, `dN/dh` ve yerel `k` tanıları
+- küresel/radyal katmanlı atmosferde RK4 ışın izleme
+- profil kapsamı dışında otomatik ekstrapolasyon yapmama
 
-- profil noktası editörü
-- profil görsel katmanı
-- deney kaydı / yeniden açma / taşınabilir provenans
-- standart ve gelişmiş atmosfer sonuçlarının yan yana gösterimi
+Ayrıntı: [`roadmap-stage-4.2.md`](roadmap-stage-4.2.md)
+
+## Aşama 4.3 — Atmosfer arayüzü ve deney entegrasyonu
+
+Durum: tamamlandı · `1.3.0`
+
+- atmosfer modu: kapalı / standart `k` / katmanlı profil
+- sıcaklık / basınç / nem katman editörü
+- dalga boyu, CO₂ ve ışın adımı ayarları
+- Ciddor optik N ve katman `dN/dh` / yerel `k` tanıları
+- atmosfer state'inin yerel ve taşınabilir deney kayıtlarında korunması
+- eski kayıtların legacy standart-k bayrağından güvenli açılması
+- profil modunun standart `k` hesabına sessizce düşmemesi
+
+Ayrıntı: [`roadmap-stage-4.3.md`](roadmap-stage-4.3.md)
 
 # Sıradaki ana ürün aşamaları
 

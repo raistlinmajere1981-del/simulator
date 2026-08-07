@@ -1,3 +1,4 @@
+import type { AtmosphereExperimentState } from './atmosphere';
 import type { CalculationTrace, ModelPrediction } from './domain';
 import type { SimulationScenarioId } from './scenario';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
@@ -162,6 +163,8 @@ export interface SavedExperiment {
   updatedAtIso: string;
   /** Scenario identity; older records default to target visibility. */
   scenarioId?: SimulationScenarioId;
+  /** Persisted advanced-atmosphere editor state; older records derive mode from the legacy standard-refraction flag. */
+  atmosphere?: AtmosphereExperimentState;
   inputs: SimulatorInputs;
   /**
    * Ordered interior terrain points. Endpoints are derived from the observer

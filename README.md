@@ -250,7 +250,8 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-3.26.md`](docs/roadmap-stage-3.26.md)
 - [`docs/roadmap-stage-3.27.md`](docs/roadmap-stage-3.27.md)
 - [`docs/roadmap-stage-4.1.md`](docs/roadmap-stage-4.1.md)
+- [`docs/roadmap-stage-4.2.md`](docs/roadmap-stage-4.2.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.2.1`dir. Üç görünürlük senaryosu, kayıt/raporlama, WGS84, arazi/DEM, jeoit ve su yüzeyi akışlarına ek olarak katmanlı meteorolojik atmosfer profilinin doğrulama ve enterpolasyon çekirdeği hazırdır. Sıradaki teknik aşama görünür ışık kırılma indisi ve katmanlı ışın izleme çekirdeğidir.
+Aktif geliştirme sürümü `1.3.0`dir. Üç görünürlük senaryosu, kayıt/raporlama, WGS84, arazi/DEM, jeoit ve su yüzeyi akışlarına ek olarak katmanlı meteorolojik atmosfer profilinin doğrulama ve enterpolasyon çekirdeği hazırdır. Sıradaki teknik aşama görünür ışık kırılma indisi ve katmanlı ışın izleme çekirdeğidir.

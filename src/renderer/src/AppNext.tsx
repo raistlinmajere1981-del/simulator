@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { simulationModels } from '../../models';
+import {
+  createDefaultAtmosphereExperimentState,
+  type AtmosphereExperimentState,
+  type AtmosphereMode
+} from '../../shared/atmosphere';
 import type {
   ExperimentDefinition,
   ModelMetadata,
@@ -46,6 +51,10 @@ import {
   type ModelRun
 } from '../../simulation/runner';
 import {
+  atmosphereStateFromLegacyStandardFlag,
+  cloneAtmosphereExperimentState
+} from '../../simulation/atmosphere-persistence';
+import {
   WATER_SURFACE_APPLICATION_MODEL_ID,
   type WaterSurfaceApplicationResult
 } from '../../simulation/water-surface-application';
@@ -68,6 +77,7 @@ import {
   type TerrainProfileImportOptions
 } from './MultiPointTerrainEditor';
 import { GeoidConversionControl } from './GeoidConversionControl';
+import { AtmosphereProfileControl } from './AtmosphereProfileControl';
 import { WaterSurfaceControl } from './WaterSurfaceControl';
 import { WorldModelViewport } from './WorldModelViewport';
 
@@ -486,13 +496,13 @@ function ScenarioSummary({
   scenarioId,
   activeName,
   inputs,
+  atmosphereMode,
   effectiveDistanceKm,
   geodesic,
   isDirty,
   onDistanceSourceChange,
   onDatumChange,
   onNumberChange,
-  onRefractionChange,
   onReset,
   onSave,
   onShowGeodesicTrace
@@ -500,13 +510,13 @@ function ScenarioSummary({
   scenarioId: SimulationScenarioId;
   activeName: string;
   inputs: SimulatorInputs;
+  atmosphereMode: AtmosphereMode;
   effectiveDistanceKm: number;
   geodesic: GeodesicResult | undefined;
   isDirty: boolean;
   onDistanceSourceChange(source: DistanceSource): void;
   onDatumChange(kind: VerticalDatumKind): void;
   onNumberChange(key: NumericInputKey, value: number): void;
-  onRefractionChange(enabled: boolean): void;
   onReset(): void;
   onSave(): void;
   onShowGeodesicTrace(): void;
@@ -550,7 +560,7 @@ function ScenarioSummary({
             <NumericField inputKey="observationUncertaintyPercent" label="Gözlem belirsizliği" unit="±%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
           </>
         )}
-        <NumericField inputKey="refractionCoefficient" label="Kırılma katsayısı" unit="k" step={0.01} inputs={inputs} disabled={!inputs.useStandardRefraction} onNumberChange={onNumberChange} />
+        <NumericField inputKey="refractionCoefficient" label="Kırılma katsayısı" unit="k" step={0.01} inputs={inputs} disabled={atmosphereMode !== 'standard'} onNumberChange={onNumberChange} />
       </div>
 
       {!isHorizon && <div className="distance-source-panel">
@@ -599,14 +609,9 @@ function ScenarioSummary({
         </p>
       )}
 
-      <label className="refraction-control">
-        <input
-          checked={inputs.useStandardRefraction}
-          type="checkbox"
-          onChange={(event) => onRefractionChange(event.currentTarget.checked)}
-        />
-        <span>Standart atmosferik kırılmayı etkin yarıçap yaklaşımıyla uygula</span>
-      </label>
+      <div className="refraction-control">
+        <span>Atmosfer modu: {atmosphereMode === 'off' ? 'Kapalı' : atmosphereMode === 'standard' ? 'Standart k' : 'Katmanlı profil'} · ayrıntılar aşağıdaki Atmosfer panelinden yönetilir.</span>
+      </div>
     </section>
   );
 }
@@ -637,7 +642,7 @@ function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.El
   );
 }
 
-function HorizonReferencePanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.Element {
+function HorizonReferencePanel({ inputs, atmosphereMode }: { inputs: SimulatorInputs; atmosphereMode: AtmosphereMode }): React.JSX.Element {
   const observerTotalElevationM = inputs.observerGroundElevationM +
     inputs.verticalDatumOffsetM + inputs.observerHeightM;
   return (
@@ -654,7 +659,7 @@ function HorizonReferencePanel({ inputs }: { inputs: SimulatorInputs }): React.J
       <div className="horizon-reference-metrics">
         <div><small>Toplam gözlemci kotu</small><strong>{formatMetres(observerTotalElevationM)}</strong></div>
         <div><small>Düşey datum</small><strong>{datumLabels[inputs.verticalDatumKind]}</strong></div>
-        <div><small>Atmosfer</small><strong>{inputs.useStandardRefraction ? `Standart k=${numberFormatter.format(inputs.refractionCoefficient)}` : 'Kapalı'}</strong></div>
+        <div><small>Atmosfer</small><strong>{atmosphereMode === 'standard' ? `Standart k=${numberFormatter.format(inputs.refractionCoefficient)}` : atmosphereMode === 'profile' ? 'Katmanlı profil' : 'Kapalı'}</strong></div>
       </div>
       <p className="engine-note">Bu senaryoda hedef görünürlük yüzdesi ölçümü yapılmaz; modellerin geometrik ufuk tanımları karşılaştırılır.</p>
     </section>
@@ -990,6 +995,9 @@ function ResultsTable({
 
 export function AppNext(): React.JSX.Element {
   const [inputs, setInputs] = useState<SimulatorInputs>(DEFAULT_SIMULATOR_INPUTS);
+  const [atmosphereState, setAtmosphereState] = useState<AtmosphereExperimentState>(() =>
+    createDefaultAtmosphereExperimentState(DEFAULT_SIMULATOR_INPUTS.useStandardRefraction ? 'standard' : 'off')
+  );
   const [activeScenarioId, setActiveScenarioId] = useState<SimulationScenarioId>('target-visibility');
   const [manualTerrainPoints, setManualTerrainPoints] = useState<ManualTerrainPoint[]>(
     defaultTerrainPoints()
@@ -1085,9 +1093,14 @@ export function AppNext(): React.JSX.Element {
   }, [activeExperimentId, activeExperimentName, activeScenarioId, effectiveDistanceKm, experimentObservedAtIso, inputs, terrainProfile]);
 
   const context = useMemo(() => ({
-    atmosphereMode: inputs.useStandardRefraction ? 'standard' as const : 'off' as const,
-    refractionCoefficient: inputs.refractionCoefficient
-  }), [inputs.refractionCoefficient, inputs.useStandardRefraction]);
+    atmosphereMode: atmosphereState.mode,
+    refractionCoefficient: inputs.refractionCoefficient,
+    ...(atmosphereState.mode === 'profile' ? {
+      atmosphereProfile: atmosphereState.profile,
+      opticalAtmosphereSettings: atmosphereState.opticalSettings,
+      rayTraceStepM: atmosphereState.rayTraceStepM
+    } : {})
+  }), [atmosphereState, inputs.refractionCoefficient]);
 
   useEffect(() => {
     void window.simulatorDesktop.listExperiments()
@@ -1308,6 +1321,9 @@ export function AppNext(): React.JSX.Element {
     const storedWater = readStoredWaterSurfaceState(saved.predictions, saved.modelVersions);
     setActiveScenarioId(normalizeSimulationScenarioId(saved.scenarioId));
     setInputs(saved.inputs);
+    setAtmosphereState(saved.atmosphere
+      ? cloneAtmosphereExperimentState(saved.atmosphere)
+      : atmosphereStateFromLegacyStandardFlag(saved.inputs.useStandardRefraction));
     setManualTerrainPoints(saved.manualTerrainPoints ?? defaultTerrainPoints(saved.inputs));
     setTerrainProfileSource(saved.terrainProfileSource);
     setGeoidConversionRecord(geoidPrediction
@@ -1334,6 +1350,7 @@ export function AppNext(): React.JSX.Element {
       createdAtIso: existing?.createdAtIso ?? experimentObservedAtIso,
       updatedAtIso: now,
       scenarioId: activeScenarioId,
+      atmosphere: cloneAtmosphereExperimentState(atmosphereState),
       inputs,
       manualTerrainPoints,
       terrainProfileSource,
@@ -1369,6 +1386,9 @@ export function AppNext(): React.JSX.Element {
       setActiveExperimentId(saved.id);
       setActiveExperimentName(saved.name);
       setExperimentObservedAtIso(saved.createdAtIso);
+      setAtmosphereState(saved.atmosphere
+        ? cloneAtmosphereExperimentState(saved.atmosphere)
+        : atmosphereStateFromLegacyStandardFlag(saved.inputs.useStandardRefraction));
       setManualTerrainPoints(saved.manualTerrainPoints ?? manualTerrainPoints);
       setTerrainProfileSource(saved.terrainProfileSource);
       setGeoidConversionRecord(savedGeoidPrediction
@@ -1397,6 +1417,7 @@ export function AppNext(): React.JSX.Element {
         setActiveExperimentId(crypto.randomUUID());
         setActiveExperimentName('');
         setExperimentObservedAtIso(new Date().toISOString());
+        setAtmosphereState(createDefaultAtmosphereExperimentState('standard'));
         setGeoidConversionRecord(undefined);
         setWaterObservationRecord(undefined);
         setWaterApplicationRecord(undefined);
@@ -1510,6 +1531,7 @@ export function AppNext(): React.JSX.Element {
               scenarioId={activeScenarioId}
               activeName={activeExperimentName}
               inputs={inputs}
+              atmosphereMode={atmosphereState.mode}
               effectiveDistanceKm={effectiveDistanceKm}
               geodesic={geodesic}
               isDirty={isDirty}
@@ -1523,9 +1545,9 @@ export function AppNext(): React.JSX.Element {
                 updateInputs((current) => ({ ...current, verticalDatumKind }));
               }}
               onNumberChange={handleNumberChange}
-              onRefractionChange={(enabled) => updateInputs((current) => ({ ...current, useStandardRefraction: enabled }))}
               onReset={() => {
                 setInputs(DEFAULT_SIMULATOR_INPUTS);
+                setAtmosphereState(createDefaultAtmosphereExperimentState('standard'));
                 setManualTerrainPoints(defaultTerrainPoints());
                 setTerrainProfileSource(undefined);
                 setGeoidConversionRecord(undefined);
@@ -1541,9 +1563,22 @@ export function AppNext(): React.JSX.Element {
               onShowGeodesicTrace={() => setTraceModelId(geodesicMetadata.id)}
             />
             {activeScenarioId === 'horizon'
-              ? <HorizonReferencePanel inputs={inputs} />
+              ? <HorizonReferencePanel inputs={inputs} atmosphereMode={atmosphereState.mode} />
               : <ObservationPanel inputs={inputs} />}
           </div>
+
+          <AtmosphereProfileControl
+            state={atmosphereState}
+            standardRefractionCoefficient={inputs.refractionCoefficient}
+            onChange={(nextState) => {
+              setAtmosphereState(nextState);
+              setInputs((current) => ({
+                ...current,
+                useStandardRefraction: nextState.mode === 'standard'
+              }));
+              setIsDirty(true);
+            }}
+          />
 
           {activeScenarioId !== 'horizon' && <TerrainPanel
             experimentId={activeExperimentId}
@@ -1606,10 +1641,10 @@ export function AppNext(): React.JSX.Element {
                 <li>Jeoit profil dönüşümü kaynak, sürüm/epok, N, belirsizlik ve hesap izini deney sonucunda korur.</li>
                 <li>Su yüzeyi kaydı gelgit/dalga belirsizliğini provenans olarak tutar ve yalnız seçilen uç kotlarına kontrollü uygulanır.</li>
                 <li>Küre ve düzlem aynı profili kendi geometrilerinde ayrı çözer.</li>
-                <li>Standart kırılma yalnızca kürede etkin yarıçap yaklaşımıdır.</li>
+                <li>Standart kırılma kürede etkin yarıçap yaklaşımıdır; katmanlı atmosfer modu meteorolojik profil ve Ciddor optik tanılarını ayrı state olarak taşır.</li>
                 <li>Azimutal gösterim yalnızca kartografik referanstır.</li>
               </ul>
-              <p>Kamera kalibrasyonu, katmanlı atmosfer ışın izleme ve dalga yüzeyinin rota boyunca dinamik geometrisi henüz hesaba dahil değildir.</p>
+              <p>Katmanlı atmosfer profilinin optik ışın izleme çekirdeği hazırdır; görünürlük/ufuk model sonucuna bağlantısı Aşama 4.4 kapsamındadır. Kamera kalibrasyonu ve dalga yüzeyinin rota boyunca dinamik geometrisi henüz hesaba dahil değildir.</p>
             </section>
           </div>
         </main>
