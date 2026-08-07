@@ -1,5 +1,7 @@
 # Yol Haritası
 
+Bu belge ana ürün aşamalarının güncel özetidir. Ayrıntılı teknik kararlar ilgili `docs/roadmap-stage-*.md` ve konu belgelerinde tutulur.
+
 ## Aşama 0 — Temel ve sözleşmeler
 
 Durum: tamamlandı
@@ -17,15 +19,10 @@ Durum: tamamlandı
 - İdeal küre modeli
 - Tanımlı düzlem modeli
 - Azimutal projeksiyon için fiziksel model değildir uyarısı
-- Ufuk mesafesi
-- Görünür ve gizlenen hedef yüksekliği
-- Hedef tepe görüş açısı
-- Atmosfer kapalı ve standart kırılma seçenekleri
+- Ufuk, görünürlük, gizlenme ve hedef tepe açısı
+- Standart kırılma / atmosfer kapalı seçenekleri
 - Gözlem farkı ve belirsizlik değerlendirmesi
-- Etkileşimli arayüz girdileri
-- Linux/KDE 1920×1080 görsel doğrulama
-- Girdi sınırlandırması
-- Birim testleri ve üretim derlemesi
+- Etkileşimli hedef görünürlüğü arayüzü
 
 ## Aşama 2 — Deney kaydetme ve izlenebilirlik
 
@@ -34,296 +31,268 @@ Durum: tamamlandı
 - Yerel deney kayıtları
 - Kayıt oluşturma, güncelleme, yeniden açma ve silme
 - Model sürümleri ve sonuç anlık görüntüleri
-- Formül, sayısal yerine koyma ve sonuç adımları
-- Varsayımlar ve hesap izi kimliği
-- Linux/KDE kayıt akışı doğrulaması
+- Formül, yerine koyma, varsayım ve hesap izi
 
 ## Aşama 2.1 — Taşınabilir deneyler ve raporlar
 
 Durum: tamamlandı
 
 - Sürümlü `.ggl.json` dışa/içe aktarma
-- Eski kayıtların otomatik taşınması
-- Çalışma zamanı doğrulaması
-- Bozuk dosyaların güvenli reddi
-- Kimlik çakışması çözümü
-- Çevrimdışı ve yazdırılabilir HTML raporu
-- Şema taşıma ve HTML güvenlik testleri
+- Eski kayıtların güvenli taşınması
+- Bozuk dosya ve kimlik çakışması kontrolleri
+- Çevrimdışı / yazdırılabilir HTML raporu
+
+# Aşama 3 — Gerçek konum, arazi ve düşey referans
 
 ## Aşama 3.1 — WGS84 gerçek konum girdileri
 
-Durum: tamamlandı
+Durum: tamamlandı · `0.4.x`
 
-- Gözlemci ve hedef enlem/boylamları
-- Manuel ve koordinat mesafesi seçimi
-- WGS84 Vincenty ters jeodezik çözümü
-- Yüzey mesafesi ve uç azimutları
-- Yakın-antipodal durumda işaretli küresel yedek çözüm
-- Jeodezik hesap izi
-- Kayıt, JSON ve HTML raporu desteği
-- Referans, sınır ve taşıma testleri
+- Enlem/boylam girdileri
+- Manuel veya koordinat mesafesi
+- Vincenty ters jeodezik çözümü
+- Yakın-antipodal küresel yedek çözüm
 
 ## Aşama 3.2 — Düşey datum ve arazi temeli
 
-Durum: tamamlandı ve `main` dalına alındı
+Durum: tamamlandı · `0.5.0`
 
-- Ortometrik deniz seviyesi, WGS84 elipsoidal ve yerel datum
-- Datum veya gelgit ofseti
-- Gözlemci zemin ve hedef taban kotları
-- Ortak referansta göz ve hedef tepe kotu
-- Genel arazi profil sözleşmesi
-- Düzlem ve kürede görüş hattı açıklığı
-- Kritik engel ve minimum açıklık
-- Araziyi temizleyen minimum hedef kotu
-- Kırılmanın arazi hesabına yaklaşık yansıması
-- Şema v3 ve eski kayıt taşıması
-- HTML raporunda düşey datum ve profil
-- Uygulama sürümü `0.5.0`
+- Ortometrik, WGS84 elipsoidal ve yerel datum
+- Gözlemci/hedef zemin kotları
+- Görüş hattı açıklığı ve kritik engel çözümü
 
 ## Aşama 3.3 — Çok noktalı manuel arazi profili
 
-Durum: tamamlandı ve `main` dalına alındı
+Durum: tamamlandı · `0.6.0`
 
-- Kimlik, yüzde konumu ve kot taşıyan iç noktalar
-- En fazla 2.000 nokta
-- Sıralama, tekrar ve sınır doğrulaması
-- Uçların zemin kotlarından otomatik eklenmesi
-- Nokta ekleme, düzenleme ve silme
-- En büyük boşluğa otomatik nokta ekleme
-- Canlı SVG profil önizlemesi
-- Kritik arazi mesafesi işareti
-- Küre ve düzlemin canlı yeniden hesaplanması
-- Şema v4 ve v1–v3 taşıması
-- HTML raporunda bütün noktalar
-- 1920×1080 panel akışı
-- Uygulama sürümü `0.6.0`
-- Linux/KDE, kayıt, JSON ve rapor doğrulaması
+- Sıralı ara noktalar
+- SVG profil önizlemesi
+- Kritik arazi mesafesi
 
-## Aşama 3.4 — CSV arazi profili içe aktarma
+## Aşama 3.4 — CSV arazi profili
 
-Durum: tamamlandı ve `main` dalına alındı
+Durum: tamamlandı · `0.7.0`
 
-- CSV, TSV ve düz metin dosyaları
-- Electron ana sürecinde güvenli dosya okuma
-- 5 MB dosya ve 2.000 ara nokta sınırı
-- Virgül, noktalı virgül ve sekme algılama
-- Metre, kilometre ve rota yüzdesi sütunları
+- CSV / TSV / metin içe aktarma
+- metre, kilometre ve rota yüzdesi
 - Türkçe başlıklar ve ondalık virgül
-- Gözlemci/hedef uç satırı doğrulaması
-- Artan ve tekrarsız mesafeler
-- Mutlak mesafelerin yüzdeye dönüştürülmesi
-- Kaynak rota ve uç kotu farkı uyarıları
-- İnceleme kartı
-- `Vazgeç` ve `Profili uygula`
-- Hata veya iptalde mevcut profil koruması
-- Canlı model yenilemesi
-- Örnek dosyalar ve parser testleri
-- Uygulama sürümü `0.7.0`
-- Linux/KDE yerel doğrulaması
 
-## Aşama 3.5 — CSV provenansı, uç kotları ve sütun eşleme
+## Aşama 3.5 — CSV provenansı ve sütun eşleme
 
-Durum: tamamlandı ve `main` dalına alındı
+Durum: tamamlandı · `0.8.0`
 
-Tamamlananlar:
+- Kaynak dosya ve sütun bilgileri
+- Uç kotu seçenekleri
+- Standart dışı başlıklarda güvenli eşleme
 
-- CSV dosya adı ve içe aktarma zamanı kaydı
-- Ayırıcı, mesafe birimi ve kaynak rota kaydı
-- Kaynak satır sayısı ve eşlenen sütun başlıkları
-- CSV gözlemci/hedef uç kotlarının kaydı
-- Gözlemci uç kotunu bağımsız uygulama seçeneği
-- Hedef uç kotunu bağımsız uygulama seçeneği
-- Standart dışı başlıklarda sütun eşleme ekranı
-- Mesafe sütunu, birim ve kot sütunu seçimi
-- İlk beş satırlık güvenli önizleme
-- Ham dosya içeriğinin renderer'a verilmemesi
-- Ana süreçte rastgele istek kimliği ve 10 dakikalık süre
-- İçe aktarma sonrasında manuel değişiklik işareti
-- Kaynak durumunun arazi panelinde gösterilmesi
-- Şema v5 ve v1–v4 taşıması
-- V4 kayıtlarına uydurma provenans eklenmemesi
-- JSON ve HTML raporunda kaynak bilgisi
-- Eşleme gerektiren örnek CSV
-- Parser, şema, rapor ve güvenlik testleri
-- Uygulama sürümü `0.8.0`
+## Aşama 3.6 — CSV rota mesafesi uygulaması
 
-Yerel doğrulama:
+Durum: tamamlandı · `0.8.1`
 
-- Linux/KDE sütun eşleme kartı yerleşimi
-- `chainage → metre`, `terrain_height → kot` eşlemesi
-- Mesafe ve kot için aynı sütunun reddedilmesi
-- CSV uç kotlarını uygulamadan profil kullanma
-- Yalnız gözlemci ucunu uygulama
-- Yalnız hedef ucunu uygulama
-- İki ucu birlikte uygulama
-- Kaynak durumunun yeşil `Kaynakla eşleşiyor` görünümü
-- Nokta veya uç değişiminde sarı `İçe aktarımdan sonra düzenlendi` görünümü
-- Kayıt ve yeniden açmada provenansın korunması
-- Şema v5 JSON dışa/içe aktarma
-- HTML raporunda dosya, sütun, birim, rota, uç seçimleri ve değişiklik durumu
-
-## Aşama 3.6 — CSV rota mesafesini deneye aktarma
-
-Durum: tamamlandı
-
-- Mutlak mesafeli CSV profillerinde kaynak toplam rota uzunluğu
-- Yalnız manuel mesafe modunda kullanılabilen bağımsız seçim
-- Varsayılan olarak mevcut deney mesafesini koruma
-- Seçildiğinde manuel yüzey mesafesini CSV rotasına ayarlama
-- Koordinat modunda WGS84 mesafesini değiştirmeme
-- Yüzde tabanlı ve uygulama sınırını aşan profillerde seçeneği göstermeme
-- Mesafe değiştiğinde CSV kaynağını sonradan düzenlenmiş olarak işaretleme
-- Saf uygulama fonksiyonu ve sınır testleri
-- Uygulama sürümü `0.8.1`
+- Mutlak CSV rota uzunluğunu manuel deneye isteğe bağlı uygulama
 
 ## Aşama 3.7 — GeoJSON arazi profili
 
-Durum: tamamlandı
+Durum: tamamlandı · `0.9.0`
 
-- Doğrudan `LineString`, `Feature` ve tek hatlı `FeatureCollection`
-- WGS84 `[boylam, enlem, yükseklik]` koordinatları
-- Ardışık noktalar arasında ters jeodezik mesafe hesabı
-- Kümülatif mesafeden rota yüzdesi üretimi
-- GeoJSON rota mesafesini deneye isteğe bağlı uygulama
-- Başlangıç ve bitiş zemin yüksekliklerini bağımsız uygulama
-- 5 MB, 2.002 koordinat ve 20.000 km güvenlik sınırları
-- Tekrarlanan konum, eksik yükseklik ve birden fazla rota reddi
-- GeoJSON kaynağının kayıt, JSON ve HTML raporunda korunması
-- Taşınabilir ve yerel kayıt şeması v6
-- Uygulama sürümü `0.9.0`
+- 3B WGS84 LineString
+- gerçek jeodezik parça mesafeleri
 
-## Aşama 3.8 — GeoJSON rota koordinatlarını deneye aktarma
+## Aşama 3.8 — GeoJSON rota koordinatları
 
-Durum: tamamlandı
+Durum: tamamlandı · `0.9.1`
 
-- GeoJSON dosya seçiminin arazi paneline bağlanması
-- Rota başlangıç ve bitiş koordinatlarını bağımsız uygulama seçeneği
-- Seçildiğinde deneyin koordinat moduna geçirilmesi
-- Yüzey mesafesinin WGS84 ile otomatik yeniden hesaplanması
-- Manuel rota mesafesi seçeneğiyle karşılıklı dışlama
-- Koordinat uygulama durumunun kayıt ve HTML raporunda korunması
-- Koordinatlar sonradan değiştirildiğinde kaynak değişiklik işareti
-- Hatalı özyinelemeli GeoJSON tür denetiminin düzeltilmesi
-- Saf uygulama testleri ve uçtan uca Electron derlemesi
-- Uygulama sürümü `0.9.1`
+- Rota başlangıç/bitiş koordinatlarını deneye isteğe bağlı uygulama
 
-## Aşama 3.9 — Profil noktalarını grafik üzerinde sürükleme
+## Aşama 3.9 — Grafik üzerinde profil düzenleme
 
-Durum: tamamlandı
+Durum: tamamlandı · `0.9.2`
 
-- Ara noktaların SVG profil grafiğinde pointer ile sürüklenmesi
-- Yatay hareketten rota yüzdesi üretimi
-- Düşey hareketten zemin yüksekliği üretimi
-- Komşu noktaları geçmeyi engelleyen dinamik sınırlar
-- Başlangıç ve bitiş uçlarının sabit kalması
-- Dokunmatik pointer desteği ve pointer capture
-- Aynı manuel profil doğrulama kurallarının kullanılması
-- İçe aktarılan kaynakta otomatik değişiklik işareti
-- Saf koordinat dönüşümü ve sınır testleri
-- Uygulama sürümü `0.9.2`
+- Ara noktaları pointer ile sürükleme
+- komşu geçiş sınırları ve dokunmatik desteği
 
-## Aşama 3.10 — ESRI ASCII DEM ayrıştırma ve örnekleme çekirdeği
+## Aşama 3.10 — ESRI ASCII DEM çekirdeği
 
-Durum: tamamlandı
+Durum: tamamlandı · `0.9.3`
 
-- ESRI ASCII Grid başlıklarının sıra bağımsız ayrıştırılması
-- Köşe ve hücre merkezi başlangıç tanımları
-- Kuzeyden güneye veri satırı yönünün doğru ele alınması
-- En yakın hücre ve iki doğrusal örnekleme
-- Kapsam dışı ve NODATA hücrelerinde açık boş sonuç
-- WGS84 coğrafi derece kapsam doğrulaması
-- 4.000.000 hücre güvenlik sınırı
-- Saf parser ve örnekleme testleri
-- Uygulama sürümü `0.9.3`
+- Grid ayrıştırma
+- en yakın hücre ve iki doğrusal örnekleme
+- NODATA ve kapsam güvenliği
 
-## Aşama 3.11 — ESRI ASCII DEM rota profili
+## Aşama 3.11 — DEM rota profili
 
-Durum: tamamlandı
+Durum: tamamlandı · `1.0.0`
 
-- Electron ana sürecinde 64 MB sınırla güvenli DEM dosya seçimi
-- Koordinat modundaki gözlemci-hedef rotasının WGS84 ters çözümü
-- Rota ara koordinatlarının Vincenty doğrudan çözümüyle üretilmesi
-- Grid çözünürlüğüne göre otomatik 3…2.002 örnek
-- Varsayılan iki doğrusal yükseklik örnekleme
-- Kapsam dışı veya NODATA örneğinde profil bütününün reddedilmesi
-- DEM uç yüksekliklerini bağımsız uygulama seçenekleri
-- Grid, örnekleme ve çözünürlük provenansının kayıt ve raporda korunması
-- Taşınabilir ve yerel kayıt şeması v7
-- Örnek ESRI ASCII grid dosyası
-- Uygulama sürümü `1.0.0`
+- WGS84 rota boyunca DEM örnekleme
+- uç kotu seçenekleri
+- DEM provenansı
 
 ## Aşama 3.12 — DEM örnekleme denetimleri
 
+Durum: tamamlandı · `1.0.1`
+
+- örnekleme yöntemi
+- otomatik / manuel örnek sayısı
+
+## Aşama 3.13 — DEM kalite ve kapsam tanısı
+
+Durum: tamamlandı · `1.0.2`
+
+- grid hücre açıklığı
+- örnek aralığı / çözünürlük oranı
+- kapsam kenarı ve yükseklik aralığı tanıları
+
+## Aşama 3.14 — Arazi kaynak bütünlüğü
+
+Durum: tamamlandı · `1.0.3`
+
+- CSV / GeoJSON / DEM SHA-256
+- dosya boyutu ve bütünlük provenansı
+
+## Aşama 3.15 — DEM görüş hattı önizlemesi
+
+Durum: tamamlandı · `1.0.4`
+
+- profil uygulanmadan önce küresel görüş hattı açıklığı
+- kritik örnek ve minimum açıklık
+
+Ayrıntı: [`roadmap-stage-3.15.md`](roadmap-stage-3.15.md)
+
+## Aşama 3.16 — DEM veri kaynağı ve çözünürlük izi
+
+Durum: tamamlandı · `1.0.5`
+
+- CRS/datum sınırlamalarının açık gösterimi
+- doğal derece ve etkili metre çözünürlüğü
+- güncel / kısmi / eski kaynak sınıflandırması
+
+Ayrıntı: [`roadmap-stage-3.16.md`](roadmap-stage-3.16.md)
+
+## Aşama 3.17 — Jeoit yükseklik dönüşüm çekirdeği
+
 Durum: tamamlandı
 
-- İki doğrusal ve en yakın hücre yöntemleri arasında seçim
-- Grid çözünürlüğüne göre otomatik örnek sayısı
-- 3…2.002 aralığında manuel örnek sayısı
-- Geçersiz manuel sayının dosya seçilmeden reddedilmesi
-- Otomatik/manüel örnek sayısı modunun kayıt ve raporda korunması
-- Saf seçenek doğrulama testleri
-- Uygulama sürümü `1.0.1`
+- `N = h - H`
+- elipsoidal ↔ ortometrik dönüşüm
+- belirsizlik birleşimi ve hesap izi
 
-## Aşama 3.13 — DEM örnekleme ve kapsam tanısı
+Ayrıntı: [`roadmap-stage-3.17.md`](roadmap-stage-3.17.md)
 
-Durum: tamamlandı
+## Aşama 3.18 — Kontrollü jeoit profil dönüşümü
 
-- Etkili grid hücre genişliğinin metre olarak hesaplanması
-- Rota örnek aralığının hücre genişliğine oranı
-- Rota boyunca grid kenarına en yakın mesafe
-- Kenar payının hücre cinsinden karşılığı
-- En düşük, en yüksek ve toplam DEM yükseklik aralığı
-- İyi, dikkat ve sınırlı örnekleme tanısı
-- Seyrek örnekleme, grid kenarı ve en yakın hücre yöntemi uyarıları
-- Tanı ölçümlerinin inceleme kartı, kayıt ve HTML raporunda korunması
-- Eski v7 DEM kayıtlarıyla geriye dönük uyumluluk
-- Uygulama sürümü `1.0.2`
+Durum: tamamlandı · `1.0.6`
 
-## Aşama 3.14 — Arazi kaynak dosyası bütünlüğü
+- gözlemci, hedef ve bütün profil noktalarını kontrollü dönüştürme
+- kaynak/model etiketi ve önizleme
 
-Durum: tamamlandı
+Ayrıntı: [`roadmap-stage-3.18.md`](roadmap-stage-3.18.md)
 
-- CSV, GeoJSON ve DEM ham dosya baytlarından SHA-256 özeti
-- Tam kaynak dosya boyutunun bayt olarak kaydı
-- CSV sütun eşleme önbelleğinde bütünlük bilgisinin korunması
-- Kısa özetin kaynak şeridinde gösterilmesi
-- Tam boyut ve SHA-256 değerinin JSON ve HTML raporunda korunması
-- Kısmi veya biçimi bozuk bütünlük provenansının reddedilmesi
-- Eski şema-v7 kayıtlarıyla geriye dönük uyumluluk
-- Bilinen SHA-256 test vektörü
-- Uygulama sürümü `1.0.3`
+## Aşama 3.19 — Kalıcı jeoit provenansı
 
-## Sonraki gerçek arazi işleri
-- Görüş hattı boyunca DEM örnekleme
-- Veri kaynağı ve çözünürlük izlenebilirliği
-- Jeoit dönüşümü
-- Su seviyesi, gelgit zamanı ve dalga belirsizliği
+Durum: tamamlandı · `1.0.7`
+
+- model etiketi, sürüm/çözünürlük, epok, N, belirsizlik ve hesap izi
+- kayıt, `.ggl.json` ve HTML rapor koruması
+
+Ayrıntı: [`roadmap-stage-3.19.md`](roadmap-stage-3.19.md)
+
+## Aşama 3.20 — Su yüzeyi ölçüm ve provenans sözleşmesi
+
+Durum: tamamlandı · `1.0.8`
+
+- su seviyesi, kaynak, zaman, gelgit ve dalga bağlamı
+- birleşik belirsizlik ve düşey aralık
+
+Ayrıntı: [`roadmap-stage-3.20.md`](roadmap-stage-3.20.md)
+
+## Aşama 3.21 — Tipli su yüzeyi anlık görüntüsü
+
+Durum: tamamlandı · `1.0.9`
+
+- kayıtlı provenanstan güvenli ve makine tarafından yeniden kullanılabilir su yüzeyi snapshot'ı
+
+Ayrıntı: [`roadmap-stage-3.21.md`](roadmap-stage-3.21.md)
+
+## Aşama 3.22 — Kontrollü su yüzeyi fiziksel uygulaması
+
+Durum: tamamlandı · `1.0.10`
+
+- gözlemci, hedef veya iki uç uygulaması
+- ortalama / alt sınır / üst sınır senaryoları
+- deney kimliği, datum ve zaman güvenlik kontrolleri
+
+Ayrıntı: [`roadmap-stage-3.22.md`](roadmap-stage-3.22.md)
+
+## Aşama 3.23 — Su yüzeyi kayıt ve uygulama arayüzü
+
+Durum: tamamlandı · `1.0.11`
+
+- su seviyesi, gelgit ve dalga giriş paneli
+- belirsizlik zarfı önizlemesi
+- kontrollü uç uygulaması
+- kayıt ve yeniden açmada su yüzeyi durumunun korunması
+- sonradan kot/datum/ofset değişikliğinde tarihsel uygulama işareti
+- su gözlem ve uygulama hesap izleri
+
+Ayrıntı: [`roadmap-stage-3.23.md`](roadmap-stage-3.23.md)
+
+# Sıradaki ana ürün aşamaları
+
+## Aşama 3.24 — Gerçek harita ve küre görselleştirme altyapısı
+
+Durum: sıradaki
+
+Hedef:
+
+- WGS84 koordinatlarının gerçek harita/küre sahnesinde gösterilmesi
+- gözlemci, hedef ve rota işaretleri
+- küresel model ve düzlem modelinin aynı deney için ayrı görsel sahneleri
+- arazi profilinin görsel sahneyle ilişkilendirilmesi
+- görsel katman mimarisinin model hesap motorundan ayrı tutulması
+
+Teknoloji seçimi bu aşamanın başında doğrulanacaktır; görselleştirme kütüphanesi fiziksel model hesabının kaynağı olmayacaktır.
+
+## Aşama 3.25 — Görsel coğrafi katmanlar
+
+- kıta / ülke sınırları
+- topografya görünümü
+- ızgara ve rota yardımcı katmanları
+- gerektiğinde gece ışıkları gibi yalnız görsel katmanlar
+
+## Aşama 3.26 — Ayrı ufuk ve uzun mesafe görüş senaryoları
+
+- mevcut motorun özel deney akışlarına ayrılması
+- senaryo bazlı giriş ve sonuç panelleri
 
 ## Aşama 4 — Gelişmiş atmosfer
 
-- Sıcaklık, basınç ve nem girdileri
-- Dikey atmosfer profili
-- Katmanlı ışın izleme
-- Standart ve gelişmiş sonuç karşılaştırması
+- sıcaklık, basınç ve nem girdileri
+- dikey atmosfer profili
+- katmanlı ışın izleme
+- standart ve gelişmiş sonuç karşılaştırması
 
 ## Aşama 5 — Fotoğraf kalibrasyonu
 
-- Kamera ve lens bilgileri
-- Ufuk, hedef tabanı ve hedef tepesi işaretleme
-- Piksel-açı dönüşümü
-- Ölçüm belirsizliği üretimi
+- kamera ve lens bilgileri
+- ufuk, hedef tabanı ve hedef tepesi işaretleme
+- piksel-açı dönüşümü
+- ölçüm belirsizliği üretimi
 
 ## Aşama 6 — Güneş, Ay ve gökyüzü deneyleri
 
 - Güneş yüksekliği ve azimutu
-- Gölge deneyleri
-- Gün doğumu ve gün batımı
+- gölge deneyleri
+- gün doğumu ve gün batımı
 - Ay konumu ve evreleri
-- Yıldız görünürlüğü ve yıldız izleri
+- yıldız görünürlüğü ve yıldız izleri
 
 ## Aşama 7 — Büyük ölçekli olaylar
 
-- Tutulmalar
-- Mevsimler
-- Zaman dilimleri
-- Rota karşılaştırmaları
+- tutulmalar
+- mevsimler
+- zaman dilimleri
+- rota karşılaştırmaları
+
+## Dağıtım aşaması
+
+Son kullanıcı kurulum paketi, imzalama ve dağıtım işlemleri ana ürün işlevleri tamamlandıktan sonra ele alınacaktır.
