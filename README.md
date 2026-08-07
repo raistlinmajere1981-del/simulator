@@ -15,7 +15,17 @@ Kullanıcı bir gözlem veya deney tanımlar; seçilen modeller aynı girdilerle
 - Tanımsız model davranışlarında uydurma sonuç yerine `unsupported` durumu döndürülür.
 - Tek bir deneydeki uyum bir modelin genel doğruluğu olarak sunulmaz.
 
-## Çalışan hedef görünürlüğü laboratuvarı
+## Çalışan gözlem senaryoları
+
+### Senaryo akışları
+
+`1.2.0` ile üç ayrı görünürlük senaryosu etkin durumdadır:
+
+- **Hedef Görünürlüğü:** hedefin görünür/gizli bölümünü ölçüm ve belirsizlikle karşılaştırır.
+- **Ufuk Analizi:** hedef, rota ve arazi gerektirmeden modelin geometrik ufuk tanımını hesaplar. İdeal kürede sonlu ufuk, tanımlı sonsuz düzlemde `∞`, azimutal kartografik referansta `unsupported` sonucu üretilir.
+- **Uzun Mesafe Görüş:** rota, arazi ve uzak hedef bağlamını ayrı bir deney kimliği altında yönetir; fiziksel hesapları mevcut hedef görünürlüğü çekirdeğini kopyalamadan yeniden kullanır.
+
+Senaryo kimliği yerel ve taşınabilir deney kayıtlarında korunur. Eski kayıtlarda senaryo alanı yoksa kayıt `Hedef Görünürlüğü` olarak açılır.
 
 ### Fiziksel modeller ve gözlem
 
@@ -44,8 +54,6 @@ Kullanıcı bir gözlem veya deney tanımlar; seçilen modeller aynı girdilerle
 - aynı sınır verisinin küre ve kuzey kutup merkezli azimutal kartografik referansta gösterimi,
 - fare/pointer ile döndürme ve tekerlekle yakınlaştırma,
 - tek tıklamayla başlangıç kamera görünümüne dönme,
-- manuel/CSV/GeoJSON/DEM profilinden rota boyunca göreli arazi yükselti şeridi,
-- topografya katmanını bağımsız açma/kapatma ve kaynak türünü sahnede belirtme,
 - manuel/CSV/GeoJSON/DEM profilinden rota boyunca göreli arazi yükselti şeridi,
 - topografya katmanını bağımsız açma/kapatma ve kaynak türünü sahnede belirtme,
 - tanımlı düzlem için küresel harita projeksiyonu uydurmayan yerel düzlem şeması,
@@ -168,7 +176,6 @@ HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı 
 ## Henüz tamamlanmayan ana ürün işleri
 
 - Gece ışıkları ve atmosfer profili görsel katmanları
-- Ufuk analizi ve uzun mesafe görüş için ayrı deney senaryoları
 - Gelişmiş sıcaklık / basınç / nem atmosfer profili ve katmanlı ışın izleme
 - Fotoğraf ve kamera/lens kalibrasyonu
 - Güneş, Ay, yıldız ve tutulma deneyleri
@@ -226,8 +233,8 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-3.24.md`](docs/roadmap-stage-3.24.md)
 - [`docs/roadmap-stage-3.25.md`](docs/roadmap-stage-3.25.md)
 - [`docs/roadmap-stage-3.26.md`](docs/roadmap-stage-3.26.md)
-- [`docs/roadmap-stage-3.26.md`](docs/roadmap-stage-3.26.md)
+- [`docs/roadmap-stage-3.27.md`](docs/roadmap-stage-3.27.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.1.2`dir. Hedef görünürlüğü motoru, kayıt/raporlama, WGS84 koordinatları, manuel/CSV/GeoJSON/DEM arazi profilleri, jeoit dönüşümü, kontrollü su yüzeyi uygulaması, Three.js tabanlı etkileşimli model sahneleri, çevrimdışı ülke/kıyı sınırı, ızgara ve rota tabanlı topografya görselleştirmesi aynı deney akışında çalışmaktadır. Sıradaki ana ürün aşaması ayrı ufuk ve uzun mesafe görüş senaryolarıdır.
+Aktif geliştirme sürümü `1.2.0`dir. Hedef Görünürlüğü, Ufuk Analizi ve Uzun Mesafe Görüş senaryoları; kayıt/raporlama, WGS84 koordinatları, manuel/CSV/GeoJSON/DEM arazi profilleri, jeoit dönüşümü, kontrollü su yüzeyi uygulaması ve Three.js tabanlı görselleştirmelerle aynı uygulama içinde çalışmaktadır. Sıradaki ana ürün aşaması gelişmiş atmosfer modelidir.

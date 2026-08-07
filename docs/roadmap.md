@@ -280,12 +280,22 @@ Durum: tamamlandı · `1.1.2`
 
 Ayrıntı: [`roadmap-stage-3.26.md`](roadmap-stage-3.26.md)
 
-# Sıradaki ana ürün aşamaları
-
 ## Aşama 3.27 — Ayrı ufuk ve uzun mesafe görüş senaryoları
 
-- mevcut motorun özel deney akışlarına ayrılması
-- senaryo bazlı giriş ve sonuç panelleri
+Durum: tamamlandı · `1.2.0`
+
+- Hedef Görünürlüğü, Ufuk Analizi ve Uzun Mesafe Görüş için ayrı senaryo kimlikleri
+- ideal kürede hedefsiz geometrik ufuk hesabı
+- tanımlı sonsuz düzlemde geometrik ufkun `∞` olarak açık gösterimi
+- azimutal projeksiyonda fiziksel ufuk kuralı bulunmadığı için `unsupported`
+- ufuk senaryosunda hedef/rota/arazi/su girdilerinin devreden çıkarılması
+- uzun mesafe senaryosunda mevcut hedef görünürlüğü motorunun kopyalanmadan yeniden kullanılması
+- senaryo kimliğinin yerel ve taşınabilir deney kayıtlarında korunması
+- eski kayıtların güvenli biçimde Hedef Görünürlüğü senaryosuna taşınması
+
+Ayrıntı: [`roadmap-stage-3.27.md`](roadmap-stage-3.27.md)
+
+# Sıradaki ana ürün aşamaları
 
 ## Aşama 4 — Gelişmiş atmosfer
 
