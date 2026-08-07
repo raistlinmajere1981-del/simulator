@@ -1,0 +1,29 @@
+name: Fix stage 4.3 typing
+
+on:
+  push:
+    branches:
+      - agent/atmosphere-ui-integration
+    paths:
+      - scripts/fix_stage_4_3.py
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/atmosphere-ui-integration
+          fetch-depth: 0
+      - run: python scripts/fix_stage_4_3.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/shared/portable.ts
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: narrow optional atmosphere persistence state"
+          git push origin HEAD:agent/atmosphere-ui-integration
