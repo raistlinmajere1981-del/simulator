@@ -1,0 +1,29 @@
+name: Patch stage 5.3 integration
+
+on:
+  push:
+    branches:
+      - agent/photo-angular-comparison
+    paths:
+      - scripts/patch_stage_5_3.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/photo-angular-comparison
+          fetch-depth: 0
+      - run: python scripts/patch_stage_5_3.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/models/ideal-sphere.ts src/models/ideal-sphere-layered.ts src/models/defined-plane.ts src/simulation/layered-sphere-visibility.ts src/shared/portable.ts src/renderer/src/PhotoCalibrationControl.tsx src/renderer/src/AppNext.tsx src/report/html-report.ts
+          git diff --cached --quiet && exit 0
+          git commit -m "feat: integrate photo angular model comparison"
+          git push origin HEAD:agent/photo-angular-comparison
