@@ -182,7 +182,8 @@ export function PhotoCalibrationControl({
     setTouchedMarks(new Set(savedCalibration ? markOrder : []));
     setIsDirty(false);
     setMessage('');
-  }, [experimentId, savedCalibration]);
+  // Parent calibration updates in the same experiment must not discard the session photo preview.
+  }, [experimentId]);
 
   const candidate = useMemo(() => {
     if (!draft.source || !draft.marks || touchedMarks.size < markOrder.length) {
@@ -377,6 +378,8 @@ export function PhotoCalibrationControl({
 
   const source = draft.source;
   const marks = draft.marks;
+  const markerRadius = source ? Math.max(8, source.imageWidthPx * 0.012) : 10;
+  const markerLabelSize = source ? Math.max(16, source.imageWidthPx * 0.024) : 24;
 
   return (
     <section className="photo-calibration-panel">
@@ -433,8 +436,12 @@ export function PhotoCalibrationControl({
                 const mark = marks[key];
                 return (
                   <g className={`photo-mark ${selectedMark === key ? 'active' : ''}`} key={key}>
-                    <circle cx={mark.xPx} cy={mark.yPx} r={10} />
-                    <text x={mark.xPx + 14} y={mark.yPx - 14}>{markShortLabels[key]}</text>
+                    <circle cx={mark.xPx} cy={mark.yPx} r={markerRadius} />
+                    <text
+                      style={{ fontSize: `${markerLabelSize}px` }}
+                      x={mark.xPx + markerRadius * 1.35}
+                      y={mark.yPx - markerRadius * 1.35}
+                    >{markShortLabels[key]}</text>
                   </g>
                 );
               })}

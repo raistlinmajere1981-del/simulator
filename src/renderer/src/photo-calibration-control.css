@@ -161,7 +161,6 @@
   stroke: rgba(3, 10, 13, 0.9);
   stroke-width: 4px;
   paint-order: stroke;
-  font-size: 24px;
   font-weight: 800;
   pointer-events: none;
 }
