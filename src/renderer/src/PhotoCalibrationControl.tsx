@@ -51,8 +51,8 @@ const markLabels: Record<MarkKey, string> = {
 const markShortLabels: Record<MarkKey, string> = {
   horizonStart: 'U1',
   horizonEnd: 'U2',
-  targetBase: 'T',
-  targetTop: 'Ü'
+  targetBase: 'TABAN',
+  targetTop: 'TEPE'
 };
 
 function emptyDraft(): DraftState {
@@ -384,7 +384,7 @@ export function PhotoCalibrationControl({
   const source = draft.source;
   const marks = draft.marks;
   const markerRadius = source ? Math.max(8, source.imageWidthPx * 0.012) : 10;
-  const markerLabelSize = source ? Math.max(16, source.imageWidthPx * 0.024) : 24;
+  const markerLabelSize = source ? Math.max(14, source.imageWidthPx * 0.018) : 20;
 
   return (
     <section className="photo-calibration-panel">
@@ -414,6 +414,13 @@ export function PhotoCalibrationControl({
           <span>{source.mimeType}</span>
           <code title={source.sha256}>SHA-256 {source.sha256.slice(0, 12)}…</code>
         </div>
+      )}
+
+      {preview && (
+        <p className="photo-calibration-note">
+          Sıradaki işaret: <strong>{markLabels[selectedMark]}</strong>. Fotoğraf üzerinde ilgili noktaya tıkla;
+          seçim otomatik olarak sonraki işarete geçer.
+        </p>
       )}
 
       {preview ? (
