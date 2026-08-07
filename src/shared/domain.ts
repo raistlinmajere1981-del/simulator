@@ -6,6 +6,8 @@ export type ModelCapability =
   | 'horizon'
   | 'terrain-profile'
   | 'atmospheric-refraction'
+  | 'water-surface-observation'
+  | 'water-surface-application'
   | 'solar-position'
   | 'lunar-position'
   | 'stellar-position';
