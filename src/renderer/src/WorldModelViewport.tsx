@@ -289,6 +289,101 @@ function addTerrainVisualization(
   targetCoordinate: { latitudeDeg: number; longitudeDeg: number },
   radius: number
 ): void {
+  let visualProfile;
+  try {
+    visualProfile = buildTerrainVisualizationProfile(profile);
+  } catch {
+    return;
+  }
+  const basePoints: THREE.Vector3[] = [];
+  const ridgePoints: THREE.Vector3[] = [];
+
+  if (kind === 'plane') {
+    for (const sample of visualProfile.samples) {
+      const x = -0.92 + sample.distanceFraction * 1.84;
+      basePoints.push(new THREE.Vector3(x, 0.04, 0.018));
+      ridgePoints.push(new THREE.Vector3(
+        x,
+        0.13 + sample.normalizedRelief * 0.09,
+        0.018
+      ));
+    }
+  } else {
+    let path;
+    try {
+      path = createWgs84GeodesicPath(observerCoordinate, targetCoordinate);
+    } catch {
+      return;
+    }
+    for (const sample of visualProfile.samples) {
+      const coordinate = coordinateAtWgs84PathFraction(
+        path,
+        sample.distanceFraction
+      ).coordinate;
+      if (kind === 'globe') {
+        const base = vector(latitudeLongitudeToSpherePoint(coordinate, radius * 1.03));
+        const ridge = base.clone().normalize().multiplyScalar(
+          radius * 1.03 + 0.045 + sample.normalizedRelief * 0.035
+        );
+        basePoints.push(base);
+        ridgePoints.push(ridge);
+      } else {
+        const base = vector(latitudeLongitudeToNorthPolarAzimuthalPoint(
+          coordinate,
+          radius * 0.94
+        ));
+        base.y = 0.04;
+        const ridge = base.clone();
+        ridge.y = 0.10 + sample.normalizedRelief * 0.065;
+        basePoints.push(base);
+        ridgePoints.push(ridge);
+      }
+    }
+  }
+
+  if (basePoints.length < 2) return;
+  group.add(terrainRibbon(basePoints, ridgePoints, 0x68d8b5));
+  group.add(line(ridgePoints, 0x8ff0cf, 0.98));
+}
+
+function terrainRibbon(
+  basePoints: THREE.Vector3[],
+  ridgePoints: THREE.Vector3[],
+  color: number
+): THREE.Mesh {
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (let index = 0; index < basePoints.length; index += 1) {
+    positions.push(...basePoints[index].toArray(), ...ridgePoints[index].toArray());
+    if (index < basePoints.length - 1) {
+      const baseIndex = index * 2;
+      indices.push(
+        baseIndex, baseIndex + 1, baseIndex + 2,
+        baseIndex + 1, baseIndex + 3, baseIndex + 2
+      );
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  const material = new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.3,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+  return new THREE.Mesh(geometry, material);
+}
+
+function addTerrainVisualization(
+  group: THREE.Group,
+  kind: WorldVisualizationKind,
+  profile: TerrainProfile,
+  observerCoordinate: { latitudeDeg: number; longitudeDeg: number },
+  targetCoordinate: { latitudeDeg: number; longitudeDeg: number },
+  radius: number
+): void {
   const visualProfile = buildTerrainVisualizationProfile(profile);
   const basePoints: THREE.Vector3[] = [];
   const ridgePoints: THREE.Vector3[] = [];
@@ -547,6 +642,7 @@ export function WorldModelViewport({
   const terrainGroupRef = useRef<THREE.Group | null>(null);
   const terrainGroupRef = useRef<THREE.Group | null>(null);
   const terrainGroupRef = useRef<THREE.Group | null>(null);
+  const terrainGroupRef = useRef<THREE.Group | null>(null);
   const renderRef = useRef<() => void>(() => undefined);
   const [error, setError] = useState('');
 
@@ -559,6 +655,11 @@ export function WorldModelViewport({
     if (boundaryGroupRef.current) boundaryGroupRef.current.visible = showGeographicBoundaries;
     renderRef.current();
   }, [showGeographicBoundaries]);
+
+  useEffect(() => {
+    if (terrainGroupRef.current) terrainGroupRef.current.visible = showTerrain;
+    renderRef.current();
+  }, [showTerrain]);
 
   useEffect(() => {
     if (terrainGroupRef.current) terrainGroupRef.current.visible = showTerrain;

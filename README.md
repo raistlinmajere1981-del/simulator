@@ -46,6 +46,8 @@ Kullanıcı bir gözlem veya deney tanımlar; seçilen modeller aynı girdilerle
 - tek tıklamayla başlangıç kamera görünümüne dönme,
 - manuel/CSV/GeoJSON/DEM profilinden rota boyunca göreli arazi yükselti şeridi,
 - topografya katmanını bağımsız açma/kapatma ve kaynak türünü sahnede belirtme,
+- manuel/CSV/GeoJSON/DEM profilinden rota boyunca göreli arazi yükselti şeridi,
+- topografya katmanını bağımsız açma/kapatma ve kaynak türünü sahnede belirtme,
 - tanımlı düzlem için küresel harita projeksiyonu uydurmayan yerel düzlem şeması,
 - WebGL kullanılamadığında açık hata görünümü,
 - sahne kapandığında GPU kaynaklarının temizlenmesi.
@@ -223,6 +225,7 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-3.23.md`](docs/roadmap-stage-3.23.md)
 - [`docs/roadmap-stage-3.24.md`](docs/roadmap-stage-3.24.md)
 - [`docs/roadmap-stage-3.25.md`](docs/roadmap-stage-3.25.md)
+- [`docs/roadmap-stage-3.26.md`](docs/roadmap-stage-3.26.md)
 - [`docs/roadmap-stage-3.26.md`](docs/roadmap-stage-3.26.md)
 
 ## Durum
