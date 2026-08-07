@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mesh } from 'topojson-client';
+import worldAtlas from 'world-atlas/countries-110m.json';
+import { extractGeographicLineStrings } from '../../simulation/geographic-visualization';
 import {
   buildWgs84VisualizationRoute,
   latitudeLongitudeToNorthPolarAzimuthalPoint,
@@ -16,6 +19,8 @@ export interface WorldModelViewportProps {
   observerLongitudeDeg: number;
   targetLatitudeDeg: number;
   targetLongitudeDeg: number;
+  showGeographicBoundaries: boolean;
+  showGrid: boolean;
 }
 
 function vector(point: VisualizationPoint3): THREE.Vector3 {
@@ -110,6 +115,37 @@ function addDiskGrid(group: THREE.Group, radius: number, color: number): void {
   }
 }
 
+function countryBoundaryGeometry(): unknown {
+  const topology = worldAtlas as unknown as Parameters<typeof mesh>[0];
+  const countries = topology.objects.countries as Parameters<typeof mesh>[1];
+  return mesh(topology, countries);
+}
+
+function addGeographicBoundaries(
+  group: THREE.Group,
+  kind: Exclude<WorldVisualizationKind, 'plane'>,
+  radius: number,
+  geographicLines: ReturnType<typeof extractGeographicLineStrings>
+): void {
+  for (const geographicLine of geographicLines) {
+    const points = geographicLine.map(([longitudeDeg, latitudeDeg]) => {
+      if (kind === 'globe') {
+        return vector(latitudeLongitudeToSpherePoint(
+          { latitudeDeg, longitudeDeg },
+          radius * 1.008
+        ));
+      }
+      const point = vector(latitudeLongitudeToNorthPolarAzimuthalPoint(
+        { latitudeDeg, longitudeDeg },
+        radius * 0.94
+      ));
+      point.y = 0.022;
+      return point;
+    });
+    if (points.length >= 2) group.add(line(points, 0x8ab5c3, kind === 'globe' ? 0.62 : 0.5));
+  }
+}
+
 function disposeScene(scene: THREE.Scene): void {
   scene.traverse((object) => {
     const renderable = object as THREE.Mesh & { material?: THREE.Material | THREE.Material[] };
@@ -136,10 +172,27 @@ export function WorldModelViewport({
   observerLatitudeDeg,
   observerLongitudeDeg,
   targetLatitudeDeg,
-  targetLongitudeDeg
+  targetLongitudeDeg,
+  showGeographicBoundaries,
+  showGrid
 }: WorldModelViewportProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const gridGroupRef = useRef<THREE.Group | null>(null);
+  const boundaryGroupRef = useRef<THREE.Group | null>(null);
   const [error, setError] = useState('');
+  const geographicLines = useMemo(
+    () => extractGeographicLineStrings(countryBoundaryGeometry()),
+    []
+  );
+
+  useEffect(() => {
+    if (gridGroupRef.current) gridGroupRef.current.visible = showGrid;
+  }, [showGrid]);
+
+  useEffect(() => {
+    if (boundaryGroupRef.current) boundaryGroupRef.current.visible = showGeographicBoundaries;
+  }, [showGeographicBoundaries]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -161,6 +214,13 @@ export function WorldModelViewport({
       container.appendChild(renderer.domElement);
 
       const world = new THREE.Group();
+      const gridGroup = new THREE.Group();
+      const boundaryGroup = new THREE.Group();
+      gridGroup.visible = showGrid;
+      boundaryGroup.visible = showGeographicBoundaries;
+      gridGroupRef.current = gridGroup;
+      boundaryGroupRef.current = boundaryGroup;
+      world.add(gridGroup, boundaryGroup);
       scene.add(world);
       scene.add(new THREE.HemisphereLight(0xbfe8ff, 0x17212b, 1.5));
       const keyLight = new THREE.DirectionalLight(0xffffff, 1.7);
@@ -183,7 +243,8 @@ export function WorldModelViewport({
           })
         );
         world.add(globe);
-        addGlobeGrid(world, radius * 1.004);
+        addGlobeGrid(gridGroup, radius * 1.004);
+        addGeographicBoundaries(boundaryGroup, 'globe', radius, geographicLines);
 
         const observerPosition = vector(latitudeLongitudeToSpherePoint(observerCoordinate, radius * 1.02));
         const targetPosition = vector(latitudeLongitudeToSpherePoint(targetCoordinate, radius * 1.02));
@@ -212,7 +273,7 @@ export function WorldModelViewport({
         );
         disk.rotation.x = -Math.PI / 2;
         world.add(disk);
-        addDiskGrid(world, radius, kind === 'plane' ? 0xb79a59 : 0x977cc8);
+        addDiskGrid(gridGroup, radius, kind === 'plane' ? 0xb79a59 : 0x977cc8);
 
         if (kind === 'plane') {
           const observerPosition = new THREE.Vector3(-0.92, 0.025, 0);
@@ -223,6 +284,7 @@ export function WorldModelViewport({
             new THREE.Vector3(0.92, 0.035, 0)
           ], 0xf2dc72, 0.96));
         } else {
+          addGeographicBoundaries(boundaryGroup, 'gleason', radius, geographicLines);
           const observerPosition = vector(latitudeLongitudeToNorthPolarAzimuthalPoint(observerCoordinate, radius * 0.94));
           const targetPosition = vector(latitudeLongitudeToNorthPolarAzimuthalPoint(targetCoordinate, radius * 0.94));
           observerPosition.y = 0.025;
@@ -250,10 +312,14 @@ export function WorldModelViewport({
       controls.minDistance = kind === 'globe' ? 2.6 : 2.8;
       controls.maxDistance = 7;
       controls.zoomToCursor = true;
+      controls.target.set(0, 0, 0);
       if (kind !== 'globe') {
         controls.minPolarAngle = 0.18;
         controls.maxPolarAngle = Math.PI / 2.15;
       }
+      controls.update();
+      controls.saveState();
+      controlsRef.current = controls;
 
       const render = (): void => {
         if (!renderer || !scene) return;
@@ -278,6 +344,9 @@ export function WorldModelViewport({
         resizeObserver?.disconnect();
         controls?.removeEventListener('change', render);
         controls?.dispose();
+        controlsRef.current = null;
+        gridGroupRef.current = null;
+        boundaryGroupRef.current = null;
         if (scene) disposeScene(scene);
         renderer?.dispose();
         renderer?.domElement.remove();
@@ -287,12 +356,16 @@ export function WorldModelViewport({
       setError(message);
       resizeObserver?.disconnect();
       controls?.dispose();
+      controlsRef.current = null;
+      gridGroupRef.current = null;
+      boundaryGroupRef.current = null;
       if (scene) disposeScene(scene);
       renderer?.dispose();
       renderer?.domElement.remove();
       return undefined;
     }
   }, [
+    geographicLines,
     kind,
     observerLatitudeDeg,
     observerLongitudeDeg,
@@ -303,9 +376,18 @@ export function WorldModelViewport({
   return (
     <div className={`world-model-viewport ${kind}`}>
       <div className="world-model-stage" ref={containerRef} />
+      <button
+        className="world-model-reset"
+        type="button"
+        title="Başlangıç kamera açısına dön"
+        onClick={() => controlsRef.current?.reset()}
+      >
+        ↺ Görünümü sıfırla
+      </button>
       <div className="world-model-legend">
         <span><i className="observer" /> Gözlemci</span>
         <span><i className="target" /> Hedef</span>
+        {showGeographicBoundaries && kind !== 'plane' && <span className="boundary-state">Sınırlar açık</span>}
         <span className="world-model-mode">{labelForKind(kind)}</span>
       </div>
       {error && <div className="world-model-error">WebGL görünümü kullanılamadı: {error}</div>}
