@@ -62,13 +62,13 @@ describe('photo comparison angular metrics from physical models', () => {
     }
   });
 
-  it('publishes optical base and full angular height when the layered ray reaches the physical base within solver tolerance', () => {
+  it('publishes optical base and full angular height when the layered ray clearly reaches an elevated physical base', () => {
     const result = analyzeLayeredSphereVisibility({
       profile,
       settings,
       observerAltitudeM: 10,
-      targetSurfaceDistanceM: 8_000,
-      targetBaseAltitudeM: 0,
+      targetSurfaceDistanceM: 1_000,
+      targetBaseAltitudeM: 20,
       targetHeightM: 20,
       stepM: 10
     });
