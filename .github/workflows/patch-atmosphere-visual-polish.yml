@@ -1,0 +1,27 @@
+name: Patch atmosphere visual polish
+
+on:
+  push:
+    branches:
+      - agent/atmosphere-visual-polish
+    paths:
+      - scripts/patch_atmosphere_visual_polish.py
+      - .github/workflows/patch-atmosphere-visual-polish.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/atmosphere-visual-polish
+      - run: python scripts/patch_atmosphere_visual_polish.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/renderer/src/WorldModelViewport.tsx src/renderer/src/world-model-viewport.css
+          git commit -m "Atmosfer görsel katmanının okunabilirliğini iyileştir"
+          git push
