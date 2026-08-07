@@ -121,6 +121,21 @@ Görselleştirme fiziksel hesap motorunun kaynağı değildir. Coğrafi sınırl
 
 Anlamlı dalga yüksekliği otomatik geometri düzeltmesine dönüştürülmez. Su yüzeyi bu aşamada rota boyunca dinamik bir dalga yüzeyi olarak modellenmez; yalnız kullanıcının açıkça seçtiği uç zemin kotlarına uygulanır.
 
+### Katmanlı atmosfer profili çekirdeği
+
+`1.2.1` ile gelişmiş atmosferin veri çekirdeği eklendi:
+
+- yükseklik, sıcaklık, basınç ve bağıl nemden oluşan sıralı profil örnekleri,
+- kaynak etiketi ve açık saat dilimli isteğe bağlı gözlem zamanı,
+- fiziksel aralık ve örnek sırası doğrulaması,
+- profil kapsamı içinde doğrusal enterpolasyon,
+- katman sıcaklık/basınç/nem gradyanları,
+- doygun su buharı basıncı ve su buharı kısmi basıncı,
+- nemli hava yoğunluğu yardımcı hesabı,
+- ölçülmeyen yüksekliklere otomatik ekstrapolasyon yapmama.
+
+Bu çekirdek henüz optik ışın izleme değildir ve mevcut standart `k` kırılma yaklaşımını değiştirmez. Görünür ışık için dalga boyuna bağlı kırılma indisi modeli ayrı aşamada bağlanacaktır; radyo-refraktivite formülleri optik görünürlük sonucu gibi kullanılmayacaktır.
+
 ## Arazi veri biçimleri
 
 ### CSV / TSV
@@ -176,7 +191,7 @@ HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı 
 ## Henüz tamamlanmayan ana ürün işleri
 
 - Gece ışıkları ve atmosfer profili görsel katmanları
-- Gelişmiş sıcaklık / basınç / nem atmosfer profili ve katmanlı ışın izleme
+- Atmosfer profili arayüzü, görünür ışık kırılma indisi ve katmanlı ışın izleme
 - Fotoğraf ve kamera/lens kalibrasyonu
 - Güneş, Ay, yıldız ve tutulma deneyleri
 - Toroidal ve içbükey gibi ek geometrik model sözleşmeleri
@@ -234,7 +249,8 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-3.25.md`](docs/roadmap-stage-3.25.md)
 - [`docs/roadmap-stage-3.26.md`](docs/roadmap-stage-3.26.md)
 - [`docs/roadmap-stage-3.27.md`](docs/roadmap-stage-3.27.md)
+- [`docs/roadmap-stage-4.1.md`](docs/roadmap-stage-4.1.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.2.0`dir. Hedef Görünürlüğü, Ufuk Analizi ve Uzun Mesafe Görüş senaryoları; kayıt/raporlama, WGS84 koordinatları, manuel/CSV/GeoJSON/DEM arazi profilleri, jeoit dönüşümü, kontrollü su yüzeyi uygulaması ve Three.js tabanlı görselleştirmelerle aynı uygulama içinde çalışmaktadır. Sıradaki ana ürün aşaması gelişmiş atmosfer modelidir.
+Aktif geliştirme sürümü `1.2.1`dir. Üç görünürlük senaryosu, kayıt/raporlama, WGS84, arazi/DEM, jeoit ve su yüzeyi akışlarına ek olarak katmanlı meteorolojik atmosfer profilinin doğrulama ve enterpolasyon çekirdeği hazırdır. Sıradaki teknik aşama görünür ışık kırılma indisi ve katmanlı ışın izleme çekirdeğidir.
