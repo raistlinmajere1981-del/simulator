@@ -34,22 +34,22 @@ const typicalProfile: LayeredAtmosphereProfile = {
 };
 
 describe('Ciddor optical refraction', () => {
-  it('matches published NIST/Ciddor reference implementations near 633 nm', () => {
+  it('matches NIST Ciddor table values at 633 nm', () => {
     expect(ciddorPhaseRefractiveIndex({
       wavelengthNm: 633,
       temperatureC: 20,
       pressureHpa: 1013.25,
-      relativeHumidityPercent: 20,
+      relativeHumidityPercent: 0,
       carbonDioxidePpm: 450
-    })).toBeCloseTo(1.00027162853, 11);
+    })).toBeCloseTo(1.000271800, 9);
 
     expect(ciddorPhaseRefractiveIndex({
       wavelengthNm: 633,
       temperatureC: 20,
-      pressureHpa: 1013.25,
-      relativeHumidityPercent: 80,
+      pressureHpa: 1000,
+      relativeHumidityPercent: 100,
       carbonDioxidePpm: 450
-    })).toBeCloseTo(1.00027111834, 11);
+    })).toBeCloseTo(1.000267394, 9);
   });
 
   it('preserves visible-light dispersion and rejects undocumented extrapolation', () => {
