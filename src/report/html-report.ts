@@ -127,11 +127,20 @@ function traceSteps(trace: CalculationTrace): string {
     </article>`).join('');
 }
 
+function predictionDisplayName(modelId: string): string {
+  const comparisonPrefix = 'photo-angular-comparison:';
+  if (modelId.startsWith(comparisonPrefix)) {
+    const sourceModelId = modelId.slice(comparisonPrefix.length);
+    return `Fotoğraf Açısal Karşılaştırması · ${modelNames[sourceModelId] ?? sourceModelId}`;
+  }
+  return modelNames[modelId] ?? modelId;
+}
+
 function predictionSection(
   prediction: ModelPrediction,
   modelVersion: string | undefined
 ): string {
-  const modelName = modelNames[prediction.modelId] ?? prediction.modelId;
+  const modelName = predictionDisplayName(prediction.modelId);
   return `
     <section class="model-section">
       <header class="model-heading">

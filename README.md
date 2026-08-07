@@ -186,7 +186,8 @@ Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama:
 - jeoit dönüşüm provenansı,
 - su yüzeyi gözlem ve uygulama provenansı,
 - atmosfer modu, meteorolojik profil ve optik ayarlar,
-- fotoğraf kaynak bütünlüğü, kamera kalibrasyonu ve piksel işaretleri,
+- fotoğraf kaynak bütünlüğü, kamera kalibrasyonu, piksel işaretleri ve U1–U2 referans anlamı,
+- fotoğraf açısal gözlem–model karşılaştırma snapshot ve hesap izleri,
 - model sürümleri ve sonuç anlık görüntülerini
 
 korur.
@@ -198,7 +199,7 @@ korur.
 - Bozuk veya tutarsız verinin reddi
 - Kimlik çakışmalarının güvenli çözümü
 - Yazdırılabilir çevrimdışı HTML raporu
-- Model, jeodezi, arazi, jeoit, su yüzeyi ve fotoğraf kalibrasyon hesap izlerinin raporda korunması
+- Model, jeodezi, arazi, jeoit, su yüzeyi, fotoğraf kalibrasyonu ve açısal karşılaştırma hesap izlerinin raporda korunması
 
 HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı `.ggl.json` dosyasıdır.
 
@@ -268,7 +269,8 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-4.5.md`](docs/roadmap-stage-4.5.md)
 - [`docs/roadmap-stage-5.1.md`](docs/roadmap-stage-5.1.md)
 - [`docs/roadmap-stage-5.2.md`](docs/roadmap-stage-5.2.md)
+- [`docs/roadmap-stage-5.3.md`](docs/roadmap-stage-5.3.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.4.0`dır. Fotoğraf/kamera kalibrasyonu artık yerel PNG/JPEG yükleme, SHA-256 kaynak provenansı, dört zorunlu etkileşimli işaret, FOV veya sensör+odak parametreleri, piksel-açı/belirsizlik hesabı, deney yeniden açma ve HTML rapor akışına bağlıdır. Fotoğraf baytları yerel/taşınabilir deney JSON’una gömülmez. Sıradaki fotoğraf aşaması açısal fotoğraf ölçümünü model tahminleriyle ayrı bir değerlendirme metriği olarak karşılaştırmaktır.
+Aktif geliştirme sürümü `1.4.1`dir. Fotoğraf/kamera kalibrasyonu yerel PNG/JPEG yükleme, SHA-256 provenansı, etkileşimli işaretler ve piksel→açı hesabına ek olarak model sonuçlarıyla **bağımsız açısal gözlem kanalı** üzerinden karşılaştırılır. U1–U2 çizgisi varsayılan olarak yalnız görsel referanstır; fiziksel yerel yatay olduğu kullanıcı tarafından açıkça belirtilmedikçe mutlak taban/tepe açıları puanlanmaz. Görüntüdeki deniz ufku otomatik yerel yatay sayılmaz. Fotoğraf baytları deney JSON’una gömülmez.

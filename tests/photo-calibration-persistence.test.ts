@@ -15,6 +15,7 @@ import {
   PHOTO_CALIBRATION_MODEL_ID,
   PHOTO_CALIBRATION_MODEL_VERSION
 } from '../src/simulation/photo-calibration';
+import { normalizePhotoReferenceKind } from '../src/simulation/photo-angular-comparison';
 
 const calibration: SavedPhotoCalibration = {
   source: {
@@ -40,6 +41,7 @@ const calibration: SavedPhotoCalibration = {
     targetTop: { xPx: 805, yPx: 390 }
   },
   recordedAtIso: '2026-08-08T01:02:00+03:00',
+  referenceKind: 'local-horizontal',
   notes: 'Tripod çekimi'
 };
 
@@ -72,10 +74,10 @@ function savedExperiment(): SavedExperiment {
 }
 
 describe('photo calibration persistence', () => {
-  it('round-trips source provenance, marks and prediction without image bytes', () => {
+  it('round-trips source provenance, marks, reference meaning and prediction without image bytes', () => {
     const portable = createPortableExperimentFile(
       savedExperiment(),
-      '1.4.0',
+      '1.4.1',
       '2026-08-08T01:04:00+03:00'
     );
     const serialized = JSON.stringify(portable);
@@ -84,12 +86,34 @@ describe('photo calibration persistence', () => {
 
     const parsed = parsePortableExperimentFile(JSON.parse(serialized)).experiment;
     expect(parsed.photoCalibration).toEqual(calibration);
+    expect(parsed.photoCalibration?.referenceKind).toBe('local-horizontal');
     expect(parsed.predictions.find((item) => item.modelId === PHOTO_CALIBRATION_MODEL_ID))
       .toBeDefined();
   });
 
+  it('preserves legacy absence of referenceKind and interprets it safely as visual reference', () => {
+    const portable = createPortableExperimentFile(savedExperiment(), '1.4.1');
+    const raw = JSON.parse(JSON.stringify(portable)) as {
+      experiment: { photoCalibration: { referenceKind?: string } };
+    };
+    delete raw.experiment.photoCalibration.referenceKind;
+
+    const parsed = parsePortableExperimentFile(raw).experiment;
+    expect(parsed.photoCalibration?.referenceKind).toBeUndefined();
+    expect(normalizePhotoReferenceKind(parsed.photoCalibration?.referenceKind)).toBe('visual-reference');
+  });
+
+  it('rejects an unknown photo reference meaning', () => {
+    const portable = createPortableExperimentFile(savedExperiment(), '1.4.1');
+    const raw = JSON.parse(JSON.stringify(portable)) as {
+      experiment: { photoCalibration: { referenceKind: string } };
+    };
+    raw.experiment.photoCalibration.referenceKind = 'sea-horizon';
+    expect(() => parsePortableExperimentFile(raw)).toThrow(PortableFormatError);
+  });
+
   it('rejects tampered photo source integrity instead of accepting an invalid hash', () => {
-    const portable = createPortableExperimentFile(savedExperiment(), '1.4.0');
+    const portable = createPortableExperimentFile(savedExperiment(), '1.4.1');
     const raw = JSON.parse(JSON.stringify(portable)) as {
       experiment: { photoCalibration: { source: { sha256: string } } };
     };

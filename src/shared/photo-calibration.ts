@@ -1,4 +1,5 @@
 export type CameraCalibrationSource = 'sensor-focal' | 'field-of-view';
+export type PhotoReferenceKind = 'visual-reference' | 'local-horizontal';
 
 export interface PixelPoint {
   xPx: number;
@@ -61,5 +62,11 @@ export interface SavedPhotoCalibration {
   distortionCorrected: boolean;
   marks: PhotoCalibrationMarks;
   recordedAtIso: string;
+  /**
+   * Omitted legacy records are treated as visual-reference. Only an explicitly
+   * declared local-horizontal reference permits absolute base/top model-angle
+   * comparisons.
+   */
+  referenceKind?: PhotoReferenceKind;
   notes?: string;
 }

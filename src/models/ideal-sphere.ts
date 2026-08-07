@@ -47,7 +47,7 @@ export class IdealSphereModel implements SimulationModel {
   readonly metadata: ModelMetadata = {
     id: 'ideal-sphere',
     name: 'İdeal Küre',
-    version: '0.4.0',
+    version: '0.5.0',
     description:
       'Ortalama yarıçaplı küresel yüzey üzerinde görüş hattı, ufuk ve isteğe bağlı arazi profili hesabı.',
     capabilities: [
@@ -229,12 +229,19 @@ export class IdealSphereModel implements SimulationModel {
       : visibleHeightM / experiment.target.heightM;
     const hiddenFraction = 1 - visibleFraction;
     const horizonSurfaceDistanceM = surfaceHorizonDistanceM(observerHeightM, radiusM);
+    const targetBaseElevationDeg = sphericalElevationAngleDeg(
+      surfaceDistanceM,
+      observerHeightM,
+      targetBaseHeightM,
+      radiusM
+    );
     const targetTopElevationDeg = sphericalElevationAngleDeg(
       surfaceDistanceM,
       observerHeightM,
       targetTopHeightM,
       radiusM
     );
+    const targetAngularHeightDeg = targetTopElevationDeg - targetBaseElevationDeg;
     const curvatureDropM = surfaceDropFromTangentM(surfaceDistanceM, radiusM);
     const observation = getMeasurement(experiment, 'visibleFraction', 'fraction');
     const evaluation = evaluateFractionPrediction(visibleFraction, observation);
@@ -334,7 +341,9 @@ export class IdealSphereModel implements SimulationModel {
         metric('visibleFraction', 'Görünür oran', visibleFraction, 'fraction'),
         metric('hiddenFraction', 'Gizlenen oran', hiddenFraction, 'fraction'),
         metric('horizonSurfaceDistanceM', 'Yüzey üzerindeki ufuk mesafesi', horizonSurfaceDistanceM, 'm'),
+        metric('targetBaseElevationDeg', 'Hedef taban görüş açısı', targetBaseElevationDeg, 'deg'),
         metric('targetTopElevationDeg', 'Hedef tepe görüş açısı', targetTopElevationDeg, 'deg'),
+        metric('targetAngularHeightDeg', 'Tam hedef açısal yüksekliği', targetAngularHeightDeg, 'deg'),
         metric('curvatureDropM', 'Teğete göre yüzey düşümü', curvatureDropM, 'm'),
         metric('terrainMinimumClearanceM', 'Arazi minimum açıklığı', terrainMinimumClearanceM, 'm'),
         metric('terrainCriticalDistanceM', 'Kritik arazi mesafesi', terrainCriticalDistanceM, 'm'),
