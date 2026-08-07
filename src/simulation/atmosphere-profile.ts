@@ -160,8 +160,8 @@ export function buildAtmosphereLayers(
 
   const layers: AtmosphereLayerSummary[] = [];
   for (let index = 0; index < profile.samples.length - 1; index += 1) {
-    const lower = profile.samples[index];
-    const upper = profile.samples[index + 1];
+    const lower = profile.samples[index]!;
+    const upper = profile.samples[index + 1]!;
     const thicknessM = upper.altitudeM - lower.altitudeM;
     const scaleToKm = 1000 / thicknessM;
     layers.push({
@@ -184,8 +184,8 @@ export function interpolateAtmosphereAt(
   if (errors.length > 0) throw new Error(errors.join(' '));
   if (!isFiniteNumber(altitudeM)) throw new Error('İstenen yükseklik sonlu bir sayı olmalıdır.');
 
-  const first = profile.samples[0];
-  const last = profile.samples[profile.samples.length - 1];
+  const first = profile.samples[0]!;
+  const last = profile.samples[profile.samples.length - 1]!;
   if (altitudeM < first.altitudeM || altitudeM > last.altitudeM) {
     throw new Error(
       `İstenen yükseklik profil kapsamı dışında: ${first.altitudeM}–${last.altitudeM} m.`
@@ -203,8 +203,8 @@ export function interpolateAtmosphereAt(
   }
 
   for (let index = 0; index < profile.samples.length - 1; index += 1) {
-    const lower = profile.samples[index];
-    const upper = profile.samples[index + 1];
+    const lower = profile.samples[index]!;
+    const upper = profile.samples[index + 1]!;
     if (altitudeM > lower.altitudeM && altitudeM < upper.altitudeM) {
       const ratio = (altitudeM - lower.altitudeM) / (upper.altitudeM - lower.altitudeM);
       const interpolate = (a: number, b: number): number => a + (b - a) * ratio;
