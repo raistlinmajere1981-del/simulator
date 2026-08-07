@@ -4,6 +4,7 @@ import { IdealSphereModel } from '../src/models/ideal-sphere';
 import type { ExperimentDefinition } from '../src/shared/domain';
 import type { LayeredAtmosphereProfile } from '../src/shared/atmosphere';
 import { analyzeLayeredSphereVisibility } from '../src/simulation/layered-sphere-visibility';
+import { PHOTO_TARGET_BASE_VISIBILITY_TOLERANCE_M } from '../src/simulation/photo-angular-comparison';
 
 function value(result: { metrics: Array<{ key: string; value: number | null }> }, key: string): number | null {
   return result.metrics.find((metric) => metric.key === key)?.value ?? null;
@@ -61,7 +62,7 @@ describe('photo comparison angular metrics from physical models', () => {
     }
   });
 
-  it('publishes optical base and full angular height when the layered ray reaches the physical base', () => {
+  it('publishes optical base and full angular height when the layered ray reaches the physical base within solver tolerance', () => {
     const result = analyzeLayeredSphereVisibility({
       profile,
       settings,
@@ -72,7 +73,7 @@ describe('photo comparison angular metrics from physical models', () => {
       stepM: 10
     });
 
-    expect(result.hiddenHeightM).toBeLessThan(1e-5);
+    expect(result.hiddenHeightM).toBeLessThanOrEqual(PHOTO_TARGET_BASE_VISIBILITY_TOLERANCE_M);
     expect(result.targetBaseElevationDeg).not.toBeNull();
     expect(result.targetTopElevationDeg).not.toBeNull();
     expect(result.targetAngularHeightDeg).not.toBeNull();
@@ -82,7 +83,7 @@ describe('photo comparison angular metrics from physical models', () => {
     );
   });
 
-  it('does not invent a physical base angle when the layered model hides the target base', () => {
+  it('does not invent a physical base angle when the layered model hides the target base beyond solver tolerance', () => {
     const result = analyzeLayeredSphereVisibility({
       profile,
       settings,
@@ -93,7 +94,7 @@ describe('photo comparison angular metrics from physical models', () => {
       stepM: 20
     });
 
-    expect(result.hiddenHeightM).toBeGreaterThan(1e-5);
+    expect(result.hiddenHeightM).toBeGreaterThan(PHOTO_TARGET_BASE_VISIBILITY_TOLERANCE_M);
     expect(result.targetBaseElevationDeg).toBeNull();
     expect(result.targetAngularHeightDeg).toBeNull();
     expect(result.targetTopElevationDeg).not.toBeNull();
