@@ -1,50 +1,29 @@
 # Simulator
 
-Farklı Dünya geometrisi ve fiziksel model iddialarını, aynı ölçülebilir deneyler üzerinden sayısal olarak karşılaştırmayı amaçlayan masaüstü simülasyon projesi.
+Farklı Dünya geometrisi ve fiziksel model iddialarını aynı ölçülebilir deneyler üzerinden sayısal olarak karşılaştırmayı amaçlayan Electron masaüstü simülasyon laboratuvarı.
 
 ## Hedef
 
-Kullanıcının bir gözlem veya deney tanımlamasını, seçilen modellerin bu deney için ayrı tahminler üretmesini ve sonuçların ölçüm belirsizlikleriyle birlikte karşılaştırılmasını sağlamak.
+Kullanıcı bir gözlem veya deney tanımlar; seçilen modeller aynı girdilerle ayrı tahminler üretir ve sonuçlar ölçüm belirsizlikleri, varsayımlar ve yeniden üretilebilir hesap izleriyle karşılaştırılır.
 
 ## Temel ilkeler
 
 - Aynı deney girdileri bütün modellere uygulanır.
 - Geometri, atmosfer, arazi verisi ve görsel canlandırma birbirinden ayrılır.
 - Harita projeksiyonları fiziksel model olarak değerlendirilmez.
-- Her sonuç kullanılan varsayımlar ve formüllerle izlenebilir olur.
+- Her sonuç kullanılan varsayımlar, formüller ve veri kaynağıyla izlenebilir olur.
 - Tanımsız model davranışlarında uydurma sonuç yerine `unsupported` durumu döndürülür.
-- Tek bir deneydeki uyum, bir modelin genel doğruluğu olarak sunulmaz.
+- Tek bir deneydeki uyum bir modelin genel doğruluğu olarak sunulmaz.
 
 ## Çalışan hedef görünürlüğü laboratuvarı
 
-Hedef görünürlüğü deneyi şu yeteneklere sahiptir:
+### Fiziksel modeller ve gözlem
 
 - İdeal küre modeli
 - Tanımlı düzlem modeli
-- Azimutal projeksiyonun fiziksel model olmadığını belirten `unsupported` sonucu
+- Azimutal projeksiyon için fiziksel model değildir / `unsupported` sonucu
 - Gözlemci göz yüksekliği ve hedef yüksekliği
-- Gözlemci zemin kotu ve hedef taban kotu
-- Ortalama deniz seviyesi, WGS84 elipsoidal veya yerel düşey datum seçimi
-- Datum, gelgit veya yerel benchmark ofseti
-- Manuel yüzey mesafesi
-- Gözlemci ve hedef enlem-boylamı
-- WGS84 elipsoidi üzerinde koordinattan yüzey mesafesi
-- Başlangıç ve varış azimutları
-- Manuel ve koordinat mesafesi arasında seçim
-- Sıralı ve düzenlenebilir çok noktalı manuel arazi profili
-- Profil noktası ekleme, düzenleme ve silme
-- CSV, TSV veya metin dosyasından arazi profili içe aktarma
-- Metre, kilometre veya rota yüzdesi sütunlarını otomatik yorumlama
-- Türkçe başlıklar ve ondalık virgüllü noktalı virgül CSV desteği
-- Standart dışı başlıklarda güvenli sütun eşleme ekranı
-- CSV gözlemci ve hedef uç kotlarını bağımsız uygulama seçenekleri
-- CSV dosya adı, sütunları, birimi, kaynak rotası ve içe aktarma zamanını kaydetme
-- İçe aktarmadan sonra manuel değişiklik yapıldığını işaretleme
-- İçe aktarmadan önce dosya özeti ve uyarı incelemesi
-- Canlı SVG profil önizlemesi ve kritik arazi mesafesi işareti
-- Küre ve düzlemde ayrı arazi görüş hattı çözümü
-- Kritik arazi noktası, minimum açıklık ve araziyi temizleyen hedef kotu
-- Gözlenen görünürlük ve belirsizlik
+- Gözlenen görünürlük ve ölçüm belirsizliği
 - Atmosfer kapalı veya standart kırılma
 - Düzenlenebilir kırılma katsayısı
 - Görünür ve gizlenen hedef oranı
@@ -53,13 +32,72 @@ Hedef görünürlüğü deneyi şu yeteneklere sahiptir:
 - Gözlem ile tahmin arasındaki fark
 - Model ve jeodezik çözüm için yeniden üretilebilir hesap izleri
 
-Koordinat modu WGS84 ters jeodezik problemini Vincenty iterasyonuyla çözer. Yakın-antipodal durumda iterasyon yakınsamazsa sonuç sessizce elipsoidal sonuç gibi sunulmaz; ortalama Dünya yarıçaplı küresel yedek çözüm açık uyarıyla işaretlenir.
+### Konum ve jeodezi
 
-Standart kırılma bu aşamada etkin yarıçap yaklaşımıyla hesaplanır. Manuel veya CSV'den alınan profil ara noktaları rota yüzdesi ve ortak datumdaki kotlarıyla saklanır. CSV uç kotları kullanıcı seçerse gözlemci ve hedef zemin kotlarına uygulanır. DEM, dalga yüzeyi, jeoit dönüşümü ve gelişmiş atmosfer profili henüz dahil değildir.
+- Manuel yüzey mesafesi
+- Gözlemci ve hedef enlem-boylamı
+- WGS84 Vincenty ters jeodezik çözümü
+- Yüzey mesafesi ve uç azimutları
+- Yakın-antipodal durumda açıkça işaretlenen küresel yedek çözüm
 
-## CSV arazi profilleri
+### Düşey datum ve arazi
 
-`0.8.0` geliştirme sürümünde arazi düzenleyicisindeki `CSV içe aktar` eylemi şu standart biçimleri otomatik tanır:
+- Ortalama deniz seviyesi / ortometrik yükseklik
+- WGS84 elipsoidal yükseklik
+- Yerel düşey datum
+- Datum, gelgit veya yerel benchmark ofseti
+- Gözlemci zemin kotu ve hedef taban kotu
+- Sıralı ve düzenlenebilir çok noktalı manuel profil
+- Profil noktalarını grafik üzerinde sürükleme
+- CSV / TSV arazi profili içe aktarma
+- Standart dışı CSV sütun eşleme
+- GeoJSON 3B WGS84 LineString profili
+- ESRI ASCII Grid DEM içe aktarma
+- En yakın hücre veya iki doğrusal DEM örnekleme
+- Otomatik veya manuel DEM örnek sayısı
+- DEM çözünürlük, kapsam ve örnekleme tanıları
+- Profil uygulanmadan önce DEM görüş hattı önizlemesi
+- Kritik arazi noktası, minimum açıklık ve hedef kotu çözümü
+- Kaynak dosya boyutu ve SHA-256 bütünlük kaydı
+- İçe aktarımdan sonra değişiklik durumunun korunması
+
+### Jeoit dönüşümü
+
+- `N = h - H` işaret sözleşmesi
+- Elipsoidal ↔ ortometrik yükseklik dönüşümü
+- Kullanıcı tarafından verilen jeoit ondülasyonu ve belirsizliği
+- Kaynak/model etiketi, sürüm veya çözünürlük ve epok
+- Gözlemci, hedef ve bütün arazi noktalarının kontrollü dönüşümü
+- Dönüşüm hesap izi ve kalıcı provenans
+- Sonradan datum veya kot değişikliğinde tarihsel işlem uyarısı
+
+### Su seviyesi, gelgit ve dalga
+
+`1.0.11` ile su yüzeyi motoru aktif hedef görünürlüğü arayüzüne bağlanmıştır:
+
+- manuel gözlem, gelgit ölçer, gelgit tahmini veya ölçme/nivelman kaynağı
+- saat dilimli gözlem zamanı
+- kaynak ve isteğe bağlı istasyon etiketi
+- su seviyesi ölçüm/tahmin belirsizliği
+- dalga kaynaklı doğrudan düşey belirsizlik
+- anlamlı dalga yüksekliğinin ayrı provenans olarak tutulması
+- gelgit evresi
+- koruyucu doğrusal veya bağımsız RSS belirsizlik birleşimi
+- alt ve üst su yüzeyi sınırları
+- gözlemci zemini, hedef tabanı veya iki uç için kontrollü uygulama
+- anlık/ortalama, alt sınır ve üst sınır senaryoları
+- deney kimliği, düşey datum ve zaman farkı güvenlik kontrolleri
+- kayıt ve uygulama hesap izleri
+- deney yeniden açıldığında su yüzeyi kayıtlarının geri yüklenmesi
+- uç kotu, datum veya ofset sonradan değişirse önceki uygulamanın tarihsel olarak işaretlenmesi
+
+Anlamlı dalga yüksekliği otomatik geometri düzeltmesine dönüştürülmez. Su yüzeyi bu aşamada rota boyunca dinamik bir dalga yüzeyi olarak modellenmez; yalnız kullanıcının açıkça seçtiği uç zemin kotlarına uygulanır.
+
+## Arazi veri biçimleri
+
+### CSV / TSV
+
+Otomatik tanınan örnek başlıklar:
 
 ```text
 distance_m,elevation_m
@@ -67,43 +105,57 @@ distance_km,elevation_m
 distance_percent,elevation_m
 ```
 
-Türkçe eşler (`mesafe_m`, `mesafe_km`, `rota_yuzdesi`, `kot_m`) ve virgül, noktalı virgül veya sekme ayırıcıları desteklenir. İlk veri satırı gözlemci ucu ve `0`, son veri satırı hedef ucudur; yüzde tabanlı dosyada son mesafe `100` olmalıdır.
+Türkçe eşler (`mesafe_m`, `mesafe_km`, `rota_yuzdesi`, `kot_m`), virgül / noktalı virgül / sekme ayırıcıları ve ondalık virgül desteklenir. Standart dışı başlıklarda kullanıcı güvenli eşleme ekranından mesafe sütununu, birimini ve kot sütununu seçer.
 
-Standart dışı başlıklarda uygulama başlıkları ve ilk beş satırı gösterir. Kullanıcı mesafe sütununu, mesafe birimini ve kot sütununu seçer; dosyanın tamamı seçilen eşlemeyle yeniden doğrulanır. Ham dosya içeriği renderer sürecine verilmez.
+### GeoJSON
 
-İnceleme kartında CSV'nin ilk ve son kotunu gözlemci/hedef zemin kotlarına uygulamak için iki bağımsız seçenek bulunur. Mevcut profil ancak kullanıcı `Profili uygula` eylemini seçerse değiştirilir. Hatalı, süresi dolmuş veya iptal edilen içe aktarma mevcut noktaları etkilemez.
+Tek bir 3B WGS84 `LineString`, `Feature` veya tek hatlı `FeatureCollection` desteklenir. `[boylam, enlem, yükseklik]` koordinatları gerçek jeodezik parça mesafeleriyle rota profiline dönüştürülür.
 
-Uygulanan kaynağın dosya adı, ayırıcısı, birimi, kaynak rotası, satır sayısı, eşlenen sütunları ve uç seçenekleri deney kaydında korunur. Noktalar veya uç kotları daha sonra elle değiştirilirse kaynak silinmez; kayıt `İçe aktarımdan sonra düzenlendi` olarak işaretlenir.
+Örnek: `examples/terrain-profile-wgs84.geojson`
+
+### ESRI ASCII Grid DEM
+
+Koordinat modunda DEM dosyası gözlemci-hedef rotası boyunca WGS84 ara koordinatlarında örneklenir. Grid çözünürlüğü, rota örnek aralığı, kapsam kenarı, yükseklik aralığı ve kaynak bütünlüğü deney provenansında korunur.
+
+Örnek: `examples/dem-route-wgs84.asc`
 
 ## Deney kayıtları
 
-Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama şu işlemleri destekler:
+Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama:
 
 - deney oluşturma ve güncelleme,
-- uygulama kapatıldıktan sonra kayıtları koruma,
-- kayıtları yeniden açma,
-- kayıt silme,
-- koordinat ve jeodezik hesap anlık görüntüsünü saklama,
-- düşey datum, zemin kotları ve bütün manuel/ithal profil noktalarını saklama,
-- CSV profil kaynak metadatasını ve değişiklik durumunu saklama,
-- model sürümleri ve sonuç anlık görüntülerini saklama.
+- yeniden açma ve silme,
+- koordinat ve jeodezik hesap anlık görüntüsü,
+- düşey datum ve bütün arazi noktaları,
+- CSV / GeoJSON / DEM kaynak provenansı,
+- jeoit dönüşüm provenansı,
+- su yüzeyi gözlem ve uygulama provenansı,
+- model sürümleri ve sonuç anlık görüntülerini
+
+korur.
 
 ## Taşınabilir dosyalar ve raporlar
 
-`0.8.0` geliştirme sürümünde:
+- Sürümlemeli `.ggl.json` dışa/içe aktarma
+- Eski şemaların güvenli taşınması
+- Bozuk veya tutarsız verinin reddi
+- Kimlik çakışmalarının güvenli çözümü
+- Yazdırılabilir çevrimdışı HTML raporu
+- Model, jeodezi, arazi, jeoit ve su yüzeyi hesap izlerinin raporda korunması
 
-- deneyler sürümlemeli `.ggl.json` dosyası olarak dışa aktarılabilir,
-- taşınabilir deney dosyaları doğrulanarak içe aktarılabilir,
-- sürüm 1, 2, 3 ve 4 kayıtlar güvenli varsayılanlarla şema sürüm 5'e taşınabilir,
-- sürüm 3'ün tek ara noktası deterministik biçimde çok noktalı diziye dönüştürülür,
-- sürüm 4 kayıtlarına var olmayan CSV kaynak bilgisi uydurulmaz,
-- nokta kimlikleri, yüzde konumları, tekrarlar, kotlar ve CSV kaynak alanları doğrulanır,
-- CSV'den uygulanan noktalar ile kaynak provenansı birlikte kaydedilir,
-- eski kayıtlar manuel mesafe ve profil davranışını korur,
-- kimlik çakışmaları güvenli yeni kayıt oluşturarak çözülür,
-- HTML raporu girdileri, koordinatları, jeodezik sonuçları, düşey datumu, bütün profil noktalarını, CSV kaynağını, model sonuçlarını ve hesap izlerini gösterir.
+HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı `.ggl.json` dosyasıdır.
 
-HTML raporu okunabilir ve yazdırılabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı `.ggl.json` dosyasıdır.
+## Henüz tamamlanmayan ana ürün işleri
+
+- Gerçek harita / döndürülebilir küre görselleştirme altyapısı
+- Kıta / ülke sınırları ve topografya görsel katmanları
+- Ufuk analizi ve uzun mesafe görüş için ayrı deney senaryoları
+- Gelişmiş sıcaklık / basınç / nem atmosfer profili ve katmanlı ışın izleme
+- Fotoğraf ve kamera/lens kalibrasyonu
+- Güneş, Ay, yıldız ve tutulma deneyleri
+- Toroidal ve içbükey gibi ek geometrik model sözleşmeleri
+
+Son kullanıcı kurulum paketi ve dağıtım işlemleri ürün işlevleri tamamlandıktan sonraki aşamadır.
 
 ## Teknoloji
 
@@ -128,7 +180,7 @@ npm test
 npm run build
 ```
 
-Aynı kontroller pull request'lerde GitHub Actions üzerinde otomatik çalışır. Aynı dalın eski CI koşuları otomatik iptal edilir.
+Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzerinde otomatik çalışır.
 
 ## Belgeler
 
@@ -139,24 +191,18 @@ Aynı kontroller pull request'lerde GitHub Actions üzerinde otomatik çalışı
 - [`docs/ui-design.md`](docs/ui-design.md)
 - [`docs/geodesy.md`](docs/geodesy.md)
 - [`docs/terrain-profile.md`](docs/terrain-profile.md)
-- [`docs/esri-ascii-dem.md`](docs/esri-ascii-dem.md)
-- [`docs/terrain-source-integrity.md`](docs/terrain-source-integrity.md)
-
-Koordinat modunda ESRI ASCII Grid DEM dosyaları gözlemci-hedef rotası boyunca
-WGS84 ara koordinatlarında örneklenerek arazi profiline dönüştürülebilir.
 - [`docs/csv-terrain-profile.md`](docs/csv-terrain-profile.md)
 - [`docs/csv-profile-provenance.md`](docs/csv-profile-provenance.md)
+- [`docs/geojson-terrain-profile.md`](docs/geojson-terrain-profile.md)
+- [`docs/esri-ascii-dem.md`](docs/esri-ascii-dem.md)
+- [`docs/terrain-source-integrity.md`](docs/terrain-source-integrity.md)
+- [`docs/geoid-height-conversion.md`](docs/geoid-height-conversion.md)
+- [`docs/water-surface-observation.md`](docs/water-surface-observation.md)
+- [`docs/water-surface-application.md`](docs/water-surface-application.md)
 - [`docs/portable-format.md`](docs/portable-format.md)
 - [`docs/roadmap.md`](docs/roadmap.md)
+- [`docs/roadmap-stage-3.23.md`](docs/roadmap-stage-3.23.md)
 
 ## Durum
 
-Hedef görünürlüğü motoru, yerel kayıtlar, taşınabilir dosyalar, çevrimdışı raporlama, WGS84 koordinat girdileri, düşey datum, çok noktalı manuel arazi profili ve temel CSV içe aktarma `main` dalındadır. CSV kaynak kaydı, uç kotu seçenekleri ve sütun eşleme sürümü `agent/csv-profile-provenance-mapping` dalında otomatik ve Linux/KDE yerel doğrulamasını beklemektedir.
-
-
-### GeoJSON arazi profili
-
-WGS84 `[boylam, enlem, yükseklik]` koordinatları taşıyan tek bir 3B LineString,
-gerçek jeodezik parça mesafeleriyle arazi profiline dönüştürülebilir. Rota uçları
-isteğe bağlı olarak deneyin gözlemci ve hedef koordinatlarına aktarılabilir. Örnek dosya:
-`examples/terrain-profile-wgs84.geojson`.
+Aktif geliştirme sürümü `1.0.11`dir. Hedef görünürlüğü motoru, kayıt/raporlama, WGS84 koordinatları, manuel/CSV/GeoJSON/DEM arazi profilleri, jeoit dönüşümü ve kontrollü su yüzeyi uygulaması aynı deney akışında çalışmaktadır. Sıradaki ana ürün aşaması gerçek harita/küre görselleştirme altyapısıdır.

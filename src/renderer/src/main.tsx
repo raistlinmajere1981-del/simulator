@@ -8,6 +8,7 @@ import './portable.css';
 import './geodesy.css';
 import './terrain.css';
 import './multi-terrain.css';
+import './water-surface-control.css';
 
 const root = document.getElementById('root');
 
