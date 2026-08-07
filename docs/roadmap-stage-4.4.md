@@ -1,6 +1,6 @@
 # Aşama 4.4 — Katmanlı atmosferin İdeal Küre sonuçlarına fiziksel bağlantısı
 
-Durum: tamamlanma adayı · `1.3.1`
+Durum: tamamlandı · `1.3.1`
 
 ## Amaç
 
@@ -67,7 +67,7 @@ Katmanlı İdeal Küre sonucu aşağıdaki provenansı taşır:
 
 ## Doğrulama ölçütleri
 
-Aşama 4.4 ancak CI üzerinde aşağıdakiler birlikte geçtiğinde tamamlandı sayılır:
+CI üzerinde aşağıdakiler birlikte doğrulandı:
 
 - sıfır indis gradyanında optik ufkun geometrik küre ufkuna yaklaşması,
 - normal negatif refraktivite gradyanında optik ufkun uzaması,
@@ -76,6 +76,7 @@ Aşama 4.4 ancak CI üzerinde aşağıdakiler birlikte geçtiğinde tamamlandı 
 - hedef profil kapsamını aşıyorsa sonucun reddedilmesi,
 - profil modunda standart `k` girişinin sonucu değiştirmemesi,
 - mevcut standart-k regresyon sonucunun korunması,
+- `0 m` profil tabanındaki aşağı yönlü RK4 sınır çıkışının fiziksel yüzey kesişimi olarak ayrılması,
 - strict TypeScript, tüm Vitest testleri ve production build'in geçmesi.
 
 ## Sonraki adım
