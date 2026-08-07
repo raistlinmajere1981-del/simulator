@@ -30,21 +30,15 @@ jobs:
           text = path.read_text()
 
           import_anchor = "import { WaterSurfaceControl } from './WaterSurfaceControl';"
-          import_replacement = import_anchor + "\nimport { WorldModelViewport } from './WorldModelViewport';"
           if "from './WorldModelViewport'" not in text:
               if import_anchor not in text:
                   raise SystemExit('WorldModelViewport import anchor not found')
-              text = text.replace(import_anchor, import_replacement, 1)
+              text = text.replace(
+                  import_anchor,
+                  import_anchor + "\nimport { WorldModelViewport } from './WorldModelViewport';",
+                  1
+              )
 
-          old = '''      <div className={`world-visual ${presentation.shape} ${isProjection ? 'projection-only' : ''}`}>
-            <span className="observer-pin">●</span><span className="target-pin">●</span><span className="route" />
-            {isProjection && (
-              <div className="projection-overlay">
-                <strong>HARİTA PROJEKSİYONU</strong>
-                <span>Konumları gösterebilir; fiziksel görüş tahmini üretemez.</span>
-              </div>
-            )}
-          </div>'''
           new = '''      <WorldModelViewport
             kind={presentation.shape === 'disk' ? 'plane' : presentation.shape}
             observerLatitudeDeg={inputs.observerLatitudeDeg}
@@ -52,10 +46,17 @@ jobs:
             targetLatitudeDeg={inputs.targetLatitudeDeg}
             targetLongitudeDeg={inputs.targetLongitudeDeg}
           />'''
-          if old in text:
-              text = text.replace(old, new, 1)
-          elif '<WorldModelViewport' not in text:
-              raise SystemExit('Legacy world visual block not found')
+
+          if '<WorldModelViewport' not in text:
+              start_marker = "      <div className={`world-visual ${presentation.shape} ${isProjection ? 'projection-only' : ''}`}>"
+              next_marker = "      {isProjection ? ("
+              start = text.find(start_marker)
+              if start < 0:
+                  raise SystemExit('Legacy world visual start marker not found')
+              next_index = text.find(next_marker, start)
+              if next_index < 0:
+                  raise SystemExit('Projection explanation marker not found')
+              text = text[:start] + new + "\n" + text[next_index:]
 
           path.write_text(text)
           PY
