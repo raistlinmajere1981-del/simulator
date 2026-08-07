@@ -465,7 +465,7 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
   const atmosphere = value.atmosphere === undefined
     ? undefined
     : parseAtmosphereExperimentState(value.atmosphere);
-  if (value.atmosphere !== undefined && !atmosphere) return null;
+  if (atmosphere === null) return null;
 
   return {
     id: value.id,
