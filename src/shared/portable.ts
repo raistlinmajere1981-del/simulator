@@ -15,6 +15,7 @@ import {
   type TerrainProfileSource
 } from './simulator';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
+import type { PhotoCalibrationMarks, PhotoSourceMetadata, SavedPhotoCalibration } from './photo-calibration';
 import { normalizeSimulationScenarioId } from './scenario';
 import { parseAtmosphereExperimentState } from '../simulation/atmosphere-persistence';
 import {
@@ -438,6 +439,106 @@ function deriveLegacyManualPoints(inputs: SimulatorInputs): ManualTerrainPoint[]
   );
 }
 
+
+function parsePhotoSourceMetadata(value: unknown): PhotoSourceMetadata | null {
+  if (!isRecord(value) || !isNonEmptyString(value.fileName) ||
+    !Number.isInteger(value.fileSizeBytes) || !inRange(value.fileSizeBytes, 1, 25 * 1024 * 1024) ||
+    typeof value.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(value.sha256) ||
+    (value.mimeType !== 'image/jpeg' && value.mimeType !== 'image/png') ||
+    !Number.isInteger(value.imageWidthPx) || !inRange(value.imageWidthPx, 1, 100_000) ||
+    !Number.isInteger(value.imageHeightPx) || !inRange(value.imageHeightPx, 1, 100_000) ||
+    !isIsoDate(value.importedAtIso)) {
+    return null;
+  }
+  return {
+    fileName: value.fileName.trim(),
+    fileSizeBytes: value.fileSizeBytes as number,
+    sha256: value.sha256,
+    mimeType: value.mimeType,
+    imageWidthPx: value.imageWidthPx as number,
+    imageHeightPx: value.imageHeightPx as number,
+    importedAtIso: value.importedAtIso
+  };
+}
+
+function parsePhotoMark(
+  value: unknown,
+  imageWidthPx: number,
+  imageHeightPx: number
+): PhotoCalibrationMarks['horizonStart'] | null {
+  if (!isRecord(value) || !inRange(value.xPx, 0, imageWidthPx - 1) ||
+    !inRange(value.yPx, 0, imageHeightPx - 1) ||
+    (value.uncertaintyPx !== undefined && !inRange(value.uncertaintyPx, 0, 100))) {
+    return null;
+  }
+  return {
+    xPx: value.xPx,
+    yPx: value.yPx,
+    ...(value.uncertaintyPx === undefined ? {} : { uncertaintyPx: value.uncertaintyPx })
+  };
+}
+
+function parsePhotoCalibration(value: unknown): SavedPhotoCalibration | null {
+  if (!isRecord(value)) return null;
+  const source = parsePhotoSourceMetadata(value.source);
+  if (!source || !isRecord(value.calibration) || !isRecord(value.marks) ||
+    !inRange(value.defaultMarkUncertaintyPx, 0, 100) ||
+    typeof value.distortionCorrected !== 'boolean' || !isIsoDate(value.recordedAtIso) ||
+    (value.notes !== undefined && (typeof value.notes !== 'string' || value.notes.length > 2_000))) {
+    return null;
+  }
+
+  let calibration: SavedPhotoCalibration['calibration'];
+  if (value.calibration.sourceKind === 'field-of-view') {
+    if (!inRange(value.calibration.horizontalFovDeg, 0.01, 179) ||
+      !inRange(value.calibration.verticalFovDeg, 0.01, 179)) return null;
+    calibration = {
+      sourceKind: 'field-of-view',
+      horizontalFovDeg: value.calibration.horizontalFovDeg,
+      verticalFovDeg: value.calibration.verticalFovDeg
+    };
+  } else if (value.calibration.sourceKind === 'sensor-focal') {
+    if (!isFiniteNumber(value.calibration.focalLengthMm) || value.calibration.focalLengthMm <= 0 ||
+      value.calibration.focalLengthMm > 10_000 ||
+      !isFiniteNumber(value.calibration.sensorWidthMm) || value.calibration.sensorWidthMm <= 0 ||
+      value.calibration.sensorWidthMm > 1_000 ||
+      !isFiniteNumber(value.calibration.sensorHeightMm) || value.calibration.sensorHeightMm <= 0 ||
+      value.calibration.sensorHeightMm > 1_000) return null;
+    calibration = {
+      sourceKind: 'sensor-focal',
+      focalLengthMm: value.calibration.focalLengthMm,
+      sensorWidthMm: value.calibration.sensorWidthMm,
+      sensorHeightMm: value.calibration.sensorHeightMm
+    };
+  } else {
+    return null;
+  }
+
+  if ((value.principalPointXPx !== undefined && !inRange(value.principalPointXPx, 0, source.imageWidthPx - 1)) ||
+    (value.principalPointYPx !== undefined && !inRange(value.principalPointYPx, 0, source.imageHeightPx - 1))) {
+    return null;
+  }
+
+  const horizonStart = parsePhotoMark(value.marks.horizonStart, source.imageWidthPx, source.imageHeightPx);
+  const horizonEnd = parsePhotoMark(value.marks.horizonEnd, source.imageWidthPx, source.imageHeightPx);
+  const targetBase = parsePhotoMark(value.marks.targetBase, source.imageWidthPx, source.imageHeightPx);
+  const targetTop = parsePhotoMark(value.marks.targetTop, source.imageWidthPx, source.imageHeightPx);
+  if (!horizonStart || !horizonEnd || !targetBase || !targetTop ||
+    Math.abs(horizonEnd.xPx - horizonStart.xPx) < 1) return null;
+
+  return {
+    source,
+    calibration,
+    ...(value.principalPointXPx === undefined ? {} : { principalPointXPx: value.principalPointXPx }),
+    ...(value.principalPointYPx === undefined ? {} : { principalPointYPx: value.principalPointYPx }),
+    defaultMarkUncertaintyPx: value.defaultMarkUncertaintyPx,
+    distortionCorrected: value.distortionCorrected,
+    marks: { horizonStart, horizonEnd, targetBase, targetTop },
+    recordedAtIso: value.recordedAtIso,
+    ...(value.notes === undefined || value.notes.trim() === '' ? {} : { notes: value.notes.trim() })
+  };
+}
+
 function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): SavedExperiment | null {
   if (!isRecord(value)) return null;
   const inputs = parseSimulatorInputs(value.inputs, allowLegacyInputs);
@@ -467,6 +568,11 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     : parseAtmosphereExperimentState(value.atmosphere);
   if (atmosphere === null) return null;
 
+  const photoCalibration = value.photoCalibration === undefined
+    ? undefined
+    : parsePhotoCalibration(value.photoCalibration);
+  if (photoCalibration === null) return null;
+
   return {
     id: value.id,
     name: value.name.trim(),
@@ -476,6 +582,7 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
       ? {}
       : { scenarioId: normalizeSimulationScenarioId(value.scenarioId) }),
     ...(atmosphere === undefined ? {} : { atmosphere }),
+    ...(photoCalibration === undefined ? {} : { photoCalibration }),
     inputs,
     manualTerrainPoints,
     terrainProfileSource,

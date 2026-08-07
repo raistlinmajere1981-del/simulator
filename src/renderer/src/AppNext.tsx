@@ -11,6 +11,7 @@ import type {
   ModelPrediction,
   ResultStatus
 } from '../../shared/domain';
+import type { SavedPhotoCalibration } from '../../shared/photo-calibration';
 import {
   DEFAULT_SIMULATOR_INPUTS,
   type DistanceSource,
@@ -55,6 +56,11 @@ import {
   cloneAtmosphereExperimentState
 } from '../../simulation/atmosphere-persistence';
 import {
+  PHOTO_CALIBRATION_MODEL_ID,
+  PHOTO_CALIBRATION_MODEL_VERSION,
+  type PhotoCalibrationRecord
+} from '../../simulation/photo-calibration';
+import {
   WATER_SURFACE_APPLICATION_MODEL_ID,
   type WaterSurfaceApplicationResult
 } from '../../simulation/water-surface-application';
@@ -79,6 +85,7 @@ import {
 import { GeoidConversionControl } from './GeoidConversionControl';
 import { AtmosphereProfileControl } from './AtmosphereProfileControl';
 import { WaterSurfaceControl } from './WaterSurfaceControl';
+import { PhotoCalibrationControl } from './PhotoCalibrationControl';
 import { WorldModelViewport } from './WorldModelViewport';
 
 type ModelTone = 'green' | 'amber' | 'violet';
@@ -104,6 +111,11 @@ interface ScenarioDefinition {
 }
 
 interface GeoidConversionRecordState {
+  prediction: ModelPrediction;
+  modelVersion: string;
+}
+
+interface PhotoCalibrationRecordState {
   prediction: ModelPrediction;
   modelVersion: string;
 }
@@ -647,9 +659,7 @@ function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.El
       <div className="observation-meta">
         <span>Gözlenen: %{numberFormatter.format(inputs.observedVisiblePercent)}</span>
         <span>Belirsizlik: ±%{numberFormatter.format(inputs.observationUncertaintyPercent)}</span>
-        <button disabled title="Fotoğraf kalibrasyon modülü henüz eklenmedi" type="button">
-          Görsel yükleme yakında
-        </button>
+        <span>Fotoğraf ölçümü aşağıdaki kalibrasyon panelinden eklenebilir.</span>
       </div>
       <p className="engine-note">
         Görsel açıklayıcıdır. Karşılaştırma, sayısal görünürlük ve belirsizlik girdileriyle yapılır.
@@ -1030,6 +1040,8 @@ export function AppNext(): React.JSX.Element {
   const [geoidConversionRecord, setGeoidConversionRecord] = useState<GeoidConversionRecordState>();
   const [waterObservationRecord, setWaterObservationRecord] = useState<StoredWaterSurfaceRecord>();
   const [waterApplicationRecord, setWaterApplicationRecord] = useState<StoredWaterSurfaceRecord>();
+  const [photoCalibration, setPhotoCalibration] = useState<SavedPhotoCalibration>();
+  const [photoCalibrationRecord, setPhotoCalibrationRecord] = useState<PhotoCalibrationRecordState>();
   const [runs, setRuns] = useState<ModelRun[]>([]);
   const [savedExperiments, setSavedExperiments] = useState<SavedExperiment[]>([]);
   const [activeExperimentId, setActiveExperimentId] = useState(() => crypto.randomUUID());
@@ -1344,6 +1356,9 @@ export function AppNext(): React.JSX.Element {
       (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
     );
     const storedWater = readStoredWaterSurfaceState(saved.predictions, saved.modelVersions);
+    const photoPrediction = saved.predictions.find(
+      (prediction) => prediction.modelId === PHOTO_CALIBRATION_MODEL_ID
+    );
     setActiveScenarioId(normalizeSimulationScenarioId(saved.scenarioId));
     setInputs(saved.inputs);
     setAtmosphereState(saved.atmosphere
@@ -1359,6 +1374,13 @@ export function AppNext(): React.JSX.Element {
       : undefined);
     setWaterObservationRecord(storedWater.observation);
     setWaterApplicationRecord(storedWater.application);
+    setPhotoCalibration(saved.photoCalibration);
+    setPhotoCalibrationRecord(photoPrediction
+      ? {
+          prediction: photoPrediction,
+          modelVersion: saved.modelVersions[PHOTO_CALIBRATION_MODEL_ID] ?? PHOTO_CALIBRATION_MODEL_VERSION
+        }
+      : undefined);
     setActiveExperimentId(saved.id);
     setActiveExperimentName(saved.name);
     setExperimentObservedAtIso(saved.createdAtIso);
@@ -1376,6 +1398,7 @@ export function AppNext(): React.JSX.Element {
       updatedAtIso: now,
       scenarioId: activeScenarioId,
       atmosphere: cloneAtmosphereExperimentState(atmosphereState),
+      ...(photoCalibration ? { photoCalibration } : {}),
       inputs,
       manualTerrainPoints,
       terrainProfileSource,
@@ -1391,13 +1414,17 @@ export function AppNext(): React.JSX.Element {
           : []),
         ...(waterApplicationRecord
           ? [[WATER_SURFACE_APPLICATION_MODEL_ID, waterApplicationRecord.modelVersion] as const]
+          : []),
+        ...(photoCalibrationRecord
+          ? [[PHOTO_CALIBRATION_MODEL_ID, photoCalibrationRecord.modelVersion] as const]
           : [])
       ]),
       predictions: [
         ...runs.map((run) => run.prediction),
         ...(geoidConversionRecord ? [geoidConversionRecord.prediction] : []),
         ...(waterObservationRecord ? [waterObservationRecord.prediction] : []),
-        ...(waterApplicationRecord ? [waterApplicationRecord.prediction] : [])
+        ...(waterApplicationRecord ? [waterApplicationRecord.prediction] : []),
+        ...(photoCalibrationRecord ? [photoCalibrationRecord.prediction] : [])
       ]
     };
 
@@ -1407,6 +1434,9 @@ export function AppNext(): React.JSX.Element {
         (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
       );
       const savedWater = readStoredWaterSurfaceState(saved.predictions, saved.modelVersions);
+      const savedPhotoPrediction = saved.predictions.find(
+        (prediction) => prediction.modelId === PHOTO_CALIBRATION_MODEL_ID
+      );
       setSavedExperiments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       setActiveExperimentId(saved.id);
       setActiveExperimentName(saved.name);
@@ -1425,6 +1455,13 @@ export function AppNext(): React.JSX.Element {
         : undefined);
       setWaterObservationRecord(savedWater.observation);
       setWaterApplicationRecord(savedWater.application);
+      setPhotoCalibration(saved.photoCalibration);
+      setPhotoCalibrationRecord(savedPhotoPrediction
+        ? {
+            prediction: savedPhotoPrediction,
+            modelVersion: saved.modelVersions[PHOTO_CALIBRATION_MODEL_ID] ?? PHOTO_CALIBRATION_MODEL_VERSION
+          }
+        : undefined);
       setIsDirty(false);
       setSaveDialogOpen(false);
       setStorageMessage(`“${saved.name}” cihazda kaydedildi.`);
@@ -1446,6 +1483,8 @@ export function AppNext(): React.JSX.Element {
         setGeoidConversionRecord(undefined);
         setWaterObservationRecord(undefined);
         setWaterApplicationRecord(undefined);
+        setPhotoCalibration(undefined);
+        setPhotoCalibrationRecord(undefined);
         setIsDirty(true);
       }
       setStorageMessage(`“${saved.name}” silindi.`);
@@ -1543,6 +1582,8 @@ export function AppNext(): React.JSX.Element {
             setGeoidConversionRecord(undefined);
             setWaterObservationRecord(undefined);
             setWaterApplicationRecord(undefined);
+            setPhotoCalibration(undefined);
+            setPhotoCalibrationRecord(undefined);
             setIsDirty(false);
             setStorageMessage(`${getSimulationScenario(scenarioId).label} senaryosu hazırlandı.`);
           }}
@@ -1579,6 +1620,8 @@ export function AppNext(): React.JSX.Element {
                 setGeoidConversionRecord(undefined);
                 setWaterObservationRecord(undefined);
                 setWaterApplicationRecord(undefined);
+                setPhotoCalibration(undefined);
+                setPhotoCalibrationRecord(undefined);
                 setActiveExperimentId(crypto.randomUUID());
                 setActiveExperimentName('');
                 setExperimentObservedAtIso(new Date().toISOString());
@@ -1592,6 +1635,29 @@ export function AppNext(): React.JSX.Element {
               ? <HorizonReferencePanel inputs={inputs} atmosphereMode={atmosphereState.mode} />
               : <ObservationPanel inputs={inputs} />}
           </div>
+
+          {activeScenarioId !== 'horizon' && (
+            <PhotoCalibrationControl
+              key={activeExperimentId}
+              experimentId={activeExperimentId}
+              savedCalibration={photoCalibration}
+              savedPrediction={photoCalibrationRecord?.prediction}
+              onSave={(calibration: SavedPhotoCalibration, record: PhotoCalibrationRecord) => {
+                setPhotoCalibration(calibration);
+                setPhotoCalibrationRecord({
+                  prediction: record.prediction,
+                  modelVersion: record.modelVersion
+                });
+                setIsDirty(true);
+                setStorageMessage('Fotoğraf kalibrasyonu deneye eklendi.');
+              }}
+              onClear={() => {
+                setPhotoCalibration(undefined);
+                setPhotoCalibrationRecord(undefined);
+                setIsDirty(true);
+              }}
+            />
+          )}
 
           <AtmosphereProfileControl
             state={atmosphereState}

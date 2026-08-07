@@ -1,4 +1,5 @@
 import type { AtmosphereExperimentState } from './atmosphere';
+import type { ImportedObservationPhoto, SavedPhotoCalibration } from './photo-calibration';
 import type { CalculationTrace, ModelPrediction } from './domain';
 import type { SimulationScenarioId } from './scenario';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
@@ -165,6 +166,8 @@ export interface SavedExperiment {
   scenarioId?: SimulationScenarioId;
   /** Persisted advanced-atmosphere editor state; older records derive mode from the legacy standard-refraction flag. */
   atmosphere?: AtmosphereExperimentState;
+  /** Camera/photo calibration metadata and marks; source image bytes are never embedded here. */
+  photoCalibration?: SavedPhotoCalibration;
   inputs: SimulatorInputs;
   /**
    * Ordered interior terrain points. Endpoints are derived from the observer
@@ -188,6 +191,10 @@ export interface ImportExperimentResult extends FileOperationResult {
   experiment?: SavedExperiment;
   migrated?: boolean;
   sourceVersion?: number;
+}
+
+export interface ImportObservationPhotoResult extends FileOperationResult {
+  photo?: ImportedObservationPhoto;
 }
 
 export interface TerrainProfileImportContext {
@@ -293,6 +300,7 @@ export interface SimulatorDesktopApi {
   exportExperiment(id: string): Promise<FileOperationResult>;
   importExperiment(): Promise<ImportExperimentResult>;
   exportExperimentReport(id: string): Promise<FileOperationResult>;
+  importObservationPhoto(): Promise<ImportObservationPhotoResult>;
   importTerrainProfile(
     context: TerrainProfileImportContext
   ): Promise<ImportTerrainProfileResult>;

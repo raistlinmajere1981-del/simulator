@@ -186,6 +186,7 @@ Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama:
 - jeoit dönüşüm provenansı,
 - su yüzeyi gözlem ve uygulama provenansı,
 - atmosfer modu, meteorolojik profil ve optik ayarlar,
+- fotoğraf kaynak bütünlüğü, kamera kalibrasyonu ve piksel işaretleri,
 - model sürümleri ve sonuç anlık görüntülerini
 
 korur.
@@ -197,14 +198,13 @@ korur.
 - Bozuk veya tutarsız verinin reddi
 - Kimlik çakışmalarının güvenli çözümü
 - Yazdırılabilir çevrimdışı HTML raporu
-- Model, jeodezi, arazi, jeoit ve su yüzeyi hesap izlerinin raporda korunması
+- Model, jeodezi, arazi, jeoit, su yüzeyi ve fotoğraf kalibrasyon hesap izlerinin raporda korunması
 
 HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı `.ggl.json` dosyasıdır.
 
 ## Henüz tamamlanmayan ana ürün işleri
 
 - Gece ışıkları görsel katmanı
-- Fotoğraf yükleme ve etkileşimli kamera/işaretleme arayüzü
 - Güneş, Ay, yıldız ve tutulma deneyleri
 - Toroidal ve içbükey gibi ek geometrik model sözleşmeleri
 
@@ -267,7 +267,8 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-4.4.md`](docs/roadmap-stage-4.4.md)
 - [`docs/roadmap-stage-4.5.md`](docs/roadmap-stage-4.5.md)
 - [`docs/roadmap-stage-5.1.md`](docs/roadmap-stage-5.1.md)
+- [`docs/roadmap-stage-5.2.md`](docs/roadmap-stage-5.2.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.3.3`tür. Üç görünürlük senaryosu, kayıt/raporlama, WGS84, arazi/DEM, jeoit, su yüzeyi ve katmanlı atmosfer akışlarına ek olarak fotoğraf kalibrasyon çekirdeği; pinhole kamera iç parametreleri, iki noktalı görüntü referans çizgisi, piksel-açı dönüşümü ve koruyucu işaret belirsizliği zarfını hesaplayabilir. Sıradaki ürün aşaması bu çekirdeği yerel fotoğraf yükleme ve etkileşimli işaretleme arayüzüne bağlamaktır.
+Aktif geliştirme sürümü `1.4.0`dır. Fotoğraf/kamera kalibrasyonu artık yerel PNG/JPEG yükleme, SHA-256 kaynak provenansı, dört zorunlu etkileşimli işaret, FOV veya sensör+odak parametreleri, piksel-açı/belirsizlik hesabı, deney yeniden açma ve HTML rapor akışına bağlıdır. Fotoğraf baytları yerel/taşınabilir deney JSON’una gömülmez. Sıradaki fotoğraf aşaması açısal fotoğraf ölçümünü model tahminleriyle ayrı bir değerlendirme metriği olarak karşılaştırmaktır.

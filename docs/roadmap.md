@@ -387,15 +387,33 @@ Durum: tamamlandı · `1.3.3`
 
 Ayrıntı: [`roadmap-stage-5.1.md`](roadmap-stage-5.1.md)
 
-# Sıradaki ana ürün aşamaları
-
 ## Aşama 5.2 — Fotoğraf yükleme ve etkileşimli işaretleme
 
-- yerel fotoğraf yükleme ve kaynak provenansı
-- kamera/lens parametre editörü
-- ufuk başlangıç/son, hedef tabanı ve hedef tepesi işaretleme
-- 5.1 açı/belirsizlik sonuçlarının deney kaydına bağlanması
-- `.ggl.json` ve HTML rapor koruması
+Durum: tamamlandı · `1.4.0`
+
+- Electron üzerinden yerel PNG/JPEG seçimi ve 25 MB üst sınırı
+- kaynak fotoğraf için dosya adı, boyut, SHA-256, MIME ve piksel boyutu provenansı
+- fotoğraf `data:` önizlemesini yalnız oturumda tutma; deney JSON’una gömmeme
+- referans sol/sağ + hedef tabanı/tepesi için dört zorunlu kullanıcı işareti
+- `object-fit: contain` boşluklarını dikkate alan doğal piksel eşleme
+- FOV veya sensör+odak kamera parametre editörü
+- asal nokta, işaret belirsizliği ve distorsiyon durumu
+- 5.1 açı/belirsizlik çekirdeğine bağlantı
+- fotoğraf kalibrasyon state/prediction/model sürümünün deneyle saklanması
+- `.ggl.json` round-trip ve tahrif edilmiş fotoğraf provenansını reddetme
+- HTML raporda kaynak/işaret/kamera provenansı ve genel hesap izi
+- görüntü baytlarının taşınabilir kayıt/rapora sızmadığını regresyon testleriyle koruma
+
+Ayrıntı: [`roadmap-stage-5.2.md`](roadmap-stage-5.2.md)
+
+# Sıradaki ana ürün aşamaları
+
+## Aşama 5.3 — Fotoğraf açısal gözlem değerlendirmesi
+
+- fotoğraftaki hedef taban/tepe açılarını model tahminleriyle karşılaştırma
+- fotoğraf ölçüm belirsizliğini ayrı gözlem kanalı olarak değerlendirme
+- sayısal görünürlük yüzdesiyle fotoğraf açısal ölçümünü birbirine karıştırmama
+- kamera ve distorsiyon provenansı için kalite tanıları
 
 ## Aşama 6 — Güneş, Ay ve gökyüzü deneyleri
 

@@ -3,14 +3,15 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  nativeImage,
   shell,
   type IpcMainInvokeEvent,
   type OpenDialogOptions,
   type SaveDialogOptions
 } from 'electron';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
-import { join } from 'node:path';
+import { basename, extname, join } from 'node:path';
 import { createExperimentHtmlReport } from '../report/html-report';
 import {
   createLocalExperimentStore,
@@ -23,6 +24,7 @@ import type {
   DemTerrainProfileImportContext,
   FileOperationResult,
   ImportExperimentResult,
+  ImportObservationPhotoResult,
   ImportTerrainProfileResult,
   SavedExperiment,
   TerrainProfileColumnMapping,
@@ -44,6 +46,7 @@ import {
 const EXPERIMENTS_FILE_NAME = 'experiments.json';
 const MAX_TERRAIN_PROFILE_BYTES = 5 * 1024 * 1024;
 const MAX_DEM_BYTES = 64 * 1024 * 1024;
+const MAX_OBSERVATION_PHOTO_BYTES = 25 * 1024 * 1024;
 const TERRAIN_MAPPING_TTL_MS = 10 * 60 * 1_000;
 
 interface PendingTerrainImport {
@@ -394,6 +397,63 @@ function registerExperimentHandlers(): void {
         experiment: imported,
         migrated: parsed.migrated,
         sourceVersion: parsed.sourceVersion
+      };
+    }
+  );
+
+
+  ipcMain.handle(
+    'photo:import',
+    async (event): Promise<ImportObservationPhotoResult> => {
+      const selection = await showOpenDialog(event, {
+        title: 'Gözlem Fotoğrafını Aç',
+        properties: ['openFile'],
+        filters: [
+          { name: 'Gözlem Fotoğrafı', extensions: ['jpg', 'jpeg', 'png'] }
+        ]
+      });
+      const selectedPath = selection.filePaths[0];
+      if (selection.canceled || !selectedPath) {
+        return { status: 'cancelled', message: 'Fotoğraf seçimi iptal edildi.' };
+      }
+
+      const extension = extname(selectedPath).toLowerCase();
+      const mimeType = extension === '.png'
+        ? 'image/png' as const
+        : extension === '.jpg' || extension === '.jpeg'
+          ? 'image/jpeg' as const
+          : null;
+      if (!mimeType) throw new Error('Yalnız PNG ve JPEG gözlem fotoğrafları desteklenir.');
+
+      const statistics = await fs.stat(selectedPath);
+      if (!statistics.isFile()) throw new Error('Seçilen yol normal bir dosya değil.');
+      if (statistics.size <= 0 || statistics.size > MAX_OBSERVATION_PHOTO_BYTES) {
+        throw new Error('Gözlem fotoğrafı boş olamaz ve 25 MB sınırını aşamaz.');
+      }
+
+      const bytes = await fs.readFile(selectedPath);
+      const image = nativeImage.createFromBuffer(bytes);
+      if (image.isEmpty()) throw new Error('Seçilen dosya geçerli bir görüntü olarak çözümlenemedi.');
+      const size = image.getSize();
+      if (!Number.isInteger(size.width) || !Number.isInteger(size.height) ||
+        size.width < 1 || size.height < 1 || size.width > 100_000 || size.height > 100_000) {
+        throw new Error('Görüntü piksel boyutları desteklenen aralığın dışında.');
+      }
+
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      return {
+        status: 'success',
+        message: `“${basename(selectedPath)}” fotoğraf kalibrasyonu için açıldı.`,
+        photo: {
+          fileName: basename(selectedPath),
+          fileSizeBytes: bytes.byteLength,
+          sha256,
+          mimeType,
+          imageWidthPx: size.width,
+          imageHeightPx: size.height,
+          importedAtIso: new Date().toISOString(),
+          dataUrl: `data:${mimeType};base64,${bytes.toString('base64')}`
+        }
       };
     }
   );
