@@ -1,0 +1,27 @@
+name: Patch stage 4.5 docs
+
+on:
+  push:
+    branches:
+      - agent/atmosphere-profile-visualization
+    paths:
+      - scripts/patch_stage_4_5_docs.py
+      - .github/workflows/patch-stage-4.5-docs.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/atmosphere-profile-visualization
+      - run: python scripts/patch_stage_4_5_docs.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/roadmap.md docs/roadmap-stage-4.4.md docs/roadmap-stage-4.5.md
+          git diff --cached --quiet || git commit -m "Aşama 4.5 durum belgelerini tamamla"
+          git push origin HEAD:agent/atmosphere-profile-visualization
