@@ -36,7 +36,11 @@ function line(
   return new THREE.Line(geometry, material);
 }
 
-function pin(position: THREE.Vector3, color: number): THREE.Group {
+function pin(
+  position: THREE.Vector3,
+  color: number,
+  surfaceNormal?: THREE.Vector3
+): THREE.Group {
   const group = new THREE.Group();
   const stemGeometry = new THREE.CylinderGeometry(0.012, 0.012, 0.16, 10);
   const stemMaterial = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
@@ -53,6 +57,14 @@ function pin(position: THREE.Vector3, color: number): THREE.Group {
   head.position.y = 0.18;
   group.add(stem, head);
   group.position.copy(position);
+
+  if (surfaceNormal && surfaceNormal.lengthSq() > 0) {
+    group.quaternion.setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      surfaceNormal.clone().normalize()
+    );
+  }
+
   return group;
 }
 
@@ -187,7 +199,10 @@ export function WorldModelViewport({
 
         const observerPosition = vector(latitudeLongitudeToSpherePoint(observerCoordinate, radius * 1.02));
         const targetPosition = vector(latitudeLongitudeToSpherePoint(targetCoordinate, radius * 1.02));
-        world.add(pin(observerPosition, 0xffa94d), pin(targetPosition, 0x58d6ff));
+        world.add(
+          pin(observerPosition, 0xffa94d, observerPosition),
+          pin(targetPosition, 0x58d6ff, targetPosition)
+        );
 
         try {
           const route = buildWgs84VisualizationRoute(observerCoordinate, targetCoordinate, 72)
@@ -196,7 +211,15 @@ export function WorldModelViewport({
         } catch {
           world.add(line([observerPosition, targetPosition], 0xf2dc72, 0.75));
         }
-        camera.position.set(0.8, 1.25, 4.3);
+
+        const routeFacing = observerPosition.clone().normalize()
+          .add(targetPosition.clone().normalize());
+        if (routeFacing.lengthSq() < 1e-8) {
+          routeFacing.set(0.8, 0.5, 1);
+        }
+        routeFacing.normalize();
+        camera.position.copy(routeFacing.multiplyScalar(5.35));
+        camera.lookAt(0, 0, 0);
       } else {
         const radius = 1.46;
         const disk = new THREE.Mesh(
@@ -247,13 +270,15 @@ export function WorldModelViewport({
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = false;
       controls.enablePan = false;
-      controls.minDistance = kind === 'globe' ? 2.6 : 2.8;
-      controls.maxDistance = 7;
+      controls.target.set(0, 0, 0);
+      controls.minDistance = kind === 'globe' ? 3.3 : 2.8;
+      controls.maxDistance = kind === 'globe' ? 9 : 7;
       controls.zoomToCursor = true;
       if (kind !== 'globe') {
         controls.minPolarAngle = 0.18;
         controls.maxPolarAngle = Math.PI / 2.15;
       }
+      controls.update();
 
       const render = (): void => {
         if (!renderer || !scene) return;
