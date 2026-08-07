@@ -91,6 +91,11 @@ interface GeoidConversionRecordState {
   modelVersion: string;
 }
 
+interface VisualLayerState {
+  geographicBoundaries: boolean;
+  grid: boolean;
+}
+
 const scenarios: ScenarioDefinition[] = [
   { label: 'Hedef Görünürlüğü', icon: '▰', enabled: true },
   { label: 'Ufuk Analizi', icon: '◫', enabled: false },
@@ -273,10 +278,14 @@ function geodesicPrediction(result: GeodesicResult | undefined): ModelPrediction
 
 function Sidebar({
   experiments,
-  onLoadExperiment
+  visualLayers,
+  onLoadExperiment,
+  onVisualLayerChange
 }: {
   experiments: SavedExperiment[];
+  visualLayers: VisualLayerState;
   onLoadExperiment(experiment: SavedExperiment): void;
+  onVisualLayerChange(key: keyof VisualLayerState, enabled: boolean): void;
 }): React.JSX.Element {
   return (
     <aside className="sidebar">
@@ -357,16 +366,34 @@ function Sidebar({
         </div>
       </section>
 
-      <section className="side-section compact grow disabled-section">
+      <section className="side-section compact grow">
         <div className="section-heading">
           <span>Görsel katmanlar</span>
-          <span className="section-state">sonraki aşama</span>
+          <span className="section-state">2 / 5 hazır</span>
         </div>
-        {['Kıta / Ülke Sınırları', 'Topografya Görselleştirme', 'Gece Işıkları', 'Atmosfer Profili', 'Izgara'].map((item) => (
+        <label className="switch-row">
+          <span>Kıta / Ülke Sınırları</span>
+          <input
+            type="checkbox"
+            checked={visualLayers.geographicBoundaries}
+            onChange={(event) => onVisualLayerChange('geographicBoundaries', event.currentTarget.checked)}
+          />
+          <span className="switch" />
+        </label>
+        {['Topografya Görselleştirme', 'Gece Işıkları', 'Atmosfer Profili'].map((item) => (
           <label className="switch-row unavailable-layer" key={item}>
             <span>{item}</span><input type="checkbox" disabled /><span className="switch" />
           </label>
         ))}
+        <label className="switch-row">
+          <span>Izgara</span>
+          <input
+            type="checkbox"
+            checked={visualLayers.grid}
+            onChange={(event) => onVisualLayerChange('grid', event.currentTarget.checked)}
+          />
+          <span className="switch" />
+        </label>
       </section>
 
       <section className="time-card disabled-section">
@@ -695,11 +722,13 @@ function ModelCard({
   metadata,
   run,
   inputs,
+  visualLayers,
   onShowTrace
 }: {
   metadata: ModelMetadata;
   run: ModelRun | undefined;
   inputs: SimulatorInputs;
+  visualLayers: VisualLayerState;
   onShowTrace(): void;
 }): React.JSX.Element {
   const presentation = getPresentation(metadata.id);
@@ -728,6 +757,8 @@ function ModelCard({
   observerLongitudeDeg={inputs.observerLongitudeDeg}
   targetLatitudeDeg={inputs.targetLatitudeDeg}
   targetLongitudeDeg={inputs.targetLongitudeDeg}
+  showGeographicBoundaries={visualLayers.geographicBoundaries}
+  showGrid={visualLayers.grid}
 />
       {isProjection ? (
         <div className="projection-explanation">
@@ -807,6 +838,10 @@ export function AppNext(): React.JSX.Element {
   const [dataManagerOpen, setDataManagerOpen] = useState(false);
   const [traceModelId, setTraceModelId] = useState<string>();
   const [storageMessage, setStorageMessage] = useState('');
+  const [visualLayers, setVisualLayers] = useState<VisualLayerState>({
+    geographicBoundaries: true,
+    grid: true
+  });
 
   const geodesic = useMemo(() => {
     if (inputs.distanceSource !== 'coordinates') return undefined;
@@ -1256,7 +1291,14 @@ export function AppNext(): React.JSX.Element {
       </header>
 
       <div className="workspace">
-        <Sidebar experiments={savedExperiments} onLoadExperiment={loadExperiment} />
+        <Sidebar
+          experiments={savedExperiments}
+          visualLayers={visualLayers}
+          onLoadExperiment={loadExperiment}
+          onVisualLayerChange={(key, enabled) => {
+            setVisualLayers((current) => ({ ...current, [key]: enabled }));
+          }}
+        />
         <main className="main-content">
           <div className="top-grid geodesic-top-grid">
             <ScenarioSummary
@@ -1331,6 +1373,7 @@ export function AppNext(): React.JSX.Element {
                 metadata={model.metadata}
                 run={runs.find((candidate) => candidate.metadata.id === model.metadata.id)}
                 inputs={effectiveInputs}
+                visualLayers={visualLayers}
                 onShowTrace={() => setTraceModelId(model.metadata.id)}
               />
             ))}
