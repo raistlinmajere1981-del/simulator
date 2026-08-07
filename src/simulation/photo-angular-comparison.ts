@@ -9,6 +9,7 @@ import { PHOTO_CALIBRATION_MODEL_ID } from './photo-calibration';
 
 export const PHOTO_ANGULAR_COMPARISON_MODEL_PREFIX = 'photo-angular-comparison';
 export const PHOTO_ANGULAR_COMPARISON_MODEL_VERSION = '0.1.0';
+export const PHOTO_TARGET_BASE_VISIBILITY_TOLERANCE_M = 0.01;
 
 export interface PhotoAngularComparisonInput {
   experimentId: string;
@@ -123,8 +124,12 @@ export function comparePhotoAngularObservation(
   const predictedTop = finiteMetricValue(input.modelPrediction, 'targetTopElevationDeg');
   const hiddenHeightM = finiteMetricValue(input.modelPrediction, 'hiddenHeightM');
   const visibleFraction = finiteMetricValue(input.modelPrediction, 'visibleFraction');
-  const baseVisible = hiddenHeightM === null ? predictedBase !== null : hiddenHeightM <= 1e-6;
-  const topVisible = visibleFraction === null ? predictedTop !== null : visibleFraction > 1e-9;
+  const baseVisible = predictedBase !== null && (
+    hiddenHeightM === null || hiddenHeightM <= PHOTO_TARGET_BASE_VISIBILITY_TOLERANCE_M
+  );
+  const topVisible = predictedTop !== null && (
+    visibleFraction === null || visibleFraction > 1e-9
+  );
 
   if (input.modelPrediction.status === 'unsupported') {
     warnings.push(`${input.sourceModelName} bu deney için fiziksel açısal tahmin üretmedi.`);
@@ -201,6 +206,7 @@ export function comparePhotoAngularObservation(
       assumptions: [
         'Fotoğraf kalibrasyonu model tahminini üretmek için kullanılmaz; karşılaştırma sonradan ve tek yönlü yapılır.',
         'Fotoğraf işaret belirsizliği ± sınır olarak kullanılır; bu sürümde model/girdi belirsizliği ayrıca yayılmaz.',
+        `Hedef tabanı görünürlük sınıflamasında sayısal çözümle uyumlu ${PHOTO_TARGET_BASE_VISIBILITY_TOLERANCE_M} m tolerans kullanılır.`,
         referenceKind === 'local-horizontal'
           ? 'U1–U2 referans çizgisinin fiziksel yerel yatayı temsil ettiği kullanıcı tarafından açıkça belirtilmiştir.'
           : 'U1–U2 çizgisinin fiziksel yerel yatay olduğu varsayılmamıştır; yalnız referans-ofsetinden bağımsız açı kanalları karşılaştırılır.',
