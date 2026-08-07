@@ -55,8 +55,8 @@ export function buildTerrainVisualizationProfile(
     previousDistanceM = sample.distanceM;
   }
 
-  const first = profile.samples[0];
-  const last = profile.samples[profile.samples.length - 1];
+  const first = profile.samples[0]!;
+  const last = profile.samples[profile.samples.length - 1]!;
   if (Math.abs(first.distanceM) > DISTANCE_TOLERANCE_M ||
     Math.abs(last.distanceM - profile.totalDistanceM) > DISTANCE_TOLERANCE_M) {
     throw new RangeError('Arazi görselleştirmesi profil uç örneklerini gerektirir.');
