@@ -41,7 +41,9 @@ export interface LayeredSphereVisibilityResult {
   hiddenHeightM: number;
   visibleFraction: number;
   hiddenFraction: number;
+  targetBaseElevationDeg: number | null;
   targetTopElevationDeg: number | null;
+  targetAngularHeightDeg: number | null;
   targetTopTerrainMinimumClearanceM: number | null;
   targetTopTerrainCriticalDistanceM: number | null;
   grazingInitialElevationDeg: number;
@@ -436,6 +438,16 @@ export function analyzeLayeredSphereVisibility(
 
   const seeds = [...evaluations, grazing]
     .sort((left, right) => left.angleDeg - right.angleDeg);
+  const targetBaseRay = hiddenHeightM <= CLEARANCE_TOLERANCE_M
+    ? solveClearRayToAltitude(
+        input,
+        input.targetBaseAltitudeM,
+        seeds,
+        stepM,
+        earthRadiusM,
+        maxPathLengthM
+      )
+    : null;
   const targetTopRay = targetTopAltitudeM + CLEARANCE_TOLERANCE_M >= minimumVisibleAltitudeM
     ? solveClearRayToAltitude(
         input,
@@ -448,7 +460,7 @@ export function analyzeLayeredSphereVisibility(
     : null;
 
   const warnings = new Set<string>();
-  for (const item of [...evaluations, grazing, ...(targetTopRay ? [targetTopRay] : [])]) {
+  for (const item of [...evaluations, grazing, ...(targetBaseRay ? [targetBaseRay] : []), ...(targetTopRay ? [targetTopRay] : [])]) {
     item.warnings.forEach((warning) => warnings.add(warning));
   }
   warnings.add(
@@ -464,7 +476,11 @@ export function analyzeLayeredSphereVisibility(
     hiddenHeightM,
     visibleFraction,
     hiddenFraction,
+    targetBaseElevationDeg: targetBaseRay?.angleDeg ?? null,
     targetTopElevationDeg: targetTopRay?.angleDeg ?? null,
+    targetAngularHeightDeg: targetBaseRay && targetTopRay
+      ? targetTopRay.angleDeg - targetBaseRay.angleDeg
+      : null,
     targetTopTerrainMinimumClearanceM: targetTopRay?.terrainMinimumClearanceM ?? null,
     targetTopTerrainCriticalDistanceM: targetTopRay?.terrainCriticalDistanceM ?? null,
     grazingInitialElevationDeg: grazing.angleDeg,

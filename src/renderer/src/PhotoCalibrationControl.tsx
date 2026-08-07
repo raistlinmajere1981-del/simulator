@@ -3,6 +3,7 @@ import type { ModelPrediction } from '../../shared/domain';
 import type {
   ImportedObservationPhoto,
   PhotoCalibrationMarks,
+  PhotoReferenceKind,
   PhotoSourceMetadata,
   SavedPhotoCalibration
 } from '../../shared/photo-calibration';
@@ -28,6 +29,7 @@ interface DraftState {
   principalPointYPx: string;
   defaultMarkUncertaintyPx: string;
   distortionCorrected: boolean;
+  referenceKind: PhotoReferenceKind;
   marks?: PhotoCalibrationMarks;
   notes: string;
 }
@@ -65,6 +67,7 @@ function emptyDraft(): DraftState {
     principalPointYPx: '',
     defaultMarkUncertaintyPx: '1',
     distortionCorrected: false,
+    referenceKind: 'visual-reference',
     notes: ''
   };
 }
@@ -97,6 +100,7 @@ function draftFromSaved(saved: SavedPhotoCalibration | undefined): DraftState {
       : String(saved.principalPointYPx),
     defaultMarkUncertaintyPx: String(saved.defaultMarkUncertaintyPx),
     distortionCorrected: saved.distortionCorrected,
+    referenceKind: saved.referenceKind ?? 'visual-reference',
     marks: {
       horizonStart: { ...saved.marks.horizonStart },
       horizonEnd: { ...saved.marks.horizonEnd },
@@ -341,6 +345,7 @@ export function PhotoCalibrationControl({
       ...(principalPointYPx === undefined ? {} : { principalPointYPx }),
       defaultMarkUncertaintyPx,
       distortionCorrected: draft.distortionCorrected,
+      referenceKind: draft.referenceKind,
       marks: {
         horizonStart: { ...draft.marks.horizonStart },
         horizonEnd: { ...draft.marks.horizonEnd },
@@ -487,6 +492,16 @@ export function PhotoCalibrationControl({
               >
                 <option value="field-of-view">Yatay / düşey görüş açısı</option>
                 <option value="sensor-focal">Sensör + odak uzaklığı</option>
+              </select>
+            </label>
+            <label>
+              <span>U1–U2 referans anlamı</span>
+              <select
+                value={draft.referenceKind}
+                onChange={(event) => updateDraft('referenceKind', event.currentTarget.value as PhotoReferenceKind)}
+              >
+                <option value="visual-reference">Görsel referans · yalnız açısal yükseklik</option>
+                <option value="local-horizontal">Fiziksel yerel yatay · taban/tepe de karşılaştır</option>
               </select>
             </label>
 

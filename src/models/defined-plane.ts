@@ -38,7 +38,7 @@ export class DefinedPlaneModel implements SimulationModel {
   readonly metadata: ModelMetadata = {
     id: 'defined-plane',
     name: 'Tanımlı Düzlem',
-    version: '0.4.0',
+    version: '0.5.0',
     description:
       'Düz yüzey ve doğrusal ışık varsayımıyla, isteğe bağlı arazi profili üzerinden görüş hesabı.',
     capabilities: ['surface-distance', 'line-of-sight', 'horizon', 'terrain-profile'],
@@ -185,11 +185,17 @@ export class DefinedPlaneModel implements SimulationModel {
       ? visibleHeightM / experiment.target.heightM
       : 0;
     const hiddenFraction = 1 - visibleFraction;
+    const targetBaseElevationDeg = planarElevationAngleDeg(
+      distanceMeasurement.value,
+      observerHeightM,
+      targetBaseHeightM
+    );
     const targetTopElevationDeg = planarElevationAngleDeg(
       distanceMeasurement.value,
       observerHeightM,
       targetTopHeightM
     );
+    const targetAngularHeightDeg = targetTopElevationDeg - targetBaseElevationDeg;
     const observation = getMeasurement(experiment, 'visibleFraction', 'fraction');
     const evaluation = evaluateFractionPrediction(visibleFraction, observation);
 
@@ -270,7 +276,9 @@ export class DefinedPlaneModel implements SimulationModel {
         metric('visibleFraction', 'Görünür oran', visibleFraction, 'fraction'),
         metric('hiddenFraction', 'Gizlenen oran', hiddenFraction, 'fraction'),
         metric('horizonSurfaceDistanceM', 'Yüzey üzerindeki ufuk mesafesi', null, 'm'),
+        metric('targetBaseElevationDeg', 'Hedef taban görüş açısı', targetBaseElevationDeg, 'deg'),
         metric('targetTopElevationDeg', 'Hedef tepe görüş açısı', targetTopElevationDeg, 'deg'),
+        metric('targetAngularHeightDeg', 'Tam hedef açısal yüksekliği', targetAngularHeightDeg, 'deg'),
         metric('curvatureDropM', 'Teğete göre yüzey düşümü', 0, 'm'),
         metric('terrainMinimumClearanceM', 'Arazi minimum açıklığı', terrainMinimumClearanceM, 'm'),
         metric('terrainCriticalDistanceM', 'Kritik arazi mesafesi', terrainCriticalDistanceM, 'm'),

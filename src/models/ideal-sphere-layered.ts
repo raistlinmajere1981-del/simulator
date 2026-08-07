@@ -90,7 +90,7 @@ export class IdealSphereLayeredModel implements SimulationModel {
 
   readonly metadata: ModelMetadata = {
     ...this.base.metadata,
-    version: '0.5.0',
+    version: '0.6.0',
     description:
       'Ortalama yarıçaplı küresel yüzey üzerinde görüş hattı, ufuk, arazi ve seçildiğinde katmanlı optik atmosfer hesabı.',
     assumptions: [
@@ -307,7 +307,9 @@ export class IdealSphereLayeredModel implements SimulationModel {
           metric('visibleFraction', 'Görünür oran', visibility.visibleFraction, 'fraction'),
           metric('hiddenFraction', 'Gizlenen oran', visibility.hiddenFraction, 'fraction'),
           metric('horizonSurfaceDistanceM', 'Katmanlı optik ufuk mesafesi', horizonSurfaceDistanceM, 'm'),
+          metric('targetBaseElevationDeg', 'Hedef taban optik görüş açısı', visibility.targetBaseElevationDeg, 'deg'),
           metric('targetTopElevationDeg', 'Hedef tepe optik görüş açısı', visibility.targetTopElevationDeg, 'deg'),
+          metric('targetAngularHeightDeg', 'Tam hedef optik açısal yüksekliği', visibility.targetAngularHeightDeg, 'deg'),
           metric('curvatureDropM', 'Geometrik yüzey düşümü', curvatureDropM, 'm'),
           metric('terrainMinimumClearanceM', 'Hedef-tepe ışını arazi minimum açıklığı', visibility.targetTopTerrainMinimumClearanceM, 'm'),
           metric('terrainCriticalDistanceM', 'Kritik arazi mesafesi', visibility.targetTopTerrainCriticalDistanceM, 'm'),

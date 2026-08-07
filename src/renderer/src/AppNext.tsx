@@ -61,6 +61,11 @@ import {
   type PhotoCalibrationRecord
 } from '../../simulation/photo-calibration';
 import {
+  PHOTO_ANGULAR_COMPARISON_MODEL_VERSION,
+  comparePhotoAngularObservation,
+  normalizePhotoReferenceKind
+} from '../../simulation/photo-angular-comparison';
+import {
   WATER_SURFACE_APPLICATION_MODEL_ID,
   type WaterSurfaceApplicationResult
 } from '../../simulation/water-surface-application';
@@ -86,6 +91,7 @@ import { GeoidConversionControl } from './GeoidConversionControl';
 import { AtmosphereProfileControl } from './AtmosphereProfileControl';
 import { WaterSurfaceControl } from './WaterSurfaceControl';
 import { PhotoCalibrationControl } from './PhotoCalibrationControl';
+import { PhotoAngularComparisonPanel } from './PhotoAngularComparisonPanel';
 import { WorldModelViewport } from './WorldModelViewport';
 
 type ModelTone = 'green' | 'amber' | 'violet';
@@ -1159,6 +1165,19 @@ export function AppNext(): React.JSX.Element {
     return () => { cancelled = true; };
   }, [context, experiment]);
 
+  const photoReferenceKind = normalizePhotoReferenceKind(photoCalibration?.referenceKind);
+  const photoAngularComparisons = useMemo(() => {
+    if (!photoCalibrationRecord) return [];
+    return runs.map((run) => comparePhotoAngularObservation({
+      experimentId: activeExperimentId,
+      sourceModelId: run.metadata.id,
+      sourceModelName: run.metadata.name,
+      modelPrediction: run.prediction,
+      photoPrediction: photoCalibrationRecord.prediction,
+      referenceKind: photoReferenceKind
+    }));
+  }, [activeExperimentId, photoCalibrationRecord, photoReferenceKind, runs]);
+
   const markTerrainSourceModified = (): void => {
     setTerrainProfileSource((current) => current
       ? { ...current, modifiedAfterImport: true }
@@ -1417,14 +1436,19 @@ export function AppNext(): React.JSX.Element {
           : []),
         ...(photoCalibrationRecord
           ? [[PHOTO_CALIBRATION_MODEL_ID, photoCalibrationRecord.modelVersion] as const]
-          : [])
+          : []),
+        ...photoAngularComparisons.map((comparison) => [
+          comparison.prediction.modelId,
+          PHOTO_ANGULAR_COMPARISON_MODEL_VERSION
+        ] as const)
       ]),
       predictions: [
         ...runs.map((run) => run.prediction),
         ...(geoidConversionRecord ? [geoidConversionRecord.prediction] : []),
         ...(waterObservationRecord ? [waterObservationRecord.prediction] : []),
         ...(waterApplicationRecord ? [waterApplicationRecord.prediction] : []),
-        ...(photoCalibrationRecord ? [photoCalibrationRecord.prediction] : [])
+        ...(photoCalibrationRecord ? [photoCalibrationRecord.prediction] : []),
+        ...photoAngularComparisons.map((comparison) => comparison.prediction)
       ]
     };
 
@@ -1723,6 +1747,11 @@ export function AppNext(): React.JSX.Element {
             ))}
           </div>
 
+          <PhotoAngularComparisonPanel
+            comparisons={photoAngularComparisons}
+            referenceKind={photoReferenceKind}
+          />
+
           <div className="bottom-grid">
             <ResultsTable runs={runs} scenarioId={activeScenarioId} onShowTrace={setTraceModelId} />
             <section className="notes panel">
@@ -1737,7 +1766,7 @@ export function AppNext(): React.JSX.Element {
                 <li>Standart kırılma kürede etkin yarıçap yaklaşımıdır; katmanlı atmosfer modu meteorolojik profil ve Ciddor optik tanılarını ayrı state olarak taşır.</li>
                 <li>Azimutal gösterim yalnızca kartografik referanstır.</li>
               </ul>
-              <p>Katmanlı atmosfer profilinin optik ışın izleme çekirdeği hazırdır; görünürlük/ufuk model sonucuna bağlantısı Aşama 4.4 kapsamındadır. Kamera kalibrasyonu ve dalga yüzeyinin rota boyunca dinamik geometrisi henüz hesaba dahil değildir.</p>
+              <p>Katmanlı atmosfer profilinin optik ışın izleme çekirdeği hazırdır; görünürlük/ufuk model sonucuna bağlantısı Aşama 4.4 kapsamındadır. Fotoğraf kalibrasyonu bağımsız açısal gözlem kanalı olarak model sonuçlarıyla sonradan karşılaştırılır; dalga yüzeyinin rota boyunca dinamik geometrisi henüz hesaba dahil değildir.</p>
             </section>
           </div>
         </main>

@@ -484,6 +484,7 @@ function parsePhotoCalibration(value: unknown): SavedPhotoCalibration | null {
   if (!source || !isRecord(value.calibration) || !isRecord(value.marks) ||
     !inRange(value.defaultMarkUncertaintyPx, 0, 100) ||
     typeof value.distortionCorrected !== 'boolean' || !isIsoDate(value.recordedAtIso) ||
+    (value.referenceKind !== undefined && value.referenceKind !== 'visual-reference' && value.referenceKind !== 'local-horizontal') ||
     (value.notes !== undefined && (typeof value.notes !== 'string' || value.notes.length > 2_000))) {
     return null;
   }
@@ -535,6 +536,7 @@ function parsePhotoCalibration(value: unknown): SavedPhotoCalibration | null {
     distortionCorrected: value.distortionCorrected,
     marks: { horizonStart, horizonEnd, targetBase, targetTop },
     recordedAtIso: value.recordedAtIso,
+    ...(value.referenceKind === undefined ? {} : { referenceKind: value.referenceKind }),
     ...(value.notes === undefined || value.notes.trim() === '' ? {} : { notes: value.notes.trim() })
   };
 }
