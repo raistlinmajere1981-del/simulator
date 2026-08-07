@@ -1,0 +1,29 @@
+name: Preserve stage 3.27 compatibility
+
+on:
+  push:
+    branches:
+      - agent/scenario-horizon-long-distance
+    paths:
+      - scripts/compat_stage_3_27.py
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/scenario-horizon-long-distance
+          fetch-depth: 0
+      - run: python scripts/compat_stage_3_27.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/shared/portable.ts tests/scenario-workflows.test.ts docs/roadmap-stage-3.27.md
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: preserve legacy scenario field absence"
+          git push origin HEAD:agent/scenario-horizon-long-distance
