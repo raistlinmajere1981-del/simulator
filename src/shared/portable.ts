@@ -16,6 +16,7 @@ import {
 } from './simulator';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 import { normalizeSimulationScenarioId } from './scenario';
+import { parseAtmosphereExperimentState } from '../simulation/atmosphere-persistence';
 import {
   migrateLegacyManualTerrainPoint,
   sortManualTerrainPoints,
@@ -461,6 +462,11 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     terrainProfileSource = parsedSource;
   }
 
+  const atmosphere = value.atmosphere === undefined
+    ? undefined
+    : parseAtmosphereExperimentState(value.atmosphere);
+  if (atmosphere === null) return null;
+
   return {
     id: value.id,
     name: value.name.trim(),
@@ -469,6 +475,7 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     ...(value.scenarioId === undefined
       ? {}
       : { scenarioId: normalizeSimulationScenarioId(value.scenarioId) }),
+    ...(atmosphere === undefined ? {} : { atmosphere }),
     inputs,
     manualTerrainPoints,
     terrainProfileSource,

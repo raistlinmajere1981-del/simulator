@@ -1,4 +1,9 @@
 import type {
+  AtmosphereMode,
+  LayeredAtmosphereProfile,
+  OpticalAtmosphereSettings
+} from '../shared/atmosphere';
+import type {
   ExperimentDefinition,
   ModelCapability,
   ModelMetadata,
@@ -6,8 +11,11 @@ import type {
 } from '../shared/domain';
 
 export interface SimulationContext {
-  atmosphereMode: 'off' | 'standard' | 'profile';
+  atmosphereMode: AtmosphereMode;
   refractionCoefficient?: number;
+  atmosphereProfile?: LayeredAtmosphereProfile;
+  opticalAtmosphereSettings?: OpticalAtmosphereSettings;
+  rayTraceStepM?: number;
   seed?: number;
 }
 
