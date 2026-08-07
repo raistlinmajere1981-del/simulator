@@ -1051,7 +1051,7 @@ export function AppNext(): React.JSX.Element {
     };
 
     if (activeScenarioId === 'horizon') {
-      return {
+      const horizonExperiment: ExperimentDefinition = {
         id: activeExperimentId,
         title: activeExperimentName || `Etkileşimli ${scenario.label.toLocaleLowerCase('tr-TR')} deneyi`,
         type: 'horizon',
@@ -1059,9 +1059,10 @@ export function AppNext(): React.JSX.Element {
         observedAtIso: experimentObservedAtIso,
         measurements: {}
       };
+      return horizonExperiment;
     }
 
-    return {
+    const targetExperiment: ExperimentDefinition = {
       id: activeExperimentId,
       title: activeExperimentName || `Etkileşimli ${scenario.label.toLocaleLowerCase('tr-TR')} deneyi`,
       type: 'target-visibility',
@@ -1080,6 +1081,7 @@ export function AppNext(): React.JSX.Element {
         visibleFraction: { value: inputs.observedVisiblePercent / 100, uncertainty: inputs.observationUncertaintyPercent / 100, unit: 'fraction' }
       }
     };
+    return targetExperiment;
   }, [activeExperimentId, activeExperimentName, activeScenarioId, effectiveDistanceKm, experimentObservedAtIso, inputs, terrainProfile]);
 
   const context = useMemo(() => ({
