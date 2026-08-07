@@ -406,14 +406,31 @@ Durum: tamamlandı · `1.4.0`
 
 Ayrıntı: [`roadmap-stage-5.2.md`](roadmap-stage-5.2.md)
 
-# Sıradaki ana ürün aşamaları
-
 ## Aşama 5.3 — Fotoğraf açısal gözlem değerlendirmesi
 
-- fotoğraftaki hedef taban/tepe açılarını model tahminleriyle karşılaştırma
-- fotoğraf ölçüm belirsizliğini ayrı gözlem kanalı olarak değerlendirme
-- sayısal görünürlük yüzdesiyle fotoğraf açısal ölçümünü birbirine karıştırmama
-- kamera ve distorsiyon provenansı için kalite tanıları
+Durum: tamamlandı · `1.4.1`
+
+- fotoğraf kalibrasyonunu model hesabına geri beslemeyen bağımsız gözlem kanalı
+- U1–U2 için `visual-reference` / açık `local-horizontal` semantiği
+- görsel referansta yalnız ofsetten bağımsız hedef açısal yüksekliğini karşılaştırma
+- fiziksel yerel yatay açıkça seçildiğinde görünür hedef taban/tepe açılarını karşılaştırma
+- model hedef tabanını görünmez öngörüyorsa tam hedef yüksekliği için sahte uyum puanı üretmeme
+- İdeal Küre ve Tanımlı Düzlemde taban/tepe/tam açısal yükseklik metrikleri
+- katmanlı atmosferde fiziksel taban ışını bulunamadığında taban/tam yükseklik metriklerini `null` bırakma
+- fotoğraf ± işaret belirsizliğiyle ilk izlenebilir uyum testi
+- comparison snapshot/modelVersion/hesap izini deney ve HTML raporda koruma
+- eski fotoğraf kayıtlarında eksik referans anlamını alan uydurmadan güvenli `visual-reference` olarak yorumlama
+
+Ayrıntı: [`roadmap-stage-5.3.md`](roadmap-stage-5.3.md)
+
+# Sıradaki ana ürün aşamaları
+
+## Aşama 5.4 — Birleşik fotoğraf/model belirsizlik zarfı
+
+- kamera iç-parametre belirsizliği
+- mesafe, kot ve atmosfer belirsizliğinin açı tahminine yayılması
+- fotoğraf işaret belirsizliğiyle birleşik değerlendirme
+- yalnız tek ± fotoğraf aralığına dayanmayan istatistiksel uyum raporu
 
 ## Aşama 6 — Güneş, Ay ve gökyüzü deneyleri
 
