@@ -150,6 +150,17 @@ describe('photo calibration', () => {
     })).toThrow(/yatay eksende en az 1 piksel/);
   });
 
+  it('rejects inverted target base/top marks instead of persisting a negative angular height', () => {
+    const input = baseInput();
+    input.marks = {
+      ...input.marks,
+      targetBase: { xPx: 500, yPx: 400 },
+      targetTop: { xPx: 500, yPx: 600 }
+    };
+
+    expect(() => createPhotoCalibrationRecord(input)).toThrow(/TABAN ve TEPE/);
+  });
+
   it('does not assume the marked line is a physical astronomical horizon', () => {
     const record = createPhotoCalibrationRecord(baseInput());
     expect(record.prediction.trace.assumptions.some((assumption) =>

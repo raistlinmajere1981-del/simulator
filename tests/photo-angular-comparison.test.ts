@@ -152,6 +152,34 @@ describe('photo angular comparison', () => {
     expect(result.prediction.warnings.join(' ')).toContain('tabanını görünür öngörmediği');
   });
 
+  it('does not compare a legacy photo record with non-positive target angular height', () => {
+    const invertedPhoto = prediction('photo-calibration', [
+      { key: 'targetBaseRelativeElevationDeg', value: 1.2, uncertainty: 0.1 },
+      { key: 'targetTopRelativeElevationDeg', value: -0.3, uncertainty: 0.1 },
+      { key: 'targetAngularHeightDeg', value: -1.5, uncertainty: 0.15 }
+    ]);
+    const model = prediction('defined-plane', [
+      { key: 'targetBaseElevationDeg', value: 0 },
+      { key: 'targetTopElevationDeg', value: 1.5 },
+      { key: 'targetAngularHeightDeg', value: 1.5 },
+      { key: 'hiddenHeightM', value: 0 },
+      { key: 'visibleFraction', value: 1 }
+    ]);
+
+    const result = comparePhotoAngularObservation({
+      experimentId: 'exp-1',
+      sourceModelId: 'defined-plane',
+      sourceModelName: 'Tanımlı Düzlem',
+      modelPrediction: model,
+      photoPrediction: invertedPhoto,
+      referenceKind: 'local-horizontal'
+    });
+
+    expect(result.channels).toHaveLength(0);
+    expect(result.prediction.status).toBe('indeterminate');
+    expect(result.prediction.warnings.join(' ')).toContain('TABAN/TEPE');
+  });
+
   it('keeps unsupported cartographic predictions unsupported', () => {
     const model = prediction('azimuthal-projection', [], 'unsupported');
     const result = comparePhotoAngularObservation({

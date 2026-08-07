@@ -1,7 +1,7 @@
 import type { CalculationTrace, ModelPrediction } from '../shared/domain';
 
 export const PHOTO_CALIBRATION_MODEL_ID = 'photo-calibration';
-export const PHOTO_CALIBRATION_MODEL_VERSION = '0.1.0';
+export const PHOTO_CALIBRATION_MODEL_VERSION = '0.1.1';
 
 export type CameraCalibrationSource = 'sensor-focal' | 'field-of-view';
 
@@ -389,6 +389,11 @@ export function createPhotoCalibrationRecord(
   }
 
   const metrics = evaluateMarks(intrinsics, input.marks);
+  if (metrics.targetAngularHeightDeg <= 0) {
+    throw new RangeError(
+      'Hedef tepesi kalibre edilmiş referansa göre tabanın üstünde olmalı. TABAN ve TEPE işaretlerini kontrol et.'
+    );
+  }
   const uncertainty = uncertaintyEnvelope(
     intrinsics,
     input.marks,
@@ -407,9 +412,6 @@ export function createPhotoCalibrationRecord(
   }
   if (Math.abs(input.marks.targetTop.xPx - input.marks.targetBase.xPx) > intrinsics.imageWidthPx * 0.05) {
     warnings.push('Hedef tabanı ve tepesi yatayda belirgin ayrık; hedef yüksekliği eğik/karma bir görüntü doğrultusunu temsil ediyor olabilir.');
-  }
-  if (metrics.targetAngularHeightDeg <= 0) {
-    warnings.push('İşaretlenen hedef tepesi, kalibre edilmiş referansa göre tabandan daha yukarıda görünmüyor.');
   }
 
   const notes = input.notes?.trim();

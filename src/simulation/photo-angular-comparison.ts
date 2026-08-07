@@ -116,7 +116,9 @@ export function comparePhotoAngularObservation(
   const steps: CalculationTraceStep[] = [];
   const channels: PhotoAngularChannelResult[] = [];
 
-  const observedAngularHeight = observedMetric(input.photoPrediction, 'targetAngularHeightDeg');
+  const observedAngularHeightCandidate = observedMetric(input.photoPrediction, 'targetAngularHeightDeg');
+  const photoTargetGeometryValid = observedAngularHeightCandidate === null || observedAngularHeightCandidate.value > 0;
+  const observedAngularHeight = photoTargetGeometryValid ? observedAngularHeightCandidate : null;
   const observedBase = observedMetric(input.photoPrediction, 'targetBaseRelativeElevationDeg');
   const observedTop = observedMetric(input.photoPrediction, 'targetTopRelativeElevationDeg');
   const predictedAngularHeight = finiteMetricValue(input.modelPrediction, 'targetAngularHeightDeg');
@@ -131,7 +133,9 @@ export function comparePhotoAngularObservation(
     visibleFraction === null || visibleFraction > 1e-9
   );
 
-  if (input.modelPrediction.status === 'unsupported') {
+  if (!photoTargetGeometryValid) {
+    warnings.push('Fotoğraf hedef açısal yüksekliği pozitif değil; TABAN/TEPE işaretleri düzeltilmeden model karşılaştırması yapılmadı.');
+  } else if (input.modelPrediction.status === 'unsupported') {
     warnings.push(`${input.sourceModelName} bu deney için fiziksel açısal tahmin üretmedi.`);
   } else {
     if (observedAngularHeight && predictedAngularHeight !== null && baseVisible && topVisible) {
@@ -177,7 +181,8 @@ export function comparePhotoAngularObservation(
   }
 
   let status: ResultStatus;
-  if (input.modelPrediction.status === 'unsupported') status = 'unsupported';
+  if (!photoTargetGeometryValid) status = 'indeterminate';
+  else if (input.modelPrediction.status === 'unsupported') status = 'unsupported';
   else if (channels.length === 0) status = 'indeterminate';
   else status = channels.some((channel) => channel.status === 'incompatible')
     ? 'incompatible'
