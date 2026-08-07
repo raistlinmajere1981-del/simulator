@@ -339,6 +339,27 @@ Durum: tamamlandı · `1.3.0`
 
 Ayrıntı: [`roadmap-stage-4.3.md`](roadmap-stage-4.3.md)
 
+## Aşama 4.4 — Katmanlı atmosferin İdeal Küre sonuçlarına fiziksel bağlantısı
+
+Durum: tamamlandı · `1.3.1`
+
+- Ciddor `n(h)` profilinden küresel RK4 ışın yollarıyla hedef görünürlüğü
+- yüzey ve arazi profilini temizleyen en düşük optik ışından minimum görünür kot
+- hedef-tepe optik atış açısı
+- katmanlı optik ufuk taraması
+- standart `k` katsayısından tamamen ayrı profil sonucu
+- profil kapsamı yetersizse uydurma sonuç yerine `indeterminate`
+- `0 m` profil tabanındaki sayısal sınır geçişini fiziksel yüzey kesişiminden ayırma
+
+Ayrıntı: [`roadmap-stage-4.4.md`](roadmap-stage-4.4.md)
+
+## Aşama 4.5 — Atmosfer ve optik ışın görsel katmanı
+
+- Atmosfer Profili görsel anahtarını etkinleştirme
+- model sahnesinde profil katman yüksekliği işaretleri
+- İdeal Küre üzerinde geometrik görüş hattı ile katmanlı optik ışın yolunu ayrı gösterme
+- görselleştirmenin hesap motoruna geri besleme yapmaması
+
 # Sıradaki ana ürün aşamaları
 
 ## Aşama 5 — Fotoğraf kalibrasyonu

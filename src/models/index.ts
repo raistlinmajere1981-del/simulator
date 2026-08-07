@@ -1,9 +1,9 @@
 import { AzimuthalProjectionReference } from './azimuthal-projection';
 import { DefinedPlaneModel } from './defined-plane';
-import { IdealSphereModel } from './ideal-sphere';
+import { IdealSphereLayeredModel } from './ideal-sphere-layered';
 
 export const simulationModels = [
-  new IdealSphereModel(),
+  new IdealSphereLayeredModel(),
   new DefinedPlaneModel(),
   new AzimuthalProjectionReference()
 ];
