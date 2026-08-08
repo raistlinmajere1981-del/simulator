@@ -19,6 +19,7 @@ Aynı UTC gözlem zamanı ve WGS84 konumundan hesaplanan geometrik Güneş refer
 - Güneş geometrik ufkun altındaysa sahte doğrudan gölge üretmeme
 - ayrı `ModelPrediction`, model sürümü ve hesap izi
 - prediction snapshot üzerinden kayıt/reopen, `.ggl.json` ve HTML rapor korunumu
+- yeniden açmada gnomon ve saha ölçüm alanlarını aynı kayıt snapshot'ından geri yükleme
 - bağlamsal yardım paneli
 
 ## Bilimsel sınır
