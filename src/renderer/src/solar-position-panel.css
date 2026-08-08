@@ -1,0 +1,116 @@
+.solar-position-panel {
+  padding: 12px;
+}
+
+.solar-horizon-badge {
+  border: 1px solid #5d5668;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+.solar-horizon-badge.above {
+  border-color: #88753d;
+  color: #f0d573;
+}
+
+.solar-horizon-badge.below {
+  border-color: #4c5f7c;
+  color: #8fa7d6;
+}
+
+.solar-sky-reference {
+  position: relative;
+  height: 190px;
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid #2a4558;
+  border-radius: 5px;
+  background:
+    linear-gradient(to bottom, rgba(36, 77, 104, .65), rgba(20, 47, 67, .4) 49.5%, rgba(21, 34, 42, .8) 50%, rgba(10, 21, 28, .95));
+}
+
+.solar-sky-reference::before,
+.solar-sky-reference::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.solar-sky-reference::before {
+  background: linear-gradient(90deg, transparent 24.8%, rgba(117, 151, 168, .12) 25%, transparent 25.2%, transparent 49.8%, rgba(117, 151, 168, .12) 50%, transparent 50.2%, transparent 74.8%, rgba(117, 151, 168, .12) 75%, transparent 75.2%);
+}
+
+.solar-sky-horizon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px dashed #9db1bc;
+}
+
+.solar-sky-sun {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #ffd06b;
+  box-shadow: 0 0 0 5px rgba(255, 208, 107, .12), 0 0 22px rgba(255, 208, 107, .45);
+}
+
+.solar-sky-label {
+  position: absolute;
+  bottom: 6px;
+  color: #71909f;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.solar-sky-label.north { left: 2%; }
+.solar-sky-label.east { left: 27%; }
+.solar-sky-label.south { left: 52%; }
+.solar-sky-label.west { left: 77%; }
+
+.solar-position-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.solar-position-metrics > div {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid #294354;
+  border-radius: 4px;
+  background: #10202a;
+}
+
+.solar-position-metrics small {
+  color: #78919e;
+  font-size: 9px;
+}
+
+.solar-position-metrics strong {
+  color: #d7e5eb;
+  font-size: 15px;
+}
+
+.solar-position-note {
+  margin: 8px 0 0;
+  border-left: 2px solid #8b7538;
+  padding: 7px 9px;
+  background: rgba(139, 117, 56, .08);
+  color: #a99b72;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1050px) {
+  .solar-position-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
