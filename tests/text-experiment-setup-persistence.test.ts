@@ -11,12 +11,17 @@ function experiment(): SavedExperiment {
     updatedAtIso: '2026-08-08T12:05:00.000Z',
     scenarioId: 'target-visibility',
     inputs: { ...DEFAULT_SIMULATOR_INPUTS },
+    photoModelUncertainty: {
+      combination: 'linear-conservative',
+      surfaceDistanceM: 20
+    },
     textSetupHistory: [{
       parserVersion: '0.1.0',
-      sourceText: 'Mesafe 25 km. Standart kırılma k=0,13.',
+      sourceText: 'Mesafe 25 km. Mesafe belirsizliği yaklaşık ±20 m. Standart kırılma k=0,13.',
       appliedAtIso: '2026-08-08T12:01:00.000Z',
       appliedFields: [
         { fieldId: 'surfaceDistanceKm', displayValue: '25 km', sourceExcerpt: 'Mesafe 25 km' },
+        { fieldId: 'surfaceDistanceUncertaintyM', displayValue: '±20 m', sourceExcerpt: 'Mesafe belirsizliği yaklaşık ±20 m' },
         { fieldId: 'refractionCoefficient', displayValue: 'k=0,13', sourceExcerpt: 'k=0,13' }
       ]
     }],
@@ -30,6 +35,16 @@ describe('text experiment setup persistence', () => {
     const portable = createPortableExperimentFile(experiment(), '1.7.0', '2026-08-08T12:10:00.000Z');
     const parsed = parsePortableExperimentFile(portable).experiment;
     expect(parsed.textSetupHistory).toEqual(experiment().textSetupHistory);
+  });
+
+  it('preserves text-applied model uncertainty even when no photo calibration exists', () => {
+    const portable = createPortableExperimentFile(experiment(), '1.7.0', '2026-08-08T12:10:00.000Z');
+    const parsed = parsePortableExperimentFile(portable).experiment;
+    expect(parsed.photoCalibration).toBeUndefined();
+    expect(parsed.photoModelUncertainty).toEqual({
+      combination: 'linear-conservative',
+      surfaceDistanceM: 20
+    });
   });
 
   it('renders escaped source provenance into the offline HTML report', () => {
