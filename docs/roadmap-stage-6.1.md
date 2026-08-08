@@ -17,6 +17,7 @@ Bu aşamada Güneş ve Ay Gözlemleri senaryosunun ilk fiziksel referans hesabı
 - senaryoya özel HTML rapor özeti
 - bağlamsal yardım panelleri
 - astronomi senaryosunda yüzey modeli kartlarını çalıştırmadan yalnız Güneş astronomik referansını gösteren ayrı UI akışı
+- yüzey modeli görsel katman anahtarlarını astronomi senaryosunda göstermeyip ilerideki gökyüzü görselleştirmesini açıkça sonraki dilime bırakma
 
 ## Bilimsel sınır
 
