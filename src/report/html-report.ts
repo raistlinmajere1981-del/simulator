@@ -336,6 +336,20 @@ function photoCalibrationSection(experiment: SavedExperiment): string {
     : `<tr><td>Kalibrasyon yöntemi</td><td>Sensör + odak uzaklığı</td></tr>
        <tr><td>Odak uzaklığı</td><td>${inputNumberFormatter.format(calibration.calibration.focalLengthMm)} mm</td></tr>
        <tr><td>Sensör</td><td>${inputNumberFormatter.format(calibration.calibration.sensorWidthMm)} × ${inputNumberFormatter.format(calibration.calibration.sensorHeightMm)} mm</td></tr>`;
+  const cameraUncertaintyRows = calibration.cameraUncertainty
+    ? Object.entries({
+        'Yatay FOV ±': calibration.cameraUncertainty.horizontalFovDeg === undefined ? undefined : `${metricNumberFormatters.degree.format(calibration.cameraUncertainty.horizontalFovDeg)}°`,
+        'Düşey FOV ±': calibration.cameraUncertainty.verticalFovDeg === undefined ? undefined : `${metricNumberFormatters.degree.format(calibration.cameraUncertainty.verticalFovDeg)}°`,
+        'Odak uzaklığı ±': calibration.cameraUncertainty.focalLengthMm === undefined ? undefined : `${inputNumberFormatter.format(calibration.cameraUncertainty.focalLengthMm)} mm`,
+        'Sensör genişliği ±': calibration.cameraUncertainty.sensorWidthMm === undefined ? undefined : `${inputNumberFormatter.format(calibration.cameraUncertainty.sensorWidthMm)} mm`,
+        'Sensör yüksekliği ±': calibration.cameraUncertainty.sensorHeightMm === undefined ? undefined : `${inputNumberFormatter.format(calibration.cameraUncertainty.sensorHeightMm)} mm`,
+        'Asal nokta X ±': calibration.cameraUncertainty.principalPointXPx === undefined ? undefined : `${inputNumberFormatter.format(calibration.cameraUncertainty.principalPointXPx)} px`,
+        'Asal nokta Y ±': calibration.cameraUncertainty.principalPointYPx === undefined ? undefined : `${inputNumberFormatter.format(calibration.cameraUncertainty.principalPointYPx)} px`
+      }).filter(([, value]) => value !== undefined).map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join('')
+    : '<tr><td>Kamera iç-parametre belirsizliği</td><td>Tanımlanmadı</td></tr>';
+  const cameraCombinationRow = calibration.cameraUncertainty
+    ? `<tr><td>Kamera belirsizlik birleşimi</td><td>${calibration.cameraUncertainty.combination === 'rss-independent' ? 'RSS · bağımsız bileşenler' : 'Koruyucu doğrusal toplam'}</td></tr>`
+    : '';
   const markRows = Object.entries({
     'Ufuk / referans sol': calibration.marks.horizonStart,
     'Ufuk / referans sağ': calibration.marks.horizonEnd,
@@ -360,6 +374,8 @@ function photoCalibrationSection(experiment: SavedExperiment): string {
             <tr><td>İçe aktarma</td><td>${formatDate(source.importedAtIso)}</td></tr>
             <tr><td>SHA-256</td><td><code>${escapeHtml(source.sha256)}</code></td></tr>
             ${cameraRows}
+            ${cameraCombinationRow}
+            ${cameraUncertaintyRows}
             <tr><td>Asal nokta</td><td>${calibration.principalPointXPx === undefined || calibration.principalPointYPx === undefined ? 'Görüntü merkezi (varsayılan)' : `${inputNumberFormatter.format(calibration.principalPointXPx)}, ${inputNumberFormatter.format(calibration.principalPointYPx)} px`}</td></tr>
             <tr><td>Distorsiyon önceden düzeltildi</td><td>${yesNo(calibration.distortionCorrected)}</td></tr>
             <tr><td>Varsayılan işaret belirsizliği</td><td>±${inputNumberFormatter.format(calibration.defaultMarkUncertaintyPx)} px</td></tr>
@@ -372,6 +388,29 @@ function photoCalibrationSection(experiment: SavedExperiment): string {
           ${calibration.notes ? `<p>${escapeHtml(calibration.notes)}</p>` : ''}
         </div>
       </div>
+    </section>`;
+}
+
+
+function photoModelUncertaintySection(experiment: SavedExperiment): string {
+  const settings = experiment.photoModelUncertainty;
+  if (!settings) return '';
+  const rows = Object.entries({
+    'Etkin yüzey mesafesi ±': settings.surfaceDistanceM === undefined ? undefined : `${inputNumberFormatter.format(settings.surfaceDistanceM)} m`,
+    'Göz yüksekliği ±': settings.observerEyeHeightM === undefined ? undefined : `${inputNumberFormatter.format(settings.observerEyeHeightM)} m`,
+    'Gözlemci zemin kotu ±': settings.observerGroundElevationM === undefined ? undefined : `${inputNumberFormatter.format(settings.observerGroundElevationM)} m`,
+    'Hedef yüksekliği ±': settings.targetHeightM === undefined ? undefined : `${inputNumberFormatter.format(settings.targetHeightM)} m`,
+    'Hedef taban kotu ±': settings.targetGroundElevationM === undefined ? undefined : `${inputNumberFormatter.format(settings.targetGroundElevationM)} m`,
+    'Kırılma katsayısı k ±': settings.refractionCoefficient === undefined ? undefined : inputNumberFormatter.format(settings.refractionCoefficient)
+  }).filter(([, value]) => value !== undefined).map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td></tr>`).join('');
+  return `
+    <section class="model-section vertical-section">
+      <header class="model-heading">
+        <div><h2>Fotoğraf / model belirsizlik ayarları</h2><span>Nominal model girdilerini değiştirmeyen hassasiyet aralıkları</span></div>
+        <strong class="status status-compatible">${settings.combination === 'rss-independent' ? 'RSS' : 'Koruyucu toplam'}</strong>
+      </header>
+      <p>Boş bırakılan bileşenler sıfır belirsizlik sayılmaz; bu raporda yalnız kullanıcı tarafından açıkça tanımlanan ± aralıklar listelenir.</p>
+      <table><tbody>${rows || '<tr><td colspan="2">Model girdi belirsizliği tanımlanmadı.</td></tr>'}</tbody></table>
     </section>`;
 }
 
@@ -472,6 +511,7 @@ export function createExperimentHtmlReport(
     ${geodesicSection(experiment)}
     ${verticalTerrainSection(experiment, effectiveDistanceKm)}
     ${photoCalibrationSection(experiment)}
+    ${photoModelUncertaintySection(experiment)}
     ${experiment.predictions.map((prediction) => predictionSection(
       prediction,
       experiment.modelVersions[prediction.modelId]
