@@ -11,6 +11,7 @@ export type ModelCapability =
   | 'solar-position'
   | 'lunar-position'
   | 'shadow-geometry'
+  | 'dual-shadow-comparison'
   | 'stellar-position';
 
 export type ResultStatus =
