@@ -16,6 +16,7 @@ Bu aşamada Güneş ve Ay Gözlemleri senaryosunun ilk fiziksel referans hesabı
 - tarih/saat ve gösterim ofsetinin yerel/portable deney kaydında korunması
 - senaryoya özel HTML rapor özeti
 - bağlamsal yardım panelleri
+- astronomi senaryosunda yüzey modeli kartlarını çalıştırmadan yalnız Güneş astronomik referansını gösteren ayrı UI akışı
 
 ## Bilimsel sınır
 
