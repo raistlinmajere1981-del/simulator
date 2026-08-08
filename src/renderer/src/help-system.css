@@ -278,3 +278,19 @@
   .help-catalog-grid { grid-template-columns: 1fr; }
   .help-search-row { flex-direction: column; }
 }
+
+
+.results-help-heading,
+.notes-help-heading,
+.water-heading-actions,
+.photo-model-uncertainty-heading-actions,
+.photo-angular-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.results-help-heading,
+.notes-help-heading { justify-content: space-between; margin-bottom: 6px; }
+.water-heading-actions,
+.photo-model-uncertainty-heading-actions,
+.photo-angular-heading-actions { justify-content: flex-end; }

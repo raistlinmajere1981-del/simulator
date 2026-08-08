@@ -1,6 +1,6 @@
 # Aşama 5.5 — Bağlamsal Yardım ve Terim Açıklamaları
 
-Durum: planlandı · Aşama 6'dan önce
+Durum: tamamlandı · `1.6.0`
 
 ## Amaç
 
@@ -56,3 +56,14 @@ Panel yardımı ve üst çubuktaki genel `Yardım` görünümü aynı içerik ka
 - Üst Yardım görünümü panel yardım kayıtlarını yeniden kullanmalı.
 - Yardım açma/kapatma deney girdilerini değiştirmemeli.
 - Klavye ve odak davranışı masaüstü Electron ortamında doğrulanmalı.
+
+
+## Uygulanan kapsam · 1.6.0
+
+- merkezi ve tipli panel yardım kayıtları
+- ortak terim sözlüğü ve arama
+- senaryo, atmosfer, arazi/datum, su, fotoğraf, model belirsizliği, fotoğraf karşılaştırması, model sahneleri, sonuçlar, kapsam ve veri yöneticisi için `?` düğmeleri
+- panelden açılan bağlamsal overlay ve üst Yardım düğmesinden açılan toplu aranabilir katalog
+- ilgili terimleri aynı overlay içinde açma
+- `Esc`, arka plana tıklama ve önceki odağa dönüş davranışı
+- yardım state'inin deney girdisi / dirty state / hesap motorundan ayrılması

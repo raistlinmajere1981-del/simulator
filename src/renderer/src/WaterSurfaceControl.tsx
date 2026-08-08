@@ -17,6 +17,7 @@ import {
 } from '../../simulation/water-surface-observation';
 import { decodeWaterSurfaceObservationSnapshot } from '../../simulation/water-surface-snapshot';
 import type { StoredWaterSurfaceRecord } from '../../simulation/water-surface-ui-state';
+import { PanelHelpButton } from './HelpSystem';
 
 interface WaterSurfaceControlProps {
   experimentId: string;
@@ -203,7 +204,7 @@ export function WaterSurfaceControl({
           <span className="eyebrow">Su seviyesi, gelgit ve dalga</span>
           <strong>Kontrollü su yüzeyi kaydı</strong>
         </div>
-        <span className="water-datum-badge">{datumLabels[verticalDatumKind]}</span>
+        <div className="water-heading-actions"><PanelHelpButton panelId="water-surface" /><span className="water-datum-badge">{datumLabels[verticalDatumKind]}</span></div>
       </div>
 
       <p className="water-surface-intro">

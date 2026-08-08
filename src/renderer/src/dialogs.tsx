@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ModelMetadata, ModelPrediction } from '../../shared/domain';
 import type { SavedExperiment } from '../../shared/simulator';
+import { PanelHelpButton } from './HelpSystem';
 
 interface SaveExperimentDialogProps {
   initialName: string;
@@ -138,6 +139,7 @@ export function DataManagerDialog({
             <h2>Kaydedilen Deneyler</h2>
           </div>
           <div className="dialog-header-actions">
+            <PanelHelpButton panelId="data-manager" />
             <button
               className="primary-button"
               disabled={Boolean(busyAction)}

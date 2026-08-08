@@ -14,6 +14,7 @@ import {
 } from '../../simulation/photo-calibration';
 import { containedImagePointerToPixel } from '../../simulation/photo-overlay';
 import './photo-calibration-control.css';
+import { PanelHelpButton } from './HelpSystem';
 
 type MarkKey = keyof PhotoCalibrationMarks;
 type CalibrationSource = 'field-of-view' | 'sensor-focal';
@@ -457,6 +458,7 @@ export function PhotoCalibrationControl({
           <strong>{source ? source.fileName : 'Henüz fotoğraf yüklenmedi'}</strong>
         </div>
         <div className="photo-calibration-actions">
+          <PanelHelpButton panelId="photo-calibration" />
           {savedCalibration && !isDirty && <span className="photo-state saved">KAYITLI</span>}
           {isDirty && <span className="photo-state dirty">DÜZENLENDİ</span>}
           <button type="button" onClick={() => void loadPhoto()}>

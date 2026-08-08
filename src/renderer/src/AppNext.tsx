@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { simulationModels } from '../../models';
 import {
   createDefaultAtmosphereExperimentState,
@@ -12,6 +12,7 @@ import type {
   ResultStatus
 } from '../../shared/domain';
 import type { SavedPhotoCalibration } from '../../shared/photo-calibration';
+import type { HelpPanelId } from '../../shared/help-content';
 import {
   DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS,
   hasDefinedModelInputUncertainty,
@@ -103,6 +104,7 @@ import { PhotoCalibrationControl } from './PhotoCalibrationControl';
 import { PhotoAngularComparisonPanel } from './PhotoAngularComparisonPanel';
 import { PhotoModelUncertaintyControl } from './PhotoModelUncertaintyControl';
 import { WorldModelViewport } from './WorldModelViewport';
+import { HelpOverlay, HelpProvider, PanelHelpButton } from './HelpSystem';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -575,6 +577,7 @@ function ScenarioSummary({
           <h2>{activeName || scenario.label}</h2>
         </div>
         <div className="title-actions">
+          <PanelHelpButton panelId="scenario-summary" />
           {isDirty && <span className="dirty-badge">KAYDEDİLMEDİ</span>}
           <button className="save-button" onClick={onSave} type="button">Deneyi Kaydet</button>
           <button className="reset-button" onClick={onReset} type="button">Yeni / Varsayılan</button>
@@ -776,6 +779,7 @@ function TerrainPanel({
           <strong>{terrainEnabled ? `${points.length} ara noktalı manuel profil` : 'Yalnız uç zemin kotları'}</strong>
         </div>
         <div className="terrain-mode-buttons">
+          <PanelHelpButton panelId="terrain-datum" />
           <button className={!terrainEnabled ? 'selected' : ''} type="button" onClick={() => onModeChange('off')}>Profil kapalı</button>
           <button className={terrainEnabled ? 'selected' : ''} type="button" onClick={() => onModeChange('manual-points')}>Manuel profil</button>
         </div>
@@ -904,6 +908,7 @@ function ModelCard({
       <header>
         <h3>{metadata.name}</h3>
         <div className="model-header-actions">
+          <PanelHelpButton panelId="model-visualization" />
           <button className="trace-button" disabled={!prediction} type="button" onClick={onShowTrace}>Hesap izi</button>
           <span className={`status-pill status-${status}`}>{statusLabel}</span>
         </div>
@@ -981,7 +986,7 @@ function ResultsTable({
   if (scenarioId === 'horizon') {
     return (
       <section className="results panel">
-        <span className="eyebrow">Ufuk sonucu karşılaştırma</span>
+        <div className="results-help-heading"><span className="eyebrow">Ufuk sonucu karşılaştırma</span><PanelHelpButton panelId="results" /></div>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Model / gösterim</th><th>Geometrik ufuk</th><th>Gözlemci toplam kotu</th><th>Etkin yarıçap</th><th>Durum</th><th>İz</th></tr></thead>
@@ -1012,7 +1017,7 @@ function ResultsTable({
 
   return (
     <section className="results panel">
-      <span className="eyebrow">Sonuç karşılaştırma</span>
+      <div className="results-help-heading"><span className="eyebrow">Sonuç karşılaştırma</span><PanelHelpButton panelId="results" /></div>
       <div className="table-wrap">
         <table>
           <thead><tr><th>Model / gösterim</th><th>Beklenen görünürlük</th><th>Gizlenen</th><th>Görüş açısı</th><th>Ufuk</th><th>Arazi açıklığı</th><th>Gözlem farkı</th><th>İz</th></tr></thead>
@@ -1075,12 +1080,27 @@ export function AppNext(): React.JSX.Element {
   const [dataManagerOpen, setDataManagerOpen] = useState(false);
   const [traceModelId, setTraceModelId] = useState<string>();
   const [storageMessage, setStorageMessage] = useState('');
+  const [helpPanelId, setHelpPanelId] = useState<HelpPanelId>();
+  const [helpCatalogOpen, setHelpCatalogOpen] = useState(false);
   const [visualLayers, setVisualLayers] = useState<VisualLayerState>({
     geographicBoundaries: true,
     terrain: false,
     atmosphere: false,
     grid: true
   });
+
+  const openHelpPanel = useCallback((panelId: HelpPanelId): void => {
+    setHelpCatalogOpen(false);
+    setHelpPanelId(panelId);
+  }, []);
+  const openHelpCatalog = useCallback((): void => {
+    setHelpPanelId(undefined);
+    setHelpCatalogOpen(true);
+  }, []);
+  const closeHelp = useCallback((): void => {
+    setHelpPanelId(undefined);
+    setHelpCatalogOpen(false);
+  }, []);
 
   const geodesic = useMemo(() => {
     if (inputs.distanceSource !== 'coordinates') return undefined;
@@ -1656,6 +1676,7 @@ export function AppNext(): React.JSX.Element {
   );
 
   return (
+    <HelpProvider onOpenPanel={openHelpPanel} onOpenCatalog={openHelpCatalog}>
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
@@ -1669,7 +1690,7 @@ export function AppNext(): React.JSX.Element {
         <div className="top-actions">
           <button type="button" onClick={() => setDataManagerOpen(true)}>▤ Veri Yöneticisi</button>
           <button disabled title="Ayarlar modülü sonraki aşamada" type="button">⚙ Ayarlar</button>
-          <button disabled title="Yardım içeriği sonraki aşamada" type="button">ⓘ Yardım</button>
+          <button type="button" onClick={openHelpCatalog}>ⓘ Yardım</button>
         </div>
       </header>
 
@@ -1859,7 +1880,7 @@ export function AppNext(): React.JSX.Element {
           <div className="bottom-grid">
             <ResultsTable runs={runs} scenarioId={activeScenarioId} onShowTrace={setTraceModelId} />
             <section className="notes panel">
-              <span className="eyebrow">Hesaplama kapsamı</span>
+              <div className="notes-help-heading"><span className="eyebrow">Hesaplama kapsamı</span><PanelHelpButton panelId="calculation-scope" /></div>
               <ul>
                 <li>Koordinat modu WGS84 ters jeodezik çözümünü kullanır.</li>
                 <li>Zemin ve hedef kotları seçilen ortak düşey datumda yorumlanır.</li>
@@ -1897,6 +1918,8 @@ export function AppNext(): React.JSX.Element {
         prediction={selectedPrediction}
         onClose={() => setTraceModelId(undefined)}
       />
+      <HelpOverlay panelId={helpPanelId} catalogOpen={helpCatalogOpen} onClose={closeHelp} />
     </div>
+    </HelpProvider>
   );
 }

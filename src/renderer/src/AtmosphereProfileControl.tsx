@@ -6,6 +6,7 @@ import type {
 } from '../../shared/atmosphere';
 import { validateAtmosphereProfile } from '../../simulation/atmosphere-profile';
 import { buildOpticalAtmosphereProfile } from '../../simulation/optical-refraction';
+import { PanelHelpButton } from './HelpSystem';
 
 interface AtmosphereProfileControlProps {
   state: AtmosphereExperimentState;
@@ -103,6 +104,7 @@ export function AtmosphereProfileControl({
               : `${state.profile.samples.length} örnekli katmanlı meteorolojik profil`}</strong>
         </div>
         <div className="atmosphere-mode-buttons">
+          <PanelHelpButton panelId="atmosphere" />
           <button className={state.mode === 'off' ? 'selected' : ''} type="button" onClick={() => setMode('off')}>Kapalı</button>
           <button className={state.mode === 'standard' ? 'selected' : ''} type="button" onClick={() => setMode('standard')}>Standart k</button>
           <button className={state.mode === 'profile' ? 'selected' : ''} type="button" onClick={() => setMode('profile')}>Katmanlı profil</button>
