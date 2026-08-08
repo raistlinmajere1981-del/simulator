@@ -1,6 +1,6 @@
 # Aşama 6.3 — Gölge deneyi ve gnomon gözlemi
 
-Durum: geliştirmede · `1.10.0`
+Durum: tamamlandı · `1.10.0`
 
 ## Amaç
 

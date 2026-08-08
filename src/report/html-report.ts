@@ -457,7 +457,7 @@ export function createExperimentHtmlReport(
     <div class="input-card"><small>Gözlem zamanı · UTC</small><strong>${formatDate(experiment.observedAtIso ?? experiment.createdAtIso)}</strong></div>
     <div class="input-card"><small>UTC ofset provenansı</small><strong>${experiment.observationUtcOffsetMinutes === undefined ? 'Tanımlanmadı' : `${experiment.observationUtcOffsetMinutes >= 0 ? '+' : ''}${inputNumberFormatter.format(experiment.observationUtcOffsetMinutes / 60)} saat`}</strong></div>
     <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
-    <div class="input-card"><small>${isShadowObservation ? '6.3 hesap türü' : '6.1–6.2 hesap türü'}</small><strong>${isShadowObservation ? 'Dikey gnomon gölge geometrisi' : 'Geometrik Güneş ve topocentrik Ay referansı'}</strong></div>` : `
+    <div class="input-card"><small>${isShadowObservation ? '6.3 hesap türü' : '6.1–6.2 hesap türü'}</small><strong>${isShadowObservation ? 'Dikey gnomon gölge geometrisi' : 'Geometrik Güneş konumu ve topocentrik Ay referansı'}</strong></div>` : `
     <div class="input-card"><small>Göz yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
     <div class="input-card"><small>Hedef yüksekliği</small><strong>${inputNumberFormatter.format(inputs.targetHeightM)} m</strong></div>
     <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(effectiveDistanceKm)} km</strong></div>
