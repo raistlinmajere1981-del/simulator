@@ -1,5 +1,7 @@
 export type HelpPanelId =
   | 'scenario-summary'
+  | 'celestial-time'
+  | 'solar-position'
   | 'text-experiment-setup'
   | 'photo-calibration'
   | 'atmosphere'
@@ -14,6 +16,7 @@ export type HelpPanelId =
 
 export type HelpCategory =
   | 'Deney'
+  | 'Astronomi'
   | 'Fotoğraf'
   | 'Atmosfer'
   | 'Arazi ve datum'
@@ -49,6 +52,28 @@ export interface HelpTermContent {
 }
 
 export const HELP_TERMS: readonly HelpTermContent[] = [
+  {
+    id: 'utc-offset',
+    label: 'UTC ofseti',
+    definition: 'Yerel saat ile UTC arasındaki farktır. Aynı yerel saat farklı UTC ofsetleriyle farklı fiziksel anları temsil eder.',
+    caution: 'Astronomi hesabında saat dilimi/ofset açık olmalıdır; yalnız yerel saat metni yeniden üretilebilir bir an değildir.'
+  },
+  {
+    id: 'solar-elevation',
+    label: 'Güneş yüksekliği',
+    definition: 'Güneş merkezinin yerel geometrik ufka göre açısal yüksekliğidir. 0° geometrik ufuk, pozitif değerler ufuk üstü, negatif değerler ufuk altıdır.',
+    caution: 'Aşama 6.1 değeri atmosferik kırılma ve yerel topoğrafik ufuk düzeltmesi içermez.'
+  },
+  {
+    id: 'declination',
+    label: 'Deklinasyon',
+    definition: 'Gök cisminin gök ekvatoruna göre kuzey/güney açısal konumudur.'
+  },
+  {
+    id: 'hour-angle',
+    label: 'Saat açısı',
+    definition: 'Yerel meridyen ile gök cisminin saat dairesi arasındaki açıdır ve zaman/konumla değişir.'
+  },
   {
     id: 'datum',
     label: 'Datum',
@@ -134,6 +159,38 @@ export const HELP_PANELS: readonly HelpPanelContent[] = [
     commonMistakes: ['Kamera fotoğrafından tahmini görünürlük yüzdesini kesin ölçüm gibi girmek.', 'Göz yüksekliği ile gözlemci zemin kotunu birbirine karıştırmak.'],
     example: 'Gözlemci zeminden 2 m yüksekte, hedef 20 km uzakta ve 30 m yüksekse; göz yüksekliği 2 m, hedef yüksekliği 30 m olarak girilir.',
     relatedTerms: ['geodesic', 'azimuth', 'k', 'uncertainty']
+  },
+  {
+    id: 'celestial-time',
+    category: 'Astronomi',
+    title: 'Astronomi gözlem zamanı',
+    summary: 'Güneş/Ay/yıldız hesaplarının yeniden üretilebilir fiziksel anını yönetir. Yerel tarih-saat, açık UTC ofsetiyle UTC anına dönüştürülür.',
+    fields: [
+      { label: 'Yerel tarih / saat', description: 'Saha kaydındaki yerel takvim ve saat değeri.' },
+      { label: 'UTC ofseti', description: 'Yerel saatin UTC’den dakika/saat farkı. Hesaplanan fiziksel anı doğrudan belirler.' },
+      { label: 'UTC', description: 'Yerel saat + ofsetten türetilen ve deney kaydında kullanılan tekil fiziksel an.' }
+    ],
+    assumptions: ['UTC ofseti kullanıcı tarafından doğru seçilmiştir.', 'Bu aşamada saat dilimi adı/DST kuralı yerine açık ofset provenansı kullanılır.'],
+    commonMistakes: ['Türkiye yerel saatini UTC sanmak.', 'Eski bir gözlem için bugünkü saat dilimi ofsetini otomatik doğru kabul etmek.'],
+    example: '2026-08-08 21:30 ve UTC+03:00, 2026-08-08T18:30:00Z fiziksel anına karşılık gelir.',
+    relatedTerms: ['utc-offset', 'solar-elevation', 'hour-angle']
+  },
+  {
+    id: 'solar-position',
+    category: 'Astronomi',
+    title: 'Güneşin geometrik yerel konumu',
+    summary: 'UTC gözlem anı ve WGS84 gözlemci koordinatından Güneş merkezinin geometrik yükseklik ve azimutunu hesaplayan astronomik referanstır.',
+    fields: [
+      { label: 'Geometrik yükseklik', unit: '°', description: 'Güneş merkezinin geometrik yerel ufka göre açısı.' },
+      { label: 'Azimut', unit: '°', description: 'Coğrafi kuzeyden saat yönünde 0°–360° yön açısı.' },
+      { label: 'Deklinasyon', unit: '°', description: 'Güneşin gök ekvatoruna göre açısal konumu.' },
+      { label: 'Saat açısı', unit: '°', description: 'Güneşin yerel meridyene göre zaman açısı.' },
+      { label: 'Zaman denklemi', unit: 'dk', description: 'Ortalama güneş zamanı ile görünür güneş zamanı arasındaki astronomik fark.' }
+    ],
+    assumptions: ['NOAA Solar Calculator denklem setinin düşük maliyetli astronomik yaklaşımı kullanılır.', 'Atmosferik kırılma uygulanmaz.', 'Azimut coğrafi kuzeyden saat yönündedir.'],
+    commonMistakes: ['Geometrik 0° yüksekliği fotoğraftaki deniz ufkuyla aynı kabul etmek.', 'Negatif yüksekliği hesap hatası sanmak; bu değer Güneşin geometrik ufkun altında olduğunu gösterebilir.'],
+    example: 'Aynı koordinatta tarih veya saati değiştirince Güneş yüksekliği ve azimutu canlı olarak yeniden hesaplanır.',
+    relatedTerms: ['solar-elevation', 'azimuth', 'declination', 'hour-angle', 'utc-offset']
   },
   {
     id: 'text-experiment-setup',

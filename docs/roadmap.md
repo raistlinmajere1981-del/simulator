@@ -471,10 +471,22 @@ Ayrıntı: [`roadmap-stage-5.6.md`](roadmap-stage-5.6.md)
 
 ## Aşama 6 — Güneş, Ay ve gökyüzü deneyleri
 
-- Güneş yüksekliği ve azimutu
+### Aşama 6.1 — Güneş konumu, gözlem zamanı ve konumu
+
+Durum: tamamlandı · `1.8.0`
+
+- açık UTC ofsetli gözlem zamanı ve WGS84 gözlem konumu
+- geometrik Güneş yüksekliği ve azimutu
+- deklinasyon, saat açısı, zaman denklemi ve hesap izi
+- gözlem zamanı/provenansının kayıt ve raporda korunması
+
+Ayrıntı: [`roadmap-stage-6.1.md`](roadmap-stage-6.1.md)
+
+### Sonraki astronomi dilimleri
+
+- Ay konumu ve evreleri
 - gölge deneyleri
 - gün doğumu ve gün batımı
-- Ay konumu ve evreleri
 - yıldız görünürlüğü ve yıldız izleri
 
 ## Aşama 7 — Büyük ölçekli olaylar

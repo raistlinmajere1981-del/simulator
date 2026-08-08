@@ -164,6 +164,10 @@ export interface SavedExperiment {
   name: string;
   createdAtIso: string;
   updatedAtIso: string;
+  /** Physical observation instant. Kept separate from record creation/update time. */
+  observedAtIso?: string;
+  /** Display/provenance offset used when editing the observation local clock. */
+  observationUtcOffsetMinutes?: number;
   /** Scenario identity; older records default to target visibility. */
   scenarioId?: SimulationScenarioId;
   /** Persisted advanced-atmosphere editor state; older records derive mode from the legacy standard-refraction flag. */

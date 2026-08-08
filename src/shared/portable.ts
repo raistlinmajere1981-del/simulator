@@ -638,6 +638,10 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
   const inputs = parseSimulatorInputs(value.inputs, allowLegacyInputs);
   if (!inputs || !isNonEmptyString(value.id) || !isNonEmptyString(value.name) ||
     !isIsoDate(value.createdAtIso) || !isIsoDate(value.updatedAtIso) ||
+    (value.observedAtIso !== undefined && !isIsoDate(value.observedAtIso)) ||
+    (value.observationUtcOffsetMinutes !== undefined &&
+      (!Number.isInteger(value.observationUtcOffsetMinutes) ||
+        value.observationUtcOffsetMinutes < -720 || value.observationUtcOffsetMinutes > 840)) ||
     !isRecord(value.modelVersions) ||
     !Object.values(value.modelVersions).every((version) => typeof version === 'string') ||
     !Array.isArray(value.predictions) || !value.predictions.every(isModelPrediction) ||
@@ -680,6 +684,10 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     name: value.name.trim(),
     createdAtIso: value.createdAtIso,
     updatedAtIso: value.updatedAtIso,
+    ...(value.observedAtIso === undefined ? {} : { observedAtIso: value.observedAtIso }),
+    ...(value.observationUtcOffsetMinutes === undefined
+      ? {}
+      : { observationUtcOffsetMinutes: value.observationUtcOffsetMinutes }),
     ...(value.scenarioId === undefined
       ? {}
       : { scenarioId: normalizeSimulationScenarioId(value.scenarioId) }),
