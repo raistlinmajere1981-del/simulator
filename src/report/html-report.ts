@@ -29,7 +29,8 @@ const modelNames: Record<string, string> = {
   'defined-plane': 'Tanımlı Düzlem',
   'azimuthal-projection': 'Azimutal Gösterim',
   'photo-calibration': 'Fotoğraf / Kamera Kalibrasyonu',
-  'solar-position-noaa': 'Güneş Konumu · Astronomik Referans'
+  'solar-position-noaa': 'Güneş Konumu · Astronomik Referans',
+  'lunar-position-low-precision': 'Ay Konumu ve Fazı · Astronomik Referans'
 };
 
 const datumLabels: Record<VerticalDatumKind, string> = {

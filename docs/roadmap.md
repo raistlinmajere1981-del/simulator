@@ -482,6 +482,19 @@ Durum: tamamlandı · `1.8.0`
 
 Ayrıntı: [`roadmap-stage-6.1.md`](roadmap-stage-6.1.md)
 
+### Aşama 6.2 — Ay konumu ve evre geometrisi
+
+Durum: tamamlandı · `1.9.0`
+
+- düşük hassasiyetli Ay yörünge ve başlıca periyodik düzeltmeleri
+- topocentrik paralaks, geometrik yükseklik ve azimut
+- uzaklık, Güneş-Ay uzanımı, aydınlık oranı, faz sınıfı ve yaklaşık Ay yaşı
+- Güneş ile ortak gözlem zamanı/konumu
+- ayrı snapshot, sürüm ve hesap izi
+- tutulma geometrisini bu aşamaya karıştırmama
+
+Ayrıntı: [`roadmap-stage-6.2.md`](roadmap-stage-6.2.md)
+
 ### Sonraki astronomi dilimleri
 
 - Ay konumu ve evreleri

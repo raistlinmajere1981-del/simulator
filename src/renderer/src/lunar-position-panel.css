@@ -58,3 +58,5 @@
 .lunar-position-note { margin: 8px 0 0; border-left: 2px solid #63739d; padding: 7px 9px; background: rgba(99,115,157,.08); color: #929db9; font-size: 10px; line-height: 1.45; }
 
 @media (max-width: 1200px) { .lunar-position-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.celestial-reference-stack { display: grid; gap: 10px; min-width: 0; }

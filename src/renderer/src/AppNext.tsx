@@ -83,6 +83,8 @@ import {
 } from '../../simulation/photo-model-uncertainty';
 import { calculateSolarPosition } from '../../simulation/solar-position';
 import { createSolarPositionPrediction, solarPositionMetadata } from '../../simulation/solar-position-prediction';
+import { calculateLunarPosition } from '../../simulation/lunar-position';
+import { createLunarPositionPrediction, lunarPositionMetadata } from '../../simulation/lunar-position-prediction';
 import {
   WATER_SURFACE_APPLICATION_MODEL_ID,
   type WaterSurfaceApplicationResult
@@ -116,6 +118,7 @@ import { HelpOverlay, HelpProvider, PanelHelpButton } from './HelpSystem';
 import { TextExperimentSetupDialog } from './TextExperimentSetupDialog';
 import { CelestialTimeCard } from './CelestialTimeCard';
 import { SolarPositionPanel } from './SolarPositionPanel';
+import { LunarPositionPanel } from './LunarPositionPanel';
 import { SolarScenarioSummary } from './SolarScenarioSummary';
 
 type ModelTone = 'green' | 'amber' | 'violet';
@@ -419,14 +422,21 @@ function Sidebar({
       <section className="side-section compact">
         <div className="section-heading">
           <span>Modeller</span>
-          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '1 astronomik referans' : '2 fiziksel'}</span>
+          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '2 astronomik referans' : '2 fiziksel'}</span>
         </div>
         {activeScenarioId === 'sun-moon-observation' ? (
-          <div className="model-toggle reference-model">
-            <span className="model-dot amber" />
-            <span>Güneş Konumu · Astronomik Referans</span>
-            <span className="reference-badge">REFERANS</span>
-          </div>
+          <>
+            <div className="model-toggle reference-model">
+              <span className="model-dot amber" />
+              <span>Güneş Konumu · Astronomik Referans</span>
+              <span className="reference-badge">REFERANS</span>
+            </div>
+            <div className="model-toggle reference-model">
+              <span className="model-dot violet" />
+              <span>Ay Konumu ve Fazı · Astronomik Referans</span>
+              <span className="reference-badge">REFERANS</span>
+            </div>
+          </>
         ) : (<>
           {simulationModels.map((model) => {
             const presentation = getPresentation(model.metadata.id);
@@ -1218,6 +1228,17 @@ export function AppNext(): React.JSX.Element {
   const solarPositionPrediction = useMemo(() => solarPosition
     ? createSolarPositionPrediction(activeExperimentId, solarPosition)
     : undefined, [activeExperimentId, solarPosition]);
+  const lunarPosition = useMemo(() => activeScenarioId === 'sun-moon-observation' && solarPosition
+    ? calculateLunarPosition({
+        observedAtIso: experimentObservedAtIso,
+        latitudeDeg: inputs.observerLatitudeDeg,
+        longitudeDeg: inputs.observerLongitudeDeg,
+        solarPosition
+      })
+    : undefined, [activeScenarioId, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg, solarPosition]);
+  const lunarPositionPrediction = useMemo(() => lunarPosition
+    ? createLunarPositionPrediction(activeExperimentId, lunarPosition)
+    : undefined, [activeExperimentId, lunarPosition]);
 
   const context = useMemo(() => ({
     atmosphereMode: atmosphereState.mode,
@@ -1632,6 +1653,9 @@ export function AppNext(): React.JSX.Element {
         ...(solarPositionPrediction
           ? [[solarPositionMetadata.id, solarPositionMetadata.version] as const]
           : []),
+        ...(lunarPositionPrediction
+          ? [[lunarPositionMetadata.id, lunarPositionMetadata.version] as const]
+          : []),
         ...(geoidConversionRecord
           ? [[GEOID_CONVERSION_MODEL_ID, geoidConversionRecord.modelVersion] as const]
           : []),
@@ -1651,6 +1675,7 @@ export function AppNext(): React.JSX.Element {
       ]),
       predictions: [
         ...(solarPositionPrediction ? [solarPositionPrediction] : []),
+        ...(lunarPositionPrediction ? [lunarPositionPrediction] : []),
         ...runs.map((run) => run.prediction),
         ...(geoidConversionRecord ? [geoidConversionRecord.prediction] : []),
         ...(waterObservationRecord ? [waterObservationRecord.prediction] : []),
@@ -1769,7 +1794,9 @@ export function AppNext(): React.JSX.Element {
   const geoPrediction = geodesicPrediction(geodesic);
   const selectedMetadata = traceModelId === solarPositionMetadata.id
     ? solarPositionMetadata
-    : traceModelId === geodesicMetadata.id
+    : traceModelId === lunarPositionMetadata.id
+      ? lunarPositionMetadata
+      : traceModelId === geodesicMetadata.id
     ? geodesicMetadata
     : traceModelId === WATER_SURFACE_OBSERVATION_MODEL_ID
       ? waterObservationMetadata
@@ -1778,7 +1805,9 @@ export function AppNext(): React.JSX.Element {
         : modelRun?.metadata;
   const selectedPrediction = traceModelId === solarPositionMetadata.id
     ? solarPositionPrediction
-    : traceModelId === geodesicMetadata.id
+    : traceModelId === lunarPositionMetadata.id
+      ? lunarPositionPrediction
+      : traceModelId === geodesicMetadata.id
     ? geoPrediction
     : traceModelId === WATER_SURFACE_OBSERVATION_MODEL_ID
       ? waterObservationRecord?.prediction
@@ -1907,8 +1936,11 @@ export function AppNext(): React.JSX.Element {
               onShowGeodesicTrace={() => setTraceModelId(geodesicMetadata.id)}
             />
             )}
-            {activeScenarioId === 'sun-moon-observation' && solarPosition
-              ? <SolarPositionPanel result={solarPosition} onShowTrace={() => setTraceModelId(solarPositionMetadata.id)} />
+            {activeScenarioId === 'sun-moon-observation' && solarPosition && lunarPosition
+              ? <div className="celestial-reference-stack">
+                  <SolarPositionPanel result={solarPosition} onShowTrace={() => setTraceModelId(solarPositionMetadata.id)} />
+                  <LunarPositionPanel result={lunarPosition} onShowTrace={() => setTraceModelId(lunarPositionMetadata.id)} />
+                </div>
               : activeScenarioId === 'horizon'
               ? <HorizonReferencePanel inputs={inputs} atmosphereMode={atmosphereState.mode} />
               : <ObservationPanel inputs={inputs} />}
