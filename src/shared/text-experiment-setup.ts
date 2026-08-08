@@ -176,6 +176,7 @@ function collapseConflicts(raw: RawCandidate[]): ExperimentSetupCandidate[] {
   let sequence = 0;
   for (const [fieldId, candidates] of byField) {
     const found = candidates.filter((candidate) => candidate.status === 'found');
+    const review = candidates.filter((candidate) => candidate.status === 'review');
     const signatures = new Set(found.map((candidate) =>
       candidate.numericValue !== undefined
         ? `n:${candidate.numericValue}`
@@ -183,19 +184,21 @@ function collapseConflicts(raw: RawCandidate[]): ExperimentSetupCandidate[] {
           ? `c:${candidate.latitudeDeg},${candidate.longitudeDeg}`
           : `s:${candidate.stringValue ?? candidate.displayValue}`
     ));
-    if (signatures.size > 1) {
+    if (signatures.size > 1 || (found.length > 0 && review.length > 0)) {
       collapsed.push({
         id: `${fieldId}-${sequence++}`,
         fieldId,
         label: candidates[0]?.label ?? fieldId,
         status: 'review',
-        displayValue: found.map((candidate) => candidate.displayValue).join(' / '),
-        sourceExcerpt: found.map((candidate) => candidate.sourceExcerpt).join(' | '),
-        reason: 'Aynı alan için birbiriyle çelişen birden fazla değer bulundu.'
+        displayValue: candidates.map((candidate) => candidate.displayValue).join(' / '),
+        sourceExcerpt: candidates.map((candidate) => candidate.sourceExcerpt).join(' | '),
+        reason: signatures.size > 1
+          ? 'Aynı alan için birbiriyle çelişen birden fazla değer bulundu.'
+          : 'Aynı alan için hem birimli hem de eksik/şüpheli bir ifade bulundu; kullanıcı kontrolü gerekli.'
       });
       continue;
     }
-    const best = found[0] ?? candidates[0];
+    const best = found[0] ?? review[0] ?? candidates[0];
     if (best) collapsed.push({ ...best, id: `${fieldId}-${sequence++}` });
   }
   return collapsed;
@@ -250,7 +253,7 @@ function parseCoordinatePair(
   }
 
   const directional = new RegExp(
-    String.raw`${role}[^\n.!?]{0,35}?(?<lat>${NUM})\s*°?\s*(?<ns>[NK])[^\n.!?]{0,20}?(?<lon>${NUM})\s*°?\s*(?<ew>[EDB])`,
+    String.raw`${role}[^\n.!?]{0,35}?(?<lat>${NUM})\s*°?\s*(?<ns>[NKG])[^\n.!?]{0,20}?(?<lon>${NUM})\s*°?\s*(?<ew>[EDBW])`,
     'giu'
   );
   for (const match of text.matchAll(directional)) {
@@ -259,7 +262,7 @@ function parseCoordinatePair(
     const ns = match.groups?.ns?.toLocaleUpperCase('tr-TR');
     const ew = match.groups?.ew?.toLocaleUpperCase('tr-TR');
     if (ns === 'G') lat *= -1;
-    if (ew === 'B') lon *= -1;
+    if (ew === 'B' || ew === 'W') lon *= -1;
     const valid = Number.isFinite(lat) && Number.isFinite(lon) &&
       lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
     target.push({
@@ -292,7 +295,7 @@ export function parseExperimentSetupText(sourceText: string): ExperimentSetupDra
   addNumberMatches(raw, text, {
     fieldId: 'surfaceDistanceKm',
     label: 'Yüzey mesafesi',
-    regex: new RegExp(String.raw`(?:yüzey\s+mesafesi|mesafe|hedef)[^\n.!?]{0,25}?(?<value>${NUM})\s*(?<unit>${LENGTH_UNIT})\s*(?:uzakta|mesafede)?`, 'giu'),
+    regex: new RegExp(String.raw`(?:(?:yüzey\s+mesafesi|mesafe)\s*[:=]?\s*|hedef\s+(?:yaklaşık\s+)?)(?<value>${NUM})\s*(?<unit>${LENGTH_UNIT})(?:\s+(?:uzakta|mesafede))?`, 'giu'),
     convert: (value, unit) => {
       const metres = unit ? lengthToMetres(value, unit) : undefined;
       return metres === undefined ? undefined : metres / 1_000;
@@ -315,7 +318,7 @@ export function parseExperimentSetupText(sourceText: string): ExperimentSetupDra
   addNumberMatches(raw, text, {
     fieldId: 'targetHeightM',
     label: 'Hedef yüksekliği',
-    regex: new RegExp(String.raw`(?:hedef\s+(?:yüksekliği|nesnesi)?|hedef)[^\n.!?]{0,18}?(?<value>${NUM})\s*(?<unit>${LENGTH_UNIT})\s+(?:yüksekliğinde|yüksek|boyunda)`, 'giu'),
+    regex: new RegExp(String.raw`(?:hedef\s+(?:yüksekliği|nesnesi)?|hedef)[^\n.!?]{0,60}?(?<value>${NUM})\s*(?<unit>${LENGTH_UNIT})\s+(?:yüksekliğinde|yüksek|boyunda)`, 'giu'),
     convert: (value, unit) => unit ? lengthToMetres(value, unit) : undefined,
     display: (value) => `${trNumber(value)} m`,
     validate: (value) => value > 0 && value <= 100_000,
