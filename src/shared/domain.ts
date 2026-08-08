@@ -10,6 +10,7 @@ export type ModelCapability =
   | 'water-surface-application'
   | 'solar-position'
   | 'lunar-position'
+  | 'shadow-geometry'
   | 'stellar-position';
 
 export type ResultStatus =
