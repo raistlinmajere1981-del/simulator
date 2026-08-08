@@ -1,0 +1,26 @@
+name: Fix stage 5.6 parser
+on:
+  push:
+    branches: [agent/text-experiment-preparation]
+    paths:
+      - scripts/fix_stage_5_6_parser.py
+      - .github/workflows/fix-stage-5-6-parser.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/text-experiment-preparation
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/fix_stage_5_6_parser.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: harden text setup parsing rules"
+          git push origin HEAD:agent/text-experiment-preparation
