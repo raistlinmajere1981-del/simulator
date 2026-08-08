@@ -1,0 +1,65 @@
+.celestial-time-card {
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  border-color: #36556b;
+}
+
+.celestial-time-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.celestial-time-card label {
+  display: grid;
+  gap: 4px;
+}
+
+.celestial-time-card label > span {
+  color: #839aa7;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.celestial-time-card input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  box-sizing: border-box;
+  border: 1px solid #2e4b5d;
+  border-radius: 4px;
+  background: #0d1a23;
+  color: #cfe0e8;
+  padding: 0 7px;
+}
+
+.celestial-offset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.celestial-offset-row b {
+  font-size: 9px;
+  color: #7ec9d5;
+  white-space: nowrap;
+}
+
+.celestial-now-button {
+  border: 1px solid #356479;
+  border-radius: 4px;
+  background: #102936;
+  color: #9dd7df;
+  height: 29px;
+  cursor: pointer;
+}
+
+.celestial-time-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #647f8d;
+  font-size: 9px;
+  white-space: nowrap;
+}
