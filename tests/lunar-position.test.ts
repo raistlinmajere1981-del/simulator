@@ -7,6 +7,10 @@ function lunar(observedAtIso: string, latitudeDeg = 41.0082, longitudeDeg = 28.9
   return calculateLunarPosition({ observedAtIso, latitudeDeg, longitudeDeg, solarPosition });
 }
 
+function angularDifferenceDeg(a: number, b: number): number {
+  return Math.abs(((a - b + 540) % 360) - 180);
+}
+
 describe('lunar position reference', () => {
   it('produces finite topocentric position, distance and phase metrics', () => {
     const result = lunar('2026-08-08T20:06:28Z');
@@ -31,10 +35,12 @@ describe('lunar position reference', () => {
     expect(fullMoon.phaseName).toBe('Dolunay');
   });
 
-  it('changes local horizontal coordinates with observer longitude while preserving phase', () => {
+  it('changes local horizontal direction with observer longitude while preserving phase', () => {
     const istanbul = lunar('2026-08-08T20:06:28Z', 41, 29);
     const atlantic = lunar('2026-08-08T20:06:28Z', 41, -29);
-    expect(Math.abs(istanbul.elevationDeg - atlantic.elevationDeg)).toBeGreaterThan(5);
+    const elevationDifference = Math.abs(istanbul.elevationDeg - atlantic.elevationDeg);
+    const azimuthDifference = angularDifferenceDeg(istanbul.azimuthDeg, atlantic.azimuthDeg);
+    expect(Math.max(elevationDifference, azimuthDifference)).toBeGreaterThan(10);
     expect(istanbul.illuminatedFraction).toBeCloseTo(atlantic.illuminatedFraction, 12);
   });
 
