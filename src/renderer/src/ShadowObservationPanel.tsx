@@ -18,8 +18,14 @@ function statusLabel(prediction: ModelPrediction): string {
   return 'GÖZLEM KARARI YOK';
 }
 
-function optionalNumber(event: React.ChangeEvent<HTMLInputElement>): number | undefined {
-  return event.currentTarget.value.trim() === '' ? undefined : event.currentTarget.valueAsNumber;
+function optionalBoundedNumber(
+  event: React.ChangeEvent<HTMLInputElement>,
+  min: number,
+  max: number
+): number | undefined | null {
+  if (event.currentTarget.value.trim() === '') return undefined;
+  const value = event.currentTarget.valueAsNumber;
+  return Number.isFinite(value) && value >= min && value <= max ? value : null;
 }
 
 export function ShadowObservationPanel({
@@ -59,25 +65,42 @@ export function ShadowObservationPanel({
         <label className="input-field">
           <span>Gnomon yüksekliği</span>
           <div><input min={0.001} max={10000} step={0.01} type="number" value={settings.gnomonHeightM} onChange={(event) => {
-            if (!Number.isFinite(event.currentTarget.valueAsNumber)) return;
-            onChange({ ...settings, gnomonHeightM: event.currentTarget.valueAsNumber });
+            const value = event.currentTarget.valueAsNumber;
+            if (!Number.isFinite(value) || value <= 0 || value > 10_000) return;
+            onChange({ ...settings, gnomonHeightM: value });
           }} /><b>m</b></div>
         </label>
         <label className="input-field">
           <span>Gözlenen gölge uzunluğu</span>
-          <div><input min={0} step={0.01} placeholder="opsiyonel" type="number" value={settings.observedShadowLengthM ?? ''} onChange={(event) => onChange({ ...settings, observedShadowLengthM: optionalNumber(event) })} /><b>m</b></div>
+          <div><input min={0} step={0.01} placeholder="opsiyonel" type="number" value={settings.observedShadowLengthM ?? ''} onChange={(event) => {
+            const value = optionalBoundedNumber(event, 0, 10_000_000);
+            if (value === null) return;
+            onChange({ ...settings, observedShadowLengthM: value });
+          }} /><b>m</b></div>
         </label>
         <label className="input-field">
           <span>Uzunluk belirsizliği ±</span>
-          <div><input min={0} step={0.01} placeholder="opsiyonel" type="number" value={settings.observedShadowLengthUncertaintyM ?? ''} onChange={(event) => onChange({ ...settings, observedShadowLengthUncertaintyM: optionalNumber(event) })} /><b>m</b></div>
+          <div><input min={0} step={0.01} placeholder="opsiyonel" type="number" value={settings.observedShadowLengthUncertaintyM ?? ''} onChange={(event) => {
+            const value = optionalBoundedNumber(event, 0, 1_000_000);
+            if (value === null) return;
+            onChange({ ...settings, observedShadowLengthUncertaintyM: value });
+          }} /><b>m</b></div>
         </label>
         <label className="input-field">
           <span>Gözlenen gölge azimutu</span>
-          <div><input min={0} max={360} step={0.1} placeholder="opsiyonel" type="number" value={settings.observedShadowAzimuthDeg ?? ''} onChange={(event) => onChange({ ...settings, observedShadowAzimuthDeg: optionalNumber(event) })} /><b>°</b></div>
+          <div><input min={0} max={360} step={0.1} placeholder="opsiyonel" type="number" value={settings.observedShadowAzimuthDeg ?? ''} onChange={(event) => {
+            const value = optionalBoundedNumber(event, 0, 360);
+            if (value === null) return;
+            onChange({ ...settings, observedShadowAzimuthDeg: value });
+          }} /><b>°</b></div>
         </label>
         <label className="input-field">
           <span>Azimut belirsizliği ±</span>
-          <div><input min={0} max={180} step={0.1} placeholder="opsiyonel" type="number" value={settings.observedShadowAzimuthUncertaintyDeg ?? ''} onChange={(event) => onChange({ ...settings, observedShadowAzimuthUncertaintyDeg: optionalNumber(event) })} /><b>°</b></div>
+          <div><input min={0} max={180} step={0.1} placeholder="opsiyonel" type="number" value={settings.observedShadowAzimuthUncertaintyDeg ?? ''} onChange={(event) => {
+            const value = optionalBoundedNumber(event, 0, 180);
+            if (value === null) return;
+            onChange({ ...settings, observedShadowAzimuthUncertaintyDeg: value });
+          }} /><b>°</b></div>
         </label>
       </div>
 
