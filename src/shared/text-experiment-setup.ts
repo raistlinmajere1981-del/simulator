@@ -295,7 +295,7 @@ export function parseExperimentSetupText(sourceText: string): ExperimentSetupDra
   addNumberMatches(raw, text, {
     fieldId: 'surfaceDistanceKm',
     label: 'Yüzey mesafesi',
-    regex: new RegExp(String.raw`(?:(?:yüzey\s+mesafesi|mesafe)\s*[:=]?\s*|hedef\s+(?:yaklaşık\s+)?)(?<value>${NUM})\s*(?<unit>${LENGTH_UNIT})(?:\s+(?:uzakta|mesafede))?`, 'giu'),
+    regex: new RegExp(String.raw`(?:(?:yüzey\s+mesafesi|mesafe)\s*[:=]?\s*|hedef\s+(?:yaklaşık\s+)?(?=(?:${NUM})\s*${LENGTH_UNIT}\s+(?:uzakta|mesafede)))(?<value>${NUM})\s*(?<unit>${LENGTH_UNIT})(?:\s+(?:uzakta|mesafede))?`, 'giu'),
     convert: (value, unit) => {
       const metres = unit ? lengthToMetres(value, unit) : undefined;
       return metres === undefined ? undefined : metres / 1_000;
