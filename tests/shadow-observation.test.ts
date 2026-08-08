@@ -4,10 +4,14 @@ import {
   SHADOW_OBSERVATION_MODEL_ID,
   calculateShadowObservation,
   createShadowObservationPrediction,
-  readShadowObservationSettings
+  readShadowObservationSettings,
+  type ShadowObservationSettings
 } from '../src/simulation/shadow-observation';
 
-function calculate(observedAtIso: string, settings = { gnomonHeightM: 2 }) {
+function calculate(
+  observedAtIso: string,
+  settings: ShadowObservationSettings = { gnomonHeightM: 2 }
+) {
   const latitudeDeg = 41.0082;
   const longitudeDeg = 28.9784;
   const solarPosition = calculateSolarPosition({ observedAtIso, latitudeDeg, longitudeDeg });
