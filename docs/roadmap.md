@@ -495,10 +495,23 @@ Durum: tamamlandı · `1.9.0`
 
 Ayrıntı: [`roadmap-stage-6.2.md`](roadmap-stage-6.2.md)
 
+### Aşama 6.3 — Gölge deneyi ve gnomon gözlemi
+
+Durum: tamamlandı · `1.10.0`
+
+- dikey gnomon ve yerel yatay yüzey gölge geometrisi
+- beklenen gölge uzunluğu ve kuzey referanslı yön
+- isteğe bağlı saha uzunluk/azimut ölçümü ve açık ± belirsizlikler
+- gölgeden bağımsız Güneş yüksekliği türetimi
+- Güneş ufuk altındaysa sahte doğrudan gölge üretmeme
+- Dünya modellerine tanımsız Güneş davranışı uydurmama
+- ayrı snapshot, hesap izi, reopen, `.ggl.json` ve HTML rapor korunumu
+
+Ayrıntı: [`roadmap-stage-6.3.md`](roadmap-stage-6.3.md)
+
 ### Sonraki astronomi dilimleri
 
-- Ay konumu ve evreleri
-- gölge deneyleri
+- iki konumlu eşzamanlı gölge karşılaştırması
 - gün doğumu ve gün batımı
 - yıldız görünürlüğü ve yıldız izleri
 

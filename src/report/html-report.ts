@@ -30,7 +30,8 @@ const modelNames: Record<string, string> = {
   'azimuthal-projection': 'Azimutal Gösterim',
   'photo-calibration': 'Fotoğraf / Kamera Kalibrasyonu',
   'solar-position-noaa': 'Güneş Konumu · Astronomik Referans',
-  'lunar-position-low-precision': 'Ay Konumu ve Fazı · Astronomik Referans'
+  'lunar-position-low-precision': 'Ay Konumu ve Fazı · Astronomik Referans',
+  'solar-shadow-observation': 'Gölge Geometrisi · Astronomik Referans'
 };
 
 const datumLabels: Record<VerticalDatumKind, string> = {
@@ -445,16 +446,18 @@ export function createExperimentHtmlReport(
     ? experiment.geodesic.distanceM / 1_000
     : inputs.surfaceDistanceKm;
   const isCelestial = experiment.scenarioId === 'sun-moon-observation';
+  const isShadowObservation = experiment.scenarioId === 'shadow-observation';
+  const isAstronomyObservation = isCelestial || isShadowObservation;
   const coordinateCards = inputs.distanceSource === 'coordinates' ? `
     <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
     <div class="input-card"><small>Hedef koordinatı</small><strong>${coordinateFormatter.format(inputs.targetLatitudeDeg)}°, ${coordinateFormatter.format(inputs.targetLongitudeDeg)}°</strong></div>
     <div class="input-card"><small>Mesafe kaynağı</small><strong>WGS84 koordinat çözümü</strong></div>` : `
     <div class="input-card"><small>Mesafe kaynağı</small><strong>Manuel giriş</strong></div>`;
-  const reportInputCards = isCelestial ? `
+  const reportInputCards = isAstronomyObservation ? `
     <div class="input-card"><small>Gözlem zamanı · UTC</small><strong>${formatDate(experiment.observedAtIso ?? experiment.createdAtIso)}</strong></div>
     <div class="input-card"><small>UTC ofset provenansı</small><strong>${experiment.observationUtcOffsetMinutes === undefined ? 'Tanımlanmadı' : `${experiment.observationUtcOffsetMinutes >= 0 ? '+' : ''}${inputNumberFormatter.format(experiment.observationUtcOffsetMinutes / 60)} saat`}</strong></div>
     <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
-    <div class="input-card"><small>6.1 hesap türü</small><strong>Geometrik Güneş konumu</strong></div>` : `
+    <div class="input-card"><small>${isShadowObservation ? '6.3 hesap türü' : '6.1–6.2 hesap türü'}</small><strong>${isShadowObservation ? 'Dikey gnomon gölge geometrisi' : 'Geometrik Güneş konumu ve topocentrik Ay referansı'}</strong></div>` : `
     <div class="input-card"><small>Göz yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
     <div class="input-card"><small>Hedef yüksekliği</small><strong>${inputNumberFormatter.format(inputs.targetHeightM)} m</strong></div>
     <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(effectiveDistanceKm)} km</strong></div>

@@ -18,7 +18,8 @@ const scenarioLabels: Record<SimulationScenarioId, string> = {
   'target-visibility': 'Hedef Görünürlüğü',
   horizon: 'Ufuk Analizi',
   'long-distance-visibility': 'Uzun Mesafe Görüş',
-  'sun-moon-observation': 'Güneş ve Ay Gözlemleri'
+  'sun-moon-observation': 'Güneş ve Ay Gözlemleri',
+  'shadow-observation': 'Gölge Deneyi'
 };
 
 const atmosphereLabels: Record<AtmosphereMode, string> = {

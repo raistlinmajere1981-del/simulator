@@ -3,6 +3,7 @@ export type HelpPanelId =
   | 'celestial-time'
   | 'solar-position'
   | 'lunar-position'
+  | 'shadow-observation'
   | 'text-experiment-setup'
   | 'photo-calibration'
   | 'atmosphere'
@@ -86,6 +87,12 @@ export const HELP_TERMS: readonly HelpTermContent[] = [
     label: 'Ay fazı',
     definition: 'Ayın Güneş tarafından aydınlatılan yarısının Dünya’dan görülen oranı ve Güneş-Ay-Dünya geometrisiyle ilişkili çevrim durumudur.',
     caution: 'Yeni Ay veya Dolunay olmak tek başına tutulma anlamına gelmez; yörünge düğümü geometrisi ayrıca gerekir.'
+  },
+  {
+    id: 'gnomon',
+    label: 'Gnomon',
+    definition: 'Gölge deneyinde yüksekliği bilinen ve yerel düşeye paralel yerleştirilen dik çubuk/referanstır.',
+    caution: 'Gnomon düşey değilse veya ölçüm yüzeyi yatay değilse basit L = h / tan(α) geometrisi sistematik hata taşır.'
   },
   {
     id: 'datum',
@@ -221,6 +228,24 @@ export const HELP_PANELS: readonly HelpPanelContent[] = [
     commonMistakes: ['Bu düşük hassasiyetli referansı JPL/Horizons hassasiyetinde efemeris saymak.', 'Aydınlık oranını Ayın ufuk üstünde görünürlüğüyle karıştırmak.', 'Faz bilgisinden otomatik tutulma sonucu çıkarmak.'],
     example: 'Tarih/saat değiştirildiğinde Güneş ve Ay aynı gözlem anında birlikte yeniden hesaplanır.',
     relatedTerms: ['azimuth', 'declination', 'utc-offset', 'lunar-parallax', 'lunar-phase']
+  },
+  {
+    id: 'shadow-observation',
+    category: 'Astronomi',
+    title: 'Gölge deneyi ve dikey gnomon',
+    summary: 'Aynı UTC/WGS84 Güneş referansından dikey gnomonun beklenen gölge uzunluğu ve yönünü üretir; isteğe bağlı saha ölçümünü yalnız kullanıcı tarafından verilen ± belirsizliklerle karşılaştırır.',
+    fields: [
+      { label: 'Gnomon yüksekliği', unit: 'm', description: 'Yerel düşeye paralel referans çubuğunun fiziksel yüksekliği.', calculationEffect: 'Beklenen gölge uzunluğunu doğrusal olarak ölçekler.' },
+      { label: 'Gözlenen gölge uzunluğu', unit: 'm', description: 'Gnomon tabanından gölge ucuna yerel yatay yüzey üzerinde ölçülen mesafe.' },
+      { label: 'Uzunluk belirsizliği', unit: 'm', description: 'Saha uzunluk ölçümünün açık ± aralığı. Girilmezse uzunluk kanalı uyum kararı üretmez.' },
+      { label: 'Gözlenen gölge azimutu', unit: '°', description: 'Gnomon tabanından gölge ucuna yön; coğrafi kuzeyden saat yönünde.' },
+      { label: 'Azimut belirsizliği', unit: '°', description: 'Gölge yönü ölçümünün açık ± açısal aralığı.' },
+      { label: 'Gölgeden türetilen Güneş yüksekliği', unit: '°', description: 'Ölçülen uzunluk ve gnomon yüksekliğinden atan2(h, L) ile bağımsız türetilen açı.' }
+    ],
+    assumptions: ['Gnomon yerel düşeye paraleldir.', 'Ölçüm yüzeyi yerel yataydır.', 'Güneş yüksekliği geometriktir; atmosferik kırılma ve topoğrafik ufuk uygulanmaz.', 'Bu astronomik referans Dünya modellerine fiziksel Güneş davranışı atamaz.'],
+    commonMistakes: ['Gölge yönünü Güneş azimutuyla aynı sanmak; gölge yaklaşık 180° ters yöndedir.', 'Gnomon yüksekliği yerine gözlemci boyunu kullanmak.', 'Belirsizlik girmeden kesin uyum/uyumsuzluk kararı beklemek.', 'Eğimli zemindeki gölgeyi yatay düzlem ölçümü gibi kullanmak.'],
+    example: '1 m dikey gnomon ve 1 m gölge, ideal yatay geometride yaklaşık 45° Güneş yüksekliğine karşılık gelir.',
+    relatedTerms: ['gnomon', 'solar-elevation', 'azimuth', 'uncertainty', 'utc-offset']
   },
   {
     id: 'text-experiment-setup',

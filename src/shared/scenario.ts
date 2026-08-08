@@ -4,7 +4,8 @@ export type SimulationScenarioId =
   | 'target-visibility'
   | 'horizon'
   | 'long-distance-visibility'
-  | 'sun-moon-observation';
+  | 'sun-moon-observation'
+  | 'shadow-observation';
 
 export interface SimulationScenarioDefinition {
   id: SimulationScenarioId;
@@ -59,16 +60,29 @@ export const SUN_MOON_SCENARIO: SimulationScenarioDefinition = {
   label: 'Güneş ve Ay Gözlemleri',
   icon: '☀',
   experimentType: 'celestial',
-  description: 'Tarih, saat ve gözlem konumundan gök cisimlerinin yerel konumunu inceler. Aşama 6.1 Güneş konumunu etkinleştirir; Ay hesabı sonraki dilimde eklenecektir.',
+  description: 'Tarih, saat ve WGS84 gözlem konumundan Güneş ve Ay için ayrı astronomik referans sonuçları üretir.',
   usesTarget: false,
   usesObservation: false,
   usesRoute: false,
   usesTerrain: false
 };
 
+export const SHADOW_SCENARIO: SimulationScenarioDefinition = {
+  id: 'shadow-observation',
+  label: 'Gölge Deneyi',
+  icon: '◒',
+  experimentType: 'shadow',
+  description: 'Dikey gnomon gölgesinin uzunluk ve yönünü geometrik Güneş referansından hesaplar; isteğe bağlı saha ölçümünü belirsizliğiyle karşılaştırır.',
+  usesTarget: false,
+  usesObservation: true,
+  usesRoute: false,
+  usesTerrain: false
+};
+
 export const ALL_SIMULATION_SCENARIOS: readonly SimulationScenarioDefinition[] = [
   ...VISIBILITY_SCENARIOS,
-  SUN_MOON_SCENARIO
+  SUN_MOON_SCENARIO,
+  SHADOW_SCENARIO
 ] as const;
 
 const scenarioById = new Map(
@@ -78,7 +92,8 @@ const scenarioById = new Map(
 export function normalizeSimulationScenarioId(value: unknown): SimulationScenarioId {
   return value === 'horizon' ||
     value === 'long-distance-visibility' ||
-    value === 'sun-moon-observation'
+    value === 'sun-moon-observation' ||
+    value === 'shadow-observation'
     ? value
     : 'target-visibility';
 }
