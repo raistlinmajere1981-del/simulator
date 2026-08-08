@@ -20,6 +20,8 @@ Durum: tamamlandı · `1.11.0`
 - gölge yönü farkı ve varsa açık azimut belirsizlikleriyle karşılaştırma
 - ayrı prediction snapshot, hesap izi, reopen, `.ggl.json` ve HTML rapor korunumu
 
+B noktası ilk etkinleştirildiğinde güvenli başlangıç olarak A koordinatlarını kopyalar. Uygulama rastgele ikinci bir coğrafi konum seçmez. Kullanıcı B koordinatlarını değiştirmeden baz çizgisi `0 km` kalır ve karşılaştırma coğrafi ayrım açısından uyarılıdır.
+
 ## Bilimsel sınır
 
 Bu aşama WGS84 baz çizgisi ve mevcut geometrik Güneş referansını ölçüm bağlamı olarak kullanır. Bunlar İdeal Küre, Tanımlı Düzlem veya başka bir Dünya modelinin Güneş davranışı değildir. Bir Dünya şekli modeli eşzamanlı gölge deneyine fiziksel tahmin üretmek için kendi Güneş/ışık geometrisini açıkça tanımlamalıdır.
