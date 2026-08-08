@@ -107,6 +107,66 @@ describe('photo angular comparison', () => {
     expect(result.prediction.status).toBe('compatible');
   });
 
+  it('combines model-input and photo uncertainty before scoring', () => {
+    const model = prediction('defined-plane', [
+      { key: 'targetBaseElevationDeg', value: -0.1 },
+      { key: 'targetTopElevationDeg', value: 1.2 },
+      { key: 'targetAngularHeightDeg', value: 1.3 },
+      { key: 'hiddenHeightM', value: 0 },
+      { key: 'visibleFraction', value: 1 }
+    ]);
+    const result = comparePhotoAngularObservation({
+      experimentId: 'exp-1',
+      sourceModelId: 'defined-plane',
+      sourceModelName: 'Tanımlı Düzlem',
+      modelPrediction: model,
+      photoPrediction: photo,
+      referenceKind: 'visual-reference',
+      modelUncertainty: {
+        sourceModelId: 'defined-plane',
+        combination: 'linear-conservative',
+        definedParameterCount: 1,
+        metricUncertaintyDeg: { targetAngularHeightDeg: 0.2 },
+        contributions: [],
+        warnings: [],
+        version: '0.1.0'
+      }
+    });
+    expect(result.channels[0]?.photoUncertaintyDeg).toBeCloseTo(0.15, 10);
+    expect(result.channels[0]?.modelUncertaintyDeg).toBeCloseTo(0.2, 10);
+    expect(result.channels[0]?.combinedUncertaintyDeg).toBeCloseTo(0.35, 10);
+    expect(result.prediction.status).toBe('compatible');
+  });
+
+  it('does not score a metric when its model uncertainty crosses an undefined angular state', () => {
+    const model = prediction('ideal-sphere', [
+      { key: 'targetBaseElevationDeg', value: -0.1 },
+      { key: 'targetTopElevationDeg', value: 0.85 },
+      { key: 'targetAngularHeightDeg', value: 0.95 },
+      { key: 'hiddenHeightM', value: 0 },
+      { key: 'visibleFraction', value: 1 }
+    ]);
+    const result = comparePhotoAngularObservation({
+      experimentId: 'exp-1',
+      sourceModelId: 'ideal-sphere',
+      sourceModelName: 'İdeal Küre',
+      modelPrediction: model,
+      photoPrediction: photo,
+      referenceKind: 'visual-reference',
+      modelUncertainty: {
+        sourceModelId: 'ideal-sphere',
+        combination: 'linear-conservative',
+        definedParameterCount: 1,
+        metricUncertaintyDeg: { targetAngularHeightDeg: null },
+        contributions: [],
+        warnings: [],
+        version: '0.1.0'
+      }
+    });
+    expect(result.channels).toHaveLength(0);
+    expect(result.prediction.status).toBe('indeterminate');
+  });
+
   it('marks a channel incompatible when the model lies outside the photo uncertainty envelope', () => {
     const model = prediction('ideal-sphere', [
       { key: 'targetBaseElevationDeg', value: -0.1 },

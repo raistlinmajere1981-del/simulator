@@ -121,6 +121,33 @@ describe('photo calibration', () => {
       .toBeCloseTo(record.uncertainty.targetAngularHeightDeg, 10);
   });
 
+  it('adds explicit camera FOV uncertainty to the photo angle envelope', () => {
+    const baseline = createPhotoCalibrationRecord(baseInput());
+    const record = createPhotoCalibrationRecord({
+      ...baseInput(),
+      cameraUncertainty: {
+        combination: 'linear-conservative',
+        horizontalFovDeg: 0.5,
+        verticalFovDeg: 0.5
+      }
+    });
+    expect(record.cameraUncertainty.targetAngularHeightDeg).toBeGreaterThan(0);
+    expect(record.uncertainty.targetAngularHeightDeg)
+      .toBeGreaterThan(baseline.uncertainty.targetAngularHeightDeg);
+    expect(record.prediction.metrics.find((metric) => metric.key === 'targetAngularHeightDeg')?.uncertainty)
+      .toBeCloseTo(record.uncertainty.targetAngularHeightDeg, 10);
+  });
+
+  it('rejects camera uncertainty intervals that cross invalid calibration values', () => {
+    expect(() => createPhotoCalibrationRecord({
+      ...baseInput(),
+      cameraUncertainty: {
+        combination: 'linear-conservative',
+        verticalFovDeg: 90
+      }
+    })).toThrow(/belirsizlik aralığı geçersiz/);
+  });
+
   it('warns instead of silently treating uncorrected lens distortion as calibrated away', () => {
     const record = createPhotoCalibrationRecord({
       ...baseInput(),
