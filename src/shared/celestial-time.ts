@@ -47,9 +47,11 @@ export function formatLocalDateTime24(
   offsetMinutes: number
 ): string {
   const localValue = localDateTimeValueFromInstant(observedAtIso, offsetMinutes);
-  const [datePart, timePart] = localValue.split('T');
-  const [year, month, day] = datePart.split('-');
-  return `${day}.${month}.${year} · ${timePart}`;
+  const year = localValue.slice(0, 4);
+  const month = localValue.slice(5, 7);
+  const day = localValue.slice(8, 10);
+  const time = localValue.slice(11, 19);
+  return `${day}.${month}.${year} · ${time}`;
 }
 
 export function instantIsoFromLocalDateTime(
