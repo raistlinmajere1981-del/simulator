@@ -386,6 +386,7 @@ export function PhotoCalibrationControl({
     const defaultMarkUncertaintyPx = Number(draft.defaultMarkUncertaintyPx);
     const principalPointXPx = finiteDraftNumber(draft.principalPointXPx);
     const principalPointYPx = finiteDraftNumber(draft.principalPointYPx);
+    const cameraUncertainty = cameraUncertaintyFromDraft(draft);
     const calibration = draft.calibrationSource === 'field-of-view'
       ? {
           sourceKind: 'field-of-view' as const,
