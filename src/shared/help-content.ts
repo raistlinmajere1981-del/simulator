@@ -4,6 +4,7 @@ export type HelpPanelId =
   | 'solar-position'
   | 'lunar-position'
   | 'shadow-observation'
+  | 'dual-shadow-comparison'
   | 'text-experiment-setup'
   | 'photo-calibration'
   | 'atmosphere'
@@ -246,6 +247,24 @@ export const HELP_PANELS: readonly HelpPanelContent[] = [
     commonMistakes: ['Gölge yönünü Güneş azimutuyla aynı sanmak; gölge yaklaşık 180° ters yöndedir.', 'Gnomon yüksekliği yerine gözlemci boyunu kullanmak.', 'Belirsizlik girmeden kesin uyum/uyumsuzluk kararı beklemek.', 'Eğimli zemindeki gölgeyi yatay düzlem ölçümü gibi kullanmak.'],
     example: '1 m dikey gnomon ve 1 m gölge, ideal yatay geometride yaklaşık 45° Güneş yüksekliğine karşılık gelir.',
     relatedTerms: ['gnomon', 'solar-elevation', 'azimuth', 'uncertainty', 'utc-offset']
+  },
+  {
+    id: 'dual-shadow-comparison',
+    category: 'Astronomi',
+    title: 'İki konumlu eşzamanlı gölge karşılaştırması',
+    summary: 'A ve B noktalarındaki dikey gnomon gölgelerini aynı UTC fiziksel anında çözer; farklı gnomon yüksekliklerini açıya dönüştürerek ortak bir karşılaştırma kanalı üretir.',
+    fields: [
+      { label: 'B enlem / boylam', unit: '°', description: 'İkinci saha gözlem noktasının WGS84 koordinatları.' },
+      { label: 'B gnomon yüksekliği', unit: 'm', description: 'İkinci noktadaki dikey referansın fiziksel yüksekliği. A ile aynı olmak zorunda değildir.' },
+      { label: 'B gözlenen gölge', unit: 'm', description: 'İkinci noktada aynı UTC anında ölçülen gölge uzunluğu.' },
+      { label: 'WGS84 nokta ayrımı', unit: 'km', description: 'A ile B arasındaki jeodezik referans mesafesi; model tahmini değil ölçüm bağlamıdır.' },
+      { label: 'Güneş yükseklik farkı B−A', unit: '°', description: 'İki geometrik Güneş yüksekliği arasındaki eşzamanlı fark.' },
+      { label: 'Gözlenen gölgelerden fark', unit: '°', description: 'Her gölgede atan2(h,L) ile türetilen Güneş yüksekliklerinin farkı.' }
+    ],
+    assumptions: ['İki istasyon aynı UTC fiziksel anını temsil eder.', 'Her iki gnomon yerel düşeye paraleldir ve ölçüm yüzeyleri yerel yataydır.', 'Atmosferik kırılma ve topoğrafik ufuk uygulanmaz.', 'WGS84 baz çizgisi bir referanstır; Dünya şekli modellerine otomatik Güneş kuralı atanmaz.'],
+    commonMistakes: ['Yerel saatleri aynı yazarak farklı saat dilimlerindeki gözlemleri eşzamanlı sanmak.', 'Farklı gnomon yüksekliklerindeki ham gölge uzunluklarını doğrudan karşılaştırmak.', 'Belirsizlik girmeden fark uyumu hakkında kesin karar beklemek.', 'Bu referans hesabından doğrudan Dünya yarıçapı veya şekli sonucu çıkarmak.'],
+    example: 'A noktasında 1 m, B noktasında 2 m gnomon kullanılabilir; gölgeler ham metre değerleri yerine her noktadan türetilen Güneş yüksekliği üzerinden karşılaştırılır.',
+    relatedTerms: ['gnomon', 'solar-elevation', 'azimuth', 'geodesic', 'uncertainty', 'utc-offset']
   },
   {
     id: 'text-experiment-setup',

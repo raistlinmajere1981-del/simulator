@@ -31,7 +31,8 @@ const modelNames: Record<string, string> = {
   'photo-calibration': 'Fotoğraf / Kamera Kalibrasyonu',
   'solar-position-noaa': 'Güneş Konumu · Astronomik Referans',
   'lunar-position-low-precision': 'Ay Konumu ve Fazı · Astronomik Referans',
-  'solar-shadow-observation': 'Gölge Geometrisi · Astronomik Referans'
+  'solar-shadow-observation': 'Gölge Geometrisi · Astronomik Referans',
+  'dual-shadow-comparison': 'İki Konumlu Gölge Karşılaştırması · Astronomik Referans'
 };
 
 const datumLabels: Record<VerticalDatumKind, string> = {
