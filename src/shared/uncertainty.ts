@@ -1,9 +1,10 @@
 export type UncertaintyCombination = 'linear-conservative' | 'rss-independent';
 
 /**
- * Optional one-sigma-like input ranges supplied by the user for sensitivity
- * propagation. Missing fields mean "uncertainty not defined"; they must not be
- * interpreted as measured zero uncertainty.
+ * Optional user-supplied input ranges for sensitivity propagation. These are
+ * deterministic +/- bounds, not probabilistic confidence intervals or implied
+ * one-sigma values. Missing fields mean "uncertainty not defined"; they must
+ * not be interpreted as measured zero uncertainty.
  */
 export interface ModelInputUncertaintySettings {
   combination: UncertaintyCombination;
@@ -21,7 +22,8 @@ export const DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS: ModelInputUncertaintySett
 
 /**
  * Linear mode is the conservative bound. RSS is valid only when the caller can
- * justify treating the individual contributions as independent.
+ * justify treating the individual sensitivity contributions as independent.
+ * Neither mode assigns a probability or confidence level to the result.
  */
 export function combineUncertaintyContributions(
   values: readonly number[],
