@@ -44,6 +44,16 @@ describe('text experiment setup parser', () => {
     expect(distance?.reason).toContain('çelişen');
   });
 
+  it('does not confuse a target height with target distance without distance context', () => {
+    const draft = parseExperimentSetupText('Mesafe 25 km. Hedef 30 m yüksekliğinde.');
+    const distance = draft.candidates.find((candidate) => candidate.fieldId === 'surfaceDistanceKm');
+    const height = draft.candidates.find((candidate) => candidate.fieldId === 'targetHeightM');
+    expect(distance?.status).toBe('found');
+    expect(distance?.numericValue).toBe(25);
+    expect(height?.status).toBe('found');
+    expect(height?.numericValue).toBe(30);
+  });
+
   it('extracts coordinate pairs and switches the application to coordinate distance', () => {
     const draft = parseExperimentSetupText(
       'Gözlemci koordinatı: 41.0082, 28.9784. Hedef koordinatı: 39.9334, 32.8597.'
