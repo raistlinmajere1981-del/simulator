@@ -17,7 +17,8 @@ const trNumber = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 6 });
 const scenarioLabels: Record<SimulationScenarioId, string> = {
   'target-visibility': 'Hedef Görünürlüğü',
   horizon: 'Ufuk Analizi',
-  'long-distance-visibility': 'Uzun Mesafe Görüş'
+  'long-distance-visibility': 'Uzun Mesafe Görüş',
+  'sun-moon-observation': 'Güneş ve Ay Gözlemleri'
 };
 
 const atmosphereLabels: Record<AtmosphereMode, string> = {
@@ -78,31 +79,30 @@ function CandidateRow({
   current: Parameters<typeof currentValue>[1];
   onChecked(checked: boolean): void;
 }): React.JSX.Element {
-  const selectable = candidate.status === 'found';
   return (
-    <div className={`text-setup-candidate ${candidate.status}`}>
-      <label className="text-setup-select">
-        <input
-          type="checkbox"
-          checked={selectable && checked}
-          disabled={!selectable}
-          onChange={(event) => onChecked(event.currentTarget.checked)}
-        />
-        <span className={`text-setup-status ${candidate.status}`}>
-          {candidate.status === 'found' ? 'BULUNDU' : candidate.status === 'review' ? 'KONTROL GEREKLİ' : 'KULLANILAMADI'}
-        </span>
-      </label>
-      <div className="text-setup-field">
-        <strong>{candidate.label}</strong>
-        <div className="text-setup-diff">
-          <span>{currentValue(candidate.fieldId, current)}</span>
-          <b>→</b>
-          <span>{candidate.displayValue}</span>
-        </div>
-        <small>Kaynak: “{candidate.sourceExcerpt}”</small>
-        {candidate.reason && <p>{candidate.reason}</p>}
+    <article className={`text-setup-candidate ${candidate.status}`}>
+      <div className="text-setup-candidate-select">
+        {candidate.status === 'found' ? (
+          <input
+            aria-label={`${candidate.label} alanını uygula`}
+            type="checkbox"
+            checked={checked}
+            onChange={(event) => onChecked(event.currentTarget.checked)}
+          />
+        ) : <span />}
+        <span className="text-setup-status">{candidate.status === 'found' ? 'BULUNDU' : candidate.status === 'review' ? 'KONTROL GEREKLİ' : 'KULLANILAMADI'}</span>
       </div>
-    </div>
+      <div className="text-setup-current">
+        <strong>{candidate.label}</strong>
+        <span>{currentValue(candidate.fieldId, current)}</span>
+        <small>Kaynak: “{candidate.sourceExcerpt}”</small>
+      </div>
+      <b className="text-setup-arrow">→</b>
+      <div className="text-setup-proposed">
+        <strong>{candidate.displayValue}</strong>
+        {candidate.message && <small>{candidate.message}</small>}
+      </div>
+    </article>
   );
 }
 
@@ -124,45 +124,53 @@ export function TextExperimentSetupDialog({
   onApply(application: ExperimentSetupApplication): void;
 }): React.JSX.Element | null {
   const [text, setText] = useState('');
-  const [draftText, setDraftText] = useState<string>();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const draft = useMemo(() => draftText === undefined ? undefined : parseExperimentSetupText(draftText), [draftText]);
+  const [candidates, setCandidates] = useState<ExperimentSetupCandidate[]>([]);
+  const [selected, setSelected] = useState<Set<ExperimentSetupFieldId>>(new Set());
 
   useEffect(() => {
     if (!open) return;
-    const handleKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [onClose, open]);
+    setText('');
+    setCandidates([]);
+    setSelected(new Set());
+  }, [open]);
+
+  const counts = useMemo(() => ({
+    found: candidates.filter((candidate) => candidate.status === 'found').length,
+    review: candidates.filter((candidate) => candidate.status === 'review').length,
+    unavailable: candidates.filter((candidate) => candidate.status === 'unavailable').length
+  }), [candidates]);
 
   if (!open) return null;
 
   const current = { scenarioId, inputs, atmosphereMode, modelUncertainty };
-  const foundCount = draft?.candidates.filter((candidate) => candidate.status === 'found').length ?? 0;
-  const reviewCount = draft?.candidates.filter((candidate) => candidate.status === 'review').length ?? 0;
-  const unavailableCount = draft?.candidates.filter((candidate) => candidate.status === 'unavailable').length ?? 0;
-
-  const prepare = (): void => {
-    const next = parseExperimentSetupText(text);
-    setDraftText(text);
-    setSelected(new Set(next.candidates.filter((candidate) => candidate.status === 'found').map((candidate) => candidate.id)));
+  const createDraft = (): void => {
+    const parsed = parseExperimentSetupText(text);
+    setCandidates(parsed.candidates);
+    setSelected(new Set(
+      parsed.candidates
+        .filter((candidate) => candidate.status === 'found')
+        .map((candidate) => candidate.fieldId)
+    ));
+  };
+  const applySelected = (): void => {
+    const application = buildExperimentSetupApplication(text, candidates, selected);
+    if (application.provenance.appliedFields.length === 0) return;
+    onApply(application);
+    onClose();
   };
 
   return (
-    <div className="text-setup-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) onClose();
+    <div className="dialog-backdrop text-setup-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.currentTarget === event.target) onClose();
     }}>
-      <section className="text-setup-dialog" role="dialog" aria-modal="true" aria-label="Metinden deney hazırla">
+      <section className="text-setup-dialog" role="dialog" aria-modal="true" aria-labelledby="text-setup-title">
         <header>
           <div>
             <span className="eyebrow">Kontrollü deney hazırlama</span>
-            <h2>Metinden deney hazırla</h2>
+            <h2 id="text-setup-title">Metinden deney hazırla</h2>
           </div>
-          <button type="button" aria-label="Kapat" onClick={onClose}>×</button>
+          <button aria-label="Metinden deney hazırlamayı kapat" type="button" onClick={onClose}>×</button>
         </header>
-
         <div className="text-setup-body">
           <p className="text-setup-intro">
             Gözlem notunu normal cümlelerle yaz. Sistem yalnız güvenle eşleyebildiği değerleri taslağa çıkarır;
@@ -171,59 +179,48 @@ export function TextExperimentSetupDialog({
           <textarea
             autoFocus
             maxLength={10_000}
+            placeholder="Örnek: Gözlemci deniz seviyesinden 12 m yüksekte, kamera yerden 1,7 m. Hedef 34,2 km uzakta ve 42 m yüksekliğinde. Standart kırılma k=0,13 kullan."
             value={text}
-            placeholder="Örnek: Gözlemci deniz seviyesinden 12 m yüksekte, kamera yerden 1,7 m. Hedef 34,2 km uzakta ve 42 m yüksekliğinde. Standart kırılma k=0,13 kullan. Mesafe belirsizliği yaklaşık ±20 m."
-            onChange={(event) => {
-              setText(event.currentTarget.value);
-              if (draftText !== undefined) setDraftText(undefined);
-            }}
+            onChange={(event) => setText(event.currentTarget.value)}
           />
-          <div className="text-setup-editor-actions">
-            <span>{text.length.toLocaleString('tr-TR')} / 10.000 karakter</span>
-            <button type="button" disabled={text.trim().length === 0} onClick={prepare}>Taslak oluştur</button>
+          <div className="text-setup-compose-footer">
+            <small>{text.length.toLocaleString('tr-TR')} / 10.000 karakter</small>
+            <button type="button" disabled={text.trim().length === 0} onClick={createDraft}>Taslak oluştur</button>
           </div>
 
-          {draft && (
-            <>
-              <div className="text-setup-summary">
-                <span className="found">{foundCount} bulundu</span>
-                <span className="review">{reviewCount} kontrol gerekli</span>
-                <span className="unavailable">{unavailableCount} kullanılamadı</span>
-              </div>
-
-              {draft.notes.map((note) => <p className="text-setup-note" key={note}>{note}</p>)}
-
-              <div className="text-setup-candidates">
-                {draft.candidates.length === 0 && <div className="text-setup-empty">Uygulanabilir alan bulunamadı.</div>}
-                {draft.candidates.map((candidate) => (
-                  <CandidateRow
-                    key={candidate.id}
-                    candidate={candidate}
-                    current={current}
-                    checked={selected.has(candidate.id)}
-                    onChecked={(checked) => setSelected((previous) => {
+          {candidates.length > 0 && <>
+            <div className="text-setup-counts">
+              <span className="found">{counts.found} bulundu</span>
+              <span className="review">{counts.review} kontrol gerekli</span>
+              <span className="unavailable">{counts.unavailable} kullanılamadı</span>
+            </div>
+            <div className="text-setup-candidates">
+              {candidates.map((candidate, index) => (
+                <CandidateRow
+                  key={`${candidate.fieldId}-${index}`}
+                  candidate={candidate}
+                  checked={selected.has(candidate.fieldId)}
+                  current={current}
+                  onChecked={(checked) => {
+                    setSelected((previous) => {
                       const next = new Set(previous);
-                      if (checked) next.add(candidate.id); else next.delete(candidate.id);
+                      if (checked) next.add(candidate.fieldId);
+                      else next.delete(candidate.fieldId);
                       return next;
-                    })}
-                  />
-                ))}
-              </div>
-            </>
-          )}
+                    });
+                  }}
+                />
+              ))}
+            </div>
+          </>}
         </div>
-
         <footer>
-          <button type="button" onClick={onClose}>Vazgeç</button>
+          <button className="secondary" type="button" onClick={onClose}>Vazgeç</button>
           <button
             className="primary"
             type="button"
-            disabled={!draft || selected.size === 0}
-            onClick={() => {
-              if (!draft) return;
-              onApply(buildExperimentSetupApplication(draft, [...selected]));
-              onClose();
-            }}
+            disabled={selected.size === 0}
+            onClick={applySelected}
           >
             Seçili alanları uygula ({selected.size})
           </button>
