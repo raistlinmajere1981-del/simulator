@@ -1,0 +1,191 @@
+.dual-shadow-panel {
+  padding: 12px 14px;
+}
+
+.dual-shadow-status {
+  border: 1px solid #3b5362;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: #91a5b0;
+  white-space: nowrap;
+}
+
+.dual-shadow-status.compatible {
+  border-color: #2d7957;
+  color: #70d69a;
+}
+
+.dual-shadow-status.incompatible {
+  border-color: #8a4949;
+  color: #ef8787;
+}
+
+.dual-shadow-status.indeterminate {
+  border-color: #7b6833;
+  color: #d8be64;
+}
+
+.dual-shadow-enable {
+  border-color: #2d776b !important;
+  color: #79dcca !important;
+}
+
+.dual-shadow-disable {
+  color: #9eb0ba;
+}
+
+.dual-shadow-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 62px;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px dashed #2b4959;
+  border-radius: 6px;
+  color: #7f97a4;
+}
+
+.dual-shadow-empty strong {
+  color: #bed1da;
+}
+
+.dual-shadow-stations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dual-shadow-station {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid #2c4858;
+  border-radius: 6px;
+  background: rgba(11, 29, 39, .56);
+}
+
+.dual-shadow-station.secondary {
+  border-color: #48532e;
+}
+
+.station-letter {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid #4a768a;
+  border-radius: 50%;
+  color: #93d7e7;
+  font-weight: 800;
+}
+
+.dual-shadow-station.secondary .station-letter {
+  border-color: #788047;
+  color: #e0d26d;
+}
+
+.dual-shadow-station > div {
+  display: grid;
+  gap: 2px;
+}
+
+.dual-shadow-station strong {
+  color: #d3e1e7;
+  font-size: 11px;
+}
+
+.dual-shadow-station small {
+  color: #79909d;
+  font-size: 9px;
+}
+
+.dual-shadow-station dl {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+}
+
+.dual-shadow-station dl div {
+  display: grid;
+  gap: 2px;
+}
+
+.dual-shadow-station dt {
+  color: #6f8793;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.dual-shadow-station dd {
+  margin: 0;
+  color: #c6d8df;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.dual-shadow-input-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.dual-shadow-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.dual-shadow-metrics > div {
+  display: grid;
+  gap: 3px;
+  min-height: 47px;
+  padding: 7px 8px;
+  border: 1px solid #294454;
+  border-radius: 4px;
+  background: #10232e;
+}
+
+.dual-shadow-metrics small {
+  color: #718995;
+  font-size: 8px;
+}
+
+.dual-shadow-metrics strong {
+  color: #b8e0e7;
+  font-size: 11px;
+}
+
+.dual-shadow-note {
+  margin: 8px 0 0;
+  padding: 7px 9px;
+  border-left: 2px solid #5f8a8e;
+  background: rgba(50, 91, 95, .08);
+  color: #839aa6;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1200px) {
+  .dual-shadow-input-grid,
+  .dual-shadow-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dual-shadow-station {
+    grid-template-columns: auto 1fr;
+  }
+
+  .dual-shadow-station dl {
+    grid-column: 1 / -1;
+    padding-left: 37px;
+  }
+}
