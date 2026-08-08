@@ -1,5 +1,10 @@
 export type UncertaintyCombination = 'linear-conservative' | 'rss-independent';
 
+/**
+ * Optional one-sigma-like input ranges supplied by the user for sensitivity
+ * propagation. Missing fields mean "uncertainty not defined"; they must not be
+ * interpreted as measured zero uncertainty.
+ */
 export interface ModelInputUncertaintySettings {
   combination: UncertaintyCombination;
   surfaceDistanceM?: number;
@@ -14,6 +19,10 @@ export const DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS: ModelInputUncertaintySett
   combination: 'linear-conservative'
 };
 
+/**
+ * Linear mode is the conservative bound. RSS is valid only when the caller can
+ * justify treating the individual contributions as independent.
+ */
 export function combineUncertaintyContributions(
   values: readonly number[],
   combination: UncertaintyCombination
