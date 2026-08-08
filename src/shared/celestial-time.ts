@@ -42,6 +42,18 @@ export function localDateTimeValueFromInstant(
   return shifted.toISOString().slice(0, 19);
 }
 
+export function formatLocalDateTime24(
+  observedAtIso: string,
+  offsetMinutes: number
+): string {
+  const localValue = localDateTimeValueFromInstant(observedAtIso, offsetMinutes);
+  const year = localValue.slice(0, 4);
+  const month = localValue.slice(5, 7);
+  const day = localValue.slice(8, 10);
+  const time = localValue.slice(11, 19);
+  return `${day}.${month}.${year} · ${time}`;
+}
+
 export function instantIsoFromLocalDateTime(
   localDateTime: string,
   offsetMinutes: number

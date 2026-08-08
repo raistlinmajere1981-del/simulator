@@ -1,4 +1,5 @@
 import {
+  formatLocalDateTime24,
   formatUtcOffset,
   instantIsoFromLocalDateTime,
   localDateTimeValueFromInstant,
@@ -31,6 +32,8 @@ export function CelestialTimeCard({
   }
 
   const localValue = localDateTimeValueFromInstant(observedAtIso, utcOffsetMinutes);
+  const explicitLocalTime = formatLocalDateTime24(observedAtIso, utcOffsetMinutes);
+  const offsetLabel = formatUtcOffset(utcOffsetMinutes);
   const offsetHours = utcOffsetMinutes / 60;
 
   return (
@@ -40,9 +43,10 @@ export function CelestialTimeCard({
         <div><span className="section-state">GÜNEŞ · 6.1</span><PanelHelpButton panelId="celestial-time" /></div>
       </div>
       <label>
-        <span>Yerel tarih / saat</span>
+        <span>Yerel tarih / saat · sistem görünümü</span>
         <input
           aria-label="Astronomi gözlemi yerel tarih ve saati"
+          lang="tr-TR"
           type="datetime-local"
           step="1"
           value={localValue}
@@ -52,6 +56,11 @@ export function CelestialTimeCard({
           }}
         />
       </label>
+      <div className="celestial-time-exact" aria-label={`24 saatlik kesin yerel gözlem zamanı ${explicitLocalTime} ${offsetLabel}`}>
+        <span>Kesin yerel zaman · 24 saat</span>
+        <strong>{explicitLocalTime}</strong>
+        <b>{offsetLabel}</b>
+      </div>
       <label>
         <span>UTC ofseti</span>
         <div className="celestial-offset-row">
@@ -69,7 +78,7 @@ export function CelestialTimeCard({
               onChange(instantIsoFromLocalDateTime(localValue, nextOffset), nextOffset);
             }}
           />
-          <b>{formatUtcOffset(utcOffsetMinutes)}</b>
+          <b>{offsetLabel}</b>
         </div>
       </label>
       <button

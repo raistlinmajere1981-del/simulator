@@ -16,7 +16,8 @@
   gap: 4px;
 }
 
-.celestial-time-card label > span {
+.celestial-time-card label > span,
+.celestial-time-exact > span {
   color: #839aa7;
   font-size: 9px;
   text-transform: uppercase;
@@ -32,6 +33,29 @@
   background: #0d1a23;
   color: #cfe0e8;
   padding: 0 7px;
+}
+
+.celestial-time-exact {
+  display: grid;
+  gap: 3px;
+  padding: 7px 8px;
+  border: 1px solid #31566a;
+  border-radius: 4px;
+  background: #0b1c27;
+}
+
+.celestial-time-exact strong {
+  color: #c9edf0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.celestial-time-exact b {
+  color: #7ec9d5;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
 }
 
 .celestial-offset-row {

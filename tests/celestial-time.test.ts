@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CelestialTimeError,
+  formatLocalDateTime24,
   formatUtcOffset,
   instantIsoFromLocalDateTime,
   localDateTimeValueFromInstant
@@ -16,6 +17,11 @@ describe('celestial time helpers', () => {
     const local = localDateTimeValueFromInstant('2026-08-08T18:30:00.000Z', 180);
     expect(local).toBe('2026-08-08T21:30:00');
     expect(instantIsoFromLocalDateTime(local, 180)).toBe('2026-08-08T18:30:00.000Z');
+  });
+
+  it('formats the selected instant as an explicit 24-hour local clock', () => {
+    expect(formatLocalDateTime24('2026-08-08T20:06:28.642Z', 180))
+      .toBe('08.08.2026 · 23:06:28');
   });
 
   it('formats fractional-hour UTC offsets without losing minutes', () => {
