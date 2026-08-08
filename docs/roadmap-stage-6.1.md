@@ -24,3 +24,7 @@ Bu aşamada Güneş ve Ay Gözlemleri senaryosunun ilk fiziksel referans hesabı
 6.1 sonucu geometrik astronomik referanstır. Atmosferik kırılma, topoğrafik ufuk, Güneş diskinin görünür kenarı, gölge geometrisi ve Dünya şekli modellerinin ayrı Güneş tahminleri bu aşamada sonuca karıştırılmaz. Bu ayrım daha sonraki karşılaştırmalı astronomi aşamalarının aynı girdiler üzerinde izlenebilir kurulmasını sağlar.
 
 Ay konumu 6.2 kapsamındadır.
+
+## Doğrulama
+
+Final ürün head'i strict TypeScript, 53 test dosyasında 291 test ve production build ile doğrulanmıştır. Birleşme sonrası `main` doğrulaması ayrıca yapılır.
