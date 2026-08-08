@@ -2,6 +2,7 @@ import type { ResultStatus } from '../../shared/domain';
 import type { PhotoReferenceKind } from '../../shared/photo-calibration';
 import type { PhotoAngularComparisonResult } from '../../simulation/photo-angular-comparison';
 import './photo-angular-comparison.css';
+import { PanelHelpButton } from './HelpSystem';
 
 const statusLabels: Record<ResultStatus, string> = {
   compatible: 'Uyumlu',
@@ -38,7 +39,7 @@ export function PhotoAngularComparisonPanel({
               : 'U1–U2: görsel referans'}
           </strong>
         </div>
-        <span className="photo-angular-independent">BAĞIMSIZ GÖZLEM KANALI</span>
+        <div className="photo-angular-heading-actions"><PanelHelpButton panelId="photo-comparison" /><span className="photo-angular-independent">BAĞIMSIZ GÖZLEM KANALI</span></div>
       </div>
 
       <p className="photo-angular-note">

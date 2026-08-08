@@ -1,6 +1,7 @@
 import type { AtmosphereMode } from '../../shared/atmosphere';
 import type { ModelInputUncertaintySettings } from '../../shared/uncertainty';
 import './photo-model-uncertainty-control.css';
+import { PanelHelpButton } from './HelpSystem';
 
 type NumericKey = Exclude<keyof ModelInputUncertaintySettings, 'combination'>;
 
@@ -61,9 +62,12 @@ export function PhotoModelUncertaintyControl({
           <span className="eyebrow">Model girdi belirsizliği</span>
           <strong>Fotoğraf karşılaştırması için hassasiyet zarfı</strong>
         </div>
-        <span className={`photo-model-uncertainty-state ${isCalculating ? 'busy' : count > 0 ? 'active' : ''}`}>
+        <div className="photo-model-uncertainty-heading-actions">
+          <PanelHelpButton panelId="model-uncertainty" />
+          <span className={`photo-model-uncertainty-state ${isCalculating ? 'busy' : count > 0 ? 'active' : ''}`}>
           {isCalculating ? 'HESAPLANIYOR…' : count > 0 ? `${count} BİLEŞEN` : 'TANIMLANMADI'}
-        </span>
+          </span>
+        </div>
       </div>
 
       <p className="photo-model-uncertainty-note">
