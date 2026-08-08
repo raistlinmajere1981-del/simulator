@@ -1,0 +1,26 @@
+name: Update stage 5.6 roadmap
+on:
+  push:
+    branches: [agent/text-experiment-preparation]
+    paths:
+      - scripts/update_stage_5_6_roadmap.py
+      - .github/workflows/update-stage-5-6-roadmap.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/text-experiment-preparation
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/update_stage_5_6_roadmap.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs: mark stages 5.5 and 5.6 complete"
+          git push origin HEAD:agent/text-experiment-preparation
