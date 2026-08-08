@@ -42,6 +42,7 @@ export function CelestialTimeCard({
       <label>
         <span>Yerel tarih / saat</span>
         <input
+          aria-label="Astronomi gözlemi yerel tarih ve saati"
           type="datetime-local"
           step="1"
           value={localValue}
@@ -55,6 +56,7 @@ export function CelestialTimeCard({
         <span>UTC ofseti</span>
         <div className="celestial-offset-row">
           <input
+            aria-label="Astronomi gözlemi UTC ofseti saat"
             type="number"
             min={-12}
             max={14}
@@ -71,6 +73,7 @@ export function CelestialTimeCard({
         </div>
       </label>
       <button
+        aria-label="Astronomi gözlem zamanını şimdi yap"
         className="celestial-now-button"
         type="button"
         onClick={() => {
