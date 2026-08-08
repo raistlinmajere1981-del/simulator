@@ -419,7 +419,7 @@ function Sidebar({
       <section className="side-section compact">
         <div className="section-heading">
           <span>Modeller</span>
-          <span className="section-state">2 fiziksel</span>
+          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '1 astronomik referans' : '2 fiziksel'}</span>
         </div>
         {activeScenarioId === 'sun-moon-observation' ? (
           <div className="model-toggle reference-model">
@@ -444,6 +444,17 @@ function Sidebar({
         </>)}
       </section>
 
+      {activeScenarioId === 'sun-moon-observation' ? (
+        <section className="side-section compact grow celestial-visual-placeholder">
+          <div className="section-heading">
+            <span>Görsel katmanlar</span>
+            <span className="section-state">astronomi · sonraki dilim</span>
+          </div>
+          <div className="saved-empty">
+            Güneş gökyüzü/ufuk görselleştirme katmanları daha sonraki astronomi aşamasında etkinleşecek. 6.1 sonucu şu anda sayısal geometrik referanstır.
+          </div>
+        </section>
+      ) : (
       <section className="side-section compact grow">
         <div className="section-heading">
           <span>Görsel katmanlar</span>
@@ -501,6 +512,7 @@ function Sidebar({
           <span className="switch" />
         </label>
       </section>
+      )}
 
       <CelestialTimeCard
         active={activeScenarioId === 'sun-moon-observation'}
