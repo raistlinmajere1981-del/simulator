@@ -1,6 +1,6 @@
 # Aşama 5.6 — Metinden Deney Hazırlama ve Kontrollü Form Doldurma
 
-Durum: planlandı · Aşama 6'dan önce
+Durum: tamamlandı · `1.7.0`
 
 ## Amaç
 
@@ -70,3 +70,18 @@ Taslak sözleşmesi senaryo-temelli olmalıdır. Güneş/Ay/yıldız deneyleri e
 - Birim dönüşümleri testlerle doğrulanmalı.
 - Eski/kısmi deneyler için uygulanabilir alanlar seçilebilmeli.
 - Metinden gelen değerlerin provenansı raporlanabilir biçimde korunabilmeli.
+
+
+## 1.7.0 gerçekleşen kapsam
+
+- Çevrimdışı, deterministik Türkçe ayrıştırıcı.
+- Senaryo, manuel mesafe/koordinat, göz ve hedef yükseklikleri, uç zemin kotları, görünürlük/gözlem belirsizliği, datum/ofset, Standart k/kapalı atmosfer ve açık model belirsizliği adayları.
+- `Bulundu / Kontrol gerekli / Kullanılamadı` sınıflandırması.
+- Her alan için `mevcut → önerilen` önizlemesi ve bağımsız uygula/atla seçimi.
+- Birimsiz veya çelişkili ifadelerin otomatik uygulanmaması.
+- Fotoğraf/FOV ve su seviyesi gibi ek provenans gerektiren ifadelerin başka alana zorla eşlenmemesi.
+- Kullanıcı onayından sonra tek batch state güncellemesi; model hesapları ancak bundan sonra yeniden çalışır.
+- Kaynak metin, parser sürümü, uygulama zamanı ve uygulanan alan parçalarının deney kaydı / `.ggl.json` / HTML raporunda provenans olarak korunması.
+- Üst araç çubuğunda `Metinden Hazırla` girişi ve merkezi Yardım kataloğunda ilgili açıklama.
+
+Bu sürüm harici AI/LLM kullanmaz. Gelecekte bir LLM adaptörü eklenirse yalnız aynı tipli taslak sözleşmesine aday veri üretmeli; doğrudan React state veya fiziksel modele yazmamalıdır.

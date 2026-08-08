@@ -13,6 +13,10 @@ import type {
 } from '../../shared/domain';
 import type { SavedPhotoCalibration } from '../../shared/photo-calibration';
 import type { HelpPanelId } from '../../shared/help-content';
+import type {
+  ExperimentSetupApplication,
+  TextExperimentSetupProvenance
+} from '../../shared/text-experiment-setup';
 import {
   DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS,
   hasDefinedModelInputUncertainty,
@@ -105,6 +109,7 @@ import { PhotoAngularComparisonPanel } from './PhotoAngularComparisonPanel';
 import { PhotoModelUncertaintyControl } from './PhotoModelUncertaintyControl';
 import { WorldModelViewport } from './WorldModelViewport';
 import { HelpOverlay, HelpProvider, PanelHelpButton } from './HelpSystem';
+import { TextExperimentSetupDialog } from './TextExperimentSetupDialog';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -1082,6 +1087,8 @@ export function AppNext(): React.JSX.Element {
   const [storageMessage, setStorageMessage] = useState('');
   const [helpPanelId, setHelpPanelId] = useState<HelpPanelId>();
   const [helpCatalogOpen, setHelpCatalogOpen] = useState(false);
+  const [textSetupOpen, setTextSetupOpen] = useState(false);
+  const [textSetupHistory, setTextSetupHistory] = useState<TextExperimentSetupProvenance[]>([]);
   const [visualLayers, setVisualLayers] = useState<VisualLayerState>({
     geographicBoundaries: true,
     terrain: false,
@@ -1301,6 +1308,53 @@ export function AppNext(): React.JSX.Element {
     setIsDirty(true);
   };
 
+  const applyTextExperimentSetup = (application: ExperimentSetupApplication): void => {
+    const nextScenario = application.scenarioId;
+    const scenarioChanged = nextScenario !== undefined && nextScenario !== activeScenarioId;
+    const changed = application.inputChanges;
+    const terrainRelevant = changed.surfaceDistanceKm !== undefined || changed.distanceSource !== undefined ||
+      changed.observerLatitudeDeg !== undefined || changed.observerLongitudeDeg !== undefined ||
+      changed.targetLatitudeDeg !== undefined || changed.targetLongitudeDeg !== undefined ||
+      changed.observerGroundElevationM !== undefined || changed.targetGroundElevationM !== undefined;
+    const verticalRelevant = changed.verticalDatumKind !== undefined || changed.verticalDatumOffsetM !== undefined ||
+      changed.observerGroundElevationM !== undefined || changed.targetGroundElevationM !== undefined;
+
+    if (terrainRelevant) markTerrainSourceModified();
+    if (verticalRelevant) {
+      markGeoidConversionModified();
+      markWaterApplicationModified();
+    }
+
+    if (scenarioChanged && nextScenario) {
+      setActiveScenarioId(nextScenario);
+      setActiveExperimentId(crypto.randomUUID());
+      setActiveExperimentName('');
+      setExperimentObservedAtIso(new Date().toISOString());
+      setGeoidConversionRecord(undefined);
+      setWaterObservationRecord(undefined);
+      setWaterApplicationRecord(undefined);
+      setPhotoCalibration(undefined);
+      setPhotoCalibrationRecord(undefined);
+      setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS, ...application.modelUncertaintyChanges });
+      setModelAngularUncertaintyById({});
+      setModelUncertaintyError(undefined);
+      setTextSetupHistory([application.provenance]);
+    } else {
+      if (Object.keys(application.modelUncertaintyChanges).length > 0) {
+        setPhotoModelUncertainty((current) => ({ ...current, ...application.modelUncertaintyChanges }));
+      }
+      setTextSetupHistory((current) => [...current, application.provenance].slice(-50));
+    }
+
+    setInputs((current) => ({ ...current, ...application.inputChanges }));
+    if (application.atmosphereMode) {
+      setAtmosphereState((current) => ({ ...current, mode: application.atmosphereMode! }));
+    }
+    setIsDirty(true);
+    const count = application.provenance.appliedFields.length;
+    setStorageMessage(`Metinden hazırlanan taslaktan ${count} alan uygulandı.`);
+  };
+
   const updateTerrainPoints = (points: ManualTerrainPoint[]): void => {
     setManualTerrainPoints(points);
     markTerrainSourceModified();
@@ -1487,6 +1541,7 @@ export function AppNext(): React.JSX.Element {
     setWaterApplicationRecord(storedWater.application);
     setPhotoCalibration(saved.photoCalibration);
     setPhotoModelUncertainty(saved.photoModelUncertainty ?? { ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+    setTextSetupHistory(saved.textSetupHistory ?? []);
     setPhotoCalibrationRecord(photoPrediction
       ? {
           prediction: photoPrediction,
@@ -1516,6 +1571,7 @@ export function AppNext(): React.JSX.Element {
       atmosphere: cloneAtmosphereExperimentState(atmosphereState),
       ...(photoCalibration ? { photoCalibration } : {}),
       ...(photoCalibration && modelInputUncertaintyDefined ? { photoModelUncertainty } : {}),
+      ...(textSetupHistory.length > 0 ? { textSetupHistory } : {}),
       inputs,
       manualTerrainPoints,
       terrainProfileSource,
@@ -1579,6 +1635,7 @@ export function AppNext(): React.JSX.Element {
       setWaterApplicationRecord(savedWater.application);
       setPhotoCalibration(saved.photoCalibration);
       setPhotoModelUncertainty(saved.photoModelUncertainty ?? { ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+      setTextSetupHistory(saved.textSetupHistory ?? []);
       setPhotoCalibrationRecord(savedPhotoPrediction
         ? {
             prediction: savedPhotoPrediction,
@@ -1609,6 +1666,7 @@ export function AppNext(): React.JSX.Element {
         setPhotoCalibration(undefined);
         setPhotoCalibrationRecord(undefined);
         setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+        setTextSetupHistory([]);
         setModelAngularUncertaintyById({});
         setModelUncertaintyError(undefined);
         setIsDirty(true);
@@ -1688,6 +1746,7 @@ export function AppNext(): React.JSX.Element {
           {storageMessage && <span className="storage-message" title={storageMessage}>{storageMessage}</span>}
         </div>
         <div className="top-actions">
+          <button type="button" onClick={() => setTextSetupOpen(true)}>✦ Metinden Hazırla</button>
           <button type="button" onClick={() => setDataManagerOpen(true)}>▤ Veri Yöneticisi</button>
           <button disabled title="Ayarlar modülü sonraki aşamada" type="button">⚙ Ayarlar</button>
           <button type="button" onClick={openHelpCatalog}>ⓘ Yardım</button>
@@ -1712,6 +1771,7 @@ export function AppNext(): React.JSX.Element {
             setPhotoCalibration(undefined);
             setPhotoCalibrationRecord(undefined);
             setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+            setTextSetupHistory([]);
             setModelAngularUncertaintyById({});
             setModelUncertaintyError(undefined);
             setIsDirty(false);
@@ -1753,6 +1813,7 @@ export function AppNext(): React.JSX.Element {
                 setPhotoCalibration(undefined);
                 setPhotoCalibrationRecord(undefined);
                 setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+                setTextSetupHistory([]);
                 setModelAngularUncertaintyById({});
                 setModelUncertaintyError(undefined);
                 setActiveExperimentId(crypto.randomUUID());
@@ -1788,6 +1849,7 @@ export function AppNext(): React.JSX.Element {
                 setPhotoCalibration(undefined);
                 setPhotoCalibrationRecord(undefined);
                 setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+                setTextSetupHistory([]);
                 setModelAngularUncertaintyById({});
                 setModelUncertaintyError(undefined);
                 setIsDirty(true);
@@ -1897,6 +1959,15 @@ export function AppNext(): React.JSX.Element {
         </main>
       </div>
 
+      <TextExperimentSetupDialog
+        open={textSetupOpen}
+        scenarioId={activeScenarioId}
+        inputs={inputs}
+        atmosphereMode={atmosphereState.mode}
+        modelUncertainty={photoModelUncertainty}
+        onClose={() => setTextSetupOpen(false)}
+        onApply={applyTextExperimentSetup}
+      />
       <SaveExperimentDialog
         initialName={activeExperimentName || defaultExperimentName(activeScenarioId)}
         open={saveDialogOpen}

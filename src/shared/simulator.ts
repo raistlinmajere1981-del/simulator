@@ -4,6 +4,7 @@ import type { CalculationTrace, ModelPrediction } from './domain';
 import type { SimulationScenarioId } from './scenario';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 import type { ModelInputUncertaintySettings } from './uncertainty';
+import type { TextExperimentSetupProvenance } from './text-experiment-setup';
 
 export type DistanceSource = 'manual' | 'coordinates';
 export type TerrainMode = 'off' | 'manual-three-point' | 'manual-points';
@@ -171,6 +172,8 @@ export interface SavedExperiment {
   photoCalibration?: SavedPhotoCalibration;
   /** Optional explicit model-input uncertainties used by photo/model angular comparison. */
   photoModelUncertainty?: ModelInputUncertaintySettings;
+  /** Provenance history for user-approved values extracted from free-form experiment text. */
+  textSetupHistory?: TextExperimentSetupProvenance[];
   inputs: SimulatorInputs;
   /**
    * Ordered interior terrain points. Endpoints are derived from the observer

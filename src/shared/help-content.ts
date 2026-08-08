@@ -1,5 +1,6 @@
 export type HelpPanelId =
   | 'scenario-summary'
+  | 'text-experiment-setup'
   | 'photo-calibration'
   | 'atmosphere'
   | 'terrain-datum'
@@ -133,6 +134,22 @@ export const HELP_PANELS: readonly HelpPanelContent[] = [
     commonMistakes: ['Kamera fotoğrafından tahmini görünürlük yüzdesini kesin ölçüm gibi girmek.', 'Göz yüksekliği ile gözlemci zemin kotunu birbirine karıştırmak.'],
     example: 'Gözlemci zeminden 2 m yüksekte, hedef 20 km uzakta ve 30 m yüksekse; göz yüksekliği 2 m, hedef yüksekliği 30 m olarak girilir.',
     relatedTerms: ['geodesic', 'azimuth', 'k', 'uncertainty']
+  },
+  {
+    id: 'text-experiment-setup',
+    category: 'Deney',
+    title: 'Metinden deney hazırlama',
+    summary: 'Serbest gözlem notunu deterministik kurallarla tipli bir taslağa dönüştürür. Bulunan değerler kullanıcı onayı olmadan deney state’ine yazılmaz.',
+    fields: [
+      { label: 'Bulundu', description: 'Birim, bağlam ve aralık bakımından güvenle eşlenen; seçilirse uygulanabilen alan.' },
+      { label: 'Kontrol gerekli', description: 'Eksik birim, çelişen tekrar veya ek fiziksel bağlam gerektiren ifade. Otomatik uygulanmaz.' },
+      { label: 'Kullanılamadı', description: 'Mevcut sözleşmede tek başına güvenli uygulanamayan ifade; örneğin provenansı eksik su seviyesi veya fotoğrafsız FOV.' },
+      { label: 'Mevcut → önerilen', description: 'Forma yazmadan önce mevcut değer ile metinden çıkarılan aday değeri yan yana gösterir.' }
+    ],
+    assumptions: ['İlk sürüm çevrimdışı ve kural tabanlıdır; harici AI servisi kullanmaz.', 'Metinde bulunmayan değerler için fiziksel varsayım uydurulmaz.'],
+    commonMistakes: ['Birimsiz sayının metre/km olduğu varsayımını beklemek.', 'Kontrol gerekli satırın otomatik uygulanacağını sanmak.', 'Metinden hazırlama provenansını gerçek ölçüm kaynağının yerine koymak.'],
+    example: '“Gözlemci deniz seviyesinden 12 m, kamera yerden 1,7 m; hedef 34,2 km uzakta ve 42 m yüksekliğinde; standart kırılma k=0,13.” metni önce taslak önizlemesine dönüşür.',
+    relatedTerms: ['provenance', 'uncertainty', 'datum', 'k']
   },
   {
     id: 'photo-calibration',
