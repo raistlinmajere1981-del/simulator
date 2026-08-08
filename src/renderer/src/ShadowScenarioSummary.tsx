@@ -45,7 +45,7 @@ export function ShadowScenarioSummary({
       </div>
 
       <p className="scenario-scope-note">
-        Dikey bir gnomonun yerel yatay yüzeyde oluşturacağı gölge geometrisi hesaplanır. Tarih/saat sol alttaki Zaman ve tarih kartından yönetilir. Bu astronomik referans herhangi bir Dünya modeli için fiziksel Güneş kuralı uydurmaz.
+        Dikey bir gnomonun yerel yatay yüzeyde oluşturacağı gölge geometrisi hesaplanır. İstersen ikinci WGS84 gözlem noktasını aynı UTC anında eşzamanlı karşılaştırmaya ekleyebilirsin. Tarih/saat sol alttaki Zaman ve tarih kartından yönetilir. Bu astronomik referans herhangi bir Dünya modeli için fiziksel Güneş kuralı uydurmaz.
       </p>
     </section>
   );

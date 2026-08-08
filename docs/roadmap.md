@@ -509,9 +509,22 @@ Durum: tamamlandı · `1.10.0`
 
 Ayrıntı: [`roadmap-stage-6.3.md`](roadmap-stage-6.3.md)
 
+### Aşama 6.4 — İki konumlu eşzamanlı gölge karşılaştırması
+
+Durum: tamamlandı · `1.11.0`
+
+- Gölge Deneyi içinde opsiyonel ikinci WGS84 gözlem noktası
+- iki noktanın aynı UTC fiziksel anında bağımsız Güneş/gölge çözümü
+- farklı gnomon yüksekliklerini ortak açısal gözlem kanalına dönüştürme
+- WGS84 baz çizgisi, Güneş yükseklik farkı ve gölge yönü farkı
+- açık saha belirsizlikleri varsa fark düzeyinde uyum değerlendirmesi
+- prediction snapshot üzerinden reopen, portable ve HTML rapor korunumu
+- Dünya modellerine tanımsız Güneş/ışık davranışı uydurmama
+
+Ayrıntı: [`roadmap-stage-6.4.md`](roadmap-stage-6.4.md)
+
 ### Sonraki astronomi dilimleri
 
-- iki konumlu eşzamanlı gölge karşılaştırması
 - gün doğumu ve gün batımı
 - yıldız görünürlüğü ve yıldız izleri
 

@@ -96,6 +96,15 @@ import {
   type ShadowObservationSettings
 } from '../../simulation/shadow-observation';
 import {
+  DUAL_SHADOW_COMPARISON_MODEL_ID,
+  calculateDualShadowComparison,
+  createDefaultDualShadowComparisonSettings,
+  createDualShadowComparisonPrediction,
+  dualShadowComparisonMetadata,
+  readDualShadowComparisonSettings,
+  type DualShadowComparisonSettings
+} from '../../simulation/dual-shadow-comparison';
+import {
   WATER_SURFACE_APPLICATION_MODEL_ID,
   type WaterSurfaceApplicationResult
 } from '../../simulation/water-surface-application';
@@ -132,6 +141,7 @@ import { LunarPositionPanel } from './LunarPositionPanel';
 import { SolarScenarioSummary } from './SolarScenarioSummary';
 import { ShadowScenarioSummary } from './ShadowScenarioSummary';
 import { ShadowObservationPanel } from './ShadowObservationPanel';
+import { DualShadowComparisonPanel } from './DualShadowComparisonPanel';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -1112,6 +1122,7 @@ export function AppNext(): React.JSX.Element {
   );
   const [activeScenarioId, setActiveScenarioId] = useState<SimulationScenarioId>('target-visibility');
   const [shadowObservationSettings, setShadowObservationSettings] = useState<ShadowObservationSettings>(() => ({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS }));
+  const [dualShadowSettings, setDualShadowSettings] = useState<DualShadowComparisonSettings>();
   const [manualTerrainPoints, setManualTerrainPoints] = useState<ManualTerrainPoint[]>(
     defaultTerrainPoints()
   );
@@ -1289,6 +1300,21 @@ export function AppNext(): React.JSX.Element {
   const shadowObservationPrediction = useMemo(() => shadowObservationResult
     ? createShadowObservationPrediction(shadowObservationResult)
     : undefined, [shadowObservationResult]);
+  const dualShadowComparisonResult = useMemo(() => activeScenarioId === 'shadow-observation' && dualShadowSettings
+    ? calculateDualShadowComparison({
+        experimentId: activeExperimentId,
+        observedAtIso: experimentObservedAtIso,
+        stationA: {
+          latitudeDeg: inputs.observerLatitudeDeg,
+          longitudeDeg: inputs.observerLongitudeDeg,
+          ...shadowObservationSettings
+        },
+        stationB: dualShadowSettings.stationB
+      })
+    : undefined, [activeExperimentId, activeScenarioId, dualShadowSettings, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg, shadowObservationSettings]);
+  const dualShadowComparisonPrediction = useMemo(() => dualShadowComparisonResult
+    ? createDualShadowComparisonPrediction(dualShadowComparisonResult)
+    : undefined, [dualShadowComparisonResult]);
 
   const context = useMemo(() => ({
     atmosphereMode: atmosphereState.mode,
@@ -1447,6 +1473,7 @@ export function AppNext(): React.JSX.Element {
       setActiveExperimentId(crypto.randomUUID());
       setActiveExperimentName('');
       setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
+      setDualShadowSettings(undefined);
       setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
       setGeoidConversionRecord(undefined);
@@ -1646,8 +1673,12 @@ export function AppNext(): React.JSX.Element {
     const shadowPrediction = saved.predictions.find(
       (prediction) => prediction.modelId === SHADOW_OBSERVATION_MODEL_ID
     );
+    const dualShadowPrediction = saved.predictions.find(
+      (prediction) => prediction.modelId === DUAL_SHADOW_COMPARISON_MODEL_ID
+    );
     setActiveScenarioId(normalizeSimulationScenarioId(saved.scenarioId));
     setShadowObservationSettings(readShadowObservationSettings(shadowPrediction));
+    setDualShadowSettings(readDualShadowComparisonSettings(dualShadowPrediction));
     setInputs(saved.inputs);
     setAtmosphereState(saved.atmosphere
       ? cloneAtmosphereExperimentState(saved.atmosphere)
@@ -1714,6 +1745,9 @@ export function AppNext(): React.JSX.Element {
         ...(shadowObservationPrediction
           ? [[shadowObservationMetadata.id, shadowObservationMetadata.version] as const]
           : []),
+        ...(dualShadowComparisonPrediction
+          ? [[dualShadowComparisonMetadata.id, dualShadowComparisonMetadata.version] as const]
+          : []),
         ...(geoidConversionRecord
           ? [[GEOID_CONVERSION_MODEL_ID, geoidConversionRecord.modelVersion] as const]
           : []),
@@ -1735,6 +1769,7 @@ export function AppNext(): React.JSX.Element {
         ...(solarPositionPrediction ? [solarPositionPrediction] : []),
         ...(lunarPositionPrediction ? [lunarPositionPrediction] : []),
         ...(shadowObservationPrediction ? [shadowObservationPrediction] : []),
+        ...(dualShadowComparisonPrediction ? [dualShadowComparisonPrediction] : []),
         ...runs.map((run) => run.prediction),
         ...(geoidConversionRecord ? [geoidConversionRecord.prediction] : []),
         ...(waterObservationRecord ? [waterObservationRecord.prediction] : []),
@@ -1756,10 +1791,14 @@ export function AppNext(): React.JSX.Element {
       const savedShadowPrediction = saved.predictions.find(
         (prediction) => prediction.modelId === SHADOW_OBSERVATION_MODEL_ID
       );
+      const savedDualShadowPrediction = saved.predictions.find(
+        (prediction) => prediction.modelId === DUAL_SHADOW_COMPARISON_MODEL_ID
+      );
       setSavedExperiments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       setActiveExperimentId(saved.id);
       setActiveExperimentName(saved.name);
       setShadowObservationSettings(readShadowObservationSettings(savedShadowPrediction));
+      setDualShadowSettings(readDualShadowComparisonSettings(savedDualShadowPrediction));
       setExperimentObservedAtIso(saved.observedAtIso ?? saved.createdAtIso);
     setObservationUtcOffsetMinutes(saved.observationUtcOffsetMinutes ?? systemUtcOffsetMinutes(new Date(saved.observedAtIso ?? saved.createdAtIso)));
       setAtmosphereState(saved.atmosphere
@@ -1802,6 +1841,7 @@ export function AppNext(): React.JSX.Element {
         setActiveExperimentId(crypto.randomUUID());
         setActiveExperimentName('');
         setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
+      setDualShadowSettings(undefined);
         setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
         setAtmosphereState(createDefaultAtmosphereExperimentState('standard'));
@@ -1862,7 +1902,9 @@ export function AppNext(): React.JSX.Element {
       ? lunarPositionMetadata
       : traceModelId === shadowObservationMetadata.id
         ? shadowObservationMetadata
-        : traceModelId === geodesicMetadata.id
+        : traceModelId === dualShadowComparisonMetadata.id
+          ? dualShadowComparisonMetadata
+          : traceModelId === geodesicMetadata.id
     ? geodesicMetadata
     : traceModelId === WATER_SURFACE_OBSERVATION_MODEL_ID
       ? waterObservationMetadata
@@ -1875,7 +1917,9 @@ export function AppNext(): React.JSX.Element {
       ? lunarPositionPrediction
       : traceModelId === shadowObservationMetadata.id
         ? shadowObservationPrediction
-        : traceModelId === geodesicMetadata.id
+        : traceModelId === dualShadowComparisonMetadata.id
+          ? dualShadowComparisonPrediction
+          : traceModelId === geodesicMetadata.id
     ? geoPrediction
     : traceModelId === WATER_SURFACE_OBSERVATION_MODEL_ID
       ? waterObservationRecord?.prediction
@@ -1907,6 +1951,7 @@ export function AppNext(): React.JSX.Element {
     setActiveExperimentId(crypto.randomUUID());
     setActiveExperimentName('');
     setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
+      setDualShadowSettings(undefined);
     setExperimentObservedAtIso(new Date().toISOString());
     setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
     setIsDirty(false);
@@ -1952,6 +1997,7 @@ export function AppNext(): React.JSX.Element {
             setActiveExperimentId(crypto.randomUUID());
             setActiveExperimentName('');
             setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
+      setDualShadowSettings(undefined);
             setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
             setGeoidConversionRecord(undefined);
@@ -2021,13 +2067,28 @@ export function AppNext(): React.JSX.Element {
                   <LunarPositionPanel result={lunarPosition} onShowTrace={() => setTraceModelId(lunarPositionMetadata.id)} />
                 </div>
               : activeScenarioId === 'shadow-observation' && shadowObservationResult && shadowObservationPrediction
-              ? <ShadowObservationPanel
-                  result={shadowObservationResult}
-                  prediction={shadowObservationPrediction}
-                  settings={shadowObservationSettings}
-                  onChange={(settings) => { setShadowObservationSettings(settings); setIsDirty(true); }}
-                  onShowTrace={() => setTraceModelId(shadowObservationMetadata.id)}
-                />
+              ? <>
+                  <ShadowObservationPanel
+                    result={shadowObservationResult}
+                    prediction={shadowObservationPrediction}
+                    settings={shadowObservationSettings}
+                    onChange={(settings) => { setShadowObservationSettings(settings); setIsDirty(true); }}
+                    onShowTrace={() => setTraceModelId(shadowObservationMetadata.id)}
+                  />
+                  <DualShadowComparisonPanel
+                    primaryResult={shadowObservationResult}
+                    settings={dualShadowSettings}
+                    result={dualShadowComparisonResult}
+                    prediction={dualShadowComparisonPrediction}
+                    onEnable={() => {
+                      setDualShadowSettings(createDefaultDualShadowComparisonSettings(inputs.observerLatitudeDeg, inputs.observerLongitudeDeg));
+                      setIsDirty(true);
+                    }}
+                    onDisable={() => { setDualShadowSettings(undefined); setIsDirty(true); }}
+                    onChange={(settings) => { setDualShadowSettings(settings); setIsDirty(true); }}
+                    onShowTrace={() => setTraceModelId(dualShadowComparisonMetadata.id)}
+                  />
+                </>
               : activeScenarioId === 'horizon'
               ? <HorizonReferencePanel inputs={inputs} atmosphereMode={atmosphereState.mode} />
               : <ObservationPanel inputs={inputs} />}
