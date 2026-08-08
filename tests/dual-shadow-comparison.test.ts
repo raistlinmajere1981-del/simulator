@@ -35,7 +35,7 @@ function baseInput(): DualShadowTestInput {
 describe('dual shadow comparison', () => {
   it('solves two locations at the same UTC instant and normalizes gnomon height', () => {
     const result = calculateDualShadowComparison(baseInput());
-    expect(result.observedAtIso).toBe(observedAtIso);
+    expect(result.observedAtIso).toBe(new Date(observedAtIso).toISOString());
     expect(result.separationDistanceM).toBeGreaterThan(300_000);
     expect(result.separationDistanceM).toBeLessThan(500_000);
     expect(Number.isFinite(result.predictedSolarElevationDifferenceDeg)).toBe(true);
