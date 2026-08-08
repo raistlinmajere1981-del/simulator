@@ -8,8 +8,9 @@ Bu aşamada fotoğraf açısal gözlemi ile fiziksel model tahmininin karşıla�
 
 - Fotoğraf kalibrasyonu model tahminini üretmek için kullanılmaz; karşılaştırma hâlâ sonradan ve tek yönlüdür.
 - Boş belirsizlik alanı `±0` değildir. Ölçülmemiş bir belirsizlik için yazılım varsayımsal sayı üretmez.
+- Girilen `±` değerler deterministik hassasiyet sınırlarıdır; kendiliğinden `1σ`, güven aralığı veya başka bir olasılık anlamı taşımaz.
 - Varsayılan birleşim `koruyucu doğrusal toplam`dır.
-- `RSS` yalnız bileşenlerin bağımsız olduğu savunulabiliyorsa kullanıcı tarafından açıkça seçilir ve bu varsayım hesap izinde korunur.
+- `RSS` yalnız bileşenlerin bağımsız olduğu savunulabiliyorsa kullanıcı tarafından açıkça seçilir ve bu varsayım hesap izinde korunur; RSS seçmek sonuçlara otomatik bir güven düzeyi atamaz.
 - Model girdi belirsizliği, nominal girdiyi değiştirmez; model her tanımlı parametrenin alt/üst uçlarında ayrıca çözülür ve nominal açıdan en büyük sapma katkı olarak alınır.
 - Belirsizlik aralığı bir açı kanalını fiziksel olarak tanımsız duruma geçirirse o kanal için sonlu uyum puanı uydurulmaz.
 
