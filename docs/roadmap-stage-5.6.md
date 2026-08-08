@@ -1,6 +1,6 @@
 # Aşama 5.6 — Metinden Deney Hazırlama ve Kontrollü Form Doldurma
 
-Durum: planlandı · Aşama 6'dan önce
+Durum: tamamlandı · `1.7.0`
 
 ## Amaç
 
@@ -14,11 +14,11 @@ Bu metin doğrudan UI state'ine yazılmaz. Önce tipli ve doğrulanmış bir tas
 
 ## Taslak ara katmanı
 
-Önerilen akış:
+Uygulanan akış:
 
-`Serbest metin -> çıkarım/parsing -> ExperimentSetupDraft -> doğrulama -> fark önizlemesi -> kullanıcı onayı -> mevcut UI state`
+`Serbest metin -> deterministik parsing -> ExperimentSetupDraft -> doğrulama -> fark önizlemesi -> kullanıcı onayı -> mevcut UI state`
 
-`ExperimentSetupDraft` yalnız mevcut uygulamanın gerçekten desteklediği alanları içermeli. İlk kapsam örnekleri:
+`ExperimentSetupDraft` yalnız mevcut uygulamanın gerçekten desteklediği alanları içerir. `1.7.0` kapsamı:
 
 - senaryo türü,
 - gözlemci/hedef koordinatları,
@@ -26,47 +26,62 @@ Bu metin doğrudan UI state'ine yazılmaz. Önce tipli ve doğrulanmış bir tas
 - göz ve hedef yüksekliği,
 - gözlemci/hedef zemin kotu,
 - düşey datum ve ofset,
-- atmosfer modu ve Standart `k`,
-- desteklenebildiği ölçüde katmanlı atmosfer girdileri,
-- fotoğraf/kamera kalibrasyon parametreleri,
-- açıkça verilen kamera/model belirsizlikleri,
-- su seviyesi bağlamında mevcut sözleşmeye uyan değerler.
+- gözlenen görünürlük ve gözlem belirsizliği,
+- atmosfer kapalı / Standart `k` modu ve kırılma katsayısı,
+- açıkça verilen model girdi belirsizlikleri.
+
+Katmanlı atmosfer, fotoğraf/FOV ve su seviyesi gibi ek sözleşme/provenans gerektiren ifadeler tespit edilebilir fakat eksik bağlamla otomatik uygulanmaz.
 
 ## Güvenlik ve bilimsel sınırlar
 
-- Birim belirtilmemişse sessizce metre/kilometre/derece varsayılmamalı; alan `belirsiz` olarak işaretlenmeli veya kullanıcıdan seçim istenmeli.
-- Aynı metinde çelişen iki değer varsa biri rastgele seçilmemeli.
-- Metinde bulunmayan bir değer için fiziksel varsayım uydurulmamalı.
-- Desteklenmeyen kavramlar ayrı listelenmeli; yakın görünen başka bir alana zorla eşlenmemeli.
-- Mevcut deney değerleri kullanıcı onayı olmadan üzerine yazılmamalı.
-- Çıkarılan her değerin mümkün olduğunca kaynak metindeki cümle/parça ile ilişkisi korunmalı.
+- Birim belirtilmemişse sessizce metre/kilometre/derece varsayılmaz; alan `Kontrol gerekli` olarak kalır.
+- Aynı metinde çelişen iki değer varsa biri rastgele seçilmez.
+- `Hedef 30 m yüksekliğinde` ifadesindeki `30 m` mesafe sayılmaz; hedef ifadesinin mesafe olması için `uzakta` / `mesafede` bağlamı gerekir.
+- Metinde bulunmayan bir değer için fiziksel varsayım uydurulmaz.
+- Desteklenmeyen kavramlar ayrı listelenir; yakın görünen başka bir alana zorla eşlenmez.
+- Mevcut deney değerleri kullanıcı onayı olmadan üzerine yazılmaz.
+- Çıkarılan her değerin kaynak metindeki cümle/parça ilişkisi korunur.
+- Metinden uygulanan model belirsizliği fotoğraf kalibrasyonu bulunmasa da deney state'inde saklanabilir; fotoğraf-model açı yayılımı ise ancak fotoğraf gözlemi olduğunda hesaplanır.
 - AI/LLM kullanılırsa model çıktısı güvenilir veri değildir; yalnız şemaya aday veri üretir ve uygulamanın kendi doğrulayıcılarından geçmek zorundadır.
 
 ## Önizleme
 
-Uygulamadan önce kullanıcıya en az şu üç grup gösterilmeli:
+Uygulamadan önce kullanıcıya üç grup gösterilir:
 
 - `Bulundu`: güvenle eşlenen değerler,
 - `Kontrol gerekli`: eksik birim, birden çok olası alan veya çelişki bulunan değerler,
-- `Kullanılamadı`: mevcut ürün sözleşmesinde karşılığı olmayan ifadeler.
+- `Kullanılamadı`: mevcut ürün sözleşmesinde tek başına güvenli uygulanamayan ifadeler.
 
-Her bulunan alan için `mevcut değer -> önerilen değer` farkı gösterilmeli ve alan bazında `uygula / atla` seçilebilmelidir.
+Her bulunan alan için `mevcut değer → önerilen değer` farkı gösterilir ve alan bazında `uygula / atla` seçilebilir.
 
 ## Ayrıştırma mimarisi
 
-İlk sürüm mümkün olduğunca deterministik birim/sayı/koordinat ayrıştırıcıları ile çalışabilir. Daha serbest doğal dil için AI/LLM desteği eklenirse sağlayıcıya özel kod deney state'ine bağlanmamalı; bir adaptör yalnız tipli taslak adayını üretmelidir.
+İlk sürüm çevrimdışı ve deterministik sayı, birim, koordinat ve anahtar sözcük kurallarıyla çalışır. Daha serbest doğal dil için AI/LLM desteği eklenirse sağlayıcıya özel kod deney state'ine bağlanmamalı; adaptör yalnız tipli taslak adayını üretmelidir.
 
-Böylece aynı UI akışı çevrimdışı kural tabanlı ayrıştırıcı, yerel model veya harici API ile kullanılabilir.
+Böylece aynı UI akışı çevrimdışı kural tabanlı ayrıştırıcı, gelecekte yerel model veya harici API ile kullanılabilir.
 
 ## Aşama 6 ve sonrası
 
-Taslak sözleşmesi senaryo-temelli olmalıdır. Güneş/Ay/yıldız deneyleri eklendiğinde tarih-saat, gözlem konumu, gölge uzunluğu/yönü ve benzeri yeni alanlar aynı mekanizmaya eklenebilir; mevcut parser akışı yeniden yazılmamalıdır.
+Taslak sözleşmesi senaryo-temellidir. Güneş/Ay/yıldız deneyleri eklendiğinde tarih-saat, gözlem konumu, gölge uzunluğu/yönü ve benzeri yeni alanlar aynı mekanizmaya eklenebilir; mevcut güvenlik ve önizleme akışı yeniden yazılmamalıdır.
 
 ## Kabul ölçütleri
 
-- Parser sonucu doğrudan React state'ine yazılmamalı.
-- Geçersiz veya belirsiz değerler doğrulama katmanını geçememeli.
-- Kullanıcı onayı olmadan mevcut alanlar değişmemeli.
-- Birim dönüşümleri testlerle doğrulanmalı.
-- Eski/kısmi deneyler için uygulanabilir alanlar seçilebilmeli.
-- Metinden gelen değerlerin provenansı raporlanabilir biçimde korunabilmeli.
+- Parser sonucu doğrudan React state'ine yazılmaz.
+- Geçersiz veya belirsiz değerler doğrulama katmanını geçemez.
+- Kullanıcı onayı olmadan mevcut alanlar değişmez.
+- Birim dönüşümleri ve bağlam ayrımları testlerle doğrulanır.
+- Eski/kısmi deneyler için uygulanabilir alanlar seçilebilir.
+- Metinden gelen değerlerin provenansı raporlanabilir biçimde korunur.
+
+## 1.7.0 gerçekleşen kapsam
+
+- Çevrimdışı, deterministik Türkçe ayrıştırıcı.
+- `Bulundu / Kontrol gerekli / Kullanılamadı` sınıflandırması.
+- Her alan için `mevcut → önerilen` önizlemesi ve bağımsız uygula/atla seçimi.
+- Birimsiz, çelişkili veya bağlamı yetersiz ifadelerin otomatik uygulanmaması.
+- Fotoğraf/FOV ve su seviyesi gibi ek provenans gerektiren ifadelerin başka alana zorla eşlenmemesi.
+- Kullanıcı onayından sonra tek batch state güncellemesi; model hesapları ancak bundan sonra yeniden çalışır.
+- Kaynak metin, parser sürümü, uygulama zamanı ve uygulanan alan parçalarının deney kaydı / `.ggl.json` / HTML raporunda provenans olarak korunması.
+- Üst araç çubuğunda `Metinden Hazırla` girişi ve merkezi Yardım kataloğunda ilgili açıklama.
+
+Bu sürüm harici AI/LLM kullanmaz. Gelecekte bir LLM adaptörü eklenirse yalnız aynı tipli taslak sözleşmesine aday veri üretmeli; doğrudan React state veya fiziksel modele yazmamalıdır.

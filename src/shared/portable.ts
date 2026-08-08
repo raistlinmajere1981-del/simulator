@@ -18,6 +18,7 @@ import type { ModelInputUncertaintySettings, UncertaintyCombination } from './un
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 import type { CameraCalibrationUncertainty, PhotoCalibrationMarks, PhotoSourceMetadata, SavedPhotoCalibration } from './photo-calibration';
 import { normalizeSimulationScenarioId } from './scenario';
+import type { TextExperimentSetupProvenance } from './text-experiment-setup';
 import { parseAtmosphereExperimentState } from '../simulation/atmosphere-persistence';
 import {
   migrateLegacyManualTerrainPoint,
@@ -603,6 +604,35 @@ function parsePhotoCalibration(value: unknown): SavedPhotoCalibration | null {
   };
 }
 
+function parseTextSetupHistory(value: unknown): TextExperimentSetupProvenance[] | null {
+  if (!Array.isArray(value) || value.length > 50) return null;
+  const history: TextExperimentSetupProvenance[] = [];
+  for (const item of value) {
+    if (!isRecord(item) || !isNonEmptyString(item.parserVersion) ||
+      typeof item.sourceText !== 'string' || item.sourceText.length > 10_000 ||
+      !isIsoDate(item.appliedAtIso) || !Array.isArray(item.appliedFields) ||
+      item.appliedFields.length > 64) return null;
+    const appliedFields: TextExperimentSetupProvenance['appliedFields'] = [];
+    for (const field of item.appliedFields) {
+      if (!isRecord(field) || !isNonEmptyString(field.fieldId) || field.fieldId.length > 80 ||
+        typeof field.displayValue !== 'string' || field.displayValue.length > 500 ||
+        typeof field.sourceExcerpt !== 'string' || field.sourceExcerpt.length > 1_000) return null;
+      appliedFields.push({
+        fieldId: field.fieldId as TextExperimentSetupProvenance['appliedFields'][number]['fieldId'],
+        displayValue: field.displayValue,
+        sourceExcerpt: field.sourceExcerpt
+      });
+    }
+    history.push({
+      parserVersion: item.parserVersion.trim(),
+      sourceText: item.sourceText,
+      appliedAtIso: item.appliedAtIso,
+      appliedFields
+    });
+  }
+  return history;
+}
+
 function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): SavedExperiment | null {
   if (!isRecord(value)) return null;
   const inputs = parseSimulatorInputs(value.inputs, allowLegacyInputs);
@@ -640,6 +670,10 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     ? undefined
     : parseModelInputUncertainty(value.photoModelUncertainty);
   if (photoModelUncertainty === null) return null;
+  const textSetupHistory = value.textSetupHistory === undefined
+    ? undefined
+    : parseTextSetupHistory(value.textSetupHistory);
+  if (textSetupHistory === null) return null;
 
   return {
     id: value.id,
@@ -652,6 +686,7 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     ...(atmosphere === undefined ? {} : { atmosphere }),
     ...(photoCalibration === undefined ? {} : { photoCalibration }),
     ...(photoModelUncertainty === undefined ? {} : { photoModelUncertainty }),
+    ...(textSetupHistory === undefined ? {} : { textSetupHistory }),
     inputs,
     manualTerrainPoints,
     terrainProfileSource,

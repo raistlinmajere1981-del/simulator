@@ -414,6 +414,25 @@ function photoModelUncertaintySection(experiment: SavedExperiment): string {
     </section>`;
 }
 
+function textSetupHistorySection(experiment: SavedExperiment): string {
+  const history = experiment.textSetupHistory;
+  if (!history || history.length === 0) return '';
+  const entries = history.map((item, index) => `
+    <div class="source-card">
+      <div class="source-card-heading"><strong>Metinden uygulama ${index + 1}</strong><span>${formatDate(item.appliedAtIso)} · parser ${escapeHtml(item.parserVersion)}</span></div>
+      <p>${escapeHtml(item.sourceText)}</p>
+      <table><thead><tr><th>Alan</th><th>Uygulanan değer</th><th>Kaynak ifade</th></tr></thead><tbody>
+        ${item.appliedFields.map((field) => `<tr><td>${escapeHtml(field.fieldId)}</td><td>${escapeHtml(field.displayValue)}</td><td>${escapeHtml(field.sourceExcerpt)}</td></tr>`).join('')}
+      </tbody></table>
+    </div>`).join('');
+  return `
+    <section class="model-section vertical-section">
+      <header class="model-heading"><div><h2>Metinden deney hazırlama provenansı</h2><span>Kullanıcı onayıyla forma uygulanan serbest metin alanları</span></div><strong class="status status-compatible">${history.length} uygulama</strong></header>
+      <p>Bu metin parser girdisidir; fiziksel ölçüm kaynağının kendisi değildir. Yalnız hangi UI değerlerinin hangi ifadelerden çıkarılıp kullanıcı onayıyla uygulandığını izler.</p>
+      <div class="trace-list">${entries}</div>
+    </section>`;
+}
+
 export function createExperimentHtmlReport(
   experiment: SavedExperiment,
   generatedAtIso = new Date().toISOString()
@@ -512,6 +531,7 @@ export function createExperimentHtmlReport(
     ${verticalTerrainSection(experiment, effectiveDistanceKm)}
     ${photoCalibrationSection(experiment)}
     ${photoModelUncertaintySection(experiment)}
+    ${textSetupHistorySection(experiment)}
     ${experiment.predictions.map((prediction) => predictionSection(
       prediction,
       experiment.modelVersions[prediction.modelId]

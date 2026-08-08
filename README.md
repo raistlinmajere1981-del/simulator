@@ -174,6 +174,16 @@ Koordinat modunda DEM dosyası gözlemci-hedef rotası boyunca WGS84 ara koordin
 
 Örnek: `examples/dem-route-wgs84.asc`
 
+## Metinden deney hazırlama
+
+`1.7.0` ile üst araç çubuğundaki **Metinden Hazırla** akışı serbest Türkçe gözlem notunu doğrudan forma yazmak yerine önce güvenli bir taslağa dönüştürür:
+
+- güvenle eşlenen alanlar `Bulundu`,
+- birimi eksik veya çelişkili ifadeler `Kontrol gerekli`,
+- ek provenans gerektiren/otomatik uygulanamayan ifadeler `Kullanılamadı`
+
+olarak ayrılır. Her bulunan satırda mevcut değer ile önerilen değer yan yana gösterilir ve kullanıcı alan bazında `uygula / atla` seçer. Bu sürüm çevrimdışı deterministik parser kullanır; harici AI servisi yoktur. Kaynak metin ve yalnız kullanıcı tarafından uygulanan alanlar deney provenansında korunur.
+
 ## Deney kayıtları
 
 Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama:
@@ -188,6 +198,7 @@ Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama:
 - atmosfer modu, meteorolojik profil ve optik ayarlar,
 - fotoğraf kaynak bütünlüğü, kamera kalibrasyonu, piksel işaretleri ve U1–U2 referans anlamı,
 - fotoğraf açısal gözlem–model karşılaştırma snapshot ve hesap izleri,
+- metinden deney hazırlama kaynak metni, parser sürümü ve kullanıcı onaylı alan provenansını,
 - model sürümleri ve sonuç anlık görüntülerini
 
 korur.
@@ -275,4 +286,4 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 
 ## Durum
 
-Aktif geliştirme sürümü `1.6.0`dir. Fotoğraf işaretleri artık overlay üzerinde `TABAN` / `TEPE` olarak açıkça adlandırılır; tepe tabanın üstünde değilse kayıt ve model karşılaştırması engellenir. Fotoğraf/kamera kalibrasyonu yerel PNG/JPEG yükleme, SHA-256 provenansı, etkileşimli işaretler ve piksel→açı hesabına ek olarak model sonuçlarıyla **bağımsız açısal gözlem kanalı** üzerinden karşılaştırılır. U1–U2 çizgisi varsayılan olarak yalnız görsel referanstır; fiziksel yerel yatay olduğu kullanıcı tarafından açıkça belirtilmedikçe mutlak taban/tepe açıları puanlanmaz. Görüntüdeki deniz ufku otomatik yerel yatay sayılmaz. Fotoğraf baytları deney JSON’una gömülmez. `1.5.0` ile fotoğraf işaret zarfına isteğe bağlı kamera iç-parametre belirsizlikleri eklenebilir; mesafe, göz/zemin/hedef kotu ve Standart k belirsizlikleri ise modeli nominal girdiden bağımsız alt/üst uçlarda yeniden çözerek fotoğraf karşılaştırmasının birleşik zarfına katılır. Boş belirsizlik alanlarına varsayımsal ± değer atanmaz.
+Aktif geliştirme sürümü `1.7.0`dir. Fotoğraf işaretleri artık overlay üzerinde `TABAN` / `TEPE` olarak açıkça adlandırılır; tepe tabanın üstünde değilse kayıt ve model karşılaştırması engellenir. Fotoğraf/kamera kalibrasyonu yerel PNG/JPEG yükleme, SHA-256 provenansı, etkileşimli işaretler ve piksel→açı hesabına ek olarak model sonuçlarıyla **bağımsız açısal gözlem kanalı** üzerinden karşılaştırılır. U1–U2 çizgisi varsayılan olarak yalnız görsel referanstır; fiziksel yerel yatay olduğu kullanıcı tarafından açıkça belirtilmedikçe mutlak taban/tepe açıları puanlanmaz. Görüntüdeki deniz ufku otomatik yerel yatay sayılmaz. Fotoğraf baytları deney JSON’una gömülmez. `1.5.0` ile fotoğraf işaret zarfına isteğe bağlı kamera iç-parametre belirsizlikleri eklenebilir; mesafe, göz/zemin/hedef kotu ve Standart k belirsizlikleri ise modeli nominal girdiden bağımsız alt/üst uçlarda yeniden çözerek fotoğraf karşılaştırmasının birleşik zarfına katılır. Boş belirsizlik alanlarına varsayımsal ± değer atanmaz.
