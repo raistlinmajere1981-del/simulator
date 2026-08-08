@@ -10,7 +10,7 @@ export const lunarPositionMetadata: ModelMetadata = {
   name: 'Ay Konumu ve Fazı · Astronomik Referans',
   version: LUNAR_POSITION_ALGORITHM_VERSION,
   description: 'Tarih/saat ve WGS84 gözlem konumundan Ayın yaklaşık topocentrik konumu, uzaklığı ve faz geometrisini hesaplar.',
-  capabilities: ['lunar-position', 'lunar-phase'],
+  capabilities: ['lunar-position'],
   assumptions: [
     'Gözlem zamanı ve WGS84 konumu Güneş referansıyla ortaktır.',
     'Ayın yatay paralaksı topocentrik konuma uygulanır.',
