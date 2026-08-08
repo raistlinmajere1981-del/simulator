@@ -2,6 +2,7 @@ export type HelpPanelId =
   | 'scenario-summary'
   | 'celestial-time'
   | 'solar-position'
+  | 'lunar-position'
   | 'text-experiment-setup'
   | 'photo-calibration'
   | 'atmosphere'
@@ -73,6 +74,18 @@ export const HELP_TERMS: readonly HelpTermContent[] = [
     id: 'hour-angle',
     label: 'Saat açısı',
     definition: 'Yerel meridyen ile gök cisminin saat dairesi arasındaki açıdır ve zaman/konumla değişir.'
+  },
+  {
+    id: 'lunar-parallax',
+    label: 'Ay paralaksı',
+    definition: 'Ayın Dünya’ya yakınlığı nedeniyle gözlemcinin Dünya üzerindeki konumunun Ayın görünen yönünü geocentrik yöne göre değiştirmesidir.',
+    caution: 'Ay için yaklaşık derece ölçeğine ulaşabildiğinden yerel yükseklik/azimut hesabında ihmal edilmemelidir.'
+  },
+  {
+    id: 'lunar-phase',
+    label: 'Ay fazı',
+    definition: 'Ayın Güneş tarafından aydınlatılan yarısının Dünya’dan görülen oranı ve Güneş-Ay-Dünya geometrisiyle ilişkili çevrim durumudur.',
+    caution: 'Yeni Ay veya Dolunay olmak tek başına tutulma anlamına gelmez; yörünge düğümü geometrisi ayrıca gerekir.'
   },
   {
     id: 'datum',
@@ -191,6 +204,23 @@ export const HELP_PANELS: readonly HelpPanelContent[] = [
     commonMistakes: ['Geometrik 0° yüksekliği fotoğraftaki deniz ufkuyla aynı kabul etmek.', 'Negatif yüksekliği hesap hatası sanmak; bu değer Güneşin geometrik ufkun altında olduğunu gösterebilir.'],
     example: 'Aynı koordinatta tarih veya saati değiştirince Güneş yüksekliği ve azimutu canlı olarak yeniden hesaplanır.',
     relatedTerms: ['solar-elevation', 'azimuth', 'declination', 'hour-angle', 'utc-offset']
+  },
+  {
+    id: 'lunar-position',
+    category: 'Astronomi',
+    title: 'Ayın topocentrik konumu ve fazı',
+    summary: 'Aynı UTC gözlem anı ve WGS84 konumunda Ayın düşük hassasiyetli topocentrik yüksekliği/azimutu, uzaklığı ve faz geometrisini üretir.',
+    fields: [
+      { label: 'Geometrik yükseklik', unit: '°', description: 'Ay merkezinin yerel geometrik ufka göre topocentrik açısı.' },
+      { label: 'Azimut', unit: '°', description: 'Coğrafi kuzeyden saat yönünde Ay yönü.' },
+      { label: 'Aydınlık oranı', unit: '%', description: 'Güneş-Ay uzanımından yaklaşık hesaplanan aydınlık disk oranı.' },
+      { label: 'Faz / Ay yaşı', description: 'Yeni Ay çevriminden itibaren yaklaşık faz sınıfı ve sinodik yaş.' },
+      { label: 'Yatay paralaks', unit: '°', description: 'Ayın yakınlığı nedeniyle gözlemci konumunun göksel yöne yaptığı büyük topocentrik düzeltmenin ölçeği.' }
+    ],
+    assumptions: ['Düşük hassasiyetli analitik Ay yörüngesi ve başlıca periyodik düzeltmeler kullanılır.', 'Gözlemci deniz seviyesinde kabul edilir.', 'Atmosferik kırılma ve yerel topoğrafik ufuk uygulanmaz.', 'Tutulma geometrisi bu panelin kapsamı değildir.'],
+    commonMistakes: ['Bu düşük hassasiyetli referansı JPL/Horizons hassasiyetinde efemeris saymak.', 'Aydınlık oranını Ayın ufuk üstünde görünürlüğüyle karıştırmak.', 'Faz bilgisinden otomatik tutulma sonucu çıkarmak.'],
+    example: 'Tarih/saat değiştirildiğinde Güneş ve Ay aynı gözlem anında birlikte yeniden hesaplanır.',
+    relatedTerms: ['azimuth', 'declination', 'utc-offset', 'lunar-parallax', 'lunar-phase']
   },
   {
     id: 'text-experiment-setup',

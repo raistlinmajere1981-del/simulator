@@ -45,7 +45,7 @@ export function SolarScenarioSummary({
       </div>
 
       <p className="scenario-scope-note">
-        Aşama 6.1 yalnız Güneşin geometrik yerel konumunu hesaplar. Tarih/saat sol alttaki Zaman ve tarih kartından yönetilir. Hedef, rota, arazi, su yüzeyi, fotoğraf görünürlük hesabı ve atmosferik kırılma bu referans hesabına katılmaz. Ay hesabı 6.2’de eklenecektir.
+        Aşama 6.2 Güneşin geometrik yerel konumunu ve Ayın düşük hassasiyetli topocentrik konum/faz referansını aynı gözlem anında hesaplar. Tarih/saat sol alttaki Zaman ve tarih kartından yönetilir. Hedef, rota, arazi, su yüzeyi, fotoğraf görünürlük hesabı ve atmosferik kırılma bu astronomik referanslara katılmaz.
       </p>
     </section>
   );

@@ -40,7 +40,7 @@ export function CelestialTimeCard({
     <section className="time-card celestial-time-card">
       <div className="section-heading celestial-time-heading">
         <span>Zaman ve tarih</span>
-        <div><span className="section-state">GÜNEŞ · 6.1</span><PanelHelpButton panelId="celestial-time" /></div>
+        <div><span className="section-state">GÜNEŞ + AY · 6.2</span><PanelHelpButton panelId="celestial-time" /></div>
       </div>
       <label>
         <span>Yerel tarih / saat · sistem görünümü</span>
