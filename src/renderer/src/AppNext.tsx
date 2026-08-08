@@ -1253,7 +1253,7 @@ export function AppNext(): React.JSX.Element {
     };
   }, [context, experiment, modelInputUncertaintyDefined, photoCalibrationRecord, photoModelUncertainty, runs]);
 
-  const modelUncertaintyReady = !modelInputUncertaintyDefined || (
+  const modelUncertaintyReady = !photoCalibrationRecord || !modelInputUncertaintyDefined || (
     !isAngularUncertaintyCalculating &&
     modelUncertaintyError === undefined &&
     runs.filter((run) => run.prediction.status !== 'unsupported').every(
@@ -1570,7 +1570,7 @@ export function AppNext(): React.JSX.Element {
       scenarioId: activeScenarioId,
       atmosphere: cloneAtmosphereExperimentState(atmosphereState),
       ...(photoCalibration ? { photoCalibration } : {}),
-      ...(photoCalibration && modelInputUncertaintyDefined ? { photoModelUncertainty } : {}),
+      ...(modelInputUncertaintyDefined ? { photoModelUncertainty } : {}),
       ...(textSetupHistory.length > 0 ? { textSetupHistory } : {}),
       inputs,
       manualTerrainPoints,
