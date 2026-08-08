@@ -2,12 +2,20 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateDualShadowComparison,
   createDualShadowComparisonPrediction,
-  readDualShadowComparisonSettings
+  readDualShadowComparisonSettings,
+  type DualShadowStationSettings
 } from '../src/simulation/dual-shadow-comparison';
 
 const observedAtIso = '2026-06-21T09:00:00Z';
 
-function baseInput() {
+interface DualShadowTestInput {
+  experimentId: string;
+  observedAtIso: string;
+  stationA: DualShadowStationSettings;
+  stationB: DualShadowStationSettings;
+}
+
+function baseInput(): DualShadowTestInput {
   return {
     experimentId: 'dual-shadow-test',
     observedAtIso,
