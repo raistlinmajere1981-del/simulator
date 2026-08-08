@@ -12,6 +12,7 @@ import type {
   ResultStatus
 } from '../../shared/domain';
 import type { SavedPhotoCalibration } from '../../shared/photo-calibration';
+import { systemUtcOffsetMinutes } from '../../shared/celestial-time';
 import type { HelpPanelId } from '../../shared/help-content';
 import type {
   ExperimentSetupApplication,
@@ -40,6 +41,7 @@ import type {
 } from '../../shared/terrain';
 import {
   VISIBILITY_SCENARIOS,
+  SUN_MOON_SCENARIO,
   getSimulationScenario,
   normalizeSimulationScenarioId,
   type SimulationScenarioId
@@ -79,6 +81,8 @@ import {
   propagateModelAngularUncertainty,
   type ModelAngularUncertaintyResult
 } from '../../simulation/photo-model-uncertainty';
+import { calculateSolarPosition } from '../../simulation/solar-position';
+import { createSolarPositionPrediction, solarPositionMetadata } from '../../simulation/solar-position-prediction';
 import {
   WATER_SURFACE_APPLICATION_MODEL_ID,
   type WaterSurfaceApplicationResult
@@ -110,6 +114,9 @@ import { PhotoModelUncertaintyControl } from './PhotoModelUncertaintyControl';
 import { WorldModelViewport } from './WorldModelViewport';
 import { HelpOverlay, HelpProvider, PanelHelpButton } from './HelpSystem';
 import { TextExperimentSetupDialog } from './TextExperimentSetupDialog';
+import { CelestialTimeCard } from './CelestialTimeCard';
+import { SolarPositionPanel } from './SolarPositionPanel';
+import { SolarScenarioSummary } from './SolarScenarioSummary';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -157,7 +164,7 @@ const scenarios: ScenarioDefinition[] = [
     icon: scenario.icon,
     enabled: true
   })),
-  { label: 'Güneş ve Ay Gözlemleri', icon: '☀', enabled: false },
+  { ...SUN_MOON_SCENARIO, enabled: true },
   { label: 'Yıldız Gözlemleri', icon: '✦', enabled: false },
   { label: 'Tutulma Simülasyonları', icon: '◐', enabled: false }
 ];
@@ -338,15 +345,21 @@ function Sidebar({
   activeScenarioId,
   atmosphereMode,
   visualLayers,
+  observedAtIso,
+  observationUtcOffsetMinutes,
   onScenarioChange,
   onLoadExperiment,
-  onVisualLayerChange
+  onVisualLayerChange,
+  onObservationTimeChange
 }: {
   experiments: SavedExperiment[];
   activeScenarioId: SimulationScenarioId;
   atmosphereMode: AtmosphereMode;
   visualLayers: VisualLayerState;
+  observedAtIso: string;
+  observationUtcOffsetMinutes: number;
   onScenarioChange(scenarioId: SimulationScenarioId): void;
+  onObservationTimeChange(observedAtIso: string, utcOffsetMinutes: number): void;
   onLoadExperiment(experiment: SavedExperiment): void;
   onVisualLayerChange(key: keyof VisualLayerState, enabled: boolean): void;
 }): React.JSX.Element {
@@ -355,7 +368,7 @@ function Sidebar({
       <section className="side-section">
         <div className="section-heading">
           <span>Test senaryoları</span>
-          <span className="section-state">3 / 6 hazır</span>
+          <span className="section-state">{scenarios.filter((scenario) => scenario.enabled).length} / {scenarios.length} hazır</span>
         </div>
         <nav className="scenario-list">
           {scenarios.map((scenario) => {
@@ -406,36 +419,42 @@ function Sidebar({
       <section className="side-section compact">
         <div className="section-heading">
           <span>Modeller</span>
-          <span className="section-state">2 fiziksel</span>
+          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '1 astronomik referans' : '2 fiziksel'}</span>
         </div>
-        {simulationModels.map((model) => {
-          const presentation = getPresentation(model.metadata.id);
-          const isProjection = model.metadata.id === 'azimuthal-projection';
-          return (
-            <div
-              className={`model-toggle ${isProjection ? 'reference-model' : ''}`}
-              key={model.metadata.id}
-            >
-              <span className={`model-dot ${presentation.tone}`} />
-              <span>{model.metadata.name}</span>
-              {isProjection ? (
-                <span className="reference-badge">REFERANS</span>
-              ) : (
-                <span className="enabled-dot" title="Hesaplamaya dahil" />
-              )}
-            </div>
-          );
-        })}
-        <div className="model-toggle future-model">
-          <span className="model-dot coral" /><span>Toroidal Model</span>
-          <span className="future-badge">YAKINDA</span>
-        </div>
-        <div className="model-toggle future-model">
-          <span className="model-dot blue" /><span>İçbükey Dünya</span>
-          <span className="future-badge">YAKINDA</span>
-        </div>
+        {activeScenarioId === 'sun-moon-observation' ? (
+          <div className="model-toggle reference-model">
+            <span className="model-dot amber" />
+            <span>Güneş Konumu · Astronomik Referans</span>
+            <span className="reference-badge">REFERANS</span>
+          </div>
+        ) : (<>
+          {simulationModels.map((model) => {
+            const presentation = getPresentation(model.metadata.id);
+            const isProjection = model.metadata.id === 'azimuthal-projection';
+            return (
+              <div className={`model-toggle ${isProjection ? 'reference-model' : ''}`} key={model.metadata.id}>
+                <span className={`model-dot ${presentation.tone}`} />
+                <span>{model.metadata.name}</span>
+                {isProjection ? <span className="reference-badge">REFERANS</span> : <span className="enabled-dot" title="Hesaplamaya dahil" />}
+              </div>
+            );
+          })}
+          <div className="model-toggle future-model"><span className="model-dot coral" /><span>Toroidal Model</span><span className="future-badge">YAKINDA</span></div>
+          <div className="model-toggle future-model"><span className="model-dot blue" /><span>İçbükey Dünya</span><span className="future-badge">YAKINDA</span></div>
+        </>)}
       </section>
 
+      {activeScenarioId === 'sun-moon-observation' ? (
+        <section className="side-section compact grow celestial-visual-placeholder">
+          <div className="section-heading">
+            <span>Görsel katmanlar</span>
+            <span className="section-state">astronomi · sonraki dilim</span>
+          </div>
+          <div className="saved-empty">
+            Güneş gökyüzü/ufuk görselleştirme katmanları daha sonraki astronomi aşamasında etkinleşecek. 6.1 sonucu şu anda sayısal geometrik referanstır.
+          </div>
+        </section>
+      ) : (
       <section className="side-section compact grow">
         <div className="section-heading">
           <span>Görsel katmanlar</span>
@@ -493,16 +512,14 @@ function Sidebar({
           <span className="switch" />
         </label>
       </section>
+      )}
 
-      <section className="time-card disabled-section">
-        <div className="section-heading">
-          <span>Zaman ve tarih</span>
-          <span className="section-state">astronomi modülü</span>
-        </div>
-        <div className="time-placeholder">
-          Güneş, Ay ve yıldız deneyleri eklendiğinde etkinleşecek.
-        </div>
-      </section>
+      <CelestialTimeCard
+        active={activeScenarioId === 'sun-moon-observation'}
+        observedAtIso={observedAtIso}
+        utcOffsetMinutes={observationUtcOffsetMinutes}
+        onChange={onObservationTimeChange}
+      />
     </aside>
   );
 }
@@ -1079,6 +1096,7 @@ export function AppNext(): React.JSX.Element {
   const [activeExperimentId, setActiveExperimentId] = useState(() => crypto.randomUUID());
   const [activeExperimentName, setActiveExperimentName] = useState('');
   const [experimentObservedAtIso, setExperimentObservedAtIso] = useState(() => new Date().toISOString());
+  const [observationUtcOffsetMinutes, setObservationUtcOffsetMinutes] = useState(() => systemUtcOffsetMinutes());
   const [isCalculating, setIsCalculating] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -1110,7 +1128,7 @@ export function AppNext(): React.JSX.Element {
   }, []);
 
   const geodesic = useMemo(() => {
-    if (inputs.distanceSource !== 'coordinates') return undefined;
+    if (activeScenarioId === 'sun-moon-observation' || inputs.distanceSource !== 'coordinates') return undefined;
     return inverseWgs84Geodesic(
       { latitudeDeg: inputs.observerLatitudeDeg, longitudeDeg: inputs.observerLongitudeDeg },
       { latitudeDeg: inputs.targetLatitudeDeg, longitudeDeg: inputs.targetLongitudeDeg }
@@ -1120,7 +1138,8 @@ export function AppNext(): React.JSX.Element {
     inputs.observerLatitudeDeg,
     inputs.observerLongitudeDeg,
     inputs.targetLatitudeDeg,
-    inputs.targetLongitudeDeg
+    inputs.targetLongitudeDeg,
+    activeScenarioId
   ]);
 
   const effectiveDistanceKm = inputs.distanceSource === 'coordinates' && geodesic
@@ -1143,6 +1162,17 @@ export function AppNext(): React.JSX.Element {
       elevationM: inputs.observerGroundElevationM + inputs.verticalDatumOffsetM,
       eyeHeightM: inputs.observerHeightM
     };
+
+    if (activeScenarioId === 'sun-moon-observation') {
+      return {
+        id: activeExperimentId,
+        title: activeExperimentName || 'Etkileşimli güneş gözlemi',
+        type: 'celestial',
+        observer,
+        observedAtIso: experimentObservedAtIso,
+        measurements: {}
+      };
+    }
 
     if (activeScenarioId === 'horizon') {
       const horizonExperiment: ExperimentDefinition = {
@@ -1178,6 +1208,17 @@ export function AppNext(): React.JSX.Element {
     return targetExperiment;
   }, [activeExperimentId, activeExperimentName, activeScenarioId, effectiveDistanceKm, experimentObservedAtIso, inputs, terrainProfile]);
 
+  const solarPosition = useMemo(() => activeScenarioId === 'sun-moon-observation'
+    ? calculateSolarPosition({
+        observedAtIso: experimentObservedAtIso,
+        latitudeDeg: inputs.observerLatitudeDeg,
+        longitudeDeg: inputs.observerLongitudeDeg
+      })
+    : undefined, [activeScenarioId, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg]);
+  const solarPositionPrediction = useMemo(() => solarPosition
+    ? createSolarPositionPrediction(activeExperimentId, solarPosition)
+    : undefined, [activeExperimentId, solarPosition]);
+
   const context = useMemo(() => ({
     atmosphereMode: atmosphereState.mode,
     refractionCoefficient: inputs.refractionCoefficient,
@@ -1197,6 +1238,11 @@ export function AppNext(): React.JSX.Element {
   }, []);
 
   useEffect(() => {
+    if (activeScenarioId === 'sun-moon-observation') {
+      setRuns([]);
+      setIsCalculating(false);
+      return;
+    }
     let cancelled = false;
     setIsCalculating(true);
     void runSimulationModels(simulationModels, experiment, context).then((nextRuns) => {
@@ -1206,7 +1252,7 @@ export function AppNext(): React.JSX.Element {
       }
     });
     return () => { cancelled = true; };
-  }, [context, experiment]);
+  }, [activeScenarioId, context, experiment]);
 
   const modelInputUncertaintyDefined = hasDefinedModelInputUncertainty(photoModelUncertainty);
 
@@ -1330,6 +1376,7 @@ export function AppNext(): React.JSX.Element {
       setActiveExperimentId(crypto.randomUUID());
       setActiveExperimentName('');
       setExperimentObservedAtIso(new Date().toISOString());
+      setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
       setGeoidConversionRecord(undefined);
       setWaterObservationRecord(undefined);
       setWaterApplicationRecord(undefined);
@@ -1550,7 +1597,8 @@ export function AppNext(): React.JSX.Element {
       : undefined);
     setActiveExperimentId(saved.id);
     setActiveExperimentName(saved.name);
-    setExperimentObservedAtIso(saved.createdAtIso);
+    setExperimentObservedAtIso(saved.observedAtIso ?? saved.createdAtIso);
+    setObservationUtcOffsetMinutes(saved.observationUtcOffsetMinutes ?? systemUtcOffsetMinutes(new Date(saved.observedAtIso ?? saved.createdAtIso)));
     setIsDirty(false);
     setStorageMessage(`“${saved.name}” açıldı.`);
   };
@@ -1565,8 +1613,10 @@ export function AppNext(): React.JSX.Element {
     const record: SavedExperiment = {
       id: activeExperimentId,
       name,
-      createdAtIso: existing?.createdAtIso ?? experimentObservedAtIso,
+      createdAtIso: existing?.createdAtIso ?? now,
       updatedAtIso: now,
+      observedAtIso: experimentObservedAtIso,
+      observationUtcOffsetMinutes,
       scenarioId: activeScenarioId,
       atmosphere: cloneAtmosphereExperimentState(atmosphereState),
       ...(photoCalibration ? { photoCalibration } : {}),
@@ -1579,6 +1629,9 @@ export function AppNext(): React.JSX.Element {
       modelVersions: Object.fromEntries([
         ...simulationModels.map((model) => [model.metadata.id, model.metadata.version] as const),
         [geodesicMetadata.id, geodesicMetadata.version],
+        ...(solarPositionPrediction
+          ? [[solarPositionMetadata.id, solarPositionMetadata.version] as const]
+          : []),
         ...(geoidConversionRecord
           ? [[GEOID_CONVERSION_MODEL_ID, geoidConversionRecord.modelVersion] as const]
           : []),
@@ -1597,6 +1650,7 @@ export function AppNext(): React.JSX.Element {
         ] as const)
       ]),
       predictions: [
+        ...(solarPositionPrediction ? [solarPositionPrediction] : []),
         ...runs.map((run) => run.prediction),
         ...(geoidConversionRecord ? [geoidConversionRecord.prediction] : []),
         ...(waterObservationRecord ? [waterObservationRecord.prediction] : []),
@@ -1618,7 +1672,8 @@ export function AppNext(): React.JSX.Element {
       setSavedExperiments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       setActiveExperimentId(saved.id);
       setActiveExperimentName(saved.name);
-      setExperimentObservedAtIso(saved.createdAtIso);
+      setExperimentObservedAtIso(saved.observedAtIso ?? saved.createdAtIso);
+    setObservationUtcOffsetMinutes(saved.observationUtcOffsetMinutes ?? systemUtcOffsetMinutes(new Date(saved.observedAtIso ?? saved.createdAtIso)));
       setAtmosphereState(saved.atmosphere
         ? cloneAtmosphereExperimentState(saved.atmosphere)
         : atmosphereStateFromLegacyStandardFlag(saved.inputs.useStandardRefraction));
@@ -1659,6 +1714,7 @@ export function AppNext(): React.JSX.Element {
         setActiveExperimentId(crypto.randomUUID());
         setActiveExperimentName('');
         setExperimentObservedAtIso(new Date().toISOString());
+      setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
         setAtmosphereState(createDefaultAtmosphereExperimentState('standard'));
         setGeoidConversionRecord(undefined);
         setWaterObservationRecord(undefined);
@@ -1711,14 +1767,18 @@ export function AppNext(): React.JSX.Element {
 
   const modelRun = runs.find((run) => run.metadata.id === traceModelId);
   const geoPrediction = geodesicPrediction(geodesic);
-  const selectedMetadata = traceModelId === geodesicMetadata.id
+  const selectedMetadata = traceModelId === solarPositionMetadata.id
+    ? solarPositionMetadata
+    : traceModelId === geodesicMetadata.id
     ? geodesicMetadata
     : traceModelId === WATER_SURFACE_OBSERVATION_MODEL_ID
       ? waterObservationMetadata
       : traceModelId === WATER_SURFACE_APPLICATION_MODEL_ID
         ? waterApplicationMetadata
         : modelRun?.metadata;
-  const selectedPrediction = traceModelId === geodesicMetadata.id
+  const selectedPrediction = traceModelId === solarPositionMetadata.id
+    ? solarPositionPrediction
+    : traceModelId === geodesicMetadata.id
     ? geoPrediction
     : traceModelId === WATER_SURFACE_OBSERVATION_MODEL_ID
       ? waterObservationRecord?.prediction
@@ -1732,6 +1792,28 @@ export function AppNext(): React.JSX.Element {
     idealSpherePrediction,
     'terrainCriticalDistanceM'
   );
+
+  const resetExperiment = (): void => {
+    setInputs(DEFAULT_SIMULATOR_INPUTS);
+    setAtmosphereState(createDefaultAtmosphereExperimentState('standard'));
+    setManualTerrainPoints(defaultTerrainPoints());
+    setTerrainProfileSource(undefined);
+    setGeoidConversionRecord(undefined);
+    setWaterObservationRecord(undefined);
+    setWaterApplicationRecord(undefined);
+    setPhotoCalibration(undefined);
+    setPhotoCalibrationRecord(undefined);
+    setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+    setTextSetupHistory([]);
+    setModelAngularUncertaintyById({});
+    setModelUncertaintyError(undefined);
+    setActiveExperimentId(crypto.randomUUID());
+    setActiveExperimentName('');
+    setExperimentObservedAtIso(new Date().toISOString());
+    setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
+    setIsDirty(false);
+    setStorageMessage('Yeni deney hazırlandı.');
+  };
 
   return (
     <HelpProvider onOpenPanel={openHelpPanel} onOpenCatalog={openHelpCatalog}>
@@ -1759,12 +1841,20 @@ export function AppNext(): React.JSX.Element {
           activeScenarioId={activeScenarioId}
           atmosphereMode={atmosphereState.mode}
           visualLayers={visualLayers}
+          observedAtIso={experimentObservedAtIso}
+          observationUtcOffsetMinutes={observationUtcOffsetMinutes}
+          onObservationTimeChange={(observedAtIso, utcOffsetMinutes) => {
+            setExperimentObservedAtIso(observedAtIso);
+            setObservationUtcOffsetMinutes(utcOffsetMinutes);
+            setIsDirty(true);
+          }}
           onScenarioChange={(scenarioId) => {
             if (scenarioId === activeScenarioId) return;
             setActiveScenarioId(scenarioId);
             setActiveExperimentId(crypto.randomUUID());
             setActiveExperimentName('');
             setExperimentObservedAtIso(new Date().toISOString());
+      setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
             setGeoidConversionRecord(undefined);
             setWaterObservationRecord(undefined);
             setWaterApplicationRecord(undefined);
@@ -1784,6 +1874,16 @@ export function AppNext(): React.JSX.Element {
         />
         <main className="main-content">
           <div className="top-grid geodesic-top-grid">
+            {activeScenarioId === 'sun-moon-observation' ? (
+              <SolarScenarioSummary
+                activeName={activeExperimentName}
+                inputs={inputs}
+                isDirty={isDirty}
+                onCoordinateChange={(key, value) => handleNumberChange(key, value)}
+                onReset={resetExperiment}
+                onSave={() => setSaveDialogOpen(true)}
+              />
+            ) : (
             <ScenarioSummary
               scenarioId={activeScenarioId}
               activeName={activeExperimentName}
@@ -1802,35 +1902,19 @@ export function AppNext(): React.JSX.Element {
                 updateInputs((current) => ({ ...current, verticalDatumKind }));
               }}
               onNumberChange={handleNumberChange}
-              onReset={() => {
-                setInputs(DEFAULT_SIMULATOR_INPUTS);
-                setAtmosphereState(createDefaultAtmosphereExperimentState('standard'));
-                setManualTerrainPoints(defaultTerrainPoints());
-                setTerrainProfileSource(undefined);
-                setGeoidConversionRecord(undefined);
-                setWaterObservationRecord(undefined);
-                setWaterApplicationRecord(undefined);
-                setPhotoCalibration(undefined);
-                setPhotoCalibrationRecord(undefined);
-                setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
-                setTextSetupHistory([]);
-                setModelAngularUncertaintyById({});
-                setModelUncertaintyError(undefined);
-                setActiveExperimentId(crypto.randomUUID());
-                setActiveExperimentName('');
-                setExperimentObservedAtIso(new Date().toISOString());
-                setIsDirty(false);
-                setStorageMessage('Yeni deney hazırlandı.');
-              }}
+              onReset={resetExperiment}
               onSave={() => setSaveDialogOpen(true)}
               onShowGeodesicTrace={() => setTraceModelId(geodesicMetadata.id)}
             />
-            {activeScenarioId === 'horizon'
+            )}
+            {activeScenarioId === 'sun-moon-observation' && solarPosition
+              ? <SolarPositionPanel result={solarPosition} onShowTrace={() => setTraceModelId(solarPositionMetadata.id)} />
+              : activeScenarioId === 'horizon'
               ? <HorizonReferencePanel inputs={inputs} atmosphereMode={atmosphereState.mode} />
               : <ObservationPanel inputs={inputs} />}
           </div>
 
-          {activeScenarioId !== 'horizon' && (
+          {activeScenarioId !== 'horizon' && activeScenarioId !== 'sun-moon-observation' && (
             <PhotoCalibrationControl
               key={activeExperimentId}
               experimentId={activeExperimentId}
@@ -1857,7 +1941,7 @@ export function AppNext(): React.JSX.Element {
             />
           )}
 
-          <AtmosphereProfileControl
+          {activeScenarioId !== 'sun-moon-observation' && <AtmosphereProfileControl
             state={atmosphereState}
             standardRefractionCoefficient={inputs.refractionCoefficient}
             onChange={(nextState) => {
@@ -1868,9 +1952,9 @@ export function AppNext(): React.JSX.Element {
               }));
               setIsDirty(true);
             }}
-          />
+          />}
 
-          {activeScenarioId !== 'horizon' && <TerrainPanel
+          {activeScenarioId !== 'horizon' && activeScenarioId !== 'sun-moon-observation' && <TerrainPanel
             experimentId={activeExperimentId}
             inputs={inputs}
             points={manualTerrainPoints}
@@ -1891,7 +1975,7 @@ export function AppNext(): React.JSX.Element {
             onApplyImport={applyTerrainImport}
           />}
 
-          {activeScenarioId !== 'horizon' && <WaterSurfaceControl
+          {activeScenarioId !== 'horizon' && activeScenarioId !== 'sun-moon-observation' && <WaterSurfaceControl
             experimentId={activeExperimentId}
             experimentObservedAtIso={experimentObservedAtIso}
             verticalDatumKind={inputs.verticalDatumKind}
@@ -1904,7 +1988,7 @@ export function AppNext(): React.JSX.Element {
             onShowTrace={setTraceModelId}
           />}
 
-          <div className="model-grid">
+          {activeScenarioId !== 'sun-moon-observation' && <div className="model-grid">
             {simulationModels.map((model) => (
               <ModelCard
                 key={model.metadata.id}
@@ -1919,7 +2003,7 @@ export function AppNext(): React.JSX.Element {
                 onShowTrace={() => setTraceModelId(model.metadata.id)}
               />
             ))}
-          </div>
+          </div>}
 
           {photoCalibrationRecord && (
             <PhotoModelUncertaintyControl
@@ -1939,7 +2023,7 @@ export function AppNext(): React.JSX.Element {
             referenceKind={photoReferenceKind}
           />
 
-          <div className="bottom-grid">
+          {activeScenarioId !== 'sun-moon-observation' && <div className="bottom-grid">
             <ResultsTable runs={runs} scenarioId={activeScenarioId} onShowTrace={setTraceModelId} />
             <section className="notes panel">
               <div className="notes-help-heading"><span className="eyebrow">Hesaplama kapsamı</span><PanelHelpButton panelId="calculation-scope" /></div>
@@ -1955,7 +2039,7 @@ export function AppNext(): React.JSX.Element {
               </ul>
               <p>Katmanlı atmosfer profilinin optik ışın izleme çekirdeği hazırdır; görünürlük/ufuk model sonucuna bağlantısı Aşama 4.4 kapsamındadır. Fotoğraf kalibrasyonu bağımsız açısal gözlem kanalı olarak model sonuçlarıyla sonradan karşılaştırılır; dalga yüzeyinin rota boyunca dinamik geometrisi henüz hesaba dahil değildir.</p>
             </section>
-          </div>
+          </div>}
         </main>
       </div>
 

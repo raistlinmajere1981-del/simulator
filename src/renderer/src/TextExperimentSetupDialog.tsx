@@ -17,7 +17,8 @@ const trNumber = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 6 });
 const scenarioLabels: Record<SimulationScenarioId, string> = {
   'target-visibility': 'Hedef Görünürlüğü',
   horizon: 'Ufuk Analizi',
-  'long-distance-visibility': 'Uzun Mesafe Görüş'
+  'long-distance-visibility': 'Uzun Mesafe Görüş',
+  'sun-moon-observation': 'Güneş ve Ay Gözlemleri'
 };
 
 const atmosphereLabels: Record<AtmosphereMode, string> = {

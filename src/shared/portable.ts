@@ -635,9 +635,18 @@ function parseTextSetupHistory(value: unknown): TextExperimentSetupProvenance[] 
 
 function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): SavedExperiment | null {
   if (!isRecord(value)) return null;
+  let observationUtcOffsetMinutes: number | undefined;
+  if (value.observationUtcOffsetMinutes !== undefined) {
+    if (!isFiniteNumber(value.observationUtcOffsetMinutes) ||
+      !Number.isInteger(value.observationUtcOffsetMinutes) ||
+      value.observationUtcOffsetMinutes < -720 ||
+      value.observationUtcOffsetMinutes > 840) return null;
+    observationUtcOffsetMinutes = value.observationUtcOffsetMinutes;
+  }
   const inputs = parseSimulatorInputs(value.inputs, allowLegacyInputs);
   if (!inputs || !isNonEmptyString(value.id) || !isNonEmptyString(value.name) ||
     !isIsoDate(value.createdAtIso) || !isIsoDate(value.updatedAtIso) ||
+    (value.observedAtIso !== undefined && !isIsoDate(value.observedAtIso)) ||
     !isRecord(value.modelVersions) ||
     !Object.values(value.modelVersions).every((version) => typeof version === 'string') ||
     !Array.isArray(value.predictions) || !value.predictions.every(isModelPrediction) ||
@@ -680,6 +689,10 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     name: value.name.trim(),
     createdAtIso: value.createdAtIso,
     updatedAtIso: value.updatedAtIso,
+    ...(value.observedAtIso === undefined ? {} : { observedAtIso: value.observedAtIso }),
+    ...(observationUtcOffsetMinutes === undefined
+      ? {}
+      : { observationUtcOffsetMinutes }),
     ...(value.scenarioId === undefined
       ? {}
       : { scenarioId: normalizeSimulationScenarioId(value.scenarioId) }),

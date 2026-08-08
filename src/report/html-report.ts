@@ -28,7 +28,8 @@ const modelNames: Record<string, string> = {
   'ideal-sphere': 'İdeal Küre',
   'defined-plane': 'Tanımlı Düzlem',
   'azimuthal-projection': 'Azimutal Gösterim',
-  'photo-calibration': 'Fotoğraf / Kamera Kalibrasyonu'
+  'photo-calibration': 'Fotoğraf / Kamera Kalibrasyonu',
+  'solar-position-noaa': 'Güneş Konumu · Astronomik Referans'
 };
 
 const datumLabels: Record<VerticalDatumKind, string> = {
@@ -442,11 +443,24 @@ export function createExperimentHtmlReport(
     inputs.distanceSource === 'coordinates'
     ? experiment.geodesic.distanceM / 1_000
     : inputs.surfaceDistanceKm;
+  const isCelestial = experiment.scenarioId === 'sun-moon-observation';
   const coordinateCards = inputs.distanceSource === 'coordinates' ? `
     <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
     <div class="input-card"><small>Hedef koordinatı</small><strong>${coordinateFormatter.format(inputs.targetLatitudeDeg)}°, ${coordinateFormatter.format(inputs.targetLongitudeDeg)}°</strong></div>
     <div class="input-card"><small>Mesafe kaynağı</small><strong>WGS84 koordinat çözümü</strong></div>` : `
     <div class="input-card"><small>Mesafe kaynağı</small><strong>Manuel giriş</strong></div>`;
+  const reportInputCards = isCelestial ? `
+    <div class="input-card"><small>Gözlem zamanı · UTC</small><strong>${formatDate(experiment.observedAtIso ?? experiment.createdAtIso)}</strong></div>
+    <div class="input-card"><small>UTC ofset provenansı</small><strong>${experiment.observationUtcOffsetMinutes === undefined ? 'Tanımlanmadı' : `${experiment.observationUtcOffsetMinutes >= 0 ? '+' : ''}${inputNumberFormatter.format(experiment.observationUtcOffsetMinutes / 60)} saat`}</strong></div>
+    <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
+    <div class="input-card"><small>6.1 hesap türü</small><strong>Geometrik Güneş konumu</strong></div>` : `
+    <div class="input-card"><small>Göz yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
+    <div class="input-card"><small>Hedef yüksekliği</small><strong>${inputNumberFormatter.format(inputs.targetHeightM)} m</strong></div>
+    <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(effectiveDistanceKm)} km</strong></div>
+    <div class="input-card"><small>Gözlenen görünürlük</small><strong>%${inputNumberFormatter.format(inputs.observedVisiblePercent)}</strong></div>
+    <div class="input-card"><small>Gözlem belirsizliği</small><strong>±%${inputNumberFormatter.format(inputs.observationUncertaintyPercent)}</strong></div>
+    <div class="input-card"><small>Atmosfer</small><strong>${inputs.useStandardRefraction ? `Standart kırılma (k=${inputNumberFormatter.format(inputs.refractionCoefficient)})` : 'Kapalı'}</strong></div>
+    ${coordinateCards}`;
 
   return `<!doctype html>
 <html lang="tr">
@@ -516,13 +530,7 @@ export function createExperimentHtmlReport(
         <span>Rapor üretimi: ${formatDate(generatedAtIso)}</span>
       </div>
       <div class="input-grid">
-        <div class="input-card"><small>Göz yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
-        <div class="input-card"><small>Hedef yüksekliği</small><strong>${inputNumberFormatter.format(inputs.targetHeightM)} m</strong></div>
-        <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(effectiveDistanceKm)} km</strong></div>
-        <div class="input-card"><small>Gözlenen görünürlük</small><strong>%${inputNumberFormatter.format(inputs.observedVisiblePercent)}</strong></div>
-        <div class="input-card"><small>Gözlem belirsizliği</small><strong>±%${inputNumberFormatter.format(inputs.observationUncertaintyPercent)}</strong></div>
-        <div class="input-card"><small>Atmosfer</small><strong>${inputs.useStandardRefraction ? `Standart kırılma (k=${inputNumberFormatter.format(inputs.refractionCoefficient)})` : 'Kapalı'}</strong></div>
-        ${coordinateCards}
+        ${reportInputCards}
       </div>
       <div class="notice">Bu rapor, kaydedildiği andaki model sürümlerini, sonuç anlık görüntülerini ve hesap izlerini gösterir. Tek bir deneydeki uyum, bir modelin genel doğruluğu anlamına gelmez.</div>
     </header>

@@ -1,0 +1,10 @@
+.solar-scenario-summary .solar-location-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.solar-scenario-summary .scenario-scope-note {
+  margin-top: 10px;
+}
