@@ -503,13 +503,13 @@ function parseCameraCalibrationUncertainty(value: unknown): CameraCalibrationUnc
   if ([horizontalFovDeg, verticalFovDeg, focalLengthMm, sensorWidthMm, sensorHeightMm, principalPointXPx, principalPointYPx].some((item) => item === null)) return null;
   return {
     combination,
-    ...(horizontalFovDeg === undefined ? {} : { horizontalFovDeg }),
-    ...(verticalFovDeg === undefined ? {} : { verticalFovDeg }),
-    ...(focalLengthMm === undefined ? {} : { focalLengthMm }),
-    ...(sensorWidthMm === undefined ? {} : { sensorWidthMm }),
-    ...(sensorHeightMm === undefined ? {} : { sensorHeightMm }),
-    ...(principalPointXPx === undefined ? {} : { principalPointXPx }),
-    ...(principalPointYPx === undefined ? {} : { principalPointYPx })
+    ...(typeof horizontalFovDeg === 'number' ? { horizontalFovDeg } : {}),
+    ...(typeof verticalFovDeg === 'number' ? { verticalFovDeg } : {}),
+    ...(typeof focalLengthMm === 'number' ? { focalLengthMm } : {}),
+    ...(typeof sensorWidthMm === 'number' ? { sensorWidthMm } : {}),
+    ...(typeof sensorHeightMm === 'number' ? { sensorHeightMm } : {}),
+    ...(typeof principalPointXPx === 'number' ? { principalPointXPx } : {}),
+    ...(typeof principalPointYPx === 'number' ? { principalPointYPx } : {})
   };
 }
 
@@ -526,12 +526,12 @@ function parseModelInputUncertainty(value: unknown): ModelInputUncertaintySettin
   if ([surfaceDistanceM, observerEyeHeightM, observerGroundElevationM, targetHeightM, targetGroundElevationM, refractionCoefficient].some((item) => item === null)) return null;
   return {
     combination,
-    ...(surfaceDistanceM === undefined ? {} : { surfaceDistanceM }),
-    ...(observerEyeHeightM === undefined ? {} : { observerEyeHeightM }),
-    ...(observerGroundElevationM === undefined ? {} : { observerGroundElevationM }),
-    ...(targetHeightM === undefined ? {} : { targetHeightM }),
-    ...(targetGroundElevationM === undefined ? {} : { targetGroundElevationM }),
-    ...(refractionCoefficient === undefined ? {} : { refractionCoefficient })
+    ...(typeof surfaceDistanceM === 'number' ? { surfaceDistanceM } : {}),
+    ...(typeof observerEyeHeightM === 'number' ? { observerEyeHeightM } : {}),
+    ...(typeof observerGroundElevationM === 'number' ? { observerGroundElevationM } : {}),
+    ...(typeof targetHeightM === 'number' ? { targetHeightM } : {}),
+    ...(typeof targetGroundElevationM === 'number' ? { targetGroundElevationM } : {}),
+    ...(typeof refractionCoefficient === 'number' ? { refractionCoefficient } : {})
   };
 }
 

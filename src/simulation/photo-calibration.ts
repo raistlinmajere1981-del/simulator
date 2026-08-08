@@ -499,7 +499,7 @@ export function createPhotoCalibrationRecord(
       'Hedef tepesi kalibre edilmiş referansa göre tabanın üstünde olmalı. TABAN ve TEPE işaretlerini kontrol et.'
     );
   }
-  const markUncertainty = uncertaintyEnvelope(
+  const markEnvelope = uncertaintyEnvelope(
     intrinsics,
     input.marks,
     defaultMarkUncertaintyPx
@@ -507,7 +507,7 @@ export function createPhotoCalibrationRecord(
   const cameraUncertainty = cameraUncertaintyEnvelope(input, metrics);
   const uncertaintyCombination = input.cameraUncertainty?.combination ?? 'linear-conservative';
   const uncertainty = combinedPhotoUncertainty(
-    markUncertainty,
+    markEnvelope,
     cameraUncertainty,
     uncertaintyCombination
   );
@@ -607,7 +607,7 @@ export function createPhotoCalibrationRecord(
     modelVersion: PHOTO_CALIBRATION_MODEL_VERSION,
     intrinsics,
     metrics,
-    markUncertainty,
+    markUncertainty: markEnvelope,
     cameraUncertainty,
     uncertainty
   };
