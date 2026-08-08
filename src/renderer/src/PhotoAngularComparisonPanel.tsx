@@ -23,6 +23,10 @@ export function PhotoAngularComparisonPanel({
 }): React.JSX.Element | null {
   if (comparisons.length === 0) return null;
 
+  const hasModelUncertainty = comparisons.some((comparison) =>
+    comparison.channels.some((channel) => channel.modelUncertaintyDeg !== undefined)
+  );
+
   return (
     <section className="photo-angular-comparison panel">
       <div className="photo-angular-comparison-heading">
@@ -39,7 +43,7 @@ export function PhotoAngularComparisonPanel({
 
       <p className="photo-angular-note">
         Fotoğraf kalibrasyonu model hesabına girdi olmaz. Model açıları önce hesaplanır,
-        ardından fotoğrafın ± işaret belirsizliğiyle karşılaştırılır.
+        ardından bağımsız fotoğraf gözlemiyle karşılaştırılır.
         {referenceKind === 'visual-reference'
           ? ' Referans çizgisi yerel yatay sayılmadığı için yalnız referans ofsetinden bağımsız açısal yükseklik karşılaştırılabilir.'
           : ' Yerel yatay açıkça beyan edildiği için görünür taban/tepe açıları da karşılaştırılabilir.'}
@@ -53,6 +57,7 @@ export function PhotoAngularComparisonPanel({
               <th>Açı kanalı</th>
               <th>Fotoğraf</th>
               <th>Model</th>
+              <th>Birleşik ±</th>
               <th>Mutlak fark</th>
               <th>Sonuç</th>
             </tr>
@@ -63,7 +68,7 @@ export function PhotoAngularComparisonPanel({
                 return [
                   <tr key={`${comparison.sourceModelId}:none`}>
                     <td>{comparison.sourceModelName}</td>
-                    <td colSpan={4}>{comparison.prediction.warnings[0] ?? 'Karşılaştırılabilir açı kanalı yok.'}</td>
+                    <td colSpan={5}>{comparison.prediction.warnings[0] ?? 'Karşılaştırılabilir açı kanalı yok.'}</td>
                     <td>
                       <span className={`photo-compare-status status-${comparison.prediction.status}`}>
                         {statusLabels[comparison.prediction.status]}
@@ -77,8 +82,14 @@ export function PhotoAngularComparisonPanel({
                 <tr key={`${comparison.sourceModelId}:${channel.key}`}>
                   <td>{index === 0 ? comparison.sourceModelName : ''}</td>
                   <td>{channel.label}</td>
-                  <td>{formatAngle(channel.observedDeg)} ±{formatAngle(channel.uncertaintyDeg)}</td>
-                  <td>{formatAngle(channel.predictedDeg)}</td>
+                  <td>{formatAngle(channel.observedDeg)} ±{formatAngle(channel.photoUncertaintyDeg)}</td>
+                  <td>
+                    {formatAngle(channel.predictedDeg)}
+                    {channel.modelUncertaintyDeg === undefined
+                      ? ''
+                      : ` ±${formatAngle(channel.modelUncertaintyDeg)}`}
+                  </td>
+                  <td>±{formatAngle(channel.combinedUncertaintyDeg)}</td>
                   <td>{formatAngle(channel.differenceDeg)}</td>
                   <td>
                     <span className={`photo-compare-status status-${channel.status}`}>
@@ -93,8 +104,11 @@ export function PhotoAngularComparisonPanel({
       </div>
 
       <p className="photo-angular-footnote">
-        Uyum ölçütü bu sürümde |model − fotoğraf| ≤ fotoğraf işaret belirsizliğidir.
-        Model, mesafe, kot, atmosfer ve kamera iç-parametre belirsizlikleri henüz birleşik istatistiksel zarfa yayılmaz.
+        Uyum ölçütü |model − fotoğraf| ≤ birleşik belirsizliktir. Fotoğraf tarafı piksel işaret
+        zarfını ve tanımlanmışsa kamera iç-parametre belirsizliğini içerir.
+        {hasModelUncertainty
+          ? ' Model tarafında kullanıcı tarafından açıkça tanımlanan girdi belirsizlikleri de hassasiyet hesabıyla zarfa katılmıştır.'
+          : ' Model girdi belirsizliği tanımlanmadıysa model tarafına varsayımsal ± değer eklenmez.'}
       </p>
     </section>
   );

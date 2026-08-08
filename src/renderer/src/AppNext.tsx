@@ -13,6 +13,11 @@ import type {
 } from '../../shared/domain';
 import type { SavedPhotoCalibration } from '../../shared/photo-calibration';
 import {
+  DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS,
+  hasDefinedModelInputUncertainty,
+  type ModelInputUncertaintySettings
+} from '../../shared/uncertainty';
+import {
   DEFAULT_SIMULATOR_INPUTS,
   type DistanceSource,
   type ImportedDemTerrainProfile,
@@ -66,6 +71,10 @@ import {
   normalizePhotoReferenceKind
 } from '../../simulation/photo-angular-comparison';
 import {
+  propagateModelAngularUncertainty,
+  type ModelAngularUncertaintyResult
+} from '../../simulation/photo-model-uncertainty';
+import {
   WATER_SURFACE_APPLICATION_MODEL_ID,
   type WaterSurfaceApplicationResult
 } from '../../simulation/water-surface-application';
@@ -92,6 +101,7 @@ import { AtmosphereProfileControl } from './AtmosphereProfileControl';
 import { WaterSurfaceControl } from './WaterSurfaceControl';
 import { PhotoCalibrationControl } from './PhotoCalibrationControl';
 import { PhotoAngularComparisonPanel } from './PhotoAngularComparisonPanel';
+import { PhotoModelUncertaintyControl } from './PhotoModelUncertaintyControl';
 import { WorldModelViewport } from './WorldModelViewport';
 
 type ModelTone = 'green' | 'amber' | 'violet';
@@ -1048,6 +1058,12 @@ export function AppNext(): React.JSX.Element {
   const [waterApplicationRecord, setWaterApplicationRecord] = useState<StoredWaterSurfaceRecord>();
   const [photoCalibration, setPhotoCalibration] = useState<SavedPhotoCalibration>();
   const [photoCalibrationRecord, setPhotoCalibrationRecord] = useState<PhotoCalibrationRecordState>();
+  const [photoModelUncertainty, setPhotoModelUncertainty] = useState<ModelInputUncertaintySettings>(() => ({
+    ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS
+  }));
+  const [modelAngularUncertaintyById, setModelAngularUncertaintyById] = useState<Record<string, ModelAngularUncertaintyResult>>({});
+  const [isAngularUncertaintyCalculating, setIsAngularUncertaintyCalculating] = useState(false);
+  const [modelUncertaintyError, setModelUncertaintyError] = useState<string>();
   const [runs, setRuns] = useState<ModelRun[]>([]);
   const [savedExperiments, setSavedExperiments] = useState<SavedExperiment[]>([]);
   const [activeExperimentId, setActiveExperimentId] = useState(() => crypto.randomUUID());
@@ -1165,18 +1181,74 @@ export function AppNext(): React.JSX.Element {
     return () => { cancelled = true; };
   }, [context, experiment]);
 
+  const modelInputUncertaintyDefined = hasDefinedModelInputUncertainty(photoModelUncertainty);
+
+  useEffect(() => {
+    if (!photoCalibrationRecord || !modelInputUncertaintyDefined || runs.length === 0) {
+      setModelAngularUncertaintyById({});
+      setIsAngularUncertaintyCalculating(false);
+      setModelUncertaintyError(undefined);
+      return;
+    }
+
+    let cancelled = false;
+    setIsAngularUncertaintyCalculating(true);
+    setModelUncertaintyError(undefined);
+    const timer = window.setTimeout(() => {
+      void Promise.all(simulationModels.map(async (model) => {
+        const run = runs.find((candidate) => candidate.metadata.id === model.metadata.id);
+        if (!run || run.prediction.status === 'unsupported') return undefined;
+        const result = await propagateModelAngularUncertainty({
+          model,
+          baselinePrediction: run.prediction,
+          experiment,
+          context,
+          settings: photoModelUncertainty
+        });
+        return [model.metadata.id, result] as const;
+      })).then((entries) => {
+        if (cancelled) return;
+        setModelAngularUncertaintyById(Object.fromEntries(
+          entries.filter((entry): entry is readonly [string, ModelAngularUncertaintyResult] => entry !== undefined)
+        ));
+        setIsAngularUncertaintyCalculating(false);
+      }).catch((error: unknown) => {
+        if (cancelled) return;
+        setModelAngularUncertaintyById({});
+        setModelUncertaintyError(error instanceof Error ? error.message : 'Model belirsizliği yayılamadı.');
+        setIsAngularUncertaintyCalculating(false);
+      });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [context, experiment, modelInputUncertaintyDefined, photoCalibrationRecord, photoModelUncertainty, runs]);
+
+  const modelUncertaintyReady = !modelInputUncertaintyDefined || (
+    !isAngularUncertaintyCalculating &&
+    modelUncertaintyError === undefined &&
+    runs.filter((run) => run.prediction.status !== 'unsupported').every(
+      (run) => modelAngularUncertaintyById[run.metadata.id] !== undefined
+    )
+  );
+
   const photoReferenceKind = normalizePhotoReferenceKind(photoCalibration?.referenceKind);
   const photoAngularComparisons = useMemo(() => {
-    if (!photoCalibrationRecord) return [];
+    if (!photoCalibrationRecord || !modelUncertaintyReady) return [];
     return runs.map((run) => comparePhotoAngularObservation({
       experimentId: activeExperimentId,
       sourceModelId: run.metadata.id,
       sourceModelName: run.metadata.name,
       modelPrediction: run.prediction,
       photoPrediction: photoCalibrationRecord.prediction,
-      referenceKind: photoReferenceKind
+      referenceKind: photoReferenceKind,
+      ...(modelInputUncertaintyDefined && modelAngularUncertaintyById[run.metadata.id]
+        ? { modelUncertainty: modelAngularUncertaintyById[run.metadata.id] }
+        : {})
     }));
-  }, [activeExperimentId, photoCalibrationRecord, photoReferenceKind, runs]);
+  }, [activeExperimentId, modelAngularUncertaintyById, modelInputUncertaintyDefined, modelUncertaintyReady, photoCalibrationRecord, photoReferenceKind, runs]);
 
   const markTerrainSourceModified = (): void => {
     setTerrainProfileSource((current) => current
@@ -1394,6 +1466,7 @@ export function AppNext(): React.JSX.Element {
     setWaterObservationRecord(storedWater.observation);
     setWaterApplicationRecord(storedWater.application);
     setPhotoCalibration(saved.photoCalibration);
+    setPhotoModelUncertainty(saved.photoModelUncertainty ?? { ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
     setPhotoCalibrationRecord(photoPrediction
       ? {
           prediction: photoPrediction,
@@ -1408,6 +1481,10 @@ export function AppNext(): React.JSX.Element {
   };
 
   const saveExperiment = async (name: string): Promise<void> => {
+    if (!modelUncertaintyReady) {
+      setStorageMessage('Model girdi belirsizliği hesabı tamamlanmadan deney kaydedilmedi.');
+      return;
+    }
     const now = new Date().toISOString();
     const existing = savedExperiments.find((item) => item.id === activeExperimentId);
     const record: SavedExperiment = {
@@ -1418,6 +1495,7 @@ export function AppNext(): React.JSX.Element {
       scenarioId: activeScenarioId,
       atmosphere: cloneAtmosphereExperimentState(atmosphereState),
       ...(photoCalibration ? { photoCalibration } : {}),
+      ...(photoCalibration && modelInputUncertaintyDefined ? { photoModelUncertainty } : {}),
       inputs,
       manualTerrainPoints,
       terrainProfileSource,
@@ -1480,6 +1558,7 @@ export function AppNext(): React.JSX.Element {
       setWaterObservationRecord(savedWater.observation);
       setWaterApplicationRecord(savedWater.application);
       setPhotoCalibration(saved.photoCalibration);
+      setPhotoModelUncertainty(saved.photoModelUncertainty ?? { ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
       setPhotoCalibrationRecord(savedPhotoPrediction
         ? {
             prediction: savedPhotoPrediction,
@@ -1509,6 +1588,9 @@ export function AppNext(): React.JSX.Element {
         setWaterApplicationRecord(undefined);
         setPhotoCalibration(undefined);
         setPhotoCalibrationRecord(undefined);
+        setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+        setModelAngularUncertaintyById({});
+        setModelUncertaintyError(undefined);
         setIsDirty(true);
       }
       setStorageMessage(`“${saved.name}” silindi.`);
@@ -1608,6 +1690,9 @@ export function AppNext(): React.JSX.Element {
             setWaterApplicationRecord(undefined);
             setPhotoCalibration(undefined);
             setPhotoCalibrationRecord(undefined);
+            setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+            setModelAngularUncertaintyById({});
+            setModelUncertaintyError(undefined);
             setIsDirty(false);
             setStorageMessage(`${getSimulationScenario(scenarioId).label} senaryosu hazırlandı.`);
           }}
@@ -1646,6 +1731,9 @@ export function AppNext(): React.JSX.Element {
                 setWaterApplicationRecord(undefined);
                 setPhotoCalibration(undefined);
                 setPhotoCalibrationRecord(undefined);
+                setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+                setModelAngularUncertaintyById({});
+                setModelUncertaintyError(undefined);
                 setActiveExperimentId(crypto.randomUUID());
                 setActiveExperimentName('');
                 setExperimentObservedAtIso(new Date().toISOString());
@@ -1678,6 +1766,9 @@ export function AppNext(): React.JSX.Element {
               onClear={() => {
                 setPhotoCalibration(undefined);
                 setPhotoCalibrationRecord(undefined);
+                setPhotoModelUncertainty({ ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
+                setModelAngularUncertaintyById({});
+                setModelUncertaintyError(undefined);
                 setIsDirty(true);
               }}
             />
@@ -1746,6 +1837,19 @@ export function AppNext(): React.JSX.Element {
               />
             ))}
           </div>
+
+          {photoCalibrationRecord && (
+            <PhotoModelUncertaintyControl
+              settings={photoModelUncertainty}
+              atmosphereMode={atmosphereState.mode}
+              isCalculating={isAngularUncertaintyCalculating}
+              error={modelUncertaintyError}
+              onChange={(settings) => {
+                setPhotoModelUncertainty(settings);
+                setIsDirty(true);
+              }}
+            />
+          )}
 
           <PhotoAngularComparisonPanel
             comparisons={photoAngularComparisons}

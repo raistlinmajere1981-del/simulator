@@ -1,0 +1,127 @@
+.photo-model-uncertainty {
+  padding: 12px 14px;
+}
+
+.photo-model-uncertainty-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.photo-model-uncertainty-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.photo-model-uncertainty-heading strong {
+  font-size: 14px;
+  color: #dce9ef;
+}
+
+.photo-model-uncertainty-state {
+  border: 1px solid #38536a;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: #7f9bab;
+  white-space: nowrap;
+}
+
+.photo-model-uncertainty-state.active {
+  border-color: #2d7f76;
+  color: #78dccb;
+}
+
+.photo-model-uncertainty-state.busy {
+  border-color: #796b31;
+  color: #dfc968;
+}
+
+.photo-model-uncertainty-note {
+  margin: 0 0 10px;
+  color: #8198a6;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.photo-model-uncertainty-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.photo-model-uncertainty-grid label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.photo-model-uncertainty-grid label > span {
+  color: #8ca1ad;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.photo-model-uncertainty-grid label > div {
+  display: flex;
+  align-items: center;
+  border: 1px solid #2c4557;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #0e1c26;
+}
+
+.photo-model-uncertainty-grid input,
+.photo-model-uncertainty-grid select {
+  min-width: 0;
+  width: 100%;
+  height: 32px;
+  border: 1px solid #2c4557;
+  border-radius: 4px;
+  background: #0e1c26;
+  color: #cfdee6;
+  padding: 0 8px;
+}
+
+.photo-model-uncertainty-grid label > div input {
+  border: 0;
+  border-radius: 0;
+}
+
+.photo-model-uncertainty-grid em {
+  padding: 0 8px;
+  color: #718996;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.photo-model-uncertainty-grid label.disabled {
+  opacity: .5;
+}
+
+.photo-model-uncertainty-warning,
+.photo-model-uncertainty-error {
+  margin: 8px 0 0;
+  padding: 7px 9px;
+  border-left: 2px solid #a98631;
+  background: rgba(169, 134, 49, .08);
+  color: #c7ae6a;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.photo-model-uncertainty-error {
+  border-left-color: #a64d4d;
+  background: rgba(166, 77, 77, .08);
+  color: #d98b8b;
+}
+
+@media (max-width: 1100px) {
+  .photo-model-uncertainty-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

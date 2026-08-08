@@ -14,8 +14,9 @@ import {
   type SimulatorInputs,
   type TerrainProfileSource
 } from './simulator';
+import type { ModelInputUncertaintySettings, UncertaintyCombination } from './uncertainty';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
-import type { PhotoCalibrationMarks, PhotoSourceMetadata, SavedPhotoCalibration } from './photo-calibration';
+import type { CameraCalibrationUncertainty, PhotoCalibrationMarks, PhotoSourceMetadata, SavedPhotoCalibration } from './photo-calibration';
 import { normalizeSimulationScenarioId } from './scenario';
 import { parseAtmosphereExperimentState } from '../simulation/atmosphere-persistence';
 import {
@@ -478,9 +479,69 @@ function parsePhotoMark(
   };
 }
 
+
+function parseUncertaintyCombination(value: unknown): UncertaintyCombination | null {
+  return value === 'linear-conservative' || value === 'rss-independent' ? value : null;
+}
+
+function optionalNonNegative(value: unknown, maximum: number): number | undefined | null {
+  if (value === undefined) return undefined;
+  return inRange(value, 0, maximum) ? value : null;
+}
+
+function parseCameraCalibrationUncertainty(value: unknown): CameraCalibrationUncertainty | null {
+  if (!isRecord(value)) return null;
+  const combination = parseUncertaintyCombination(value.combination);
+  if (!combination) return null;
+  const horizontalFovDeg = optionalNonNegative(value.horizontalFovDeg, 179);
+  const verticalFovDeg = optionalNonNegative(value.verticalFovDeg, 179);
+  const focalLengthMm = optionalNonNegative(value.focalLengthMm, 10_000);
+  const sensorWidthMm = optionalNonNegative(value.sensorWidthMm, 1_000);
+  const sensorHeightMm = optionalNonNegative(value.sensorHeightMm, 1_000);
+  const principalPointXPx = optionalNonNegative(value.principalPointXPx, 200_000);
+  const principalPointYPx = optionalNonNegative(value.principalPointYPx, 200_000);
+  if ([horizontalFovDeg, verticalFovDeg, focalLengthMm, sensorWidthMm, sensorHeightMm, principalPointXPx, principalPointYPx].some((item) => item === null)) return null;
+  return {
+    combination,
+    ...(typeof horizontalFovDeg === 'number' ? { horizontalFovDeg } : {}),
+    ...(typeof verticalFovDeg === 'number' ? { verticalFovDeg } : {}),
+    ...(typeof focalLengthMm === 'number' ? { focalLengthMm } : {}),
+    ...(typeof sensorWidthMm === 'number' ? { sensorWidthMm } : {}),
+    ...(typeof sensorHeightMm === 'number' ? { sensorHeightMm } : {}),
+    ...(typeof principalPointXPx === 'number' ? { principalPointXPx } : {}),
+    ...(typeof principalPointYPx === 'number' ? { principalPointYPx } : {})
+  };
+}
+
+function parseModelInputUncertainty(value: unknown): ModelInputUncertaintySettings | null {
+  if (!isRecord(value)) return null;
+  const combination = parseUncertaintyCombination(value.combination);
+  if (!combination) return null;
+  const surfaceDistanceM = optionalNonNegative(value.surfaceDistanceM, 20_000_000);
+  const observerEyeHeightM = optionalNonNegative(value.observerEyeHeightM, 100_000);
+  const observerGroundElevationM = optionalNonNegative(value.observerGroundElevationM, 100_000);
+  const targetHeightM = optionalNonNegative(value.targetHeightM, 100_000);
+  const targetGroundElevationM = optionalNonNegative(value.targetGroundElevationM, 100_000);
+  const refractionCoefficient = optionalNonNegative(value.refractionCoefficient, 2);
+  if ([surfaceDistanceM, observerEyeHeightM, observerGroundElevationM, targetHeightM, targetGroundElevationM, refractionCoefficient].some((item) => item === null)) return null;
+  return {
+    combination,
+    ...(typeof surfaceDistanceM === 'number' ? { surfaceDistanceM } : {}),
+    ...(typeof observerEyeHeightM === 'number' ? { observerEyeHeightM } : {}),
+    ...(typeof observerGroundElevationM === 'number' ? { observerGroundElevationM } : {}),
+    ...(typeof targetHeightM === 'number' ? { targetHeightM } : {}),
+    ...(typeof targetGroundElevationM === 'number' ? { targetGroundElevationM } : {}),
+    ...(typeof refractionCoefficient === 'number' ? { refractionCoefficient } : {})
+  };
+}
+
 function parsePhotoCalibration(value: unknown): SavedPhotoCalibration | null {
   if (!isRecord(value)) return null;
   const source = parsePhotoSourceMetadata(value.source);
+  const cameraUncertainty = value.cameraUncertainty === undefined
+    ? undefined
+    : parseCameraCalibrationUncertainty(value.cameraUncertainty);
+  if (cameraUncertainty === null) return null;
   if (!source || !isRecord(value.calibration) || !isRecord(value.marks) ||
     !inRange(value.defaultMarkUncertaintyPx, 0, 100) ||
     typeof value.distortionCorrected !== 'boolean' || !isIsoDate(value.recordedAtIso) ||
@@ -533,6 +594,7 @@ function parsePhotoCalibration(value: unknown): SavedPhotoCalibration | null {
     ...(value.principalPointXPx === undefined ? {} : { principalPointXPx: value.principalPointXPx }),
     ...(value.principalPointYPx === undefined ? {} : { principalPointYPx: value.principalPointYPx }),
     defaultMarkUncertaintyPx: value.defaultMarkUncertaintyPx,
+    ...(cameraUncertainty === undefined ? {} : { cameraUncertainty }),
     distortionCorrected: value.distortionCorrected,
     marks: { horizonStart, horizonEnd, targetBase, targetTop },
     recordedAtIso: value.recordedAtIso,
@@ -574,6 +636,10 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     ? undefined
     : parsePhotoCalibration(value.photoCalibration);
   if (photoCalibration === null) return null;
+  const photoModelUncertainty = value.photoModelUncertainty === undefined
+    ? undefined
+    : parseModelInputUncertainty(value.photoModelUncertainty);
+  if (photoModelUncertainty === null) return null;
 
   return {
     id: value.id,
@@ -585,6 +651,7 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
       : { scenarioId: normalizeSimulationScenarioId(value.scenarioId) }),
     ...(atmosphere === undefined ? {} : { atmosphere }),
     ...(photoCalibration === undefined ? {} : { photoCalibration }),
+    ...(photoModelUncertainty === undefined ? {} : { photoModelUncertainty }),
     inputs,
     manualTerrainPoints,
     terrainProfileSource,

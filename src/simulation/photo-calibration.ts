@@ -1,7 +1,9 @@
 import type { CalculationTrace, ModelPrediction } from '../shared/domain';
+import type { CameraCalibrationUncertainty } from '../shared/photo-calibration';
+import { combineUncertaintyContributions } from '../shared/uncertainty';
 
 export const PHOTO_CALIBRATION_MODEL_ID = 'photo-calibration';
-export const PHOTO_CALIBRATION_MODEL_VERSION = '0.1.1';
+export const PHOTO_CALIBRATION_MODEL_VERSION = '0.2.0';
 
 export type CameraCalibrationSource = 'sensor-focal' | 'field-of-view';
 
@@ -64,6 +66,7 @@ export interface PhotoCalibrationInput extends CameraIntrinsicsInput {
   recordedAtIso: string;
   marks: PhotoCalibrationMarks;
   defaultMarkUncertaintyPx: number;
+  cameraUncertainty?: CameraCalibrationUncertainty;
   distortionCorrected: boolean;
   notes?: string;
 }
@@ -87,6 +90,8 @@ export interface PhotoCalibrationRecord {
   modelVersion: typeof PHOTO_CALIBRATION_MODEL_VERSION;
   intrinsics: CameraIntrinsics;
   metrics: PhotoCalibrationMetrics;
+  markUncertainty: PhotoCalibrationUncertainty;
+  cameraUncertainty: PhotoCalibrationUncertainty;
   uncertainty: PhotoCalibrationUncertainty;
 }
 
@@ -364,6 +369,106 @@ function uncertaintyEnvelope(
   };
 }
 
+
+const PHOTO_UNCERTAINTY_KEYS: Array<keyof PhotoCalibrationUncertainty> = [
+  'horizonRollDeg',
+  'targetBaseRelativeElevationDeg',
+  'targetTopRelativeElevationDeg',
+  'targetAngularHeightDeg'
+];
+
+function zeroPhotoUncertainty(): PhotoCalibrationUncertainty {
+  return {
+    horizonRollDeg: 0,
+    targetBaseRelativeElevationDeg: 0,
+    targetTopRelativeElevationDeg: 0,
+    targetAngularHeightDeg: 0
+  };
+}
+
+function cameraUncertaintyEnvelope(
+  input: PhotoCalibrationInput,
+  center: PhotoCalibrationMetrics
+): PhotoCalibrationUncertainty {
+  const settings = input.cameraUncertainty;
+  if (!settings) return zeroPhotoUncertainty();
+  const buckets: Record<keyof PhotoCalibrationUncertainty, number[]> = {
+    horizonRollDeg: [],
+    targetBaseRelativeElevationDeg: [],
+    targetTopRelativeElevationDeg: [],
+    targetAngularHeightDeg: []
+  };
+
+  type CameraParameter = keyof Omit<CameraCalibrationUncertainty, 'combination'>;
+  const parameters: CameraParameter[] = input.calibration.sourceKind === 'field-of-view'
+    ? ['horizontalFovDeg', 'verticalFovDeg', 'principalPointXPx', 'principalPointYPx']
+    : ['focalLengthMm', 'sensorWidthMm', 'sensorHeightMm', 'principalPointXPx', 'principalPointYPx'];
+
+  const evaluateVariant = (parameter: CameraParameter, delta: number): PhotoCalibrationMetrics => {
+    const calibration = { ...input.calibration } as CameraCalibrationDefinition;
+    let principalPointXPx = input.principalPointXPx;
+    let principalPointYPx = input.principalPointYPx;
+    if (parameter === 'principalPointXPx') {
+      principalPointXPx = (input.principalPointXPx ?? (input.imageWidthPx - 1) / 2) + delta;
+    } else if (parameter === 'principalPointYPx') {
+      principalPointYPx = (input.principalPointYPx ?? (input.imageHeightPx - 1) / 2) + delta;
+    } else if (calibration.sourceKind === 'field-of-view' &&
+      (parameter === 'horizontalFovDeg' || parameter === 'verticalFovDeg')) {
+      calibration[parameter] += delta;
+    } else if (calibration.sourceKind === 'sensor-focal' &&
+      (parameter === 'focalLengthMm' || parameter === 'sensorWidthMm' || parameter === 'sensorHeightMm')) {
+      calibration[parameter] += delta;
+    }
+    const intrinsics = resolveCameraIntrinsics({
+      imageWidthPx: input.imageWidthPx,
+      imageHeightPx: input.imageHeightPx,
+      ...(principalPointXPx === undefined ? {} : { principalPointXPx }),
+      ...(principalPointYPx === undefined ? {} : { principalPointYPx }),
+      calibration
+    });
+    return evaluateMarks(intrinsics, input.marks);
+  };
+
+  for (const parameter of parameters) {
+    const uncertainty = settings[parameter];
+    if (uncertainty === undefined || uncertainty === 0) continue;
+    if (!Number.isFinite(uncertainty) || uncertainty < 0) {
+      throw new RangeError(`${parameter} belirsizliği negatif olmayan sonlu bir sayı olmalı.`);
+    }
+    let minus: PhotoCalibrationMetrics;
+    let plus: PhotoCalibrationMetrics;
+    try {
+      minus = evaluateVariant(parameter, -uncertainty);
+      plus = evaluateVariant(parameter, uncertainty);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'geçersiz aralık';
+      throw new RangeError(`${parameter} ± belirsizlik aralığı geçersiz: ${message}`);
+    }
+    for (const key of PHOTO_UNCERTAINTY_KEYS) {
+      buckets[key].push(Math.max(
+        Math.abs(minus[key] - center[key]),
+        Math.abs(plus[key] - center[key])
+      ));
+    }
+  }
+
+  return Object.fromEntries(PHOTO_UNCERTAINTY_KEYS.map((key) => [
+    key,
+    combineUncertaintyContributions(buckets[key], settings.combination)
+  ])) as unknown as PhotoCalibrationUncertainty;
+}
+
+function combinedPhotoUncertainty(
+  mark: PhotoCalibrationUncertainty,
+  camera: PhotoCalibrationUncertainty,
+  combination: CameraCalibrationUncertainty['combination']
+): PhotoCalibrationUncertainty {
+  return Object.fromEntries(PHOTO_UNCERTAINTY_KEYS.map((key) => [
+    key,
+    combineUncertaintyContributions([mark[key], camera[key]], combination)
+  ])) as unknown as PhotoCalibrationUncertainty;
+}
+
 export function createPhotoCalibrationRecord(
   input: PhotoCalibrationInput
 ): PhotoCalibrationRecord {
@@ -394,13 +499,26 @@ export function createPhotoCalibrationRecord(
       'Hedef tepesi kalibre edilmiş referansa göre tabanın üstünde olmalı. TABAN ve TEPE işaretlerini kontrol et.'
     );
   }
-  const uncertainty = uncertaintyEnvelope(
+  const markEnvelope = uncertaintyEnvelope(
     intrinsics,
     input.marks,
     defaultMarkUncertaintyPx
   );
+  const cameraUncertainty = cameraUncertaintyEnvelope(input, metrics);
+  const uncertaintyCombination = input.cameraUncertainty?.combination ?? 'linear-conservative';
+  const uncertainty = combinedPhotoUncertainty(
+    markEnvelope,
+    cameraUncertainty,
+    uncertaintyCombination
+  );
 
   const warnings: string[] = [];
+  const hasCameraUncertainty = PHOTO_UNCERTAINTY_KEYS.some((key) => cameraUncertainty[key] > 0);
+  if (!hasCameraUncertainty) {
+    warnings.push('Kamera iç-parametre belirsizliği tanımlanmadı; fotoğraf açı zarfı yalnız piksel işaret belirsizliğini içerir.');
+  } else if (uncertaintyCombination === 'rss-independent') {
+    warnings.push('Fotoğraf belirsizlikleri RSS ile birleştirildi; işaret ve kamera parametre katkılarının bağımsız olduğu varsayılmıştır.');
+  }
   if (!input.distortionCorrected) {
     warnings.push('Lens distorsiyonu düzeltilmedi; özellikle görüntü kenarlarındaki piksel-açı dönüşümü sistematik hata içerebilir.');
   }
@@ -422,7 +540,9 @@ export function createPhotoCalibrationRecord(
       ? 'Lens distorsiyonunun görüntü üzerinde önceden düzeltildiği kabul edilmiştir.'
       : 'Lens distorsiyonu düzeltilmemiştir ve sistematik hata uyarısı korunmuştur.',
     'İki ufuk işareti görüntüde yerel sıfır-eğim referans çizgisi olarak kullanılmıştır; bunun fiziksel/astronomik ufuk olduğu otomatik varsayılmamıştır.',
-    'İşaret belirsizliği, x/y piksel uç durumlarının koruyucu zarfıyla yayılmıştır; kamera iç parametre belirsizliği bu sürümde ayrıca modellenmez.'
+    input.cameraUncertainty
+      ? `İşaret ve kamera iç-parametre belirsizlikleri ${uncertaintyCombination === 'rss-independent' ? 'RSS bağımsızlık varsayımıyla' : 'koruyucu doğrusal toplamla'} birleştirilmiştir.`
+      : 'İşaret belirsizliği x/y piksel uç durumlarının koruyucu zarfıyla yayılmıştır; kamera iç-parametre belirsizliği kullanıcı tarafından tanımlanmamıştır.'
   ];
 
   const trace: CalculationTrace = {
@@ -487,6 +607,8 @@ export function createPhotoCalibrationRecord(
     modelVersion: PHOTO_CALIBRATION_MODEL_VERSION,
     intrinsics,
     metrics,
+    markUncertainty: markEnvelope,
+    cameraUncertainty,
     uncertainty
   };
 }

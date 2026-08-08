@@ -1,3 +1,5 @@
+import type { UncertaintyCombination } from './uncertainty';
+
 export type CameraCalibrationSource = 'sensor-focal' | 'field-of-view';
 export type PhotoReferenceKind = 'visual-reference' | 'local-horizontal';
 
@@ -34,6 +36,17 @@ export type CameraCalibrationDefinition =
   | SensorFocalCalibration
   | FieldOfViewCalibration;
 
+export interface CameraCalibrationUncertainty {
+  combination: UncertaintyCombination;
+  horizontalFovDeg?: number;
+  verticalFovDeg?: number;
+  focalLengthMm?: number;
+  sensorWidthMm?: number;
+  sensorHeightMm?: number;
+  principalPointXPx?: number;
+  principalPointYPx?: number;
+}
+
 export interface PhotoSourceMetadata {
   fileName: string;
   fileSizeBytes: number;
@@ -59,6 +72,8 @@ export interface SavedPhotoCalibration {
   principalPointXPx?: number;
   principalPointYPx?: number;
   defaultMarkUncertaintyPx: number;
+  /** Optional camera/intrinsic parameter uncertainties. Omitted legacy records remain valid. */
+  cameraUncertainty?: CameraCalibrationUncertainty;
   distortionCorrected: boolean;
   marks: PhotoCalibrationMarks;
   recordedAtIso: string;

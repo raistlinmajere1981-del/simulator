@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ModelPrediction } from '../../shared/domain';
 import type {
+  CameraCalibrationUncertainty,
   ImportedObservationPhoto,
   PhotoCalibrationMarks,
   PhotoReferenceKind,
@@ -28,6 +29,14 @@ interface DraftState {
   principalPointXPx: string;
   principalPointYPx: string;
   defaultMarkUncertaintyPx: string;
+  cameraUncertaintyCombination: CameraCalibrationUncertainty['combination'];
+  horizontalFovUncertaintyDeg: string;
+  verticalFovUncertaintyDeg: string;
+  focalLengthUncertaintyMm: string;
+  sensorWidthUncertaintyMm: string;
+  sensorHeightUncertaintyMm: string;
+  principalPointXUncertaintyPx: string;
+  principalPointYUncertaintyPx: string;
   distortionCorrected: boolean;
   referenceKind: PhotoReferenceKind;
   marks?: PhotoCalibrationMarks;
@@ -66,6 +75,14 @@ function emptyDraft(): DraftState {
     principalPointXPx: '',
     principalPointYPx: '',
     defaultMarkUncertaintyPx: '1',
+    cameraUncertaintyCombination: 'linear-conservative',
+    horizontalFovUncertaintyDeg: '',
+    verticalFovUncertaintyDeg: '',
+    focalLengthUncertaintyMm: '',
+    sensorWidthUncertaintyMm: '',
+    sensorHeightUncertaintyMm: '',
+    principalPointXUncertaintyPx: '',
+    principalPointYUncertaintyPx: '',
     distortionCorrected: false,
     referenceKind: 'visual-reference',
     notes: ''
@@ -99,6 +116,14 @@ function draftFromSaved(saved: SavedPhotoCalibration | undefined): DraftState {
       ? ''
       : String(saved.principalPointYPx),
     defaultMarkUncertaintyPx: String(saved.defaultMarkUncertaintyPx),
+    cameraUncertaintyCombination: saved.cameraUncertainty?.combination ?? 'linear-conservative',
+    horizontalFovUncertaintyDeg: saved.cameraUncertainty?.horizontalFovDeg === undefined ? '' : String(saved.cameraUncertainty.horizontalFovDeg),
+    verticalFovUncertaintyDeg: saved.cameraUncertainty?.verticalFovDeg === undefined ? '' : String(saved.cameraUncertainty.verticalFovDeg),
+    focalLengthUncertaintyMm: saved.cameraUncertainty?.focalLengthMm === undefined ? '' : String(saved.cameraUncertainty.focalLengthMm),
+    sensorWidthUncertaintyMm: saved.cameraUncertainty?.sensorWidthMm === undefined ? '' : String(saved.cameraUncertainty.sensorWidthMm),
+    sensorHeightUncertaintyMm: saved.cameraUncertainty?.sensorHeightMm === undefined ? '' : String(saved.cameraUncertainty.sensorHeightMm),
+    principalPointXUncertaintyPx: saved.cameraUncertainty?.principalPointXPx === undefined ? '' : String(saved.cameraUncertainty.principalPointXPx),
+    principalPointYUncertaintyPx: saved.cameraUncertainty?.principalPointYPx === undefined ? '' : String(saved.cameraUncertainty.principalPointYPx),
     distortionCorrected: saved.distortionCorrected,
     referenceKind: saved.referenceKind ?? 'visual-reference',
     marks: {
@@ -126,6 +151,38 @@ function finiteDraftNumber(value: string): number | undefined {
   if (value.trim() === '') return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function uncertaintyDraftNumber(value: string, label: string): number | undefined {
+  if (value.trim() === '') return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new RangeError(`${label} belirsizliği negatif olmayan sayısal bir değer olmalı.`);
+  }
+  return parsed;
+}
+
+function cameraUncertaintyFromDraft(draft: DraftState): CameraCalibrationUncertainty | undefined {
+  const common = {
+    principalPointXPx: uncertaintyDraftNumber(draft.principalPointXUncertaintyPx, 'Asal nokta X'),
+    principalPointYPx: uncertaintyDraftNumber(draft.principalPointYUncertaintyPx, 'Asal nokta Y')
+  };
+  const sourceSpecific = draft.calibrationSource === 'field-of-view'
+    ? {
+        horizontalFovDeg: uncertaintyDraftNumber(draft.horizontalFovUncertaintyDeg, 'Yatay FOV'),
+        verticalFovDeg: uncertaintyDraftNumber(draft.verticalFovUncertaintyDeg, 'Düşey FOV')
+      }
+    : {
+        focalLengthMm: uncertaintyDraftNumber(draft.focalLengthUncertaintyMm, 'Odak uzaklığı'),
+        sensorWidthMm: uncertaintyDraftNumber(draft.sensorWidthUncertaintyMm, 'Sensör genişliği'),
+        sensorHeightMm: uncertaintyDraftNumber(draft.sensorHeightUncertaintyMm, 'Sensör yüksekliği')
+      };
+  const values = [...Object.values(common), ...Object.values(sourceSpecific)];
+  if (values.every((value) => value === undefined)) return undefined;
+  return {
+    combination: draft.cameraUncertaintyCombination,
+    ...Object.fromEntries(Object.entries({ ...common, ...sourceSpecific }).filter(([, value]) => value !== undefined))
+  } as CameraCalibrationUncertainty;
 }
 
 function sourceMetadata(photo: ImportedObservationPhoto): PhotoSourceMetadata {
@@ -200,6 +257,7 @@ export function PhotoCalibrationControl({
 
     const principalPointXPx = finiteDraftNumber(draft.principalPointXPx);
     const principalPointYPx = finiteDraftNumber(draft.principalPointYPx);
+    const cameraUncertainty = cameraUncertaintyFromDraft(draft);
     const calibration = draft.calibrationSource === 'field-of-view'
       ? {
           sourceKind: 'field-of-view' as const,
@@ -224,6 +282,7 @@ export function PhotoCalibrationControl({
     }
 
     try {
+      const cameraUncertainty = cameraUncertaintyFromDraft(draft);
       const record = createPhotoCalibrationRecord({
         experimentId,
         imageSourceLabel: draft.source.fileName,
@@ -235,6 +294,7 @@ export function PhotoCalibrationControl({
         calibration: calibration as Parameters<typeof createPhotoCalibrationRecord>[0]['calibration'],
         marks: draft.marks,
         defaultMarkUncertaintyPx,
+        ...(cameraUncertainty === undefined ? {} : { cameraUncertainty }),
         distortionCorrected: draft.distortionCorrected,
         ...(draft.notes.trim() === '' ? {} : { notes: draft.notes.trim() })
       });
@@ -326,6 +386,7 @@ export function PhotoCalibrationControl({
     const defaultMarkUncertaintyPx = Number(draft.defaultMarkUncertaintyPx);
     const principalPointXPx = finiteDraftNumber(draft.principalPointXPx);
     const principalPointYPx = finiteDraftNumber(draft.principalPointYPx);
+    const cameraUncertainty = cameraUncertaintyFromDraft(draft);
     const calibration = draft.calibrationSource === 'field-of-view'
       ? {
           sourceKind: 'field-of-view' as const,
@@ -344,6 +405,7 @@ export function PhotoCalibrationControl({
       ...(principalPointXPx === undefined ? {} : { principalPointXPx }),
       ...(principalPointYPx === undefined ? {} : { principalPointYPx }),
       defaultMarkUncertaintyPx,
+      ...(cameraUncertainty === undefined ? {} : { cameraUncertainty }),
       distortionCorrected: draft.distortionCorrected,
       referenceKind: draft.referenceKind,
       marks: {
@@ -368,6 +430,7 @@ export function PhotoCalibrationControl({
       calibration: saved.calibration,
       marks: saved.marks,
       defaultMarkUncertaintyPx: saved.defaultMarkUncertaintyPx,
+      ...(saved.cameraUncertainty === undefined ? {} : { cameraUncertainty: saved.cameraUncertainty }),
       distortionCorrected: saved.distortionCorrected,
       ...(saved.notes === undefined ? {} : { notes: saved.notes })
     });
@@ -530,6 +593,48 @@ export function PhotoCalibrationControl({
             <label><span>İşaret belirsizliği</span><div><input inputMode="decimal" value={draft.defaultMarkUncertaintyPx} onChange={(event) => updateDraft('defaultMarkUncertaintyPx', event.currentTarget.value)} /><em>px</em></div></label>
             <label className="photo-checkbox"><input type="checkbox" checked={draft.distortionCorrected} onChange={(event) => updateDraft('distortionCorrected', event.currentTarget.checked)} /><span>Lens distorsiyonu önceden düzeltildi</span></label>
             <label className="photo-notes"><span>Not</span><input value={draft.notes} onChange={(event) => updateDraft('notes', event.currentTarget.value)} placeholder="Kamera, lens, çekim veya işaretleme notu" /></label>
+          </div>
+
+          <div className="photo-camera-uncertainty">
+            <div className="photo-camera-uncertainty-heading">
+              <div>
+                <span className="eyebrow">Kamera iç-parametre belirsizliği</span>
+                <strong>Opsiyonel ± aralıklar</strong>
+              </div>
+              <select
+                value={draft.cameraUncertaintyCombination}
+                onChange={(event) => updateDraft(
+                  'cameraUncertaintyCombination',
+                  event.currentTarget.value as CameraCalibrationUncertainty['combination']
+                )}
+              >
+                <option value="linear-conservative">Koruyucu doğrusal toplam</option>
+                <option value="rss-independent">RSS · bağımsız bileşenler</option>
+              </select>
+            </div>
+            <p>
+              Boş alan “belirsizlik tanımlanmadı” demektir. Kamera için ölçmediğin ± değerleri doldurma;
+              uygulama varsayımsal hata payı üretmez.
+            </p>
+            <div className="photo-camera-grid photo-camera-uncertainty-grid">
+              {draft.calibrationSource === 'field-of-view' ? (
+                <>
+                  <label><span>Yatay FOV ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.horizontalFovUncertaintyDeg} onChange={(event) => updateDraft('horizontalFovUncertaintyDeg', event.currentTarget.value)} /><em>°</em></div></label>
+                  <label><span>Düşey FOV ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.verticalFovUncertaintyDeg} onChange={(event) => updateDraft('verticalFovUncertaintyDeg', event.currentTarget.value)} /><em>°</em></div></label>
+                </>
+              ) : (
+                <>
+                  <label><span>Odak uzaklığı ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.focalLengthUncertaintyMm} onChange={(event) => updateDraft('focalLengthUncertaintyMm', event.currentTarget.value)} /><em>mm</em></div></label>
+                  <label><span>Sensör genişliği ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.sensorWidthUncertaintyMm} onChange={(event) => updateDraft('sensorWidthUncertaintyMm', event.currentTarget.value)} /><em>mm</em></div></label>
+                  <label><span>Sensör yüksekliği ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.sensorHeightUncertaintyMm} onChange={(event) => updateDraft('sensorHeightUncertaintyMm', event.currentTarget.value)} /><em>mm</em></div></label>
+                </>
+              )}
+              <label><span>Asal nokta X ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.principalPointXUncertaintyPx} onChange={(event) => updateDraft('principalPointXUncertaintyPx', event.currentTarget.value)} /><em>px</em></div></label>
+              <label><span>Asal nokta Y ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.principalPointYUncertaintyPx} onChange={(event) => updateDraft('principalPointYUncertaintyPx', event.currentTarget.value)} /><em>px</em></div></label>
+            </div>
+            {draft.cameraUncertaintyCombination === 'rss-independent' && (
+              <p className="photo-warning">RSS seçimi kamera belirsizlik bileşenlerinin bağımsız olduğu varsayımını gerektirir.</p>
+            )}
           </div>
 
           {(candidate.error || (savedCalibration && isDirty)) && (

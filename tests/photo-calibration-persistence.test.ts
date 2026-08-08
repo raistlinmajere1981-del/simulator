@@ -33,6 +33,13 @@ const calibration: SavedPhotoCalibration = {
     verticalFovDeg: 36
   },
   defaultMarkUncertaintyPx: 1.5,
+  cameraUncertainty: {
+    combination: 'linear-conservative',
+    horizontalFovDeg: 0.4,
+    verticalFovDeg: 0.3,
+    principalPointXPx: 0.5,
+    principalPointYPx: 0.5
+  },
   distortionCorrected: false,
   marks: {
     horizonStart: { xPx: 200, yPx: 460 },
@@ -55,6 +62,7 @@ function savedExperiment(): SavedExperiment {
     calibration: calibration.calibration,
     marks: calibration.marks,
     defaultMarkUncertaintyPx: calibration.defaultMarkUncertaintyPx,
+    cameraUncertainty: calibration.cameraUncertainty,
     distortionCorrected: calibration.distortionCorrected,
     notes: calibration.notes
   });
@@ -65,6 +73,13 @@ function savedExperiment(): SavedExperiment {
     updatedAtIso: '2026-08-08T01:03:00+03:00',
     scenarioId: 'target-visibility',
     photoCalibration: calibration,
+    photoModelUncertainty: {
+      combination: 'linear-conservative',
+      surfaceDistanceM: 5,
+      observerEyeHeightM: 0.1,
+      targetHeightM: 0.2,
+      refractionCoefficient: 0.01
+    },
     inputs: { ...DEFAULT_SIMULATOR_INPUTS },
     modelVersions: {
       [PHOTO_CALIBRATION_MODEL_ID]: PHOTO_CALIBRATION_MODEL_VERSION
@@ -87,6 +102,8 @@ describe('photo calibration persistence', () => {
     const parsed = parsePortableExperimentFile(JSON.parse(serialized)).experiment;
     expect(parsed.photoCalibration).toEqual(calibration);
     expect(parsed.photoCalibration?.referenceKind).toBe('local-horizontal');
+    expect(parsed.photoCalibration?.cameraUncertainty).toEqual(calibration.cameraUncertainty);
+    expect(parsed.photoModelUncertainty).toEqual(savedExperiment().photoModelUncertainty);
     expect(parsed.predictions.find((item) => item.modelId === PHOTO_CALIBRATION_MODEL_ID))
       .toBeDefined();
   });
@@ -128,6 +145,9 @@ describe('photo calibration persistence', () => {
     expect(report).toContain('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
     expect(report).toContain('Hedef tepesi');
     expect(report).toContain('Fotoğraf / Kamera Kalibrasyonu');
+    expect(report).toContain('Kamera belirsizlik birleşimi');
+    expect(report).toContain('Fotoğraf / model belirsizlik ayarları');
+    expect(report).toContain('Etkin yüzey mesafesi ±');
     expect(report).not.toContain('data:image');
     expect(report).not.toContain('base64');
   });
