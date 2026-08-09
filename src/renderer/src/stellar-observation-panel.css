@@ -73,8 +73,19 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 7px;
   padding: 0 9px;
-  color: inherit;
+  color: #e8eef5;
   background: rgba(10, 15, 25, 0.58);
+  color-scheme: dark;
+}
+
+.stellar-controls select option {
+  color: #e8eef5;
+  background: #111923;
+}
+
+.stellar-controls select option:checked {
+  color: #ffffff;
+  background: #315f96;
 }
 
 .stellar-coordinate-grid,
