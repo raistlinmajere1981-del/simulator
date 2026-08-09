@@ -330,7 +330,7 @@ describe('portable experiment format', () => {
   it('migrates the legacy local experiment array to a versioned store', () => {
     const parsed = parseLocalExperimentStore([legacyExperiment()]);
     expect(parsed.migrated).toBe(true);
-    expect(parsed.experiments).toHaveLength(1);
+    expect(parsed.store.experiments).toHaveLength(1);
   });
 
   it('creates a current versioned local store with provenance', () => {
@@ -339,8 +339,8 @@ describe('portable experiment format', () => {
     expect(store.schemaVersion).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION);
     const parsed = parseLocalExperimentStore(store);
     expect(parsed.migrated).toBe(false);
-    expect(parsed.sourceVersion).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION);
-    expect(parsed.experiments).toEqual([savedExperimentFixture]);
+    expect(parsed.store.schemaVersion).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION);
+    expect(parsed.store.experiments).toEqual([savedExperimentFixture]);
   });
 
   it('normalizes multi-point order during storage', () => {
