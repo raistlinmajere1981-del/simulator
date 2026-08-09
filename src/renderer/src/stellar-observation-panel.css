@@ -89,6 +89,7 @@
   background: #315f96;
 }
 
+.stellar-refraction-diagnostic,
 .stellar-local-horizon-editor {
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 9px;
@@ -98,11 +99,17 @@
   gap: 10px;
 }
 
+.stellar-refraction-diagnostic.active {
+  border-color: rgba(86, 185, 190, 0.28);
+  background: rgba(52, 134, 139, 0.055);
+}
+
 .stellar-local-horizon-editor.active {
   border-color: rgba(104, 176, 217, 0.28);
   background: rgba(67, 123, 156, 0.06);
 }
 
+.stellar-refraction-heading,
 .stellar-local-horizon-heading {
   display: flex;
   align-items: center;
@@ -110,21 +117,25 @@
   gap: 16px;
 }
 
+.stellar-refraction-heading > div,
 .stellar-local-horizon-heading > div {
   display: grid;
   gap: 3px;
 }
 
+.stellar-refraction-heading strong,
 .stellar-local-horizon-heading strong {
   font-size: 12px;
 }
 
+.stellar-refraction-heading > div > span,
 .stellar-local-horizon-heading > div > span {
   color: var(--text-muted, #8f9aae);
   font-size: 11px;
   line-height: 1.45;
 }
 
+.stellar-refraction-toggle,
 .stellar-local-horizon-toggle {
   display: inline-flex;
   align-items: center;
@@ -134,10 +145,59 @@
   font-weight: 700;
 }
 
+.stellar-refraction-toggle input,
 .stellar-local-horizon-toggle input {
   width: 16px;
   height: 16px;
   accent-color: #5fa8d3;
+}
+
+.stellar-refraction-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stellar-refraction-grid article {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(86, 185, 190, 0.16);
+  border-radius: 7px;
+  background: rgba(86, 185, 190, 0.035);
+  display: grid;
+  gap: 3px;
+}
+
+.stellar-refraction-grid article.mixed-reference {
+  grid-column: span 2;
+  border-color: rgba(214, 170, 98, 0.3);
+  background: rgba(214, 170, 98, 0.055);
+}
+
+.stellar-refraction-grid span {
+  color: var(--text-muted, #8f9aae);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stellar-refraction-grid strong {
+  font-size: 13px;
+}
+
+.stellar-refraction-grid b {
+  color: #d7bd88;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.stellar-refraction-warning {
+  margin: 0;
+  padding-left: 9px;
+  border-left: 2px solid rgba(214, 170, 98, 0.62);
+  color: #cdbd9f;
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .stellar-local-horizon-source-switch {
@@ -378,6 +438,13 @@
   vector-effect: non-scaling-stroke;
 }
 
+.stellar-apparent-trail-line {
+  stroke: #61c5ca;
+  stroke-width: 0.8;
+  stroke-dasharray: 2.5 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
 .stellar-local-horizon-line {
   stroke: #d6aa62;
   stroke-width: 0.75;
@@ -422,6 +489,7 @@
 }
 
 .stellar-trail-legend .star-line-key::before { background: currentColor; }
+.stellar-trail-legend .apparent-line-key::before { background: #61c5ca; }
 .stellar-trail-legend .skyline-line-key::before { background: #d6aa62; }
 
 .stellar-crossings {
@@ -502,6 +570,7 @@
 
 @media (max-width: 1200px) {
   .stellar-local-horizon-grid { grid-template-columns: repeat(4, minmax(80px, 1fr)); }
+  .stellar-refraction-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 1100px) {
@@ -514,6 +583,7 @@
 @media (max-width: 720px) {
   .stellar-panel-heading,
   .stellar-trail-title,
+  .stellar-refraction-heading,
   .stellar-local-horizon-heading,
   .stellar-local-horizon-source-switch,
   .stellar-skyline-source-card { flex-direction: column; align-items: stretch; }
@@ -522,7 +592,9 @@
   .stellar-controls,
   .stellar-coordinate-grid,
   .stellar-position-grid,
+  .stellar-refraction-grid,
   .stellar-local-horizon-grid { grid-template-columns: 1fr; }
+  .stellar-refraction-grid article.mixed-reference { grid-column: auto; }
   .stellar-controls label:first-child { grid-column: auto; }
   .stellar-trail-title > div:not(:first-child) { text-align: left; }
 }
