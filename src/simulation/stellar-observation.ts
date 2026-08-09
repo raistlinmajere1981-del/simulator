@@ -135,8 +135,12 @@ export function calculateStellarObservation(input: {
   longitudeDeg: number;
   settings: StellarObservationSettings;
 }): StellarObservationResult {
-  validateSettings(input.settings);
-  const resolved = resolveBrightStarForObservation(input.settings.starId, input.observedAtIso);
+  const settings: StellarObservationSettings = {
+    ...DEFAULT_STELLAR_OBSERVATION_SETTINGS,
+    ...input.settings
+  };
+  validateSettings(settings);
+  const resolved = resolveBrightStarForObservation(settings.starId, input.observedAtIso);
   const rightAscensionDeg = resolved.precession.meanOfDateRightAscensionDeg;
   const declinationDeg = resolved.precession.meanOfDateDeclinationDeg;
   const position = calculateStellarPosition({
@@ -149,8 +153,8 @@ export function calculateStellarObservation(input: {
   });
   const trailInput = {
     startAtIso: input.observedAtIso,
-    durationMinutes: input.settings.trailDurationMinutes,
-    sampleIntervalMinutes: input.settings.trailSampleIntervalMinutes,
+    durationMinutes: settings.trailDurationMinutes,
+    sampleIntervalMinutes: settings.trailSampleIntervalMinutes,
     latitudeDeg: input.latitudeDeg,
     longitudeDeg: input.longitudeDeg,
     rightAscensionDeg,
@@ -158,10 +162,10 @@ export function calculateStellarObservation(input: {
     label: resolved.star.commonName
   };
   const trail = calculateStellarTrail(trailInput);
-  const localHorizonTrail = input.settings.localHorizonEnabled
+  const localHorizonTrail = settings.localHorizonEnabled
     ? calculateStellarLocalHorizonTrail({
         ...trailInput,
-        horizonMask: localHorizonMaskFromSettings(input.settings)
+        horizonMask: localHorizonMaskFromSettings(settings)
       })
     : null;
 
@@ -169,7 +173,7 @@ export function calculateStellarObservation(input: {
     `Katalog kaynağı: ${BRIGHT_STAR_CATALOG_SOURCE}; çevrimdışı altküme=${BRIGHT_STAR_CATALOG_ID}@${BRIGHT_STAR_CATALOG_VERSION}.`,
     'Katalog koordinatı ortalama J2000 sisteminden IAU 2006 precession ile gözlem tarihinin ortalama ekvator/equinox sistemine dönüştürülür.',
     'Proper motion, yıllık paralaks, radyal hız, nutation, aberration ve ışık sapması uygulanmaz.',
-    input.settings.localHorizonEnabled
+    settings.localHorizonEnabled
       ? 'Sekiz yönlü manuel yerel skyline maskesi geometrik yıldız izine uygulanır; ara azimutlar döngüsel doğrusal interpolasyonla çözülür.'
       : 'Yerel/topoğrafik ufuk kapalıdır; görünürlük yalnız geometrik 0° astronomik ufuk anlamındadır.',
     'Atmosferik kırılma, yıldız sönümlemesi, gökyüzü parlaklığı, bulut, seeing ve çıplak-göz algı eşiği bu gözlem sonucuna uygulanmaz.',
@@ -193,7 +197,7 @@ export function calculateStellarObservation(input: {
         id: 'trail-summary',
         title: 'Yıldız izi penceresi',
         formula: 't ∈ [t₀, t₀+Δt]; her örnekte (α_t,δ_t) → (h,A)',
-        substitution: `Δt=${format(input.settings.trailDurationMinutes)} dk; örnek aralığı=${format(input.settings.trailSampleIntervalMinutes)} dk`,
+        substitution: `Δt=${format(settings.trailDurationMinutes)} dk; örnek aralığı=${format(settings.trailSampleIntervalMinutes)} dk`,
         result: `${trail.samples.length} örnek; geometrik 0° ufuk üstü=${format(trail.visibleDurationMinutes)} dk; geçiş=${trail.horizonCrossings.length}`
       },
       ...(localHorizonTrail
@@ -207,7 +211,7 @@ export function calculateStellarObservation(input: {
     observedAtIso: position.observedAtIso,
     latitudeDeg: input.latitudeDeg,
     longitudeDeg: input.longitudeDeg,
-    settings: { ...input.settings },
+    settings: { ...settings },
     star: resolved.star,
     sourceRightAscensionJ2000Deg: resolved.star.rightAscensionJ2000Deg,
     sourceDeclinationJ2000Deg: resolved.star.declinationJ2000Deg,
