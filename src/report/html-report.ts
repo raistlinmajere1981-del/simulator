@@ -33,7 +33,8 @@ const modelNames: Record<string, string> = {
   'solar-day-events': 'Gün Doğumu / Batımı · Astronomik Referans',
   'lunar-position-low-precision': 'Ay Konumu ve Fazı · Astronomik Referans',
   'solar-shadow-observation': 'Gölge Geometrisi · Astronomik Referans',
-  'dual-shadow-comparison': 'İki Konumlu Gölge Karşılaştırması · Astronomik Referans'
+  'dual-shadow-comparison': 'İki Konumlu Gölge Karşılaştırması · Astronomik Referans',
+  'stellar-observation-reference': 'Yıldız Gözlemi · Astronomik Referans'
 };
 
 const datumLabels: Record<VerticalDatumKind, string> = {

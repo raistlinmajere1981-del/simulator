@@ -24,10 +24,15 @@ function horizonExperiment(): ExperimentDefinition {
 }
 
 describe('scenario workflow contracts', () => {
-  it('defines three ready visibility scenarios with a real horizon experiment type', () => {
+  it('defines ready visibility and astronomy scenarios with explicit experiment types', () => {
     expect(getSimulationScenario('target-visibility').experimentType).toBe('target-visibility');
     expect(getSimulationScenario('horizon').experimentType).toBe('horizon');
     expect(getSimulationScenario('long-distance-visibility').experimentType).toBe('target-visibility');
+    expect(getSimulationScenario('sun-moon-observation').experimentType).toBe('celestial');
+    expect(getSimulationScenario('shadow-observation').experimentType).toBe('shadow');
+    expect(getSimulationScenario('stellar-observation').experimentType).toBe('celestial');
+    expect(getSimulationScenario('stellar-observation').usesTerrain).toBe(false);
+    expect(normalizeSimulationScenarioId('stellar-observation')).toBe('stellar-observation');
     expect(normalizeSimulationScenarioId('unknown')).toBe('target-visibility');
   });
 
@@ -63,6 +68,16 @@ describe('scenario workflow contracts', () => {
     };
     const portable = createPortableExperimentFile(saved, '1.2.0', '2026-08-07T12:01:00Z');
     expect(parsePortableExperimentFile(portable).experiment.scenarioId).toBe('horizon');
+
+    const stellar: SavedExperiment = {
+      ...saved,
+      id: 'saved-stellar',
+      name: 'Yıldız kaydı',
+      scenarioId: 'stellar-observation'
+    };
+    expect(parsePortableExperimentFile(
+      createPortableExperimentFile(stellar, '1.13.0', '2026-08-09T15:00:00Z')
+    ).experiment.scenarioId).toBe('stellar-observation');
 
     const legacy = { ...saved } as Record<string, unknown>;
     delete legacy.scenarioId;

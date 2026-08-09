@@ -5,7 +5,8 @@ export type SimulationScenarioId =
   | 'horizon'
   | 'long-distance-visibility'
   | 'sun-moon-observation'
-  | 'shadow-observation';
+  | 'shadow-observation'
+  | 'stellar-observation';
 
 export interface SimulationScenarioDefinition {
   id: SimulationScenarioId;
@@ -79,10 +80,23 @@ export const SHADOW_SCENARIO: SimulationScenarioDefinition = {
   usesTerrain: false
 };
 
+export const STELLAR_SCENARIO: SimulationScenarioDefinition = {
+  id: 'stellar-observation',
+  label: 'Yıldız Gözlemleri',
+  icon: '✦',
+  experimentType: 'celestial',
+  description: 'Çevrimdışı parlak yıldız kataloğundan seçilen yıldızın J2000 koordinatını gözlem tarihine dönüştürür; geometrik konum ve zaman içindeki yıldız izini hesaplar.',
+  usesTarget: false,
+  usesObservation: false,
+  usesRoute: false,
+  usesTerrain: false
+};
+
 export const ALL_SIMULATION_SCENARIOS: readonly SimulationScenarioDefinition[] = [
   ...VISIBILITY_SCENARIOS,
   SUN_MOON_SCENARIO,
-  SHADOW_SCENARIO
+  SHADOW_SCENARIO,
+  STELLAR_SCENARIO
 ] as const;
 
 const scenarioById = new Map(
@@ -93,7 +107,8 @@ export function normalizeSimulationScenarioId(value: unknown): SimulationScenari
   return value === 'horizon' ||
     value === 'long-distance-visibility' ||
     value === 'sun-moon-observation' ||
-    value === 'shadow-observation'
+    value === 'shadow-observation' ||
+    value === 'stellar-observation'
     ? value
     : 'target-visibility';
 }
