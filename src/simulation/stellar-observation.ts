@@ -1,4 +1,5 @@
 import type { CalculationTrace, ModelMetadata, ModelPrediction } from '../shared/domain';
+import type { SavedStellarLocalHorizonSource } from '../shared/stellar-local-horizon-import';
 import {
   BRIGHT_STAR_CATALOG,
   BRIGHT_STAR_CATALOG_ID,
@@ -11,18 +12,24 @@ import {
   calculateStellarLocalHorizonTrail,
   type StellarLocalHorizonTrailResult
 } from './stellar-local-horizon-trail';
-import type { StellarLocalHorizonMask } from './stellar-local-horizon';
+import {
+  normalizeStellarLocalHorizonMask,
+  type StellarLocalHorizonMask
+} from './stellar-local-horizon';
 import { calculateStellarPosition, type StellarPositionResult } from './stellar-position';
 import { calculateStellarTrail, type StellarTrailResult } from './stellar-trail';
 
 export const STELLAR_OBSERVATION_MODEL_ID = 'stellar-observation-reference';
-export const STELLAR_OBSERVATION_MODEL_VERSION = '0.2.0';
+export const STELLAR_OBSERVATION_MODEL_VERSION = '0.3.0';
+
+export type StellarLocalHorizonSourceMode = 'manual' | 'external';
 
 export interface StellarObservationSettings {
   starId: string;
   trailDurationMinutes: number;
   trailSampleIntervalMinutes: number;
   localHorizonEnabled: boolean;
+  localHorizonSourceMode: StellarLocalHorizonSourceMode;
   localHorizonNorthDeg: number;
   localHorizonNorthEastDeg: number;
   localHorizonEastDeg: number;
@@ -38,6 +45,7 @@ export const DEFAULT_STELLAR_OBSERVATION_SETTINGS: StellarObservationSettings = 
   trailDurationMinutes: 720,
   trailSampleIntervalMinutes: 10,
   localHorizonEnabled: false,
+  localHorizonSourceMode: 'manual',
   localHorizonNorthDeg: 0,
   localHorizonNorthEastDeg: 0,
   localHorizonEastDeg: 0,
@@ -61,6 +69,18 @@ export const STELLAR_LOCAL_HORIZON_DIRECTIONS = [
 
 export type StellarLocalHorizonSettingKey = typeof STELLAR_LOCAL_HORIZON_DIRECTIONS[number]['key'];
 
+export interface StellarObservationLocalHorizonSourceSummary {
+  mode: StellarLocalHorizonSourceMode;
+  label: string;
+  pointCount: number;
+  maximumAzimuthGapDeg: number;
+  fileName?: string;
+  fileSizeBytes?: number;
+  sha256?: string;
+  importedAtIso?: string;
+  warnings: string[];
+}
+
 export interface StellarObservationResult {
   experimentId: string;
   observedAtIso: string;
@@ -76,6 +96,7 @@ export interface StellarObservationResult {
   position: StellarPositionResult;
   trail: StellarTrailResult;
   localHorizonTrail: StellarLocalHorizonTrailResult | null;
+  localHorizonSource: StellarObservationLocalHorizonSourceSummary | null;
   traceId: string;
   trace: CalculationTrace;
   warnings: string[];
@@ -107,6 +128,14 @@ function localHorizonMaskFromSettings(settings: StellarObservationSettings): Ste
   };
 }
 
+function localHorizonMaskFromExternal(source: SavedStellarLocalHorizonSource): StellarLocalHorizonMask {
+  return {
+    sourceKind: 'external',
+    sourceLabel: source.fileName,
+    points: source.points.map((point) => ({ ...point }))
+  };
+}
+
 function validateSettings(settings: StellarObservationSettings): void {
   const star = BRIGHT_STAR_CATALOG.find((candidate) => candidate.id === settings.starId);
   if (!star) throw new StellarObservationError(`Bilinmeyen parlak yıldız katalog kimliği: ${settings.starId}`);
@@ -120,6 +149,9 @@ function validateSettings(settings: StellarObservationSettings): void {
   if (sampleCount > 4_000) {
     throw new StellarObservationError('Yıldız izi ayarları 4.000 örnek sınırını aşar.');
   }
+  if (settings.localHorizonSourceMode !== 'manual' && settings.localHorizonSourceMode !== 'external') {
+    throw new StellarObservationError('Yerel ufuk kaynak modu manual veya external olmalıdır.');
+  }
   for (const direction of STELLAR_LOCAL_HORIZON_DIRECTIONS) {
     const value = settings[direction.key];
     if (!Number.isFinite(value) || value < -90 || value > 90) {
@@ -128,12 +160,57 @@ function validateSettings(settings: StellarObservationSettings): void {
   }
 }
 
+function resolveLocalHorizon(input: {
+  settings: StellarObservationSettings;
+  externalLocalHorizonSource?: SavedStellarLocalHorizonSource;
+}): {
+  mask: StellarLocalHorizonMask | null;
+  summary: StellarObservationLocalHorizonSourceSummary | null;
+} {
+  if (!input.settings.localHorizonEnabled) return { mask: null, summary: null };
+  if (input.settings.localHorizonSourceMode === 'manual') {
+    const mask = localHorizonMaskFromSettings(input.settings);
+    const normalized = normalizeStellarLocalHorizonMask(mask);
+    return {
+      mask,
+      summary: {
+        mode: 'manual',
+        label: normalized.sourceLabel,
+        pointCount: normalized.points.length,
+        maximumAzimuthGapDeg: normalized.maximumAzimuthGapDeg,
+        warnings: []
+      }
+    };
+  }
+  const source = input.externalLocalHorizonSource;
+  if (!source) {
+    throw new StellarObservationError('Dış skyline kaynak modu seçili ancak doğrulanmış skyline dosyası bulunmuyor.');
+  }
+  const mask = localHorizonMaskFromExternal(source);
+  const normalized = normalizeStellarLocalHorizonMask(mask);
+  return {
+    mask,
+    summary: {
+      mode: 'external',
+      label: source.fileName,
+      pointCount: normalized.points.length,
+      maximumAzimuthGapDeg: normalized.maximumAzimuthGapDeg,
+      fileName: source.fileName,
+      fileSizeBytes: source.fileSizeBytes,
+      sha256: source.sha256,
+      importedAtIso: source.importedAtIso,
+      warnings: [...source.warnings]
+    }
+  };
+}
+
 export function calculateStellarObservation(input: {
   experimentId: string;
   observedAtIso: string;
   latitudeDeg: number;
   longitudeDeg: number;
   settings: StellarObservationSettings;
+  externalLocalHorizonSource?: SavedStellarLocalHorizonSource;
 }): StellarObservationResult {
   const settings: StellarObservationSettings = {
     ...DEFAULT_STELLAR_OBSERVATION_SETTINGS,
@@ -162,20 +239,25 @@ export function calculateStellarObservation(input: {
     label: resolved.star.commonName
   };
   const trail = calculateStellarTrail(trailInput);
-  const localHorizonTrail = settings.localHorizonEnabled
-    ? calculateStellarLocalHorizonTrail({
-        ...trailInput,
-        horizonMask: localHorizonMaskFromSettings(settings)
-      })
+  const localHorizon = resolveLocalHorizon({
+    settings,
+    externalLocalHorizonSource: input.externalLocalHorizonSource
+  });
+  const localHorizonTrail = localHorizon.mask
+    ? calculateStellarLocalHorizonTrail({ ...trailInput, horizonMask: localHorizon.mask })
     : null;
 
+  const localHorizonWarning = !settings.localHorizonEnabled
+    ? 'Yerel/topoğrafik ufuk kapalıdır; görünürlük yalnız geometrik 0° astronomik ufuk anlamındadır.'
+    : localHorizon.summary?.mode === 'external'
+      ? `Dış yerel skyline uygulanır: ${localHorizon.summary.fileName}; ${localHorizon.summary.pointCount} nokta; maksimum azimut boşluğu=${format(localHorizon.summary.maximumAzimuthGapDeg, 3)}°; SHA-256=${localHorizon.summary.sha256}.`
+      : 'Sekiz yönlü manuel yerel skyline maskesi geometrik yıldız izine uygulanır; ara azimutlar döngüsel doğrusal interpolasyonla çözülür.';
   const warnings = [
     `Katalog kaynağı: ${BRIGHT_STAR_CATALOG_SOURCE}; çevrimdışı altküme=${BRIGHT_STAR_CATALOG_ID}@${BRIGHT_STAR_CATALOG_VERSION}.`,
     'Katalog koordinatı ortalama J2000 sisteminden IAU 2006 precession ile gözlem tarihinin ortalama ekvator/equinox sistemine dönüştürülür.',
     'Proper motion, yıllık paralaks, radyal hız, nutation, aberration ve ışık sapması uygulanmaz.',
-    settings.localHorizonEnabled
-      ? 'Sekiz yönlü manuel yerel skyline maskesi geometrik yıldız izine uygulanır; ara azimutlar döngüsel doğrusal interpolasyonla çözülür.'
-      : 'Yerel/topoğrafik ufuk kapalıdır; görünürlük yalnız geometrik 0° astronomik ufuk anlamındadır.',
+    localHorizonWarning,
+    ...(localHorizon.summary?.warnings ?? []),
     'Atmosferik kırılma, yıldız sönümlemesi, gökyüzü parlaklığı, bulut, seeing ve çıplak-göz algı eşiği bu gözlem sonucuna uygulanmaz.',
     'Bu astronomik referans tek başına herhangi bir Dünya şekli modelini doğrulamaz.'
   ];
@@ -200,6 +282,17 @@ export function calculateStellarObservation(input: {
         substitution: `Δt=${format(settings.trailDurationMinutes)} dk; örnek aralığı=${format(settings.trailSampleIntervalMinutes)} dk`,
         result: `${trail.samples.length} örnek; geometrik 0° ufuk üstü=${format(trail.visibleDurationMinutes)} dk; geçiş=${trail.horizonCrossings.length}`
       },
+      ...(localHorizon.summary
+        ? [{
+            id: 'local-source',
+            title: 'Yerel skyline kaynağı',
+            formula: 'azimut → geometrik yerel ufuk yüksekliği',
+            substitution: localHorizon.summary.mode === 'external'
+              ? `${localHorizon.summary.fileName} · SHA-256=${localHorizon.summary.sha256}`
+              : localHorizon.summary.label,
+            result: `${localHorizon.summary.pointCount} nokta · maksimum azimut boşluğu=${format(localHorizon.summary.maximumAzimuthGapDeg, 3)}°`
+          }]
+        : []),
       ...(localHorizonTrail
         ? localHorizonTrail.trace.steps.map((step) => ({ ...step, id: `local-${step.id}` }))
         : [])
@@ -221,6 +314,7 @@ export function calculateStellarObservation(input: {
     position,
     trail,
     localHorizonTrail,
+    localHorizonSource: localHorizon.summary,
     traceId,
     trace,
     warnings
@@ -231,12 +325,12 @@ export const stellarObservationMetadata: ModelMetadata = {
   id: STELLAR_OBSERVATION_MODEL_ID,
   name: 'Yıldız Gözlemi · Astronomik Referans',
   version: STELLAR_OBSERVATION_MODEL_VERSION,
-  description: 'Çevrimdışı parlak yıldız kataloğundan seçilen J2000 yönünü gözlem tarihine dönüştürüp geometrik yerel konum, yıldız izi ve isteğe bağlı manuel yerel skyline açıklığı üreten astronomik referans.',
+  description: 'Çevrimdışı parlak yıldız kataloğundan seçilen J2000 yönünü gözlem tarihine dönüştürüp geometrik yerel konum, yıldız izi ve isteğe bağlı manuel veya dış kaynaklı yerel skyline açıklığı üreten astronomik referans.',
   capabilities: ['stellar-position'],
   assumptions: [
     'Katalog yönü ortalama J2000 koordinatıdır ve gözlem tarihine açık precession adımıyla dönüştürülür.',
     'Proper motion ve diğer yüksek hassasiyetli astrometrik düzeltmeler uygulanmaz.',
-    'İsteğe bağlı yerel ufuk sekiz yönlü manuel geometrik skyline maskesidir; atmosferik apparent-altitude ile otomatik birleştirilmez.',
+    'İsteğe bağlı yerel ufuk manuel veya doğrulanmış dış geometrik skyline maskesidir; atmosferik apparent-altitude ile otomatik birleştirilmez.',
     'Optik çıplak-göz görünürlüğü bu modelde yoktur.'
   ]
 };
@@ -266,6 +360,9 @@ export function createStellarObservationPrediction(result: StellarObservationRes
       { key: 'stellarTrailMinimumElevationDeg', label: 'İz minimum yüksekliği', value: result.trail.sampledMinimumElevationDeg, unit: 'deg' },
       { key: 'stellarTrailMaximumElevationDeg', label: 'İz maksimum yüksekliği', value: result.trail.sampledMaximumElevationDeg, unit: 'deg' },
       { key: 'stellarLocalHorizonEnabled', label: 'Yerel ufuk maskesi etkin', value: result.settings.localHorizonEnabled ? 1 : 0, unit: 'boolean' },
+      { key: 'stellarLocalHorizonSourceExternal', label: 'Yerel ufuk kaynak modu dış dosya', value: result.settings.localHorizonSourceMode === 'external' ? 1 : 0, unit: 'boolean' },
+      { key: 'stellarLocalHorizonPointCount', label: 'Yerel ufuk nokta sayısı', value: result.localHorizonSource?.pointCount ?? null, unit: 'count' },
+      { key: 'stellarLocalHorizonMaximumAzimuthGapDeg', label: 'Yerel ufuk maksimum azimut boşluğu', value: result.localHorizonSource?.maximumAzimuthGapDeg ?? null, unit: 'deg' },
       { key: 'stellarLocalHorizonNorthDeg', label: 'Yerel ufuk K', value: result.settings.localHorizonNorthDeg, unit: 'deg' },
       { key: 'stellarLocalHorizonNorthEastDeg', label: 'Yerel ufuk KD', value: result.settings.localHorizonNorthEastDeg, unit: 'deg' },
       { key: 'stellarLocalHorizonEastDeg', label: 'Yerel ufuk D', value: result.settings.localHorizonEastDeg, unit: 'deg' },
@@ -316,6 +413,7 @@ export function readStellarObservationSettings(prediction: ModelPrediction | und
       ? interval
       : defaults.trailSampleIntervalMinutes,
     localHorizonEnabled: metricValue('stellarLocalHorizonEnabled') === 1,
+    localHorizonSourceMode: metricValue('stellarLocalHorizonSourceExternal') === 1 ? 'external' : 'manual',
     localHorizonNorthDeg: readStoredLocalHorizonAltitude(metricValue, 'stellarLocalHorizonNorthDeg', defaults.localHorizonNorthDeg),
     localHorizonNorthEastDeg: readStoredLocalHorizonAltitude(metricValue, 'stellarLocalHorizonNorthEastDeg', defaults.localHorizonNorthEastDeg),
     localHorizonEastDeg: readStoredLocalHorizonAltitude(metricValue, 'stellarLocalHorizonEastDeg', defaults.localHorizonEastDeg),
