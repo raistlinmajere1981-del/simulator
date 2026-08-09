@@ -96,6 +96,6 @@ describe('stellar local horizon import', () => {
     for (let index = 0; index < 1_441; index += 1) {
       rows.push(`${index * 360 / 1_441},0`);
     }
-    expect(() => parseStellarLocalHorizonCsv(rows.join('\n'), 'dense.csv')).toThrow('1.440');
+    expect(() => parseStellarLocalHorizonCsv(rows.join('\n'), 'dense.csv')).toThrow('en fazla 1440');
   });
 });
