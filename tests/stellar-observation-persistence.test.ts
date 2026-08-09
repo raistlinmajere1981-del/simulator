@@ -86,7 +86,7 @@ describe('stellar observation persistence', () => {
     expect(report).toContain('Yerel ufuk D');
     expect(report).toContain('Anlık yerel ufuk açıklığı');
     expect(report).toContain('İz penceresinde yerel ufuk üstü geometrik süre');
-    expect(report).toContain('sekiz yönlü manuel yerel skyline');
+    expect(report).toContain('Sekiz yönlü manuel yerel skyline');
     expect(report).toContain('Proper motion');
     expect(report).toContain('Atmosferik kırılma');
     expect(report).toContain('NASA HEASARC BSC5P');
