@@ -26,7 +26,7 @@ export function CelestialTimeCard({
           <span>Zaman ve tarih</span>
           <span className="section-state">astronomi modülü</span>
         </div>
-        <div className="time-placeholder">Güneş ve Ay gözlem senaryosunda etkinleşir.</div>
+        <div className="time-placeholder">Astronomi gözlem senaryolarında etkinleşir.</div>
       </section>
     );
   }
@@ -40,7 +40,7 @@ export function CelestialTimeCard({
     <section className="time-card celestial-time-card">
       <div className="section-heading celestial-time-heading">
         <span>Zaman ve tarih</span>
-        <div><span className="section-state">GÜNEŞ + AY · 6.2</span><PanelHelpButton panelId="celestial-time" /></div>
+        <div><span className="section-state">ASTRONOMİ · UTC</span><PanelHelpButton panelId="celestial-time" /></div>
       </div>
       <label>
         <span>Yerel tarih / saat · sistem görünümü</span>
