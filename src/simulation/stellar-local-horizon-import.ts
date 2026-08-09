@@ -1,4 +1,3 @@
-import { basename, extname } from 'node:path';
 import type {
   StellarLocalHorizonImportFormat,
   StellarLocalHorizonImportPoint
@@ -28,30 +27,13 @@ export class StellarLocalHorizonImportError extends Error {
 }
 
 const AZIMUTH_HEADERS = new Set([
-  'azimuth',
-  'azimuthdeg',
-  'azimut',
-  'azimutdeg',
-  'bearing',
-  'bearingdeg',
-  'yon',
-  'yonder',
-  'direction',
-  'directiondeg'
+  'azimuth', 'azimuthdeg', 'azimut', 'azimutdeg', 'bearing', 'bearingdeg',
+  'yon', 'yonder', 'direction', 'directiondeg'
 ]);
 const ALTITUDE_HEADERS = new Set([
-  'altitude',
-  'altitudedeg',
-  'elevation',
-  'elevationdeg',
-  'horizon',
-  'horizonaltitude',
-  'horizonaltitudedeg',
-  'ufuk',
-  'ufukyuksekligi',
-  'ufukyuksekligideg',
-  'yukseklik',
-  'yukseklikdeg'
+  'altitude', 'altitudedeg', 'elevation', 'elevationdeg', 'horizon',
+  'horizonaltitude', 'horizonaltitudedeg', 'ufuk', 'ufukyuksekligi',
+  'ufukyuksekligideg', 'yukseklik', 'yukseklikdeg'
 ]);
 
 function normalizeHeader(value: string): string {
@@ -83,9 +65,16 @@ function parseFiniteNumber(raw: unknown, label: string): number {
 }
 
 function sourceFileName(fileName: string): string {
-  const value = basename(fileName).trim();
+  const normalizedPath = fileName.replace(/\\/g, '/');
+  const value = (normalizedPath.split('/').pop() ?? '').trim();
   if (!value) throw new StellarLocalHorizonImportError('Skyline kaynak dosyası adı boş olamaz.');
   return value.slice(0, 240);
+}
+
+function fileExtension(fileName: string): string {
+  const name = sourceFileName(fileName);
+  const dot = name.lastIndexOf('.');
+  return dot < 0 ? '' : name.slice(dot).toLocaleLowerCase('en-US');
 }
 
 function warningsForNormalized(
@@ -166,20 +155,13 @@ function splitCsvLine(line: string, delimiter: string): string[] {
 }
 
 function detectDelimiter(line: string): ',' | ';' | '\t' {
-  const candidates: Array<',' | ';' | '\t'> = [',', ';', '\t'];
-  let best: ',' | ';' | '\t' = ',';
-  let bestCount = -1;
-  for (const delimiter of candidates) {
-    const count = splitCsvLine(line, delimiter).length - 1;
-    if (count > bestCount) {
-      best = delimiter;
-      bestCount = count;
-    }
-  }
-  if (bestCount < 1) {
-    throw new StellarLocalHorizonImportError('Skyline CSV dosyasında en az iki sütun bulunmalıdır.');
-  }
-  return best;
+  const tabColumns = splitCsvLine(line, '\t').length;
+  if (tabColumns >= 2) return '\t';
+  const semicolonColumns = splitCsvLine(line, ';').length;
+  if (semicolonColumns >= 2) return ';';
+  const commaColumns = splitCsvLine(line, ',').length;
+  if (commaColumns >= 2) return ',';
+  throw new StellarLocalHorizonImportError('Skyline CSV dosyasında en az iki sütun bulunmalıdır.');
 }
 
 function identifyColumns(cells: string[]): { azimuthIndex: number; altitudeIndex: number } | null {
@@ -255,7 +237,8 @@ function pointFromJson(value: unknown, index: number): StellarLocalHorizonImport
   }
   const record = value as Record<string, unknown>;
   const azimuth = record.azimuthDeg ?? record.azimuth ?? record.azimutDeg ?? record.azimut;
-  const altitude = record.altitudeDeg ?? record.altitude ?? record.horizonAltitudeDeg ?? record.elevationDeg ?? record.elevation ?? record.ufukYuksekligi;
+  const altitude = record.altitudeDeg ?? record.altitude ?? record.horizonAltitudeDeg ??
+    record.elevationDeg ?? record.elevation ?? record.ufukYuksekligi;
   return {
     azimuthDeg: parseFiniteNumber(azimuth, `${index + 1}. JSON noktası azimutu`),
     altitudeDeg: parseFiniteNumber(altitude, `${index + 1}. JSON noktası ufuk yüksekliği`)
@@ -287,7 +270,7 @@ export function parseStellarLocalHorizonFile(
   content: string,
   fileName: string
 ): ParsedStellarLocalHorizonProfile {
-  const extension = extname(fileName).toLocaleLowerCase('en-US');
+  const extension = fileExtension(fileName);
   if (extension === '.json') return parseStellarLocalHorizonJson(content, fileName);
   if (extension === '.csv' || extension === '.tsv' || extension === '.txt') {
     return parseStellarLocalHorizonCsv(content, fileName);
