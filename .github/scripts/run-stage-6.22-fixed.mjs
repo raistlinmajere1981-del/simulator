@@ -14,6 +14,11 @@ const newBlock = `replaceExpected(\n  'src/simulation/stellar-sky-snapshot.ts',\
 if (!source.includes(oldBlock)) throw new Error('eski snapshot loop bloğu bulunamadı');
 source = source.replace(oldBlock, newBlock);
 
+const preSkyDescription = 'Çevrimdışı parlak yıldız kataloğundan seçilen J2000 yönünü gözlem tarihine dönüştürüp geometrik yerel konum, yıldız izi, isteğe bağlı geometrik skyline açıklığı ve ayrı standart-refraction apparent tanısı üreten astronomik referans.';
+const currentSkyDescription = 'Çevrimdışı parlak yıldız kataloğundan seçilen J2000 yönünü ve 19-yıldız çoklu gökyüzü snapshotını gözlem tarihine dönüştürüp geometrik yerel konum, yıldız izi, isteğe bağlı geometrik skyline açıklığı ve ayrı standart-refraction apparent tanısı üreten astronomik referans.';
+if (!source.includes(preSkyDescription)) throw new Error('6.21 metadata description anchor bulunamadı');
+source = source.replace(preSkyDescription, currentSkyDescription);
+
 const temporaryPath = '/tmp/apply-stage-6.22-fixed.mjs';
 fs.writeFileSync(temporaryPath, source);
 execFileSync(process.execPath, [temporaryPath], { stdio: 'inherit' });
