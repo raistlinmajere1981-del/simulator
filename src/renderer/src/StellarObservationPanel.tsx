@@ -127,6 +127,18 @@ function localHorizonDraftMatchesSettings(
     STELLAR_LOCAL_HORIZON_DIRECTIONS.every((direction) => draft[direction.key] === settings[direction.key]);
 }
 
+function cloneExternalSource(
+  source: SavedStellarLocalHorizonSource | undefined
+): SavedStellarLocalHorizonSource | undefined {
+  return source
+    ? { ...source, points: source.points.map((point) => ({ ...point })), warnings: [...source.warnings] }
+    : undefined;
+}
+
+function externalSourceSignature(source: SavedStellarLocalHorizonSource | undefined): string {
+  return source ? `${source.sha256}|${source.fileName}|${source.importedAtIso}` : '';
+}
+
 export function StellarObservationPanel({
   result,
   prediction,
@@ -134,6 +146,7 @@ export function StellarObservationPanel({
   externalLocalHorizonSource,
   onChange,
   onImportLocalHorizon,
+  onApplyLocalHorizon,
   onShowTrace
 }: {
   result: StellarObservationResult;
@@ -142,18 +155,27 @@ export function StellarObservationPanel({
   externalLocalHorizonSource?: SavedStellarLocalHorizonSource;
   onChange(settings: StellarObservationSettings): void;
   onImportLocalHorizon(): Promise<SavedStellarLocalHorizonSource | undefined>;
+  onApplyLocalHorizon(settings: StellarObservationSettings, source?: SavedStellarLocalHorizonSource): void;
   onShowTrace(): void;
 }): React.JSX.Element {
   const [localHorizonDraft, setLocalHorizonDraft] = useState<LocalHorizonDraft>(() =>
     localHorizonDraftFromSettings(settings)
   );
+  const [draftExternalLocalHorizonSource, setDraftExternalLocalHorizonSource] = useState<SavedStellarLocalHorizonSource | undefined>(() =>
+    cloneExternalSource(externalLocalHorizonSource)
+  );
   const [isImportingHorizon, setIsImportingHorizon] = useState(false);
   const [horizonImportMessage, setHorizonImportMessage] = useState('');
   const appliedLocalHorizonSignature = localHorizonSignature(settings);
+  const appliedExternalSourceSignature = externalSourceSignature(externalLocalHorizonSource);
 
   useEffect(() => {
     setLocalHorizonDraft(localHorizonDraftFromSettings(settings));
   }, [appliedLocalHorizonSignature]);
+
+  useEffect(() => {
+    setDraftExternalLocalHorizonSource(cloneExternalSource(externalLocalHorizonSource));
+  }, [appliedExternalSourceSignature]);
 
   const position = result.position;
   const crossings = result.trail.horizonCrossings;
@@ -162,7 +184,8 @@ export function StellarObservationPanel({
   const skylinePolyline = localHorizonPolyline(result);
   const localState = currentLocalHorizonState(result);
   const firstLocalSample = result.localHorizonTrail?.samples[0];
-  const localHorizonDirty = !localHorizonDraftMatchesSettings(localHorizonDraft, settings);
+  const sourceDraftDirty = externalSourceSignature(draftExternalLocalHorizonSource) !== appliedExternalSourceSignature;
+  const localHorizonDirty = !localHorizonDraftMatchesSettings(localHorizonDraft, settings) || sourceDraftDirty;
   const usesExternalDraft = localHorizonDraft.localHorizonSourceMode === 'external';
 
   const updateLocalHorizonDirection = (key: LocalHorizonDirectionKey, value: number): void => {
@@ -170,15 +193,15 @@ export function StellarObservationPanel({
   };
 
   const applyLocalHorizonDraft = (): void => {
-    if (localHorizonDraft.localHorizonEnabled && usesExternalDraft && !externalLocalHorizonSource) {
+    if (localHorizonDraft.localHorizonEnabled && usesExternalDraft && !draftExternalLocalHorizonSource) {
       setHorizonImportMessage('Dış skyline modu için önce doğrulanmış bir dosya içe aktarılmalıdır.');
       return;
     }
     setHorizonImportMessage('');
-    onChange({
-      ...settings,
-      ...localHorizonDraft
-    });
+    onApplyLocalHorizon(
+      { ...settings, ...localHorizonDraft },
+      cloneExternalSource(draftExternalLocalHorizonSource)
+    );
   };
 
   const importLocalHorizon = async (): Promise<void> => {
@@ -187,6 +210,7 @@ export function StellarObservationPanel({
     try {
       const imported = await onImportLocalHorizon();
       if (!imported) return;
+      setDraftExternalLocalHorizonSource(cloneExternalSource(imported));
       setLocalHorizonDraft((current) => ({
         ...current,
         localHorizonEnabled: true,
@@ -289,7 +313,7 @@ export function StellarObservationPanel({
             </button>
             <button
               className={usesExternalDraft ? 'selected' : ''}
-              disabled={!externalLocalHorizonSource}
+              disabled={!draftExternalLocalHorizonSource}
               type="button"
               onClick={() => setLocalHorizonDraft((current) => ({ ...current, localHorizonSourceMode: 'external' }))}
             >
@@ -301,16 +325,16 @@ export function StellarObservationPanel({
           </button>
         </div>
 
-        {externalLocalHorizonSource && (
+        {draftExternalLocalHorizonSource && (
           <div className={usesExternalDraft ? 'stellar-skyline-source-card selected' : 'stellar-skyline-source-card'}>
             <div>
               <small>DOSYA SKYLINE KAYNAĞI</small>
-              <strong>{externalLocalHorizonSource.fileName}</strong>
-              <span>{externalLocalHorizonSource.format.toUpperCase()} · {externalLocalHorizonSource.pointCount} nokta · en büyük boşluk {angleFormatter.format(externalLocalHorizonSource.maximumAzimuthGapDeg)}°</span>
+              <strong>{draftExternalLocalHorizonSource.fileName}</strong>
+              <span>{draftExternalLocalHorizonSource.format.toUpperCase()} · {draftExternalLocalHorizonSource.pointCount} nokta · en büyük boşluk {angleFormatter.format(draftExternalLocalHorizonSource.maximumAzimuthGapDeg)}°</span>
             </div>
             <div>
-              <span>SHA-256 <code title={externalLocalHorizonSource.sha256}>{externalLocalHorizonSource.sha256.slice(0, 12)}…</code></span>
-              <span>{angleFormatter.format(externalLocalHorizonSource.fileSizeBytes / 1024)} KB · {formatImportedAt(externalLocalHorizonSource.importedAtIso)}</span>
+              <span>SHA-256 <code title={draftExternalLocalHorizonSource.sha256}>{draftExternalLocalHorizonSource.sha256.slice(0, 12)}…</code></span>
+              <span>{angleFormatter.format(draftExternalLocalHorizonSource.fileSizeBytes / 1024)} KB · {formatImportedAt(draftExternalLocalHorizonSource.importedAtIso)}</span>
             </div>
           </div>
         )}
@@ -337,12 +361,12 @@ export function StellarObservationPanel({
           </div>
         )}
 
-        {localHorizonDraft.localHorizonEnabled && usesExternalDraft && !externalLocalHorizonSource && (
+        {localHorizonDraft.localHorizonEnabled && usesExternalDraft && !draftExternalLocalHorizonSource && (
           <p className="stellar-skyline-source-empty">Dış profil seçmek için CSV/TSV/TXT/JSON skyline dosyası içe aktar.</p>
         )}
-        {externalLocalHorizonSource && externalLocalHorizonSource.warnings.length > 0 && usesExternalDraft && (
+        {externalLocalHorizonSource && draftExternalLocalHorizonSource.warnings.length > 0 && usesExternalDraft && (
           <div className="stellar-skyline-source-warnings">
-            {externalLocalHorizonSource.warnings.map((warning) => <span key={warning}>{warning}</span>)}
+            {draftExternalLocalHorizonSource.warnings.map((warning) => <span key={warning}>{warning}</span>)}
           </div>
         )}
         {horizonImportMessage && <p className="stellar-skyline-import-message" role="status">{horizonImportMessage}</p>}
@@ -359,13 +383,14 @@ export function StellarObservationPanel({
               onClick={() => {
                 setHorizonImportMessage('');
                 setLocalHorizonDraft(localHorizonDraftFromSettings(settings));
+                setDraftExternalLocalHorizonSource(cloneExternalSource(externalLocalHorizonSource));
               }}
             >
               Geri al
             </button>
             <button
               className="stellar-local-horizon-apply"
-              disabled={!localHorizonDirty || (localHorizonDraft.localHorizonEnabled && usesExternalDraft && !externalLocalHorizonSource)}
+              disabled={!localHorizonDirty || (localHorizonDraft.localHorizonEnabled && usesExternalDraft && !draftExternalLocalHorizonSource)}
               type="button"
               onClick={applyLocalHorizonDraft}
             >

@@ -1739,9 +1739,7 @@ export function AppNext(): React.JSX.Element {
         warnings: [...result.profile.warnings],
         modifiedAfterImport: false
       };
-      setStellarLocalHorizonSource(nextSource);
-      setIsDirty(true);
-      setStorageMessage(`“${nextSource.fileName}” skyline kaynağı hazır: ${nextSource.pointCount} nokta doğrulandı. Uygula ve hesapla ile etkinleştirilebilir.`);
+      setStorageMessage(`“${nextSource.fileName}” skyline kaynağı taslak olarak hazır: ${nextSource.pointCount} nokta doğrulandı. Uygula ve hesapla ile etkinleştirilebilir.`);
       return nextSource;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Skyline profili içe aktarılamadı.';
@@ -2230,6 +2228,11 @@ export function AppNext(): React.JSX.Element {
                   externalLocalHorizonSource={stellarLocalHorizonSource}
                   onChange={(settings) => { setStellarObservationSettings(settings); setIsDirty(true); }}
                   onImportLocalHorizon={importStellarLocalHorizon}
+                  onApplyLocalHorizon={(settings, source) => {
+                    setStellarObservationSettings(settings);
+                    setStellarLocalHorizonSource(source);
+                    setIsDirty(true);
+                  }}
                   onShowTrace={() => setTraceModelId(stellarObservationMetadata.id)}
                 />
               : activeScenarioId === 'shadow-observation' && shadowObservationResult && shadowObservationPrediction
