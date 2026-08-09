@@ -12,6 +12,7 @@ import type {
   ResultStatus
 } from '../../shared/domain';
 import type { SavedPhotoCalibration } from '../../shared/photo-calibration';
+import type { SavedStellarLocalHorizonSource } from '../../shared/stellar-local-horizon-import';
 import { systemUtcOffsetMinutes } from '../../shared/celestial-time';
 import type { HelpPanelId } from '../../shared/help-content';
 import type {
@@ -1155,6 +1156,7 @@ export function AppNext(): React.JSX.Element {
   const [shadowObservationSettings, setShadowObservationSettings] = useState<ShadowObservationSettings>(() => ({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS }));
   const [dualShadowSettings, setDualShadowSettings] = useState<DualShadowComparisonSettings>();
   const [stellarObservationSettings, setStellarObservationSettings] = useState<StellarObservationSettings>(() => ({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS }));
+  const [stellarLocalHorizonSource, setStellarLocalHorizonSource] = useState<SavedStellarLocalHorizonSource>();
   const [manualTerrainPoints, setManualTerrainPoints] = useState<ManualTerrainPoint[]>(
     defaultTerrainPoints()
   );
@@ -1359,15 +1361,21 @@ export function AppNext(): React.JSX.Element {
   const dualShadowComparisonPrediction = useMemo(() => dualShadowComparisonResult
     ? createDualShadowComparisonPrediction(dualShadowComparisonResult)
     : undefined, [dualShadowComparisonResult]);
+  const appliedExternalStellarLocalHorizonSource = stellarObservationSettings.localHorizonSourceMode === 'external'
+    ? stellarLocalHorizonSource
+    : undefined;
   const stellarObservationResult = useMemo(() => activeScenarioId === 'stellar-observation'
     ? calculateStellarObservation({
         experimentId: activeExperimentId,
         observedAtIso: experimentObservedAtIso,
         latitudeDeg: inputs.observerLatitudeDeg,
         longitudeDeg: inputs.observerLongitudeDeg,
-        settings: stellarObservationSettings
+        settings: stellarObservationSettings,
+        ...(appliedExternalStellarLocalHorizonSource
+          ? { externalLocalHorizonSource: appliedExternalStellarLocalHorizonSource }
+          : {})
       })
-    : undefined, [activeExperimentId, activeScenarioId, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg, stellarObservationSettings]);
+    : undefined, [activeExperimentId, activeScenarioId, appliedExternalStellarLocalHorizonSource, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg, stellarObservationSettings]);
   const stellarObservationPrediction = useMemo(() => stellarObservationResult
     ? createStellarObservationPrediction(stellarObservationResult)
     : undefined, [stellarObservationResult]);
@@ -1531,6 +1539,7 @@ export function AppNext(): React.JSX.Element {
       setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
       setDualShadowSettings(undefined);
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
+      setStellarLocalHorizonSource(undefined);
       setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
       setGeoidConversionRecord(undefined);
@@ -1719,6 +1728,28 @@ export function AppNext(): React.JSX.Element {
     setIsDirty(true);
   };
 
+  const importStellarLocalHorizon = async (): Promise<SavedStellarLocalHorizonSource | undefined> => {
+    try {
+      const result = await window.simulatorDesktop.importStellarLocalHorizon();
+      setStorageMessage(result.message);
+      if (result.status !== 'success' || !result.profile) return undefined;
+      const nextSource: SavedStellarLocalHorizonSource = {
+        ...result.profile,
+        points: result.profile.points.map((point) => ({ ...point })),
+        warnings: [...result.profile.warnings],
+        modifiedAfterImport: false
+      };
+      setStellarLocalHorizonSource(nextSource);
+      setIsDirty(true);
+      setStorageMessage(`“${nextSource.fileName}” skyline kaynağı hazır: ${nextSource.pointCount} nokta doğrulandı. Uygula ve hesapla ile etkinleştirilebilir.`);
+      return nextSource;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Skyline profili içe aktarılamadı.';
+      setStorageMessage(message);
+      throw error;
+    }
+  };
+
   const loadExperiment = (saved: SavedExperiment): void => {
     const geoidPrediction = saved.predictions.find(
       (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
@@ -1736,10 +1767,22 @@ export function AppNext(): React.JSX.Element {
     const stellarPrediction = saved.predictions.find(
       (prediction) => prediction.modelId === STELLAR_OBSERVATION_MODEL_ID
     );
+    const storedStellarSettings = readStellarObservationSettings(stellarPrediction);
+    const storedStellarSource = saved.stellarLocalHorizonSource
+      ? {
+          ...saved.stellarLocalHorizonSource,
+          points: saved.stellarLocalHorizonSource.points.map((point) => ({ ...point })),
+          warnings: [...saved.stellarLocalHorizonSource.warnings]
+        }
+      : undefined;
+    const safeStellarSettings = storedStellarSettings.localHorizonSourceMode === 'external' && !storedStellarSource
+      ? { ...storedStellarSettings, localHorizonEnabled: false, localHorizonSourceMode: 'manual' as const }
+      : storedStellarSettings;
     setActiveScenarioId(normalizeSimulationScenarioId(saved.scenarioId));
     setShadowObservationSettings(readShadowObservationSettings(shadowPrediction));
     setDualShadowSettings(readDualShadowComparisonSettings(dualShadowPrediction));
-    setStellarObservationSettings(readStellarObservationSettings(stellarPrediction));
+    setStellarObservationSettings(safeStellarSettings);
+    setStellarLocalHorizonSource(storedStellarSource);
     setInputs(saved.inputs);
     setAtmosphereState(saved.atmosphere
       ? cloneAtmosphereExperimentState(saved.atmosphere)
@@ -1790,6 +1833,7 @@ export function AppNext(): React.JSX.Element {
       ...(photoCalibration ? { photoCalibration } : {}),
       ...(modelInputUncertaintyDefined ? { photoModelUncertainty } : {}),
       ...(textSetupHistory.length > 0 ? { textSetupHistory } : {}),
+      ...(stellarLocalHorizonSource ? { stellarLocalHorizonSource } : {}),
       inputs,
       manualTerrainPoints,
       terrainProfileSource,
@@ -1871,7 +1915,20 @@ export function AppNext(): React.JSX.Element {
       setActiveExperimentName(saved.name);
       setShadowObservationSettings(readShadowObservationSettings(savedShadowPrediction));
       setDualShadowSettings(readDualShadowComparisonSettings(savedDualShadowPrediction));
-      setStellarObservationSettings(readStellarObservationSettings(savedStellarPrediction));
+      {
+        const reopenedStellarSettings = readStellarObservationSettings(savedStellarPrediction);
+        const reopenedStellarSource = saved.stellarLocalHorizonSource
+          ? {
+              ...saved.stellarLocalHorizonSource,
+              points: saved.stellarLocalHorizonSource.points.map((point) => ({ ...point })),
+              warnings: [...saved.stellarLocalHorizonSource.warnings]
+            }
+          : undefined;
+        setStellarLocalHorizonSource(reopenedStellarSource);
+        setStellarObservationSettings(reopenedStellarSettings.localHorizonSourceMode === 'external' && !reopenedStellarSource
+          ? { ...reopenedStellarSettings, localHorizonEnabled: false, localHorizonSourceMode: 'manual' }
+          : reopenedStellarSettings);
+      }
       setExperimentObservedAtIso(saved.observedAtIso ?? saved.createdAtIso);
     setObservationUtcOffsetMinutes(saved.observationUtcOffsetMinutes ?? systemUtcOffsetMinutes(new Date(saved.observedAtIso ?? saved.createdAtIso)));
       setAtmosphereState(saved.atmosphere
@@ -1916,6 +1973,7 @@ export function AppNext(): React.JSX.Element {
         setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
       setDualShadowSettings(undefined);
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
+      setStellarLocalHorizonSource(undefined);
         setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
         setAtmosphereState(createDefaultAtmosphereExperimentState('standard'));
@@ -2035,6 +2093,7 @@ export function AppNext(): React.JSX.Element {
     setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
       setDualShadowSettings(undefined);
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
+      setStellarLocalHorizonSource(undefined);
     setExperimentObservedAtIso(new Date().toISOString());
     setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
     setIsDirty(false);
@@ -2082,6 +2141,7 @@ export function AppNext(): React.JSX.Element {
             setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
       setDualShadowSettings(undefined);
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
+      setStellarLocalHorizonSource(undefined);
             setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
             setGeoidConversionRecord(undefined);
@@ -2167,7 +2227,9 @@ export function AppNext(): React.JSX.Element {
                   result={stellarObservationResult}
                   prediction={stellarObservationPrediction}
                   settings={stellarObservationSettings}
+                  externalLocalHorizonSource={stellarLocalHorizonSource}
                   onChange={(settings) => { setStellarObservationSettings(settings); setIsDirty(true); }}
+                  onImportLocalHorizon={importStellarLocalHorizon}
                   onShowTrace={() => setTraceModelId(stellarObservationMetadata.id)}
                 />
               : activeScenarioId === 'shadow-observation' && shadowObservationResult && shadowObservationPrediction
