@@ -1,0 +1,27 @@
+# Örnek geometrik yerel skyline profili
+# Azimut kuzeyden saat yönünde derece; altitudeDeg geometrik ufuk yüksekliğidir.
+azimuthDeg,altitudeDeg
+0,2.0
+15,2.5
+30,3.0
+45,4.0
+60,6.0
+75,9.0
+90,12.0
+105,14.0
+120,13.0
+135,10.0
+150,7.0
+165,5.0
+180,4.0
+195,3.0
+210,2.0
+225,2.5
+240,4.0
+255,6.0
+270,8.0
+285,7.0
+300,5.0
+315,4.0
+330,3.0
+345,2.5
