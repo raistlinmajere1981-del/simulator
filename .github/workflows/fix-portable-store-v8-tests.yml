@@ -1,0 +1,40 @@
+name: Fix Portable Store V8 Tests
+
+on:
+  push:
+    branches:
+      - agent/stellar-skyline-import-ui
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/stellar-skyline-import-ui
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fix local-store expectations
+        run: node scripts/fix-portable-store-v8-tests.mjs
+      - name: Validate diff
+        run: git diff --check
+      - name: Commit product test fix
+        shell: bash
+        run: |
+          if git diff --quiet -- tests/portable.test.ts; then
+            echo "No test change to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/portable.test.ts
+          git commit -m "Portable v8 local store test beklentilerini düzelt"
+          git push origin HEAD:agent/stellar-skyline-import-ui
