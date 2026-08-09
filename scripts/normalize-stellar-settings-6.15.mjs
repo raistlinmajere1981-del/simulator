@@ -13,3 +13,4 @@ source = source.replace('horizonMask: localHorizonMaskFromSettings(input.setting
 source = source.replace('settings: { ...input.settings },', 'settings: { ...settings },');
 fs.writeFileSync(path, source);
 console.log('Stage 6.15 stellar settings normalization applied.');
+// Trigger commit after workflow registration.
