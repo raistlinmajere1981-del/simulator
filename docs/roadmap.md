@@ -632,10 +632,24 @@ Durum: tamamlandı · `1.13.4`
 
 Ayrıntı: [`roadmap-stage-6.12.md`](roadmap-stage-6.12.md)
 
+### Aşama 6.13 — Standart astronomik kırılma / apparent altitude temeli
+
+Durum: tamamlandı · `1.13.5`
+
+- NOAA GML parçalı standart atmosferik refraction yaklaşımı
+- geometric altitude → refraction correction → apparent altitude zinciri
+- 85° üstü, yüksek irtifa, yakın ufuk ve ufuk-altı formül bölgelerini açık tutma
+- point-source yıldız hesabına Güneş semidiameter düzeltmesi taşımama
+- gerçek basınç/sıcaklık/nem/dalga boyu kullanılmadığını açık sınırlama olarak koruma
+- mevcut Ciddor terrestrial-ray motorunu yıldız apparent-altitude problemiyle sessizce eşitlememe
+- apparent yıldız yüksekliğini geometrik local skyline'a otomatik kıyaslayıp görünürlük sonucu üretmeme
+
+Ayrıntı: [`roadmap-stage-6.13.md`](roadmap-stage-6.13.md)
+
 ### Sonraki astronomi dilimleri
 
-- astronomik atmosferik kırılmayı ayrı apparent-altitude katmanı olarak ekleme
-- yerel ufuk maskesini yıldız izi ve geçiş hesaplarına bağlama
+- yerel ufuk maskesini yıldız izi ve geometrik local-horizon geçiş hesaplarına bağlama
+- refraction ile local skyline'ın güvenli karşılaştırma sözleşmesini tanımlama
 - resmi BSC5P kaynak dosyası erişildiğinde doğrulanmış 19-yıldız motion veri dosyasını üretip gözlem zincirine bağlama
 - çoklu yıldız / gökyüzü görselleştirmesi
 
