@@ -598,3 +598,171 @@
   .stellar-controls label:first-child { grid-column: auto; }
   .stellar-trail-title > div:not(:first-child) { text-align: left; }
 }
+
+.stellar-sky-panel {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 9px;
+  padding: 11px 12px;
+  background: rgba(6, 10, 18, 0.24);
+  display: grid;
+  gap: 10px;
+}
+
+.stellar-sky-panel.active {
+  border-color: rgba(126, 153, 214, 0.3);
+  background: rgba(87, 110, 167, 0.06);
+}
+
+.stellar-sky-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.stellar-sky-heading > div { display: grid; gap: 3px; }
+.stellar-sky-heading strong { font-size: 12px; }
+.stellar-sky-heading > div > span,
+.stellar-sky-note {
+  color: var(--text-muted, #8f9aae);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.stellar-sky-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: max-content;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.stellar-sky-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #7d9bd7;
+}
+
+.stellar-sky-summary {
+  display: flex;
+  gap: 9px 18px;
+  flex-wrap: wrap;
+  color: var(--text-muted, #8f9aae);
+  font-size: 10px;
+}
+
+.stellar-sky-summary strong { color: #dfe8f4; font-weight: 700; }
+
+.stellar-sky-chart-wrap {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px 7px;
+  background: rgba(4, 8, 15, 0.34);
+}
+
+.stellar-sky-chart-wrap svg {
+  display: block;
+  width: 100%;
+  height: min(430px, 52vh);
+  min-height: 300px;
+}
+
+.stellar-sky-horizon {
+  fill: rgba(88, 112, 153, 0.035);
+  stroke: rgba(220, 231, 244, 0.55);
+  stroke-width: 0.45;
+}
+
+.stellar-sky-altitude-ring {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.11);
+  stroke-width: 0.28;
+  stroke-dasharray: 1.4 1.4;
+}
+
+.stellar-sky-axis {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 0.24;
+}
+
+.stellar-sky-cardinal {
+  fill: #cbd8e6;
+  font-size: 3.2px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+.stellar-sky-cardinal.east,
+.stellar-sky-cardinal.west { dominant-baseline: middle; }
+
+.stellar-sky-altitude-label {
+  fill: rgba(184, 198, 215, 0.62);
+  font-size: 2.2px;
+  text-anchor: middle;
+}
+
+.stellar-sky-star circle {
+  fill: #dce8f5;
+  stroke: rgba(7, 12, 20, 0.9);
+  stroke-width: 0.35;
+}
+
+.stellar-sky-star text {
+  fill: #b9c9d8;
+  font-size: 2.35px;
+  paint-order: stroke;
+  stroke: rgba(4, 8, 14, 0.9);
+  stroke-width: 0.7px;
+  stroke-linejoin: round;
+}
+
+.stellar-sky-star.selected circle {
+  fill: #81d7ff;
+  stroke: #e7f7ff;
+  stroke-width: 0.55;
+}
+
+.stellar-sky-star.selected text { fill: #bcecff; font-weight: 800; }
+
+.stellar-sky-star.locally-blocked circle {
+  fill: rgba(173, 184, 200, 0.2);
+  stroke: #8c98aa;
+  stroke-width: 0.45;
+}
+
+.stellar-sky-star.locally-blocked text { fill: #818da0; }
+
+.stellar-sky-star.local-boundary circle {
+  fill: #d6aa62;
+  stroke: #f3d39b;
+}
+
+.stellar-sky-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--text-muted, #8f9aae);
+  font-size: 9px;
+}
+
+.stellar-sky-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+  vertical-align: -1px;
+  background: #dce8f5;
+}
+
+.stellar-sky-legend .selected-star::before { background: #81d7ff; }
+.stellar-sky-legend .blocked-star::before { background: #687487; border: 1px solid #9aa7ba; }
+.stellar-sky-note { margin: 0; }
+
+@media (max-width: 720px) {
+  .stellar-sky-heading { flex-direction: column; align-items: stretch; }
+  .stellar-sky-chart-wrap svg { min-height: 250px; height: 46vh; }
+}

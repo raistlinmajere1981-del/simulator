@@ -21,11 +21,12 @@ import {
   normalizeStellarLocalHorizonMask,
   type StellarLocalHorizonMask
 } from './stellar-local-horizon';
+import { calculateStellarSkySnapshot, type StellarSkySnapshotResult } from './stellar-sky-snapshot';
 import { calculateStellarPosition, type StellarPositionResult } from './stellar-position';
 import { calculateStellarTrail, type StellarTrailResult } from './stellar-trail';
 
 export const STELLAR_OBSERVATION_MODEL_ID = 'stellar-observation-reference';
-export const STELLAR_OBSERVATION_MODEL_VERSION = '0.4.0';
+export const STELLAR_OBSERVATION_MODEL_VERSION = '0.5.0';
 
 export type StellarLocalHorizonSourceMode = 'manual' | 'external';
 
@@ -113,6 +114,7 @@ export interface StellarObservationResult {
   localHorizonSource: StellarObservationLocalHorizonSourceSummary | null;
   apparentDiagnostic: StellarApparentDiagnosticResult;
   apparentTrailSamples: StellarObservationApparentTrailSample[];
+  skySnapshot: StellarSkySnapshotResult;
   traceId: string;
   trace: CalculationTrace;
   warnings: string[];
@@ -279,6 +281,12 @@ export function calculateStellarObservation(input: {
       aboveApparentAstronomicalHorizon: refraction.aboveApparentAstronomicalHorizon
     };
   });
+  const skySnapshot = calculateStellarSkySnapshot({
+    observedAtIso: input.observedAtIso,
+    latitudeDeg: input.latitudeDeg,
+    longitudeDeg: input.longitudeDeg,
+    horizonMask: localHorizon.mask ?? undefined
+  });
 
   const localHorizonWarning = !settings.localHorizonEnabled
     ? 'Yerel/topoğrafik ufuk kapalıdır; geometrik görünürlük yalnız 0° astronomik ufuk anlamındadır.'
@@ -316,6 +324,13 @@ export function calculateStellarObservation(input: {
         formula: 't ∈ [t₀, t₀+Δt]; her örnekte (α_t,δ_t) → (h,A)',
         substitution: `Δt=${format(settings.trailDurationMinutes)} dk; örnek aralığı=${format(settings.trailSampleIntervalMinutes)} dk`,
         result: `${trail.samples.length} örnek; geometrik 0° ufuk üstü=${format(trail.visibleDurationMinutes)} dk; geçiş=${trail.horizonCrossings.length}`
+      },
+      {
+        id: 'sky-snapshot-summary',
+        title: 'Çoklu yıldız gökyüzü snapshotı',
+        formula: 'BSC5P altkümesi → her yıldız için precession → (h,A)',
+        substitution: `${skySnapshot.starCount} katalog yıldızı · t=${skySnapshot.observedAtIso}`,
+        result: `geometrik 0° üstü=${skySnapshot.aboveGeometricHorizonCount}; altı=${skySnapshot.belowGeometricHorizonCount}${skySnapshot.localHorizonCounts ? `; yerel skyline üstü=${skySnapshot.localHorizonCounts.above}` : ''}`
       },
       {
         id: 'standard-refraction-diagnostic',
@@ -368,6 +383,7 @@ export function calculateStellarObservation(input: {
     localHorizonSource: localHorizon.summary,
     apparentDiagnostic,
     apparentTrailSamples,
+    skySnapshot,
     traceId,
     trace,
     warnings
@@ -378,7 +394,7 @@ export const stellarObservationMetadata: ModelMetadata = {
   id: STELLAR_OBSERVATION_MODEL_ID,
   name: 'Yıldız Gözlemi · Astronomik Referans',
   version: STELLAR_OBSERVATION_MODEL_VERSION,
-  description: 'Çevrimdışı parlak yıldız kataloğundan seçilen J2000 yönünü gözlem tarihine dönüştürüp geometrik yerel konum, yıldız izi, isteğe bağlı geometrik skyline açıklığı ve ayrı standart-refraction apparent tanısı üreten astronomik referans.',
+  description: 'Çevrimdışı parlak yıldız kataloğundan seçilen J2000 yönünü ve 19-yıldız çoklu gökyüzü snapshotını gözlem tarihine dönüştürüp geometrik yerel konum, yıldız izi, isteğe bağlı geometrik skyline açıklığı ve ayrı standart-refraction apparent tanısı üreten astronomik referans.',
   capabilities: ['stellar-position'],
   assumptions: [
     'Katalog yönü ortalama J2000 koordinatıdır ve gözlem tarihine açık precession adımıyla dönüştürülür.',
@@ -413,6 +429,9 @@ export function createStellarObservationPrediction(result: StellarObservationRes
       { key: 'stellarAzimuthDeg', label: 'Yıldız azimutu', value: result.position.azimuthDeg, unit: 'deg' },
       { key: 'localMeanSiderealTimeDeg', label: 'Yerel ortalama yıldız zamanı', value: result.position.localMeanSiderealTimeDeg, unit: 'deg' },
       { key: 'starAboveGeometricHorizon', label: 'Geometrik 0° ufkun üstünde', value: result.position.aboveGeometricHorizon ? 1 : 0, unit: 'boolean' },
+      { key: 'stellarSkySnapshotStarCount', label: 'Çoklu yıldız snapshot katalog sayısı', value: result.skySnapshot.starCount, unit: 'count' },
+      { key: 'stellarSkySnapshotGeometricAboveCount', label: 'Çoklu yıldız snapshot geometrik 0° üstü', value: result.skySnapshot.aboveGeometricHorizonCount, unit: 'count' },
+      { key: 'stellarSkySnapshotLocalAboveCount', label: 'Çoklu yıldız snapshot yerel skyline üstü', value: result.skySnapshot.localHorizonCounts?.above ?? null, unit: 'count' },
       { key: 'stellarTrailDurationMinutes', label: 'Yıldız izi süresi', value: result.settings.trailDurationMinutes, unit: 'min' },
       { key: 'stellarTrailSampleIntervalMinutes', label: 'Yıldız izi örnekleme aralığı', value: result.settings.trailSampleIntervalMinutes, unit: 'min' },
       { key: 'stellarTrailVisibleDurationMinutes', label: 'İz penceresinde geometrik 0° ufuk üstü süre', value: result.trail.visibleDurationMinutes, unit: 'min' },
