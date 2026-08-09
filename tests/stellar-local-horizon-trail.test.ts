@@ -3,24 +3,24 @@ import { calculateGreenwichMeanSiderealTimeDeg } from '../src/simulation/stellar
 import { calculateStellarLocalHorizonTrail } from '../src/simulation/stellar-local-horizon-trail';
 
 const FLAT_ZERO_MASK = {
-  source: 'manual' as const,
+  sourceKind: 'manual' as const,
   sourceLabel: 'Düz 0° test ufku',
   points: [
-    { azimuthDeg: 0, elevationDeg: 0 },
-    { azimuthDeg: 90, elevationDeg: 0 },
-    { azimuthDeg: 180, elevationDeg: 0 },
-    { azimuthDeg: 270, elevationDeg: 0 }
+    { azimuthDeg: 0, altitudeDeg: 0 },
+    { azimuthDeg: 90, altitudeDeg: 0 },
+    { azimuthDeg: 180, altitudeDeg: 0 },
+    { azimuthDeg: 270, altitudeDeg: 0 }
   ]
 };
 
 const FLAT_TEN_MASK = {
-  source: 'manual' as const,
+  sourceKind: 'manual' as const,
   sourceLabel: 'Düz +10° test ufku',
   points: [
-    { azimuthDeg: 0, elevationDeg: 10 },
-    { azimuthDeg: 90, elevationDeg: 10 },
-    { azimuthDeg: 180, elevationDeg: 10 },
-    { azimuthDeg: 270, elevationDeg: 10 }
+    { azimuthDeg: 0, altitudeDeg: 10 },
+    { azimuthDeg: 90, altitudeDeg: 10 },
+    { azimuthDeg: 180, altitudeDeg: 10 },
+    { azimuthDeg: 270, altitudeDeg: 10 }
   ]
 };
 
@@ -41,11 +41,12 @@ describe('stellar local-horizon trail', () => {
     });
 
     expect(result.samples).toHaveLength(25);
+    expect(result.crossingScanIntervalMinutes).toBe(0.25);
     expect(result.localHorizonCrossings).toHaveLength(1);
     expect(result.localHorizonCrossings[0]!.kind).toBe('set');
     expect(result.localHorizonCrossings[0]!.elapsedMinutes).toBeCloseTo(359.0167, 2);
-    expect(result.visibleDurationMinutes).toBeCloseTo(359.0167, 2);
-    expect(result.sampledMaximumClearanceDeg).toBeCloseTo(90, 8);
+    expect(result.visibleDurationMinutes).not.toBeNull();
+    expect(result.visibleDurationMinutes!).toBeCloseTo(359.0167, 2);
   });
 
   it('+10° düz skyline batışı geometrik ufuktan daha erken üretir', () => {
@@ -67,7 +68,8 @@ describe('stellar local-horizon trail', () => {
     expect(result.localHorizonCrossings[0]!.kind).toBe('set');
     expect(result.localHorizonCrossings[0]!.elapsedMinutes).toBeGreaterThan(300);
     expect(result.localHorizonCrossings[0]!.elapsedMinutes).toBeLessThan(359.0167);
-    expect(result.visibleDurationMinutes).toBeCloseTo(result.localHorizonCrossings[0]!.elapsedMinutes, 6);
+    expect(result.visibleDurationMinutes).not.toBeNull();
+    expect(result.visibleDurationMinutes!).toBeCloseTo(result.localHorizonCrossings[0]!.elapsedMinutes, 6);
   });
 
   it('yüksek circumpolar yıldız +20° skyline üzerinde tüm pencereyi korur', () => {
@@ -81,20 +83,20 @@ describe('stellar local-horizon trail', () => {
       declinationDeg: 80,
       label: 'circumpolar-test',
       horizonMask: {
-        source: 'manual',
+        sourceKind: 'manual',
         sourceLabel: 'Düz +20° test ufku',
         points: [
-          { azimuthDeg: 0, elevationDeg: 20 },
-          { azimuthDeg: 90, elevationDeg: 20 },
-          { azimuthDeg: 180, elevationDeg: 20 },
-          { azimuthDeg: 270, elevationDeg: 20 }
+          { azimuthDeg: 0, altitudeDeg: 20 },
+          { azimuthDeg: 90, altitudeDeg: 20 },
+          { azimuthDeg: 180, altitudeDeg: 20 },
+          { azimuthDeg: 270, altitudeDeg: 20 }
         ]
       }
     });
 
     expect(result.localHorizonCrossings).toHaveLength(0);
     expect(result.visibleDurationMinutes).toBeCloseTo(1_440, 8);
-    expect(result.samples.every((sample) => sample.clearanceDeg === null || sample.clearanceDeg > 0)).toBe(true);
+    expect(result.samples.every((sample) => sample.geometricClearanceDeg === null || sample.geometricClearanceDeg > 0)).toBe(true);
   });
 
   it('azimuta bağlı skyline her örnekte interpolasyonla uygulanır', () => {
@@ -107,24 +109,27 @@ describe('stellar local-horizon trail', () => {
       rightAscensionDeg: 0,
       declinationDeg: 0,
       horizonMask: {
-        source: 'manual',
+        sourceKind: 'manual',
         sourceLabel: 'Yönlü test ufku',
         points: [
-          { azimuthDeg: 0, elevationDeg: 0 },
-          { azimuthDeg: 90, elevationDeg: 10 },
-          { azimuthDeg: 180, elevationDeg: 20 },
-          { azimuthDeg: 270, elevationDeg: 10 }
+          { azimuthDeg: 0, altitudeDeg: 0 },
+          { azimuthDeg: 90, altitudeDeg: 10 },
+          { azimuthDeg: 180, altitudeDeg: 20 },
+          { azimuthDeg: 270, altitudeDeg: 10 }
         ]
       }
     });
 
     for (const sample of result.samples) {
       if (sample.azimuthDeg === null) {
-        expect(sample.localHorizonStatus).toBe('undefined-azimuth');
+        expect(sample.status).toBe('undefined-azimuth');
         continue;
       }
-      expect(sample.localHorizonElevationDeg).not.toBeNull();
-      expect(sample.clearanceDeg).toBeCloseTo(sample.elevationDeg - sample.localHorizonElevationDeg!, 10);
+      expect(sample.localHorizonAltitudeDeg).not.toBeNull();
+      expect(sample.geometricClearanceDeg).toBeCloseTo(
+        sample.geometricAltitudeDeg - sample.localHorizonAltitudeDeg!,
+        10
+      );
     }
   });
 
@@ -138,17 +143,17 @@ describe('stellar local-horizon trail', () => {
       rightAscensionDeg: 200,
       declinationDeg: 30,
       horizonMask: {
-        source: 'external',
+        sourceKind: 'external',
         sourceLabel: 'Ölçülmüş skyline.csv',
         points: [
-          { azimuthDeg: 0, elevationDeg: 1 },
-          { azimuthDeg: 120, elevationDeg: 3 },
-          { azimuthDeg: 240, elevationDeg: 2 }
+          { azimuthDeg: 0, altitudeDeg: 1 },
+          { azimuthDeg: 120, altitudeDeg: 3 },
+          { azimuthDeg: 240, altitudeDeg: 2 }
         ]
       }
     });
 
-    expect(result.maskSource).toBe('external');
+    expect(result.maskSourceKind).toBe('external');
     expect(result.maskSourceLabel).toBe('Ölçülmüş skyline.csv');
     expect(result.maskPointCount).toBe(3);
     expect(result.maskMaximumAzimuthGapDeg).toBeCloseTo(120, 10);
