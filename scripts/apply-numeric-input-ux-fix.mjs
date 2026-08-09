@@ -8,16 +8,21 @@ function replaceExactlyOnce(source, before, after, label) {
   return source.slice(0, first) + after + source.slice(first + before.length);
 }
 
+function replaceIfNeeded(source, before, after, label) {
+  if (source.includes(after)) return source;
+  return replaceExactlyOnce(source, before, after, label);
+}
+
 {
   const file = 'src/renderer/src/AppNext.tsx';
   let source = fs.readFileSync(file, 'utf8');
-  source = replaceExactlyOnce(
+  source = replaceIfNeeded(
     source,
     "import { StellarObservationPanel } from './StellarObservationPanel';",
     "import { StellarObservationPanel } from './StellarObservationPanel';\nimport { DraftNumberInput } from './DraftNumberInput';",
     'AppNext import'
   );
-  source = replaceExactlyOnce(
+  source = replaceIfNeeded(
     source,
     `        <input\n          disabled={disabled}\n          min={inputRanges[inputKey].min}\n          max={inputRanges[inputKey].max}\n          step={step}\n          type="number"\n          value={inputs[inputKey]}\n          onChange={(event) => onNumberChange(inputKey, event.currentTarget.valueAsNumber)}\n        />`,
     `        <DraftNumberInput\n          disabled={disabled}\n          min={inputRanges[inputKey].min}\n          max={inputRanges[inputKey].max}\n          step={step}\n          value={inputs[inputKey]}\n          onCommit={(value) => onNumberChange(inputKey, value)}\n        />`,
@@ -37,6 +42,36 @@ function replaceExactlyOnce(source, before, after, label) {
   fs.writeFileSync(file, source);
 }
 
+{
+  const file = 'src/renderer/src/MultiPointTerrainEditor.tsx';
+  let source = fs.readFileSync(file, 'utf8');
+  source = replaceIfNeeded(
+    source,
+    "import { DemLineOfSightReviewCard } from './DemLineOfSightReviewCard';",
+    "import { DemLineOfSightReviewCard } from './DemLineOfSightReviewCard';\nimport { DraftNumberInput } from './DraftNumberInput';",
+    'terrain import'
+  );
+  source = replaceIfNeeded(
+    source,
+    `              <input\n                max={2_002}\n                min={3}\n                step={1}\n                type="number"\n                value={demManualSampleCount}\n                onChange={(event) => setDemManualSampleCount(Number(event.currentTarget.value))}\n              />`,
+    `              <DraftNumberInput\n                max={2_002}\n                min={3}\n                step={1}\n                value={demManualSampleCount}\n                onCommit={setDemManualSampleCount}\n              />`,
+    'terrain DEM sample count'
+  );
+  source = replaceIfNeeded(
+    source,
+    `                <input\n                  disabled={disabled}\n                  max={99.999}\n                  min={0.001}\n                  step={0.1}\n                  type="number"\n                  value={point.distancePercent}\n                  onChange={(event) => {\n                    const value = event.currentTarget.valueAsNumber;\n                    if (!Number.isFinite(value)) return;\n                    apply(() => updateManualTerrainPoint(sortedPoints, point.id, {\n                      distancePercent: value\n                    }));\n                  }}\n                />`,
+    `                <DraftNumberInput\n                  disabled={disabled}\n                  max={99.999}\n                  min={0.001}\n                  step={0.1}\n                  value={point.distancePercent}\n                  onCommit={(value) => apply(() => updateManualTerrainPoint(sortedPoints, point.id, {\n                    distancePercent: value\n                  }))}\n                />`,
+    'terrain point distance'
+  );
+  source = replaceIfNeeded(
+    source,
+    `                <input\n                  disabled={disabled}\n                  max={100_000}\n                  min={-12_000}\n                  step={0.1}\n                  type="number"\n                  value={point.elevationM}\n                  onChange={(event) => {\n                    const value = event.currentTarget.valueAsNumber;\n                    if (!Number.isFinite(value)) return;\n                    apply(() => updateManualTerrainPoint(sortedPoints, point.id, {\n                      elevationM: value\n                    }));\n                  }}\n                />`,
+    `                <DraftNumberInput\n                  disabled={disabled}\n                  max={100_000}\n                  min={-12_000}\n                  step={0.1}\n                  value={point.elevationM}\n                  onCommit={(value) => apply(() => updateManualTerrainPoint(sortedPoints, point.id, {\n                    elevationM: value\n                  }))}\n                />`,
+    'terrain point elevation'
+  );
+  fs.writeFileSync(file, source);
+}
+
 function walk(directory) {
   const output = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -47,14 +82,17 @@ function walk(directory) {
   return output;
 }
 
-console.log('Remaining renderer type="number" fields after shared NumericField migration:');
+console.log('Remaining renderer type="number" fields:');
 let remaining = 0;
+let directValueAsNumber = 0;
 for (const file of walk('src/renderer/src')) {
   const source = fs.readFileSync(file, 'utf8');
   const count = (source.match(/type="number"/g) ?? []).length;
-  if (count > 0) {
+  const directCount = (source.match(/valueAsNumber/g) ?? []).length;
+  if (count > 0 || directCount > 0) {
     remaining += count;
-    console.log(`${file}: ${count}`);
+    directValueAsNumber += directCount;
+    console.log(`${file}: type=number ${count}, valueAsNumber ${directCount}`);
   }
 }
-console.log(`TOTAL=${remaining}`);
+console.log(`TOTAL type=number=${remaining}; valueAsNumber=${directValueAsNumber}`);
