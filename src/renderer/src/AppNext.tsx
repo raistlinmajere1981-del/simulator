@@ -526,7 +526,7 @@ function Sidebar({
             {activeScenarioId === 'shadow-observation'
               ? 'Gölge yön diyagramı ana deney panelinde gösterilir. Dünya modellerine fiziksel Güneş davranışı atanmaz.'
               : activeScenarioId === 'stellar-observation'
-                ? 'Katalog yıldızı, J2000→gözlem tarihi dönüşümü ve geometrik yıldız izi ana deney alanında gösterilir.'
+                ? 'Katalog yıldızı, J2000→gözlem tarihi dönüşümü, geometrik yıldız izi ve isteğe bağlı yerel skyline ana deney alanında gösterilir.'
                 : 'Güneş/Ay konumu ile günlük doğuş-batış zaman çizgisi ana deney alanında gösterilir; ek gökyüzü katmanları sonraki dilimlerde genişletilecektir.'}
           </div>
         </section>

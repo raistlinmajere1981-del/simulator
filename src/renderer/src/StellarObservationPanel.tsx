@@ -71,13 +71,13 @@ function currentLocalHorizonState(result: StellarObservationResult): {
   const sample = result.localHorizonTrail?.samples[0];
   if (!sample) return null;
   if (sample.status === 'undefined-azimuth') {
-    return { label: 'YEREL UFKUK AZİMUTU TANIMSIZ', className: 'stellar-state neutral' };
+    return { label: 'YEREL UFUK AZİMUTU TANIMSIZ', className: 'stellar-state neutral' };
   }
   if (sample.status === 'below') {
     return { label: 'YEREL UFKUN ALTINDA', className: 'stellar-state below' };
   }
   if (sample.status === 'on-horizon') {
-    return { label: 'YEREL UFKUK SINIRINDA', className: 'stellar-state neutral' };
+    return { label: 'YEREL UFUK SINIRINDA', className: 'stellar-state neutral' };
   }
   return { label: 'YEREL UFKUN ÜSTÜNDE', className: 'stellar-state visible' };
 }
