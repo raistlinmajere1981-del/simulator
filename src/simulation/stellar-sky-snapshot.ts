@@ -13,6 +13,10 @@ import {
   type StellarLocalHorizonStatus
 } from './stellar-local-horizon';
 import { calculateStellarPosition } from './stellar-position';
+import {
+  resolveVerifiedBrightStarMotionReference,
+  type VerifiedBrightStarMotionSubset
+} from './bsc5p-motion-subset';
 
 export const STELLAR_SKY_SNAPSHOT_ALGORITHM_ID = 'stellar-sky-snapshot';
 export const STELLAR_SKY_SNAPSHOT_ALGORITHM_VERSION = '0.1.0';
@@ -31,6 +35,8 @@ export interface StellarSkySnapshotStar {
   elevationDeg: number;
   azimuthDeg: number | null;
   aboveGeometricHorizon: boolean;
+  properMotionApplied: boolean;
+  properMotionAngularShiftArcsec: number | null;
   localHorizonAltitudeDeg: number | null;
   localHorizonClearanceDeg: number | null;
   localHorizonStatus: StellarSkyLocalStatus | null;
@@ -53,6 +59,10 @@ export interface StellarSkySnapshotResult {
   starCount: number;
   aboveGeometricHorizonCount: number;
   belowGeometricHorizonCount: number;
+  properMotionApplied: boolean;
+  properMotionSourceId: string | null;
+  properMotionSourceVersion: string | null;
+  properMotionSourceEpochJulianYear: number | null;
   localHorizonApplied: boolean;
   localHorizonSourceLabel: string | null;
   localHorizonMaximumAzimuthGapDeg: number | null;
@@ -72,13 +82,17 @@ export function calculateStellarSkySnapshot(input: {
   latitudeDeg: number;
   longitudeDeg: number;
   horizonMask?: StellarLocalHorizonMask;
+  motionSubset?: VerifiedBrightStarMotionSubset;
 }): StellarSkySnapshotResult {
   const normalizedMask = input.horizonMask
     ? normalizeStellarLocalHorizonMask(input.horizonMask)
     : null;
 
   const stars: StellarSkySnapshotStar[] = BRIGHT_STAR_CATALOG.map((star) => {
-    const resolved = resolveBrightStarForObservation(star.id, input.observedAtIso);
+    const motionReference = input.motionSubset
+      ? resolveVerifiedBrightStarMotionReference(input.motionSubset, star.id)
+      : undefined;
+    const resolved = resolveBrightStarForObservation(star.id, input.observedAtIso, motionReference);
     const position = calculateStellarPosition({
       observedAtIso: input.observedAtIso,
       latitudeDeg: input.latitudeDeg,
@@ -87,6 +101,11 @@ export function calculateStellarSkySnapshot(input: {
       declinationDeg: resolved.precession.meanOfDateDeclinationDeg,
       label: star.commonName
     });
+
+    const motionFields = {
+      properMotionApplied: resolved.properMotion !== null,
+      properMotionAngularShiftArcsec: resolved.properMotion?.angularShiftArcsec ?? null
+    };
 
     if (!input.horizonMask) {
       return {
@@ -101,6 +120,7 @@ export function calculateStellarSkySnapshot(input: {
         elevationDeg: position.elevationDeg,
         azimuthDeg: position.azimuthDeg,
         aboveGeometricHorizon: position.aboveGeometricHorizon,
+        ...motionFields,
         localHorizonAltitudeDeg: null,
         localHorizonClearanceDeg: null,
         localHorizonStatus: null
@@ -120,6 +140,7 @@ export function calculateStellarSkySnapshot(input: {
         elevationDeg: position.elevationDeg,
         azimuthDeg: null,
         aboveGeometricHorizon: position.aboveGeometricHorizon,
+        ...motionFields,
         localHorizonAltitudeDeg: null,
         localHorizonClearanceDeg: null,
         localHorizonStatus: 'undefined-azimuth'
@@ -144,6 +165,7 @@ export function calculateStellarSkySnapshot(input: {
       elevationDeg: position.elevationDeg,
       azimuthDeg: position.azimuthDeg,
       aboveGeometricHorizon: position.aboveGeometricHorizon,
+      ...motionFields,
       localHorizonAltitudeDeg: local.localHorizonAltitudeDeg,
       localHorizonClearanceDeg: local.geometricClearanceDeg,
       localHorizonStatus: local.status
@@ -160,10 +182,15 @@ export function calculateStellarSkySnapshot(input: {
       }
     : null;
   const observedAtIso = new Date(input.observedAtIso).toISOString();
+  const motionWarning = input.motionSubset
+    ? `Doğrulanmış proper motion uygulanır: ${input.motionSubset.id}@${input.motionSubset.version}; kaynak epok=J${format(input.motionSubset.sourceEpochJulianYear, 4)}. Paralaks, radyal hız ve perspektif ivmelenmesi uygulanmaz.`
+    : 'Proper motion, yıllık paralaks, radyal hız, nutation, aberration ve ışık sapması uygulanmaz.';
   const warnings = [
     `Katalog kaynağı: ${BRIGHT_STAR_CATALOG_SOURCE}; çevrimdışı altküme=${BRIGHT_STAR_CATALOG_ID}@${BRIGHT_STAR_CATALOG_VERSION}.`,
-    'Her yıldızın ortalama J2000 katalog yönü gözlem tarihine mevcut IAU 2006 precession zinciriyle dönüştürülür.',
-    'Proper motion, yıllık paralaks, radyal hız, nutation, aberration ve ışık sapması uygulanmaz.',
+    input.motionSubset
+      ? 'Her yıldızın ortalama J2000 yönü önce doğrulanmış iki-bileşenli proper motion ile gözlem epoch’una taşınır, ardından IAU 2006 precession uygulanır.'
+      : 'Her yıldızın ortalama J2000 katalog yönü gözlem tarihine mevcut IAU 2006 precession zinciriyle dönüştürülür.',
+    motionWarning,
     normalizedMask
       ? 'Yerel skyline yalnız geometrik yükseklik/azimut ile karşılaştırılır; atmosferik apparent yükseklik bu snapshot sınıfına karıştırılmaz.'
       : 'Yerel skyline uygulanmaz; sınıflandırma yalnız geometrik 0° astronomik ufka göredir.',
@@ -177,8 +204,10 @@ export function calculateStellarSkySnapshot(input: {
       {
         id: 'catalog-resolve',
         title: 'Çoklu katalog çözümü',
-        formula: 'her yıldız: J2000 (α₀,δ₀) → precession → (α_t,δ_t)',
-        substitution: `${BRIGHT_STAR_CATALOG_ID}@${BRIGHT_STAR_CATALOG_VERSION}; ${stars.length} yıldız`,
+        formula: input.motionSubset
+          ? 'her yıldız: J2000 (α₀,δ₀) → proper motion → precession → (α_t,δ_t)'
+          : 'her yıldız: J2000 (α₀,δ₀) → precession → (α_t,δ_t)',
+        substitution: `${BRIGHT_STAR_CATALOG_ID}@${BRIGHT_STAR_CATALOG_VERSION}; ${stars.length} yıldız${input.motionSubset ? `; motion=${input.motionSubset.id}@${input.motionSubset.version}` : ''}`,
         result: `${stars.length} gözlem-tarihi ekvatoryal yön`
       },
       {
@@ -210,6 +239,10 @@ export function calculateStellarSkySnapshot(input: {
     starCount: stars.length,
     aboveGeometricHorizonCount,
     belowGeometricHorizonCount: stars.length - aboveGeometricHorizonCount,
+    properMotionApplied: input.motionSubset !== undefined,
+    properMotionSourceId: input.motionSubset?.id ?? null,
+    properMotionSourceVersion: input.motionSubset?.version ?? null,
+    properMotionSourceEpochJulianYear: input.motionSubset?.sourceEpochJulianYear ?? null,
     localHorizonApplied: normalizedMask !== null,
     localHorizonSourceLabel: normalizedMask?.sourceLabel ?? null,
     localHorizonMaximumAzimuthGapDeg: normalizedMask?.maximumAzimuthGapDeg ?? null,

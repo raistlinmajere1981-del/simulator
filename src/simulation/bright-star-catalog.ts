@@ -2,6 +2,10 @@ import {
   precessStellarDirectionToMeanOfDate,
   type StellarPrecessionResult
 } from './stellar-precession';
+import {
+  propagateStellarProperMotion,
+  type StellarProperMotionResult
+} from './stellar-proper-motion';
 
 export const BRIGHT_STAR_CATALOG_ID = 'bsc5p-curated-reference';
 export const BRIGHT_STAR_CATALOG_VERSION = '0.1.0';
@@ -19,15 +23,23 @@ export interface BrightStarCatalogEntry {
   sourceFrame: 'mean-j2000';
 }
 
+export interface BrightStarMotionReference {
+  sourceEpochJulianYear: number;
+  properMotionRaStarArcsecPerYear: number;
+  properMotionDecArcsecPerYear: number;
+  sourceLabel?: string;
+}
+
 export interface ResolvedBrightStar {
   star: BrightStarCatalogEntry;
+  properMotion: StellarProperMotionResult | null;
   precession: StellarPrecessionResult;
 }
 
 /**
  * Small offline navigation/reference subset. Coordinates are stored as J2000
- * equatorial catalog directions. Proper motion is intentionally not applied in
- * this stage; the precession result keeps that limitation explicit.
+ * equatorial catalog directions. Proper motion is applied only when a separately
+ * verified motion reference is explicitly supplied by the caller.
  */
 export const BRIGHT_STAR_CATALOG: readonly BrightStarCatalogEntry[] = [
   { id: 'hr-2491', commonName: 'Sirius', bayerDesignation: 'α CMa', constellation: 'Canis Major', hrNumber: 2491, rightAscensionJ2000Deg: 101.28715533, declinationJ2000Deg: -16.71611586, visualMagnitude: -1.46, sourceFrame: 'mean-j2000' },
@@ -71,16 +83,31 @@ export function searchBrightStars(query: string): BrightStarCatalogEntry[] {
 
 export function resolveBrightStarForObservation(
   starId: string,
-  observedAtIso: string
+  observedAtIso: string,
+  motionReference?: BrightStarMotionReference
 ): ResolvedBrightStar {
   const star = getBrightStarById(starId);
   if (!star) throw new Error(`Parlak yıldız kataloğunda bilinmeyen kimlik: ${starId}`);
+  const properMotion = motionReference
+    ? propagateStellarProperMotion({
+        observedAtIso,
+        sourceEpochJulianYear: motionReference.sourceEpochJulianYear,
+        rightAscensionDeg: star.rightAscensionJ2000Deg,
+        declinationDeg: star.declinationJ2000Deg,
+        properMotionRaStarArcsecPerYear: motionReference.properMotionRaStarArcsecPerYear,
+        properMotionDecArcsecPerYear: motionReference.properMotionDecArcsecPerYear,
+        label: motionReference.sourceLabel ?? star.commonName
+      })
+    : null;
+  const rightAscensionDeg = properMotion?.propagatedRightAscensionDeg ?? star.rightAscensionJ2000Deg;
+  const declinationDeg = properMotion?.propagatedDeclinationDeg ?? star.declinationJ2000Deg;
   return {
     star,
+    properMotion,
     precession: precessStellarDirectionToMeanOfDate({
       observedAtIso,
-      rightAscensionDeg: star.rightAscensionJ2000Deg,
-      declinationDeg: star.declinationJ2000Deg,
+      rightAscensionDeg,
+      declinationDeg,
       sourceFrame: star.sourceFrame,
       label: star.commonName
     })
