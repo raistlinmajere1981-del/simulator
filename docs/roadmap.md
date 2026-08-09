@@ -538,9 +538,26 @@ Durum: tamamlandı · `1.12.0`
 
 Ayrıntı: [`roadmap-stage-6.5.md`](roadmap-stage-6.5.md)
 
+### Aşama 6.6 — Yıldız konumu ve iz geometrisi çekirdeği
+
+Durum: tamamlandı · `1.12.1`
+
+- of-date sağ açıklık/deklinasyon girdisi ve açık koordinat çerçevesi sözleşmesi
+- yaklaşık GMST/LMST, yıldız saat açısı, geometrik yükseklik ve azimut
+- circumpolar / doğup-batan / hiç-doğmayan / teğet ufuk sınıfları
+- en fazla 48 saatlik geometrik yıldız izi örnekleme
+- geometrik `0°` doğuş/batış geçişlerini zaman ekseninde kök aramayla inceltme
+- pencere içindeki geometrik ufuk-üstü süre
+- tipli prediction adaptörü ve hesap izi
+- J2000/ICRS dönüşümü ile optik görünürlüğü sessizce varsaymama
+
+Ayrıntı: [`roadmap-stage-6.6.md`](roadmap-stage-6.6.md)
+
 ### Sonraki astronomi dilimleri
 
-- yıldız görünürlüğü ve yıldız izleri
+- J2000/ICRS → gözlem tarihi koordinat dönüşümü ve provenanslı parlak yıldız kataloğu
+- Yıldız Gözlemleri arayüzü, kayıt/portable/HTML rapor entegrasyonu
+- geometrik ufuktan ayrı optik yıldız görünürlüğü
 
 ## Aşama 7 — Büyük ölçekli olaylar
 
