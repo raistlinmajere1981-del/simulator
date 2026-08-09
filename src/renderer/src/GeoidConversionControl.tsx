@@ -6,6 +6,7 @@ import {
   createGeoidConversionApplication,
   type GeoidConversionApplication
 } from '../../simulation/geoid-conversion-provenance';
+import { DraftNumberInput } from './DraftNumberInput';
 import './geoid-conversion-control.css';
 
 interface GeoidConversionControlProps {
@@ -122,14 +123,13 @@ export function GeoidConversionControl({
       <div className="geoid-conversion-fields">
         <label>
           <span>Jeoit ondülasyonu N</span>
-          <div><input
+          <div><DraftNumberInput
             max={1_000}
             min={-1_000}
             step={0.01}
-            type="number"
             value={geoidUndulationM}
-            onChange={(event) => {
-              setGeoidUndulationM(event.currentTarget.valueAsNumber);
+            onCommit={(value) => {
+              setGeoidUndulationM(value);
               setMessage('');
             }}
           /><b>m</b></div>
@@ -175,14 +175,13 @@ export function GeoidConversionControl({
               type="checkbox"
               onChange={(event) => setIncludeUncertainty(event.currentTarget.checked)}
             />
-            <input
+            <DraftNumberInput
               disabled={!includeUncertainty}
               max={10_000}
               min={0}
               step={0.01}
-              type="number"
               value={geoidUncertaintyM}
-              onChange={(event) => setGeoidUncertaintyM(event.currentTarget.valueAsNumber)}
+              onCommit={setGeoidUncertaintyM}
             />
             <b>m</b>
           </div>
