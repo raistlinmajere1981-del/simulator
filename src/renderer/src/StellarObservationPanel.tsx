@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { BRIGHT_STAR_CATALOG, BRIGHT_STAR_CATALOG_SOURCE } from '../../simulation/bright-star-catalog';
 import {
   STELLAR_LOCAL_HORIZON_DIRECTIONS,
@@ -5,10 +6,17 @@ import {
   type StellarObservationSettings
 } from '../../simulation/stellar-observation';
 import type { ModelPrediction } from '../../shared/domain';
+import { DraftNumberInput } from './DraftNumberInput';
 import './stellar-observation-panel.css';
 
 const angleFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
 const preciseFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 5 });
+
+type LocalHorizonDirectionKey = (typeof STELLAR_LOCAL_HORIZON_DIRECTIONS)[number]['key'];
+type LocalHorizonDraft = Pick<
+  StellarObservationSettings,
+  'localHorizonEnabled' | LocalHorizonDirectionKey
+>;
 
 const horizonClassLabels: Record<StellarObservationResult['position']['horizonClass'], string> = {
   'circumpolar-above': 'Çevresel · ufkun üstünde',
@@ -82,6 +90,31 @@ function currentLocalHorizonState(result: StellarObservationResult): {
   return { label: 'YEREL UFKUN ÜSTÜNDE', className: 'stellar-state visible' };
 }
 
+function localHorizonDraftFromSettings(settings: StellarObservationSettings): LocalHorizonDraft {
+  const draft = {
+    localHorizonEnabled: settings.localHorizonEnabled
+  } as LocalHorizonDraft;
+  for (const direction of STELLAR_LOCAL_HORIZON_DIRECTIONS) {
+    draft[direction.key] = settings[direction.key];
+  }
+  return draft;
+}
+
+function localHorizonSignature(settings: StellarObservationSettings): string {
+  return [
+    settings.localHorizonEnabled ? '1' : '0',
+    ...STELLAR_LOCAL_HORIZON_DIRECTIONS.map((direction) => String(settings[direction.key]))
+  ].join('|');
+}
+
+function localHorizonDraftMatchesSettings(
+  draft: LocalHorizonDraft,
+  settings: StellarObservationSettings
+): boolean {
+  return draft.localHorizonEnabled === settings.localHorizonEnabled &&
+    STELLAR_LOCAL_HORIZON_DIRECTIONS.every((direction) => draft[direction.key] === settings[direction.key]);
+}
+
 export function StellarObservationPanel({
   result,
   prediction,
@@ -95,6 +128,15 @@ export function StellarObservationPanel({
   onChange(settings: StellarObservationSettings): void;
   onShowTrace(): void;
 }): React.JSX.Element {
+  const [localHorizonDraft, setLocalHorizonDraft] = useState<LocalHorizonDraft>(() =>
+    localHorizonDraftFromSettings(settings)
+  );
+  const appliedLocalHorizonSignature = localHorizonSignature(settings);
+
+  useEffect(() => {
+    setLocalHorizonDraft(localHorizonDraftFromSettings(settings));
+  }, [appliedLocalHorizonSignature]);
+
   const position = result.position;
   const crossings = result.trail.horizonCrossings;
   const localCrossings = result.localHorizonTrail?.localHorizonCrossings ?? [];
@@ -102,6 +144,18 @@ export function StellarObservationPanel({
   const skylinePolyline = localHorizonPolyline(result);
   const localState = currentLocalHorizonState(result);
   const firstLocalSample = result.localHorizonTrail?.samples[0];
+  const localHorizonDirty = !localHorizonDraftMatchesSettings(localHorizonDraft, settings);
+
+  const updateLocalHorizonDirection = (key: LocalHorizonDirectionKey, value: number): void => {
+    setLocalHorizonDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const applyLocalHorizonDraft = (): void => {
+    onChange({
+      ...settings,
+      ...localHorizonDraft
+    });
+  };
 
   return (
     <section className="panel stellar-observation-panel">
@@ -162,37 +216,38 @@ export function StellarObservationPanel({
         </label>
       </div>
 
-      <div className={settings.localHorizonEnabled ? 'stellar-local-horizon-editor active' : 'stellar-local-horizon-editor'}>
+      <div className={localHorizonDraft.localHorizonEnabled ? 'stellar-local-horizon-editor active' : 'stellar-local-horizon-editor'}>
         <div className="stellar-local-horizon-heading">
           <div>
             <strong>Yerel ufuk · 8 yönlü skyline</strong>
-            <span>Ara yönler döngüsel doğrusal interpolasyonla tamamlanır. Değerler geometrik yüksekliktir.</span>
+            <span>Ara yönler döngüsel doğrusal interpolasyonla tamamlanır. Kutularda düzenleme hesap motorunu çalıştırmaz; değerler tek seferde uygulanır.</span>
           </div>
           <label className="stellar-local-horizon-toggle">
             <input
               type="checkbox"
-              checked={settings.localHorizonEnabled}
-              onChange={(event) => onChange({ ...settings, localHorizonEnabled: event.currentTarget.checked })}
+              checked={localHorizonDraft.localHorizonEnabled}
+              onChange={(event) => setLocalHorizonDraft((current) => ({
+                ...current,
+                localHorizonEnabled: event.currentTarget.checked
+              }))}
             />
-            <span>{settings.localHorizonEnabled ? 'Etkin' : 'Kapalı'}</span>
+            <span>{localHorizonDraft.localHorizonEnabled ? 'Etkin' : 'Kapalı'}</span>
           </label>
         </div>
-        {settings.localHorizonEnabled && (
+        {localHorizonDraft.localHorizonEnabled && (
           <div className="stellar-local-horizon-grid">
             {STELLAR_LOCAL_HORIZON_DIRECTIONS.map((direction) => (
               <label key={direction.key}>
                 <span>{direction.label} · {direction.azimuthDeg}°</span>
                 <div>
-                  <input
-                    type="number"
+                  <DraftNumberInput
+                    ariaLabel={`${direction.label} yerel ufuk yüksekliği`}
                     min={-90}
                     max={90}
                     step={0.1}
-                    value={settings[direction.key]}
-                    onChange={(event) => onChange({
-                      ...settings,
-                      [direction.key]: Number(event.currentTarget.value)
-                    })}
+                    value={localHorizonDraft[direction.key]}
+                    onValidDraftChange={(value) => updateLocalHorizonDirection(direction.key, value)}
+                    onCommit={(value) => updateLocalHorizonDirection(direction.key, value)}
                   />
                   <b>°</b>
                 </div>
@@ -200,6 +255,29 @@ export function StellarObservationPanel({
             ))}
           </div>
         )}
+        <div className="stellar-local-horizon-apply-row">
+          <span className={localHorizonDirty ? 'stellar-local-horizon-draft dirty' : 'stellar-local-horizon-draft'}>
+            {localHorizonDirty ? 'Değişiklikler henüz hesaplanmadı.' : 'Editör ile hesaplanan sonuç eşleşiyor.'}
+          </span>
+          <div>
+            <button
+              className="stellar-local-horizon-revert"
+              disabled={!localHorizonDirty}
+              type="button"
+              onClick={() => setLocalHorizonDraft(localHorizonDraftFromSettings(settings))}
+            >
+              Geri al
+            </button>
+            <button
+              className="stellar-local-horizon-apply"
+              disabled={!localHorizonDirty}
+              type="button"
+              onClick={applyLocalHorizonDraft}
+            >
+              Uygula ve hesapla
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="stellar-coordinate-grid">
