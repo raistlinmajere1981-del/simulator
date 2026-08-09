@@ -84,6 +84,11 @@ import {
 } from '../../simulation/photo-model-uncertainty';
 import { calculateSolarPosition } from '../../simulation/solar-position';
 import { createSolarPositionPrediction, solarPositionMetadata } from '../../simulation/solar-position-prediction';
+import {
+  calculateSolarDayEvents,
+  createSolarDayEventsPrediction,
+  solarDayEventsMetadata
+} from '../../simulation/solar-day-events';
 import { calculateLunarPosition } from '../../simulation/lunar-position';
 import { createLunarPositionPrediction, lunarPositionMetadata } from '../../simulation/lunar-position-prediction';
 import {
@@ -137,6 +142,7 @@ import { HelpOverlay, HelpProvider, PanelHelpButton } from './HelpSystem';
 import { TextExperimentSetupDialog } from './TextExperimentSetupDialog';
 import { CelestialTimeCard } from './CelestialTimeCard';
 import { SolarPositionPanel } from './SolarPositionPanel';
+import { SolarDayEventsPanel } from './SolarDayEventsPanel';
 import { LunarPositionPanel } from './LunarPositionPanel';
 import { SolarScenarioSummary } from './SolarScenarioSummary';
 import { ShadowScenarioSummary } from './ShadowScenarioSummary';
@@ -449,7 +455,7 @@ function Sidebar({
       <section className="side-section compact">
         <div className="section-heading">
           <span>Modeller</span>
-          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '2 astronomik referans' : activeScenarioId === 'shadow-observation' ? '1 astronomik referans' : '2 fiziksel'}</span>
+          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '3 astronomik referans' : activeScenarioId === 'shadow-observation' ? '1 astronomik referans' : '2 fiziksel'}</span>
         </div>
         {activeScenarioId === 'sun-moon-observation' ? (
           <>
@@ -461,6 +467,11 @@ function Sidebar({
             <div className="model-toggle reference-model">
               <span className="model-dot violet" />
               <span>Ay Konumu ve Fazı · Astronomik Referans</span>
+              <span className="reference-badge">REFERANS</span>
+            </div>
+            <div className="model-toggle reference-model">
+              <span className="model-dot green" />
+              <span>Gün Doğumu / Batımı · Astronomik Referans</span>
               <span className="reference-badge">REFERANS</span>
             </div>
           </>
@@ -496,7 +507,7 @@ function Sidebar({
           <div className="saved-empty">
             {activeScenarioId === 'shadow-observation'
               ? 'Gölge yön diyagramı ana deney panelinde gösterilir. Dünya modellerine fiziksel Güneş davranışı atanmaz.'
-              : 'Güneş ve Ay referansları sayısal/geometrik astronomi sonucudur; ek gökyüzü katmanları sonraki dilimlerde genişletilecektir.'}
+              : 'Güneş/Ay konumu ile günlük doğuş-batış zaman çizgisi ana deney alanında gösterilir; ek gökyüzü katmanları sonraki dilimlerde genişletilecektir.'}
           </div>
         </section>
       ) : (
@@ -1276,6 +1287,18 @@ export function AppNext(): React.JSX.Element {
   const solarPositionPrediction = useMemo(() => activeScenarioId === 'sun-moon-observation' && solarPosition
     ? createSolarPositionPrediction(activeExperimentId, solarPosition)
     : undefined, [activeExperimentId, activeScenarioId, solarPosition]);
+  const solarDayEventsResult = useMemo(() => activeScenarioId === 'sun-moon-observation'
+    ? calculateSolarDayEvents({
+        experimentId: activeExperimentId,
+        observedAtIso: experimentObservedAtIso,
+        utcOffsetMinutes: observationUtcOffsetMinutes,
+        latitudeDeg: inputs.observerLatitudeDeg,
+        longitudeDeg: inputs.observerLongitudeDeg
+      })
+    : undefined, [activeExperimentId, activeScenarioId, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg, observationUtcOffsetMinutes]);
+  const solarDayEventsPrediction = useMemo(() => solarDayEventsResult
+    ? createSolarDayEventsPrediction(solarDayEventsResult)
+    : undefined, [solarDayEventsResult]);
   const lunarPosition = useMemo(() => activeScenarioId === 'sun-moon-observation' && solarPosition
     ? calculateLunarPosition({
         observedAtIso: experimentObservedAtIso,
@@ -1739,6 +1762,9 @@ export function AppNext(): React.JSX.Element {
         ...(solarPositionPrediction
           ? [[solarPositionMetadata.id, solarPositionMetadata.version] as const]
           : []),
+        ...(solarDayEventsPrediction
+          ? [[solarDayEventsMetadata.id, solarDayEventsMetadata.version] as const]
+          : []),
         ...(lunarPositionPrediction
           ? [[lunarPositionMetadata.id, lunarPositionMetadata.version] as const]
           : []),
@@ -1767,6 +1793,7 @@ export function AppNext(): React.JSX.Element {
       ]),
       predictions: [
         ...(solarPositionPrediction ? [solarPositionPrediction] : []),
+        ...(solarDayEventsPrediction ? [solarDayEventsPrediction] : []),
         ...(lunarPositionPrediction ? [lunarPositionPrediction] : []),
         ...(shadowObservationPrediction ? [shadowObservationPrediction] : []),
         ...(dualShadowComparisonPrediction ? [dualShadowComparisonPrediction] : []),
@@ -1898,7 +1925,9 @@ export function AppNext(): React.JSX.Element {
   const geoPrediction = geodesicPrediction(geodesic);
   const selectedMetadata = traceModelId === solarPositionMetadata.id
     ? solarPositionMetadata
-    : traceModelId === lunarPositionMetadata.id
+    : traceModelId === solarDayEventsMetadata.id
+      ? solarDayEventsMetadata
+      : traceModelId === lunarPositionMetadata.id
       ? lunarPositionMetadata
       : traceModelId === shadowObservationMetadata.id
         ? shadowObservationMetadata
@@ -1913,7 +1942,9 @@ export function AppNext(): React.JSX.Element {
         : modelRun?.metadata;
   const selectedPrediction = traceModelId === solarPositionMetadata.id
     ? solarPositionPrediction
-    : traceModelId === lunarPositionMetadata.id
+    : traceModelId === solarDayEventsMetadata.id
+      ? solarDayEventsPrediction
+      : traceModelId === lunarPositionMetadata.id
       ? lunarPositionPrediction
       : traceModelId === shadowObservationMetadata.id
         ? shadowObservationPrediction
@@ -2061,11 +2092,14 @@ export function AppNext(): React.JSX.Element {
               onShowGeodesicTrace={() => setTraceModelId(geodesicMetadata.id)}
             />
             )}
-            {activeScenarioId === 'sun-moon-observation' && solarPosition && lunarPosition
-              ? <div className="celestial-reference-stack">
-                  <SolarPositionPanel result={solarPosition} onShowTrace={() => setTraceModelId(solarPositionMetadata.id)} />
-                  <LunarPositionPanel result={lunarPosition} onShowTrace={() => setTraceModelId(lunarPositionMetadata.id)} />
-                </div>
+            {activeScenarioId === 'sun-moon-observation' && solarPosition && lunarPosition && solarDayEventsResult
+              ? <>
+                  <div className="celestial-reference-stack">
+                    <SolarPositionPanel result={solarPosition} onShowTrace={() => setTraceModelId(solarPositionMetadata.id)} />
+                    <LunarPositionPanel result={lunarPosition} onShowTrace={() => setTraceModelId(lunarPositionMetadata.id)} />
+                  </div>
+                  <SolarDayEventsPanel result={solarDayEventsResult} onShowTrace={() => setTraceModelId(solarDayEventsMetadata.id)} />
+                </>
               : activeScenarioId === 'shadow-observation' && shadowObservationResult && shadowObservationPrediction
               ? <>
                   <ShadowObservationPanel

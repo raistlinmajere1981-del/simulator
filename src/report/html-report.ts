@@ -30,6 +30,7 @@ const modelNames: Record<string, string> = {
   'azimuthal-projection': 'Azimutal Gösterim',
   'photo-calibration': 'Fotoğraf / Kamera Kalibrasyonu',
   'solar-position-noaa': 'Güneş Konumu · Astronomik Referans',
+  'solar-day-events': 'Gün Doğumu / Batımı · Astronomik Referans',
   'lunar-position-low-precision': 'Ay Konumu ve Fazı · Astronomik Referans',
   'solar-shadow-observation': 'Gölge Geometrisi · Astronomik Referans',
   'dual-shadow-comparison': 'İki Konumlu Gölge Karşılaştırması · Astronomik Referans'

@@ -523,9 +523,23 @@ Durum: tamamlandı · `1.11.0`
 
 Ayrıntı: [`roadmap-stage-6.4.md`](roadmap-stage-6.4.md)
 
+### Aşama 6.5 — Gün doğumu ve gün batımı olay geometrisi
+
+Durum: tamamlandı · `1.12.0`
+
+- açık UTC ofsetli yerel sivil gün penceresi
+- geometrik Güneş merkezi `0°` doğuş/batış geçişleri
+- ayrı standart görünür referans olarak `-0,833°` eşiği
+- doğuş/batış azimutları ve eşik-üstü süreler
+- güneş öğlesi / günlük maksimum geometrik yükseklik
+- kutup günü/gecesinde sahte olay saati üretmeme
+- prediction, hesap izi, portable ve HTML rapor korunumu
+- Dünya modellerine tanımsız Güneş/ışık davranışı uydurmama
+
+Ayrıntı: [`roadmap-stage-6.5.md`](roadmap-stage-6.5.md)
+
 ### Sonraki astronomi dilimleri
 
-- gün doğumu ve gün batımı
 - yıldız görünürlüğü ve yıldız izleri
 
 ## Aşama 7 — Büyük ölçekli olaylar
