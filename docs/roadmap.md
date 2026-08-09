@@ -553,11 +553,35 @@ Durum: tamamlandı · `1.12.1`
 
 Ayrıntı: [`roadmap-stage-6.6.md`](roadmap-stage-6.6.md)
 
+### Aşama 6.7 — Yıldız katalog koordinatı ve gözlem tarihine dönüşüm
+
+Durum: tamamlandı · `1.12.2`
+
+- IAU 2006 precession ve açık ICRS / ortalama J2000 çerçeve ayrımı
+- SOFA referans matrisine bağlı regresyon
+- BSC5P tabanlı çevrimdışı parlak-yıldız referans altkümesi
+- J2000 katalog yönünü sessizce of-date kabul etmeme
+
+Ayrıntı: [`roadmap-stage-6.7.md`](roadmap-stage-6.7.md)
+
+### Aşama 6.8 — Yıldız Gözlemleri arayüzü ve kayıt entegrasyonu
+
+Durum: tamamlandı · `1.13.0`
+
+- Yıldız Gözlemleri senaryosunu etkinleştirme
+- katalog yıldızı seçimi, J2000 → gözlem tarihi provenansı
+- anlık geometrik konum, LMST ve günlük ufuk sınıfı
+- 3–48 saat yıldız izi, geometrik ufuk geçişleri ve ufuk-üstü süre
+- prediction snapshot üzerinden reopen ve portable kayıt korunumu
+- HTML rapor ve hesap izi entegrasyonu
+
+Ayrıntı: [`roadmap-stage-6.8.md`](roadmap-stage-6.8.md)
+
 ### Sonraki astronomi dilimleri
 
-- J2000/ICRS → gözlem tarihi koordinat dönüşümü ve provenanslı parlak yıldız kataloğu
-- Yıldız Gözlemleri arayüzü, kayıt/portable/HTML rapor entegrasyonu
-- geometrik ufuktan ayrı optik yıldız görünürlüğü
+- proper motion ve katalog epoch düzeltmeleri
+- optik yıldız görünürlüğü ve topoğrafik ufuk
+- çoklu yıldız / gökyüzü görselleştirmesi
 
 ## Aşama 7 — Büyük ölçekli olaylar
 
