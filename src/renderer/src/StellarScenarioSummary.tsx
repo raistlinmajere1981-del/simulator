@@ -1,4 +1,5 @@
 import type { SimulatorInputs } from '../../shared/simulator';
+import { DraftNumberInput } from './DraftNumberInput';
 import { PanelHelpButton } from './HelpSystem';
 import './solar-scenario-summary.css';
 
@@ -36,11 +37,11 @@ export function StellarScenarioSummary({
       <div className="solar-location-grid">
         <label className="input-field">
           <span>Gözlemci enlemi</span>
-          <div><input min={-90} max={90} step={0.000001} type="number" value={inputs.observerLatitudeDeg} onChange={(event) => onCoordinateChange('observerLatitudeDeg', event.currentTarget.valueAsNumber)} /><b>°</b></div>
+          <div><DraftNumberInput min={-90} max={90} step={0.000001} value={inputs.observerLatitudeDeg} onCommit={(value) => onCoordinateChange('observerLatitudeDeg', value)} /><b>°</b></div>
         </label>
         <label className="input-field">
           <span>Gözlemci boylamı</span>
-          <div><input min={-180} max={180} step={0.000001} type="number" value={inputs.observerLongitudeDeg} onChange={(event) => onCoordinateChange('observerLongitudeDeg', event.currentTarget.valueAsNumber)} /><b>°</b></div>
+          <div><DraftNumberInput min={-180} max={180} step={0.000001} value={inputs.observerLongitudeDeg} onCommit={(value) => onCoordinateChange('observerLongitudeDeg', value)} /><b>°</b></div>
         </label>
       </div>
 

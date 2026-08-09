@@ -661,9 +661,24 @@ Durum: tamamlandı · `1.13.6`
 
 Ayrıntı: [`roadmap-stage-6.14.md`](roadmap-stage-6.14.md)
 
+### Aşama 6.15 — Yıldız yerel ufuk arayüzü, kayıt ve rapor entegrasyonu
+
+Durum: tamamlandı · `1.14.0`
+
+- yerel ufku varsayılan kapalı, sekiz yönlü manuel skyline editörüyle kullanıcıya açma
+- K/KD/D/GD/G/GB/B/KB yön değerlerini 6.12 döngüsel interpolasyon sözleşmesine bağlama
+- astronomik `0°` ufuk ile yerel skyline'ı grafikte ayrı çizgiler ve ayrı durum/geçiş sonuçları olarak tutma
+- anlık yerel ufuk yüksekliği, geometrik açıklık ve yerel-ufuk üstü süreyi prediction metriklerine ekleme
+- sekiz yönü mevcut prediction snapshot içinde saklayıp yeni top-level portable şema alanı açmama
+- kayıt/reopen, `.ggl.json` round-trip ve HTML rapor korunumu
+- 6.15 öncesi yıldız kayıtlarını yerel ufuk kapalı ve 0° yön değerleriyle güvenli açma
+- atmosferik apparent altitude ile geometrik skyline'ı otomatik görünürlük sonucuna dönüştürmeme
+
+Ayrıntı: [`roadmap-stage-6.15.md`](roadmap-stage-6.15.md)
+
 ### Sonraki astronomi dilimleri
 
-- yerel ufuk maskesini Yıldız Gözlemleri arayüzü, kayıt, portable ve HTML rapora bağlama
+- yüksek çözünürlüklü skyline CSV/JSON importu ve kaynak bütünlüğü
 - refraction ile local skyline'ın güvenli karşılaştırma sözleşmesini tanımlama
 - resmi BSC5P kaynak dosyası erişildiğinde doğrulanmış 19-yıldız motion veri dosyasını üretip gözlem zincirine bağlama
 - çoklu yıldız / gökyüzü görselleştirmesi

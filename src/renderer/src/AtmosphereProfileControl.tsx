@@ -6,6 +6,7 @@ import type {
 } from '../../shared/atmosphere';
 import { validateAtmosphereProfile } from '../../simulation/atmosphere-profile';
 import { buildOpticalAtmosphereProfile } from '../../simulation/optical-refraction';
+import { DraftNumberInput } from './DraftNumberInput';
 import { PanelHelpButton } from './HelpSystem';
 
 interface AtmosphereProfileControlProps {
@@ -136,48 +137,40 @@ export function AtmosphereProfileControl({
             </label>
             <label className="input-field">
               <span>Vakum dalga boyu</span>
-              <div><input
+              <div><DraftNumberInput
                 min={300}
                 max={1690}
                 step={1}
-                type="number"
                 value={state.opticalSettings.wavelengthNm}
-                onChange={(event) => {
-                  if (!Number.isFinite(event.currentTarget.valueAsNumber)) return;
+                onCommit={(value) => {
                   const next = cloneState(state);
-                  next.opticalSettings.wavelengthNm = clamp(event.currentTarget.valueAsNumber, 300, 1690);
+                  next.opticalSettings.wavelengthNm = value;
                   onChange(next);
                 }}
               /><b>nm</b></div>
             </label>
             <label className="input-field">
               <span>CO₂</span>
-              <div><input
+              <div><DraftNumberInput
                 min={0}
                 max={2000}
                 step={1}
-                type="number"
                 value={state.opticalSettings.carbonDioxidePpm}
-                onChange={(event) => {
-                  if (!Number.isFinite(event.currentTarget.valueAsNumber)) return;
+                onCommit={(value) => {
                   const next = cloneState(state);
-                  next.opticalSettings.carbonDioxidePpm = clamp(event.currentTarget.valueAsNumber, 0, 2000);
+                  next.opticalSettings.carbonDioxidePpm = value;
                   onChange(next);
                 }}
               /><b>ppm</b></div>
             </label>
             <label className="input-field">
               <span>Işın adımı</span>
-              <div><input
+              <div><DraftNumberInput
                 min={1}
                 max={5000}
                 step={1}
-                type="number"
                 value={state.rayTraceStepM}
-                onChange={(event) => {
-                  if (!Number.isFinite(event.currentTarget.valueAsNumber)) return;
-                  onChange({ ...cloneState(state), rayTraceStepM: clamp(event.currentTarget.valueAsNumber, 1, 5000) });
-                }}
+                onCommit={(value) => onChange({ ...cloneState(state), rayTraceStepM: value })}
               /><b>m</b></div>
             </label>
           </div>
@@ -190,10 +183,10 @@ export function AtmosphereProfileControl({
                   const opticalSample = optical?.samples[index];
                   return (
                     <tr key={sample.id}>
-                      <td><input type="number" step={1} value={sample.altitudeM} onChange={(event) => updateSample(sample.id, 'altitudeM', event.currentTarget.valueAsNumber)} /><span>m</span></td>
-                      <td><input type="number" step={0.1} value={sample.temperatureC} onChange={(event) => updateSample(sample.id, 'temperatureC', event.currentTarget.valueAsNumber)} /><span>°C</span></td>
-                      <td><input type="number" step={0.1} value={sample.pressureHpa} onChange={(event) => updateSample(sample.id, 'pressureHpa', event.currentTarget.valueAsNumber)} /><span>hPa</span></td>
-                      <td><input type="number" min={0} max={100} step={1} value={sample.relativeHumidityPercent} onChange={(event) => updateSample(sample.id, 'relativeHumidityPercent', event.currentTarget.valueAsNumber)} /><span>%</span></td>
+                      <td><DraftNumberInput step={1} value={sample.altitudeM} onCommit={(value) => updateSample(sample.id, 'altitudeM', value)} /><span>m</span></td>
+                      <td><DraftNumberInput step={0.1} value={sample.temperatureC} onCommit={(value) => updateSample(sample.id, 'temperatureC', value)} /><span>°C</span></td>
+                      <td><DraftNumberInput step={0.1} value={sample.pressureHpa} onCommit={(value) => updateSample(sample.id, 'pressureHpa', value)} /><span>hPa</span></td>
+                      <td><DraftNumberInput min={0} max={100} step={1} value={sample.relativeHumidityPercent} onCommit={(value) => updateSample(sample.id, 'relativeHumidityPercent', value)} /><span>%</span></td>
                       <td>{opticalSample ? formatter.format(opticalSample.refractivityN) : '—'}</td>
                       <td><button disabled={state.profile.samples.length <= 2} type="button" onClick={() => removeSample(sample.id)}>Sil</button></td>
                     </tr>

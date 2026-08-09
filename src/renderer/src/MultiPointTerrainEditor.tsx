@@ -28,6 +28,7 @@ import {
   type DemSampleCountMode
 } from '../../simulation/dem-import-options';
 import { DemLineOfSightReviewCard } from './DemLineOfSightReviewCard';
+import { DraftNumberInput } from './DraftNumberInput';
 
 export type TerrainProfileImportOptions = TerrainProfileApplicationOptions;
 
@@ -611,13 +612,12 @@ export function MultiPointTerrainEditor({
           {demSampleCountMode === 'manual' && (
             <label title="Başlangıç ve bitiş dahil 3…2002 rota örneği">
               <span>Manuel örnek sayısı</span>
-              <input
+              <DraftNumberInput
                 max={2_002}
                 min={3}
                 step={1}
-                type="number"
                 value={demManualSampleCount}
-                onChange={(event) => setDemManualSampleCount(Number(event.currentTarget.value))}
+                onCommit={setDemManualSampleCount}
               />
             </label>
           )}
@@ -872,20 +872,15 @@ export function MultiPointTerrainEditor({
             <label title="Başlangıçtan bitişe kadar rotanın yüzde kaçında olduğu">
               <span>Rotadaki yeri</span>
               <div>
-                <input
+                <DraftNumberInput
                   disabled={disabled}
                   max={99.999}
                   min={0.001}
                   step={0.1}
-                  type="number"
                   value={point.distancePercent}
-                  onChange={(event) => {
-                    const value = event.currentTarget.valueAsNumber;
-                    if (!Number.isFinite(value)) return;
-                    apply(() => updateManualTerrainPoint(sortedPoints, point.id, {
-                      distancePercent: value
-                    }));
-                  }}
+                  onCommit={(value) => apply(() => updateManualTerrainPoint(sortedPoints, point.id, {
+                    distancePercent: value
+                  }))}
                 />
                 <b>%</b>
               </div>
@@ -893,20 +888,15 @@ export function MultiPointTerrainEditor({
             <label title="Bu noktadaki zemin veya arazi yüksekliği">
               <span>Arazi yüksekliği</span>
               <div>
-                <input
+                <DraftNumberInput
                   disabled={disabled}
                   max={100_000}
                   min={-12_000}
                   step={0.1}
-                  type="number"
                   value={point.elevationM}
-                  onChange={(event) => {
-                    const value = event.currentTarget.valueAsNumber;
-                    if (!Number.isFinite(value)) return;
-                    apply(() => updateManualTerrainPoint(sortedPoints, point.id, {
-                      elevationM: value
-                    }));
-                  }}
+                  onCommit={(value) => apply(() => updateManualTerrainPoint(sortedPoints, point.id, {
+                    elevationM: value
+                  }))}
                 />
                 <b>m</b>
               </div>
