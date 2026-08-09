@@ -5,6 +5,7 @@ import {
   localDateTimeValueFromInstant,
   systemUtcOffsetMinutes
 } from '../../shared/celestial-time';
+import { DraftNumberInput } from './DraftNumberInput';
 import { PanelHelpButton } from './HelpSystem';
 import './celestial-time-card.css';
 
@@ -64,16 +65,13 @@ export function CelestialTimeCard({
       <label>
         <span>UTC ofseti</span>
         <div className="celestial-offset-row">
-          <input
-            aria-label="Astronomi gözlemi UTC ofseti saat"
-            type="number"
+          <DraftNumberInput
+            ariaLabel="Astronomi gözlemi UTC ofseti saat"
             min={-12}
             max={14}
             step={0.25}
             value={offsetHours}
-            onChange={(event) => {
-              const nextHours = event.currentTarget.valueAsNumber;
-              if (!Number.isFinite(nextHours) || nextHours < -12 || nextHours > 14) return;
+            onCommit={(nextHours) => {
               const nextOffset = Math.round(nextHours * 60);
               onChange(instantIsoFromLocalDateTime(localValue, nextOffset), nextOffset);
             }}
