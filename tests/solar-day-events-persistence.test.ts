@@ -55,6 +55,7 @@ describe('solar day event persistence', () => {
     expect(report).toContain('Gün Doğumu / Batımı · Astronomik Referans');
     expect(report).toContain('Geometrik 0° doğuş');
     expect(report).toContain('Standart -0,833° doğuş');
-    expect(report).toContain('ölçülen atmosfer değildir');
+    expect(report).toContain('gerçek zamanlı atmosfer ölçümü değil');
+    expect(report).toContain('Bu eşik ölçülen atmosferik kırılma değildir.');
   });
 });
