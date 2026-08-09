@@ -9,6 +9,11 @@ import {
   type BrightStarCatalogEntry
 } from './bright-star-catalog';
 import {
+  calculateStellarApparentDiagnostic,
+  type StellarApparentDiagnosticResult
+} from './stellar-apparent-diagnostic';
+import { calculateStellarAtmosphericRefraction } from './stellar-atmospheric-refraction';
+import {
   calculateStellarLocalHorizonTrail,
   type StellarLocalHorizonTrailResult
 } from './stellar-local-horizon-trail';
@@ -20,7 +25,7 @@ import { calculateStellarPosition, type StellarPositionResult } from './stellar-
 import { calculateStellarTrail, type StellarTrailResult } from './stellar-trail';
 
 export const STELLAR_OBSERVATION_MODEL_ID = 'stellar-observation-reference';
-export const STELLAR_OBSERVATION_MODEL_VERSION = '0.3.0';
+export const STELLAR_OBSERVATION_MODEL_VERSION = '0.4.0';
 
 export type StellarLocalHorizonSourceMode = 'manual' | 'external';
 
@@ -81,6 +86,15 @@ export interface StellarObservationLocalHorizonSourceSummary {
   warnings: string[];
 }
 
+export interface StellarObservationApparentTrailSample {
+  observedAtIso: string;
+  elapsedMinutes: number;
+  geometricAltitudeDeg: number;
+  apparentAltitudeDeg: number;
+  refractionCorrectionArcmin: number;
+  aboveApparentAstronomicalHorizon: boolean;
+}
+
 export interface StellarObservationResult {
   experimentId: string;
   observedAtIso: string;
@@ -97,6 +111,8 @@ export interface StellarObservationResult {
   trail: StellarTrailResult;
   localHorizonTrail: StellarLocalHorizonTrailResult | null;
   localHorizonSource: StellarObservationLocalHorizonSourceSummary | null;
+  apparentDiagnostic: StellarApparentDiagnosticResult;
+  apparentTrailSamples: StellarObservationApparentTrailSample[];
   traceId: string;
   trace: CalculationTrace;
   warnings: string[];
@@ -246,9 +262,26 @@ export function calculateStellarObservation(input: {
   const localHorizonTrail = localHorizon.mask
     ? calculateStellarLocalHorizonTrail({ ...trailInput, horizonMask: localHorizon.mask })
     : null;
+  const apparentDiagnostic = calculateStellarApparentDiagnostic({
+    geometricAltitudeDeg: position.elevationDeg,
+    azimuthDeg: position.azimuthDeg,
+    localHorizonMask: position.azimuthDeg === null ? undefined : localHorizon.mask ?? undefined,
+    label: resolved.star.commonName
+  });
+  const apparentTrailSamples: StellarObservationApparentTrailSample[] = trail.samples.map((sample) => {
+    const refraction = calculateStellarAtmosphericRefraction(sample.elevationDeg);
+    return {
+      observedAtIso: sample.observedAtIso,
+      elapsedMinutes: sample.elapsedMinutes,
+      geometricAltitudeDeg: sample.elevationDeg,
+      apparentAltitudeDeg: refraction.apparentAltitudeDeg,
+      refractionCorrectionArcmin: refraction.refractionCorrectionArcmin,
+      aboveApparentAstronomicalHorizon: refraction.aboveApparentAstronomicalHorizon
+    };
+  });
 
   const localHorizonWarning = !settings.localHorizonEnabled
-    ? 'Yerel/topoğrafik ufuk kapalıdır; görünürlük yalnız geometrik 0° astronomik ufuk anlamındadır.'
+    ? 'Yerel/topoğrafik ufuk kapalıdır; geometrik görünürlük yalnız 0° astronomik ufuk anlamındadır.'
     : localHorizon.summary?.mode === 'external'
       ? `Dış yerel skyline uygulanır: ${localHorizon.summary.fileName}; ${localHorizon.summary.pointCount} nokta; maksimum azimut boşluğu=${format(localHorizon.summary.maximumAzimuthGapDeg, 3)}°; SHA-256=${localHorizon.summary.sha256}.`
       : 'Sekiz yönlü manuel yerel skyline maskesi geometrik yıldız izine uygulanır; ara azimutlar döngüsel doğrusal interpolasyonla çözülür.';
@@ -258,12 +291,14 @@ export function calculateStellarObservation(input: {
     'Proper motion, yıllık paralaks, radyal hız, nutation, aberration ve ışık sapması uygulanmaz.',
     localHorizonWarning,
     ...(localHorizon.summary?.warnings ?? []),
-    'Atmosferik kırılma, yıldız sönümlemesi, gökyüzü parlaklığı, bulut, seeing ve çıplak-göz algı eşiği bu gözlem sonucuna uygulanmaz.',
+    'NOAA standart atmosferik kırılma yaklaşımı yalnız ayrı bir apparent-altitude tanı katmanı olarak hesaplanır; geometrik yıldız izi veya geometrik yerel-ufuk görünürlük sınıfını değiştirmez.',
+    'Apparent yıldız yüksekliği ile geometrik skyline farkı karma referanslı tanısal değerdir; yerel optik görünürlük sınıfı değildir.',
+    'Yıldız sönümlemesi, gökyüzü parlaklığı, gerçek basınç/sıcaklık/nem profili, bulut, seeing ve çıplak-göz algı eşiği uygulanmaz.',
     'Bu astronomik referans tek başına herhangi bir Dünya şekli modelini doğrulamaz.'
   ];
   const traceId = `${STELLAR_OBSERVATION_MODEL_ID}:${input.experimentId}:${resolved.star.id}:${position.observedAtIso}`;
   const trace: CalculationTrace = {
-    summary: `${resolved.star.commonName} için J2000 katalog yönü gözlem tarihine dönüştürüldü; anlık geometrik konum ve seçilen pencere boyunca yıldız izi${localHorizonTrail ? ' ile yerel skyline açıklığı' : ''} hesaplandı.`,
+    summary: `${resolved.star.commonName} için J2000 katalog yönü gözlem tarihine dönüştürüldü; geometrik konum/yıldız izi${localHorizonTrail ? ', yerel skyline açıklığı' : ''} ve ayrı standart-refraction apparent tanısı hesaplandı.`,
     assumptions: warnings,
     steps: [
       {
@@ -282,6 +317,13 @@ export function calculateStellarObservation(input: {
         substitution: `Δt=${format(settings.trailDurationMinutes)} dk; örnek aralığı=${format(settings.trailSampleIntervalMinutes)} dk`,
         result: `${trail.samples.length} örnek; geometrik 0° ufuk üstü=${format(trail.visibleDurationMinutes)} dk; geçiş=${trail.horizonCrossings.length}`
       },
+      {
+        id: 'standard-refraction-diagnostic',
+        title: 'Standart atmosferik kırılma tanısı',
+        formula: 'h_apparent = h_geometrik + R_NOAA(h)',
+        substitution: `h_geometrik=${format(position.elevationDeg, 6)}°; R=${format(apparentDiagnostic.refraction.refractionCorrectionArcmin, 6)}′`,
+        result: `h_apparent=${format(apparentDiagnostic.refraction.apparentAltitudeDeg, 6)}°; apparent 0° üstü=${apparentDiagnostic.refraction.aboveApparentAstronomicalHorizon ? 'evet' : 'hayır'}`
+      },
       ...(localHorizon.summary
         ? [{
             id: 'local-source',
@@ -295,6 +337,15 @@ export function calculateStellarObservation(input: {
         : []),
       ...(localHorizonTrail
         ? localHorizonTrail.trace.steps.map((step) => ({ ...step, id: `local-${step.id}` }))
+        : []),
+      ...(apparentDiagnostic.starOnlyApparentMinusGeometricSkylineDeg !== null
+        ? [{
+            id: 'mixed-reference-diagnostic',
+            title: 'Karma apparent-skyline tanısı',
+            formula: 'Δh_tanı = h_apparent,yıldız − h_geometrik,skyline',
+            substitution: `h_apparent=${format(apparentDiagnostic.refraction.apparentAltitudeDeg, 6)}°; h_skyline=${format(apparentDiagnostic.localHorizon!.localHorizonAltitudeDeg, 6)}°`,
+            result: `Δh_tanı=${format(apparentDiagnostic.starOnlyApparentMinusGeometricSkylineDeg, 6)}°; yerel görünürlük sınıflandırılmadı`
+          }]
         : [])
     ]
   };
@@ -315,6 +366,8 @@ export function calculateStellarObservation(input: {
     trail,
     localHorizonTrail,
     localHorizonSource: localHorizon.summary,
+    apparentDiagnostic,
+    apparentTrailSamples,
     traceId,
     trace,
     warnings
@@ -325,12 +378,13 @@ export const stellarObservationMetadata: ModelMetadata = {
   id: STELLAR_OBSERVATION_MODEL_ID,
   name: 'Yıldız Gözlemi · Astronomik Referans',
   version: STELLAR_OBSERVATION_MODEL_VERSION,
-  description: 'Çevrimdışı parlak yıldız kataloğundan seçilen J2000 yönünü gözlem tarihine dönüştürüp geometrik yerel konum, yıldız izi ve isteğe bağlı manuel veya dış kaynaklı yerel skyline açıklığı üreten astronomik referans.',
+  description: 'Çevrimdışı parlak yıldız kataloğundan seçilen J2000 yönünü gözlem tarihine dönüştürüp geometrik yerel konum, yıldız izi, isteğe bağlı geometrik skyline açıklığı ve ayrı standart-refraction apparent tanısı üreten astronomik referans.',
   capabilities: ['stellar-position'],
   assumptions: [
     'Katalog yönü ortalama J2000 koordinatıdır ve gözlem tarihine açık precession adımıyla dönüştürülür.',
     'Proper motion ve diğer yüksek hassasiyetli astrometrik düzeltmeler uygulanmaz.',
-    'İsteğe bağlı yerel ufuk manuel veya doğrulanmış dış geometrik skyline maskesidir; atmosferik apparent-altitude ile otomatik birleştirilmez.',
+    'İsteğe bağlı yerel ufuk manuel veya doğrulanmış dış geometrik skyline maskesidir.',
+    'Standart atmosferik kırılma apparent yıldız yüksekliği olarak ayrı raporlanır; geometrik skyline ile karma fark yerel optik görünürlük sayılmaz.',
     'Optik çıplak-göz görünürlüğü bu modelde yoktur.'
   ]
 };
@@ -351,6 +405,11 @@ export function createStellarObservationPrediction(result: StellarObservationRes
       { key: 'stellarMeanOfDateDecDeg', label: 'Gözlem tarihi deklinasyon', value: result.meanOfDateDeclinationDeg, unit: 'deg' },
       { key: 'stellarPrecessionShiftArcsec', label: 'Precession açısal kayması', value: result.precessionAngularShiftArcsec, unit: 'arcsec' },
       { key: 'stellarElevationDeg', label: 'Geometrik yıldız yüksekliği', value: result.position.elevationDeg, unit: 'deg' },
+      { key: 'stellarStandardRefractionCorrectionArcmin', label: 'Standart kırılma düzeltmesi', value: result.apparentDiagnostic.refraction.refractionCorrectionArcmin, unit: 'arcmin' },
+      { key: 'stellarApparentElevationDeg', label: 'Standart apparent yıldız yüksekliği', value: result.apparentDiagnostic.refraction.apparentAltitudeDeg, unit: 'deg' },
+      { key: 'starAboveApparentAstronomicalHorizon', label: 'Standart apparent 0° ufkun üstünde', value: result.apparentDiagnostic.refraction.aboveApparentAstronomicalHorizon ? 1 : 0, unit: 'boolean' },
+      { key: 'stellarApparentMinusGeometricSkylineDeg', label: 'Karma apparent yıldız − geometrik skyline tanısı', value: result.apparentDiagnostic.starOnlyApparentMinusGeometricSkylineDeg, unit: 'deg' },
+      { key: 'stellarLocalApparentVisibilityClassified', label: 'Yerel apparent görünürlük sınıflandırıldı', value: 0, unit: 'boolean' },
       { key: 'stellarAzimuthDeg', label: 'Yıldız azimutu', value: result.position.azimuthDeg, unit: 'deg' },
       { key: 'localMeanSiderealTimeDeg', label: 'Yerel ortalama yıldız zamanı', value: result.position.localMeanSiderealTimeDeg, unit: 'deg' },
       { key: 'starAboveGeometricHorizon', label: 'Geometrik 0° ufkun üstünde', value: result.position.aboveGeometricHorizon ? 1 : 0, unit: 'boolean' },
