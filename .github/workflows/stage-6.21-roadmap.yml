@@ -1,0 +1,34 @@
+name: Stage 6.21 roadmap update
+
+on:
+  push:
+    branches:
+      - agent/stellar-sky-ui
+    paths:
+      - .github/scripts/update-roadmap-stage-6.21.mjs
+      - .github/workflows/stage-6.21-roadmap.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update-roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/stellar-sky-ui
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply roadmap update
+        run: node .github/scripts/update-roadmap-stage-6.21.mjs
+      - name: Validate and commit roadmap only
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/roadmap.md
+          git diff --cached --quiet && exit 0
+          git commit -m "Roadmap 6.17–6.21 durumunu güncelle"
+          git push origin HEAD:agent/stellar-sky-ui
