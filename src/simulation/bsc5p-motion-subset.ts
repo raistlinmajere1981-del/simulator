@@ -1,4 +1,8 @@
-import { BRIGHT_STAR_CATALOG, type BrightStarCatalogEntry } from './bright-star-catalog';
+import {
+  BRIGHT_STAR_CATALOG,
+  type BrightStarCatalogEntry,
+  type BrightStarMotionReference
+} from './bright-star-catalog';
 import {
   BSC5P_FIXED_WIDTH_FORMAT_ID,
   BSC5P_FIXED_WIDTH_FORMAT_VERSION,
@@ -122,6 +126,35 @@ export function buildVerifiedBrightStarMotionSubset(
   sourceText: string
 ): VerifiedBrightStarMotionSubset {
   return buildVerifiedBrightStarMotionSubsetFromRecords(parseBsc5pFixedWidthCatalog(sourceText));
+}
+
+export function resolveVerifiedBrightStarMotionReference(
+  subset: VerifiedBrightStarMotionSubset,
+  starId: string
+): BrightStarMotionReference {
+  if (subset.id !== BSC5P_MOTION_SUBSET_ID || subset.version !== BSC5P_MOTION_SUBSET_VERSION ||
+    subset.sourceFrame !== 'fk5-j2000' || !Number.isFinite(subset.sourceEpochJulianYear)) {
+    throw new Bsc5pMotionSubsetError('Proper-motion subset üstverisi desteklenen BSC5P sözleşmesiyle uyuşmuyor.');
+  }
+  if (subset.entries.length !== BRIGHT_STAR_CATALOG.length) {
+    throw new Bsc5pMotionSubsetError(
+      `Proper-motion subset ${BRIGHT_STAR_CATALOG.length} yıldızın tamamını içermelidir; alınan=${subset.entries.length}.`
+    );
+  }
+  const star = BRIGHT_STAR_CATALOG.find((candidate) => candidate.id === starId);
+  if (!star) throw new Bsc5pMotionSubsetError(`Bilinmeyen parlak yıldız kimliği: ${starId}.`);
+  const entry = subset.entries.find((candidate) => candidate.starId === starId);
+  if (!entry || entry.hrNumber !== star.hrNumber ||
+    !Number.isFinite(entry.properMotionRaStarArcsecPerYear) ||
+    !Number.isFinite(entry.properMotionDecArcsecPerYear)) {
+    throw new Bsc5pMotionSubsetError(`HR ${star.hrNumber} (${star.commonName}) için doğrulanmış proper-motion kaydı eksik veya geçersiz.`);
+  }
+  return {
+    sourceEpochJulianYear: subset.sourceEpochJulianYear,
+    properMotionRaStarArcsecPerYear: entry.properMotionRaStarArcsecPerYear,
+    properMotionDecArcsecPerYear: entry.properMotionDecArcsecPerYear,
+    sourceLabel: `${subset.id}@${subset.version} · ${star.commonName}`
+  };
 }
 
 export function serializeVerifiedBrightStarMotionSubset(

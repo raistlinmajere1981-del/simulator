@@ -24,9 +24,14 @@ import {
 import { calculateStellarSkySnapshot, type StellarSkySnapshotResult } from './stellar-sky-snapshot';
 import { calculateStellarPosition, type StellarPositionResult } from './stellar-position';
 import { calculateStellarTrail, type StellarTrailResult } from './stellar-trail';
+import {
+  resolveVerifiedBrightStarMotionReference,
+  type VerifiedBrightStarMotionSubset
+} from './bsc5p-motion-subset';
+import type { StellarProperMotionResult } from './stellar-proper-motion';
 
 export const STELLAR_OBSERVATION_MODEL_ID = 'stellar-observation-reference';
-export const STELLAR_OBSERVATION_MODEL_VERSION = '0.5.0';
+export const STELLAR_OBSERVATION_MODEL_VERSION = '0.6.0';
 
 export type StellarLocalHorizonSourceMode = 'manual' | 'external';
 
@@ -108,6 +113,9 @@ export interface StellarObservationResult {
   meanOfDateRightAscensionDeg: number;
   meanOfDateDeclinationDeg: number;
   precessionAngularShiftArcsec: number;
+  properMotion: StellarProperMotionResult | null;
+  properMotionSourceId: string | null;
+  properMotionSourceVersion: string | null;
   position: StellarPositionResult;
   trail: StellarTrailResult;
   localHorizonTrail: StellarLocalHorizonTrailResult | null;
@@ -229,13 +237,17 @@ export function calculateStellarObservation(input: {
   longitudeDeg: number;
   settings: StellarObservationSettings;
   externalLocalHorizonSource?: SavedStellarLocalHorizonSource;
+  motionSubset?: VerifiedBrightStarMotionSubset;
 }): StellarObservationResult {
   const settings: StellarObservationSettings = {
     ...DEFAULT_STELLAR_OBSERVATION_SETTINGS,
     ...input.settings
   };
   validateSettings(settings);
-  const resolved = resolveBrightStarForObservation(settings.starId, input.observedAtIso);
+  const motionReference = input.motionSubset
+    ? resolveVerifiedBrightStarMotionReference(input.motionSubset, settings.starId)
+    : undefined;
+  const resolved = resolveBrightStarForObservation(settings.starId, input.observedAtIso, motionReference);
   const rightAscensionDeg = resolved.precession.meanOfDateRightAscensionDeg;
   const declinationDeg = resolved.precession.meanOfDateDeclinationDeg;
   const position = calculateStellarPosition({
@@ -285,7 +297,8 @@ export function calculateStellarObservation(input: {
     observedAtIso: input.observedAtIso,
     latitudeDeg: input.latitudeDeg,
     longitudeDeg: input.longitudeDeg,
-    horizonMask: localHorizon.mask ?? undefined
+    horizonMask: localHorizon.mask ?? undefined,
+    motionSubset: input.motionSubset
   });
 
   const localHorizonWarning = !settings.localHorizonEnabled
@@ -293,10 +306,15 @@ export function calculateStellarObservation(input: {
     : localHorizon.summary?.mode === 'external'
       ? `Dış yerel skyline uygulanır: ${localHorizon.summary.fileName}; ${localHorizon.summary.pointCount} nokta; maksimum azimut boşluğu=${format(localHorizon.summary.maximumAzimuthGapDeg, 3)}°; SHA-256=${localHorizon.summary.sha256}.`
       : 'Sekiz yönlü manuel yerel skyline maskesi geometrik yıldız izine uygulanır; ara azimutlar döngüsel doğrusal interpolasyonla çözülür.';
+  const motionWarning = resolved.properMotion
+    ? `Doğrulanmış proper motion uygulanır: μ_α*=${format(resolved.properMotion.properMotionRaStarArcsecPerYear, 6)}″/yıl; μ_δ=${format(resolved.properMotion.properMotionDecArcsecPerYear, 6)}″/yıl; kaynak epok=J${format(resolved.properMotion.sourceEpochJulianYear, 4)}. Paralaks, radyal hız ve perspektif ivmelenmesi uygulanmaz.`
+    : 'Proper motion, yıllık paralaks, radyal hız, nutation, aberration ve ışık sapması uygulanmaz.';
   const warnings = [
     `Katalog kaynağı: ${BRIGHT_STAR_CATALOG_SOURCE}; çevrimdışı altküme=${BRIGHT_STAR_CATALOG_ID}@${BRIGHT_STAR_CATALOG_VERSION}.`,
-    'Katalog koordinatı ortalama J2000 sisteminden IAU 2006 precession ile gözlem tarihinin ortalama ekvator/equinox sistemine dönüştürülür.',
-    'Proper motion, yıllık paralaks, radyal hız, nutation, aberration ve ışık sapması uygulanmaz.',
+    resolved.properMotion
+      ? 'Katalog yönü önce doğrulanmış iki-bileşenli proper motion ile gözlem epoch’una taşınır, sonra IAU 2006 precession ile gözlem tarihinin ortalama ekvator/equinox sistemine dönüştürülür.'
+      : 'Katalog koordinatı ortalama J2000 sisteminden IAU 2006 precession ile gözlem tarihinin ortalama ekvator/equinox sistemine dönüştürülür.',
+    motionWarning,
     localHorizonWarning,
     ...(localHorizon.summary?.warnings ?? []),
     'NOAA standart atmosferik kırılma yaklaşımı yalnız ayrı bir apparent-altitude tanı katmanı olarak hesaplanır; geometrik yıldız izi veya geometrik yerel-ufuk görünürlük sınıfını değiştirmez.',
@@ -316,6 +334,9 @@ export function calculateStellarObservation(input: {
         substitution: `${resolved.star.commonName} · ${resolved.star.bayerDesignation} · HR ${resolved.star.hrNumber}`,
         result: `α₀=${format(resolved.star.rightAscensionJ2000Deg)}°; δ₀=${format(resolved.star.declinationJ2000Deg)}°; V=${format(resolved.star.visualMagnitude, 2)}`
       },
+      ...(resolved.properMotion
+        ? resolved.properMotion.trace.steps.map((step) => ({ ...step, id: `motion-${step.id}` }))
+        : []),
       ...resolved.precession.trace.steps.map((step) => ({ ...step, id: `precession-${step.id}` })),
       ...position.trace.steps.map((step) => ({ ...step, id: `position-${step.id}` })),
       {
@@ -377,6 +398,9 @@ export function calculateStellarObservation(input: {
     meanOfDateRightAscensionDeg: rightAscensionDeg,
     meanOfDateDeclinationDeg: declinationDeg,
     precessionAngularShiftArcsec: resolved.precession.angularShiftArcsec,
+    properMotion: resolved.properMotion,
+    properMotionSourceId: input.motionSubset?.id ?? null,
+    properMotionSourceVersion: input.motionSubset?.version ?? null,
     position,
     trail,
     localHorizonTrail,
@@ -394,11 +418,11 @@ export const stellarObservationMetadata: ModelMetadata = {
   id: STELLAR_OBSERVATION_MODEL_ID,
   name: 'Yıldız Gözlemi · Astronomik Referans',
   version: STELLAR_OBSERVATION_MODEL_VERSION,
-  description: 'Çevrimdışı parlak yıldız kataloğundan seçilen J2000 yönünü ve 19-yıldız çoklu gökyüzü snapshotını gözlem tarihine dönüştürüp geometrik yerel konum, yıldız izi, isteğe bağlı geometrik skyline açıklığı ve ayrı standart-refraction apparent tanısı üreten astronomik referans.',
+  description: 'Çevrimdışı parlak yıldız kataloğundan seçilen J2000 yönünü, isteğe bağlı doğrulanmış proper motion ve IAU 2006 precession ile gözlem tarihine dönüştürüp geometrik yerel konum, yıldız izi, isteğe bağlı geometrik skyline açıklığı ve ayrı standart-refraction apparent tanısı üreten astronomik referans.',
   capabilities: ['stellar-position'],
   assumptions: [
     'Katalog yönü ortalama J2000 koordinatıdır ve gözlem tarihine açık precession adımıyla dönüştürülür.',
-    'Proper motion ve diğer yüksek hassasiyetli astrometrik düzeltmeler uygulanmaz.',
+    'Proper motion yalnız ayrı doğrulanmış BSC5P motion kaynağı verildiğinde uygulanır; paralaks, radyal hız ve perspektif ivmelenmesi uygulanmaz.',
     'İsteğe bağlı yerel ufuk manuel veya doğrulanmış dış geometrik skyline maskesidir.',
     'Standart atmosferik kırılma apparent yıldız yüksekliği olarak ayrı raporlanır; geometrik skyline ile karma fark yerel optik görünürlük sayılmaz.',
     'Optik çıplak-göz görünürlüğü bu modelde yoktur.'
@@ -420,6 +444,11 @@ export function createStellarObservationPrediction(result: StellarObservationRes
       { key: 'stellarMeanOfDateRaDeg', label: 'Gözlem tarihi sağ açıklık', value: result.meanOfDateRightAscensionDeg, unit: 'deg' },
       { key: 'stellarMeanOfDateDecDeg', label: 'Gözlem tarihi deklinasyon', value: result.meanOfDateDeclinationDeg, unit: 'deg' },
       { key: 'stellarPrecessionShiftArcsec', label: 'Precession açısal kayması', value: result.precessionAngularShiftArcsec, unit: 'arcsec' },
+      { key: 'stellarProperMotionApplied', label: 'Doğrulanmış proper motion uygulandı', value: result.properMotion ? 1 : 0, unit: 'boolean' },
+      { key: 'stellarProperMotionShiftArcsec', label: 'Proper motion açısal kayması', value: result.properMotion?.angularShiftArcsec ?? null, unit: 'arcsec' },
+      { key: 'stellarProperMotionRaStarArcsecPerYear', label: 'Proper motion μ_α*', value: result.properMotion?.properMotionRaStarArcsecPerYear ?? null, unit: 'arcsec/yr' },
+      { key: 'stellarProperMotionDecArcsecPerYear', label: 'Proper motion μ_δ', value: result.properMotion?.properMotionDecArcsecPerYear ?? null, unit: 'arcsec/yr' },
+      { key: 'stellarProperMotionSourceEpochJulianYear', label: 'Proper motion kaynak epoku', value: result.properMotion?.sourceEpochJulianYear ?? null, unit: 'Julian year' },
       { key: 'stellarElevationDeg', label: 'Geometrik yıldız yüksekliği', value: result.position.elevationDeg, unit: 'deg' },
       { key: 'stellarStandardRefractionCorrectionArcmin', label: 'Standart kırılma düzeltmesi', value: result.apparentDiagnostic.refraction.refractionCorrectionArcmin, unit: 'arcmin' },
       { key: 'stellarApparentElevationDeg', label: 'Standart apparent yıldız yüksekliği', value: result.apparentDiagnostic.refraction.apparentAltitudeDeg, unit: 'deg' },
