@@ -1,0 +1,40 @@
+name: Fix 6.14 Crossing Duration
+
+on:
+  push:
+    branches:
+      - agent/stellar-local-horizon-trail
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/stellar-local-horizon-trail
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply guarded fix
+        run: node scripts/fix-6.14-crossing-duration.mjs
+      - name: Check diff
+        run: git diff --check
+      - name: Commit fix
+        shell: bash
+        run: |
+          if git diff --quiet -- src/simulation/stellar-local-horizon-trail.ts; then
+            echo "No source change to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/simulation/stellar-local-horizon-trail.ts
+          git commit -m "6.14 yerel ufuk görünür süre hassasiyetini düzelt"
+          git push origin HEAD:agent/stellar-local-horizon-trail
