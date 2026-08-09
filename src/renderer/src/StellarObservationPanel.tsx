@@ -364,7 +364,7 @@ export function StellarObservationPanel({
         {localHorizonDraft.localHorizonEnabled && usesExternalDraft && !draftExternalLocalHorizonSource && (
           <p className="stellar-skyline-source-empty">Dış profil seçmek için CSV/TSV/TXT/JSON skyline dosyası içe aktar.</p>
         )}
-        {externalLocalHorizonSource && draftExternalLocalHorizonSource.warnings.length > 0 && usesExternalDraft && (
+        {draftExternalLocalHorizonSource && draftExternalLocalHorizonSource.warnings.length > 0 && usesExternalDraft && (
           <div className="stellar-skyline-source-warnings">
             {draftExternalLocalHorizonSource.warnings.map((warning) => <span key={warning}>{warning}</span>)}
           </div>
