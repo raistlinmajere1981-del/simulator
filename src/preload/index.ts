@@ -4,6 +4,7 @@ import type {
   FileOperationResult,
   ImportExperimentResult,
   ImportObservationPhotoResult,
+  ImportStellarLocalHorizonResult,
   ImportTerrainProfileResult,
   SavedExperiment,
   SimulatorDesktopApi,
@@ -28,6 +29,8 @@ const api: SimulatorDesktopApi = {
     ipcRenderer.invoke('experiments:report', id) as Promise<FileOperationResult>,
   importObservationPhoto: () =>
     ipcRenderer.invoke('photo:import') as Promise<ImportObservationPhotoResult>,
+  importStellarLocalHorizon: () =>
+    ipcRenderer.invoke('stellar-horizon:import') as Promise<ImportStellarLocalHorizonResult>,
   importTerrainProfile: (context: TerrainProfileImportContext) =>
     ipcRenderer.invoke('terrain:import-csv', context) as Promise<ImportTerrainProfileResult>,
   importTerrainProfileWithMapping: (

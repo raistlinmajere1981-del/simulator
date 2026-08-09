@@ -5,6 +5,7 @@ import type { SimulationScenarioId } from './scenario';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 import type { ModelInputUncertaintySettings } from './uncertainty';
 import type { TextExperimentSetupProvenance } from './text-experiment-setup';
+import type { ImportedStellarLocalHorizonProfile } from './stellar-local-horizon-import';
 
 export type DistanceSource = 'manual' | 'coordinates';
 export type TerrainMode = 'off' | 'manual-three-point' | 'manual-points';
@@ -207,6 +208,10 @@ export interface ImportObservationPhotoResult extends FileOperationResult {
   photo?: ImportedObservationPhoto;
 }
 
+export interface ImportStellarLocalHorizonResult extends FileOperationResult {
+  profile?: ImportedStellarLocalHorizonProfile;
+}
+
 export interface TerrainProfileImportContext {
   routeDistanceM: number;
   observerGroundElevationM: number;
@@ -311,6 +316,7 @@ export interface SimulatorDesktopApi {
   importExperiment(): Promise<ImportExperimentResult>;
   exportExperimentReport(id: string): Promise<FileOperationResult>;
   importObservationPhoto(): Promise<ImportObservationPhotoResult>;
+  importStellarLocalHorizon(): Promise<ImportStellarLocalHorizonResult>;
   importTerrainProfile(
     context: TerrainProfileImportContext
   ): Promise<ImportTerrainProfileResult>;
