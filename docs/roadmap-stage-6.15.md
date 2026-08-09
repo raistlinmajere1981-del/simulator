@@ -23,6 +23,29 @@ Her değer geometrik ufuk yüksekliğidir ve `[-90°, +90°]` aralığında doğ
 
 Bu sekiz yönlü editör, yüksek çözünürlüklü skyline dosya importunun yerine geçmez; anlaşılır ve kaydedilebilir ilk UI katmanıdır. Gelecekte daha yoğun maskeler aynı temel `StellarLocalHorizonMask` sözleşmesine bağlanabilir.
 
+## Manuel UI geri bildirimi ve hesap yükü
+
+İlk gerçek Electron kontrolünde, yerel ufku etkinleştirmenin ve yön değerlerini her tuş vuruşunda doğrudan ana ayarlara yazmanın pahalı yerel-ufuk geçiş taramasını tekrar tekrar çalıştırdığı görüldü. Bu durum yazma sırasında belirgin gecikmeye ve art arda değişikliklerde renderer kararsızlığına yol açabiliyordu.
+
+6.15 tamamlanma adayında editör bu nedenle iki katmana ayrılır:
+
+1. **Taslak düzenleme:** etkin/kapalı seçimi ve sekiz yön değeri yalnız panelin hafif yerel state'inde değiştirilir. Bu aşamada yıldız izi veya yerel-ufuk kök taraması yeniden çalıştırılmaz.
+2. **Uygula ve hesapla:** kullanıcı bütün değerleri hazırladıktan sonra ayarlar tek paket halinde ana gözlem state'ine aktarılır ve pahalı hesap yalnız bir kez çalıştırılır.
+
+Panel taslak ile hesaplanmış state farklıysa bunu açıkça gösterir; kullanıcı taslağı geri alabilir. Grafikte, rozetlerde ve kaydedilebilir prediction'da yalnız **uygulanmış** değerler kullanılır.
+
+Aynı manuel kontrolde uygulama genelindeki zorunlu sayısal alanlarda kontrollü `<input type="number">` kullanımının mevcut değeri tamamen silip yeni sayı yazmayı zorlaştırdığı da doğrulandı. Bu alanlar ortak `DraftNumberInput` davranışına geçirilir:
+
+- odaklandığında mevcut değer seçilebilir,
+- geçici olarak boş, `-`, `+`, `.` veya `,` gibi yazım ara durumları kabul edilir,
+- hem nokta hem virgül ondalık ayırıcı olarak yazılabilir,
+- geçerli sayı Enter veya odak kaybında modele uygulanır,
+- eksik/geçersiz zorunlu taslak odak kaybında son geçerli değere geri döner,
+- min/max sınırı commit sırasında korunur,
+- ok tuşları tanımlı `step` kadar değişiklik yapar.
+
+Bu ortak davranış aktif ana senaryo girdileri, astronomi koordinatları/UTC ofseti, zorunlu gölge girdileri, atmosfer profili, jeoit dönüşümü ve manuel arazi editörü gibi zorunlu sayısal alanlara uygulanır. **Boş değerin gerçekten “ölçüm tanımlanmadı” anlamına geldiği opsiyonel alanların mevcut boşluk semantiği değiştirilmez.** Legacy `App.tsx` bu kullanıcı akışının parçası olmadığı için bu dilime dahil edilmez.
+
 ## Panel çıktıları
 
 Yerel ufuk etkin olduğunda panel:
@@ -94,6 +117,11 @@ Dolayısıyla paneldeki `yerel ufkun üstünde` ifadesi yalnız geometrik yön a
 ## Doğrulama hedefleri
 
 - yerel ufuk kapalıyken eski Yıldız Gözlemleri davranışı,
+- skyline checkbox/değer düzenlemesinin ana astronomi hesabını her tuşta tetiklememesi,
+- sekiz yönün `Uygula ve hesapla` ile tek işlemde hesap state'ine geçmesi,
+- zorunlu sayısal alanlarda boş taslak → yeni değer → Enter/blur akışı,
+- nokta ve virgül ondalık yazımının kabul edilmesi,
+- opsiyonel boş alan semantiğinin korunması,
 - sekiz yönlü skyline etkinleştirildiğinde local-horizon trail üretimi,
 - yön değerlerinin prediction snapshot'a yazılması ve eksiksiz tekrar açılması,
 - eski prediction'ların yerel ufuk kapalı olarak güvenli açılması,
@@ -102,7 +130,7 @@ Dolayısıyla paneldeki `yerel ufkun üstünde` ifadesi yalnız geometrik yön a
 - strict TypeScript,
 - tüm regresyonlar,
 - production Electron/Vite build,
-- gerçek Electron UI görsel kontrolü.
+- gerçek Electron UI görsel ve tepkisellik kontrolü.
 
 ## Sonraki dilimler
 
