@@ -65,6 +65,9 @@ function format(value: number, digits = 3): string {
 }
 
 function normalizeObservedAtIso(value: string): string {
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value.trim())) {
+    throw new RangeError('Gözlem zamanı açık saat dilimi (Z veya ±SS:dd) içermelidir.');
+  }
   const instant = new Date(value);
   if (Number.isNaN(instant.getTime())) {
     throw new RangeError('Gözlem zamanı geçerli bir ISO-8601 zamanı olmalıdır.');
@@ -139,6 +142,7 @@ function findCrossings(
   for (let index = 0; index < samples.length - 1; index += 1) {
     const current = samples[index];
     const next = samples[index + 1];
+    if (!current || !next) continue;
     const currentValue = current.elevationDeg - thresholdDeg;
     const nextValue = next.elevationDeg - thresholdDeg;
     const signChanged = (currentValue < 0 && nextValue >= 0) || (currentValue > 0 && nextValue <= 0);
@@ -245,12 +249,19 @@ function refineSolarNoon(
   startMs: number,
   endMs: number
 ): { timeMs: number; elevationDeg: number; azimuthDeg: number } {
+  if (samples.length === 0) {
+    throw new RangeError('Güneş olay çözümü için günlük örnek üretilemedi.');
+  }
   let bestIndex = 0;
   for (let index = 1; index < samples.length; index += 1) {
-    if (samples[index].elevationDeg > samples[bestIndex].elevationDeg) bestIndex = index;
+    const candidate = samples[index];
+    const best = samples[bestIndex];
+    if (candidate && best && candidate.elevationDeg > best.elevationDeg) bestIndex = index;
   }
-  let left = bestIndex === 0 ? startMs : samples[bestIndex - 1].timeMs;
-  let right = bestIndex === samples.length - 1 ? endMs : samples[bestIndex + 1].timeMs;
+  const previous = samples[bestIndex - 1];
+  const following = samples[bestIndex + 1];
+  let left = bestIndex === 0 ? startMs : previous?.timeMs ?? startMs;
+  let right = bestIndex === samples.length - 1 ? endMs : following?.timeMs ?? endMs;
 
   for (let iteration = 0; iteration < 35; iteration += 1) {
     const first = left + (right - left) / 3;
