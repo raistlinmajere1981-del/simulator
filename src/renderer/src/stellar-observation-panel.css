@@ -334,6 +334,54 @@
   padding-left: 9px;
 }
 
+.stellar-local-horizon-apply-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.stellar-local-horizon-apply-row > div {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.stellar-local-horizon-draft {
+  color: var(--text-muted, #8f9aae);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.stellar-local-horizon-draft.dirty {
+  color: #e4bd77;
+}
+
+.stellar-local-horizon-apply,
+.stellar-local-horizon-revert {
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 0 10px;
+  color: #dce8f2;
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.stellar-local-horizon-apply {
+  border-color: rgba(95, 168, 211, 0.38);
+  background: rgba(66, 132, 173, 0.14);
+}
+
+.stellar-local-horizon-apply:disabled,
+.stellar-local-horizon-revert:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
 @media (max-width: 1200px) {
   .stellar-local-horizon-grid { grid-template-columns: repeat(4, minmax(80px, 1fr)); }
 }

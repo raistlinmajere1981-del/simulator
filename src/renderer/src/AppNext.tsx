@@ -160,6 +160,7 @@ import { ShadowObservationPanel } from './ShadowObservationPanel';
 import { DualShadowComparisonPanel } from './DualShadowComparisonPanel';
 import { StellarScenarioSummary } from './StellarScenarioSummary';
 import { StellarObservationPanel } from './StellarObservationPanel';
+import { DraftNumberInput } from './DraftNumberInput';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -621,14 +622,13 @@ function NumericField({
     <label className="input-field">
       <span>{label}</span>
       <div>
-        <input
+        <DraftNumberInput
           disabled={disabled}
           min={inputRanges[inputKey].min}
           max={inputRanges[inputKey].max}
           step={step}
-          type="number"
           value={inputs[inputKey]}
-          onChange={(event) => onNumberChange(inputKey, event.currentTarget.valueAsNumber)}
+          onCommit={(value) => onNumberChange(inputKey, value)}
         />
         <b>{unit}</b>
       </div>
