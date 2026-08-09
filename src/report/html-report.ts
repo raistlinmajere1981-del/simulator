@@ -331,6 +331,35 @@ function verticalTerrainSection(experiment: SavedExperiment, effectiveDistanceKm
 }
 
 
+function stellarLocalHorizonSourceSection(experiment: SavedExperiment): string {
+  const source = experiment.stellarLocalHorizonSource;
+  if (!source) return '';
+  const stateClass = source.modifiedAfterImport ? 'source-modified' : 'source-matching';
+  const stateLabel = source.modifiedAfterImport
+    ? 'İçe aktarımdan sonra düzenlendi'
+    : 'Kaydedilen noktalar içe aktarılan kaynakla eşleşiyor';
+  return `
+    <section class="model-section vertical-section">
+      <header class="model-heading">
+        <div><h2>Yıldız yerel skyline dosya kaynağı</h2><span>Geometrik azimut → ufuk yüksekliği profili</span></div>
+        <strong class="status status-compatible">${source.pointCount} nokta</strong>
+      </header>
+      <div class="source-card ${stateClass}">
+        <div class="source-card-heading"><strong>${escapeHtml(source.fileName)}</strong><span>${escapeHtml(stateLabel)}</span></div>
+        <table><tbody>
+          <tr><td>Biçim</td><td>${escapeHtml(source.format.toUpperCase())}</td></tr>
+          <tr><td>Nokta sayısı</td><td>${source.pointCount}</td></tr>
+          <tr><td>En büyük azimut boşluğu</td><td>${metricNumberFormatters.degree.format(source.maximumAzimuthGapDeg)}°</td></tr>
+          <tr><td>Dosya boyutu</td><td>${inputNumberFormatter.format(source.fileSizeBytes)} bayt</td></tr>
+          <tr><td>İçe aktarma</td><td>${formatDate(source.importedAtIso)}</td></tr>
+          <tr><td>SHA-256</td><td><code>${escapeHtml(source.sha256)}</code></td></tr>
+        </tbody></table>
+        ${source.warnings.length > 0 ? `<h3>Kaynak uyarıları</h3><ul class="warnings">${source.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')}</ul>` : ''}
+        <p class="muted">Bu kayıt dosyanın ham baytlarını içermez; doğrulanmış/normalize edilmiş geometrik skyline noktalarını ve kaynak bütünlük özetini taşır. Profilin yıldız hesabında uygulanıp uygulanmadığı ilgili Yıldız Gözlemi prediction anlık görüntüsünde ayrıca kaydedilir.</p>
+      </div>
+    </section>`;
+}
+
 function photoCalibrationSection(experiment: SavedExperiment): string {
   const calibration = experiment.photoCalibration;
   if (!calibration) return '';
@@ -450,7 +479,8 @@ export function createExperimentHtmlReport(
     : inputs.surfaceDistanceKm;
   const isCelestial = experiment.scenarioId === 'sun-moon-observation';
   const isShadowObservation = experiment.scenarioId === 'shadow-observation';
-  const isAstronomyObservation = isCelestial || isShadowObservation;
+  const isStellarObservation = experiment.scenarioId === 'stellar-observation';
+  const isAstronomyObservation = isCelestial || isShadowObservation || isStellarObservation;
   const coordinateCards = inputs.distanceSource === 'coordinates' ? `
     <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
     <div class="input-card"><small>Hedef koordinatı</small><strong>${coordinateFormatter.format(inputs.targetLatitudeDeg)}°, ${coordinateFormatter.format(inputs.targetLongitudeDeg)}°</strong></div>
@@ -460,7 +490,7 @@ export function createExperimentHtmlReport(
     <div class="input-card"><small>Gözlem zamanı · UTC</small><strong>${formatDate(experiment.observedAtIso ?? experiment.createdAtIso)}</strong></div>
     <div class="input-card"><small>UTC ofset provenansı</small><strong>${experiment.observationUtcOffsetMinutes === undefined ? 'Tanımlanmadı' : `${experiment.observationUtcOffsetMinutes >= 0 ? '+' : ''}${inputNumberFormatter.format(experiment.observationUtcOffsetMinutes / 60)} saat`}</strong></div>
     <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
-    <div class="input-card"><small>${isShadowObservation ? '6.3 hesap türü' : '6.1–6.2 hesap türü'}</small><strong>${isShadowObservation ? 'Dikey gnomon gölge geometrisi' : 'Geometrik Güneş konumu ve topocentrik Ay referansı'}</strong></div>` : `
+    <div class="input-card"><small>${isShadowObservation ? '6.3 hesap türü' : isStellarObservation ? 'Yıldız gözlemi' : '6.1–6.2 hesap türü'}</small><strong>${isShadowObservation ? 'Dikey gnomon gölge geometrisi' : isStellarObservation ? 'Katalog yıldızı, precession ve geometrik skyline izi' : 'Geometrik Güneş konumu ve topocentrik Ay referansı'}</strong></div>` : `
     <div class="input-card"><small>Göz yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
     <div class="input-card"><small>Hedef yüksekliği</small><strong>${inputNumberFormatter.format(inputs.targetHeightM)} m</strong></div>
     <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(effectiveDistanceKm)} km</strong></div>
@@ -547,6 +577,7 @@ export function createExperimentHtmlReport(
     ${photoCalibrationSection(experiment)}
     ${photoModelUncertaintySection(experiment)}
     ${textSetupHistorySection(experiment)}
+    ${stellarLocalHorizonSourceSection(experiment)}
     ${experiment.predictions.map((prediction) => predictionSection(
       prediction,
       experiment.modelVersions[prediction.modelId]
