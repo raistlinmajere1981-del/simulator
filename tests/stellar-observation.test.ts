@@ -46,6 +46,10 @@ describe('stellar observation', () => {
     expect(result.meanOfDateRightAscensionDeg).not.toBe(result.sourceRightAscensionJ2000Deg);
     expect(result.position.rightAscensionDeg).toBeCloseTo(result.meanOfDateRightAscensionDeg, 10);
     expect(result.trail.samples).toHaveLength(73);
+    expect(result.apparentTrailSamples).toHaveLength(result.trail.samples.length);
+    expect(result.apparentTrailSamples[0]?.geometricAltitudeDeg).toBeCloseTo(result.trail.samples[0]!.elevationDeg, 12);
+    expect(result.apparentDiagnostic.refraction.apparentAltitudeDeg).toBeGreaterThanOrEqual(result.position.elevationDeg);
+    expect(result.trace.steps.some((step) => step.id === 'standard-refraction-diagnostic')).toBe(true);
     expect(result.trail.durationMinutes).toBe(720);
     expect(result.localHorizonTrail).toBeNull();
     expect(result.warnings.some((warning) => warning.includes('Proper motion'))).toBe(true);
@@ -79,7 +83,9 @@ describe('stellar observation', () => {
     expect(result.localHorizonTrail?.maskMaximumAzimuthGapDeg).toBeCloseTo(45, 10);
     expect(result.localHorizonSource?.mode).toBe('manual');
     expect(result.trail.samples).toHaveLength(7);
+    expect(result.apparentTrailSamples).toHaveLength(7);
     expect(result.localHorizonTrail?.samples).toHaveLength(7);
+    expect(result.apparentDiagnostic.localVisibilityClassified).toBe(false);
     expect(result.trace.steps.some((step) => step.id.startsWith('local-local-horizon-mask'))).toBe(true);
   });
 
@@ -108,9 +114,14 @@ describe('stellar observation', () => {
     });
     expect(result.warnings.some((warning) => warning.includes('ridge.csv'))).toBe(true);
     expect(result.trace.steps.find((step) => step.id === 'local-source')?.substitution).toContain('SHA-256');
+    expect(result.apparentDiagnostic.localComparisonKind).toBe('mixed-reference-diagnostic');
+    expect(result.apparentDiagnostic.starOnlyApparentMinusGeometricSkylineDeg).not.toBeNull();
+    expect(result.apparentDiagnostic.localVisibilityClassified).toBe(false);
     const prediction = createStellarObservationPrediction(result);
     expect(prediction.metrics.find((metric) => metric.key === 'stellarLocalHorizonSourceExternal')?.value).toBe(1);
     expect(prediction.metrics.find((metric) => metric.key === 'stellarLocalHorizonPointCount')?.value).toBe(4);
+    expect(prediction.metrics.find((metric) => metric.key === 'stellarApparentElevationDeg')?.value).toBeCloseTo(result.apparentDiagnostic.refraction.apparentAltitudeDeg, 12);
+    expect(prediction.metrics.find((metric) => metric.key === 'stellarLocalApparentVisibilityClassified')?.value).toBe(0);
   });
 
   it('rejects external mode without a validated external source', () => {
@@ -153,6 +164,8 @@ describe('stellar observation', () => {
     expect(prediction.metrics.find((metric) => metric.key === 'stellarLocalHorizonEastDeg')?.value).toBe(7.5);
     expect(prediction.metrics.find((metric) => metric.key === 'stellarLocalHorizonWestDeg')?.value).toBe(3.25);
     expect(prediction.metrics.find((metric) => metric.key === 'stellarLocalHorizonVisibleDurationMinutes')).toBeDefined();
+    expect(prediction.metrics.find((metric) => metric.key === 'stellarStandardRefractionCorrectionArcmin')).toBeDefined();
+    expect(prediction.metrics.find((metric) => metric.key === 'stellarLocalApparentVisibilityClassified')?.value).toBe(0);
     expect(prediction.trace.summary).toContain('Sirius');
   });
 
@@ -238,6 +251,7 @@ describe('stellar observation', () => {
     expect(result.settings.localHorizonSourceMode).toBe('manual');
     expect(result.settings.localHorizonEastDeg).toBe(0);
     expect(result.localHorizonTrail).toBeNull();
+    expect(result.apparentDiagnostic.localComparisonKind).toBe('no-local-skyline');
   });
 
   it('rejects an unknown catalog star or invalid local-horizon altitude', () => {

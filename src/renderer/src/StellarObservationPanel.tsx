@@ -68,6 +68,16 @@ function trailPolyline(result: StellarObservationResult): string {
   }).join(' ');
 }
 
+function apparentTrailPolyline(result: StellarObservationResult): string {
+  const samples = result.apparentTrailSamples;
+  if (samples.length < 2) return '';
+  const duration = Math.max(result.trail.durationMinutes, 1);
+  return samples.map((sample) => {
+    const x = 4 + (sample.elapsedMinutes / duration) * 92;
+    return `${x.toFixed(2)},${graphY(sample.apparentAltitudeDeg).toFixed(2)}`;
+  }).join(' ');
+}
+
 function localHorizonPolyline(result: StellarObservationResult): string {
   const localTrail = result.localHorizonTrail;
   if (!localTrail || localTrail.samples.length < 2) return '';
@@ -166,6 +176,7 @@ export function StellarObservationPanel({
   );
   const [isImportingHorizon, setIsImportingHorizon] = useState(false);
   const [horizonImportMessage, setHorizonImportMessage] = useState('');
+  const [showRefractionDiagnostic, setShowRefractionDiagnostic] = useState(false);
   const appliedLocalHorizonSignature = localHorizonSignature(settings);
   const appliedExternalSourceSignature = externalSourceSignature(externalLocalHorizonSource);
 
@@ -181,9 +192,11 @@ export function StellarObservationPanel({
   const crossings = result.trail.horizonCrossings;
   const localCrossings = result.localHorizonTrail?.localHorizonCrossings ?? [];
   const polyline = trailPolyline(result);
+  const apparentPolyline = apparentTrailPolyline(result);
   const skylinePolyline = localHorizonPolyline(result);
   const localState = currentLocalHorizonState(result);
   const firstLocalSample = result.localHorizonTrail?.samples[0];
+  const apparent = result.apparentDiagnostic;
   const sourceDraftDirty = externalSourceSignature(draftExternalLocalHorizonSource) !== appliedExternalSourceSignature;
   const localHorizonDirty = !localHorizonDraftMatchesSettings(localHorizonDraft, settings) || sourceDraftDirty;
   const usesExternalDraft = localHorizonDraft.localHorizonSourceMode === 'external';
@@ -281,6 +294,55 @@ export function StellarObservationPanel({
             <option value={60}>60 dk</option>
           </select>
         </label>
+      </div>
+
+      <div className={showRefractionDiagnostic ? 'stellar-refraction-diagnostic active' : 'stellar-refraction-diagnostic'}>
+        <div className="stellar-refraction-heading">
+          <div>
+            <strong>Standart atmosferik kırılma tanısı</strong>
+            <span>NOAA standart yaklaşımı yalnız yıldız ışınına uygulanır. Geometrik yıldız/skyline sonuçlarını değiştirmez.</span>
+          </div>
+          <label className="stellar-refraction-toggle">
+            <input
+              type="checkbox"
+              checked={showRefractionDiagnostic}
+              onChange={(event) => setShowRefractionDiagnostic(event.currentTarget.checked)}
+            />
+            <span>{showRefractionDiagnostic ? 'Gösteriliyor' : 'Kapalı'}</span>
+          </label>
+        </div>
+        {showRefractionDiagnostic && (
+          <>
+            <div className="stellar-refraction-grid">
+              <article>
+                <span>Geometrik yükseklik</span>
+                <strong>{formatAngle(apparent.geometricAltitudeDeg)}</strong>
+              </article>
+              <article>
+                <span>Standart apparent yükseklik</span>
+                <strong>{formatAngle(apparent.refraction.apparentAltitudeDeg)}</strong>
+              </article>
+              <article>
+                <span>Kırılma düzeltmesi</span>
+                <strong>{angleFormatter.format(apparent.refraction.refractionCorrectionArcmin)}′</strong>
+              </article>
+              <article>
+                <span>Apparent astronomik 0°</span>
+                <strong>{apparent.refraction.aboveApparentAstronomicalHorizon ? 'Üstünde' : 'Altında'}</strong>
+              </article>
+              {apparent.starOnlyApparentMinusGeometricSkylineDeg !== null && (
+                <article className="mixed-reference">
+                  <span>Apparent yıldız − geometrik skyline</span>
+                  <strong>{formatAngle(apparent.starOnlyApparentMinusGeometricSkylineDeg)}</strong>
+                  <b>Tanı · yerel görünürlük değildir</b>
+                </article>
+              )}
+            </div>
+            <p className="stellar-refraction-warning">
+              Apparent yıldız yüksekliği ile geometrik skyline farklı referanslardadır. Skyline/terrain ışını aynı atmosfer modeliyle çözülmediği için bu farktan yerel görünür/görünmez kararı üretilmez.
+            </p>
+          </>
+        )}
       </div>
 
       <div className={localHorizonDraft.localHorizonEnabled ? 'stellar-local-horizon-editor active' : 'stellar-local-horizon-editor'}>
@@ -453,18 +515,20 @@ export function StellarObservationPanel({
             </div>
           )}
         </div>
-        <svg aria-label="Yıldız yüksekliğinin ve yerel ufkun zaman içindeki geometrik izi" role="img" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <svg aria-label="Geometrik yıldız yüksekliği, isteğe bağlı standart apparent yıldız yüksekliği ve yerel skyline zaman izi" role="img" viewBox="0 0 100 100" preserveAspectRatio="none">
           <line className="stellar-horizon-line" x1="4" x2="96" y1="50" y2="50" />
           <line className="stellar-guide-line" x1="4" x2="96" y1="6" y2="6" />
           <line className="stellar-guide-line" x1="4" x2="96" y1="94" y2="94" />
           {skylinePolyline && <polyline className="stellar-local-horizon-line" points={skylinePolyline} fill="none" />}
           <polyline className="stellar-trail-line" points={polyline} fill="none" />
+          {showRefractionDiagnostic && apparentPolyline && <polyline className="stellar-apparent-trail-line" points={apparentPolyline} fill="none" />}
         </svg>
         <div className="stellar-trail-axis"><span>+90°</span><span>0° astronomik ufuk</span><span>−90°</span></div>
-        {result.localHorizonTrail && (
+        {(result.localHorizonTrail || showRefractionDiagnostic) && (
           <div className="stellar-trail-legend">
-            <span className="star-line-key">Yıldız</span>
-            <span className="skyline-line-key">Yerel skyline</span>
+            <span className="star-line-key">Geometrik yıldız</span>
+            {showRefractionDiagnostic && <span className="apparent-line-key">Standart apparent</span>}
+            {result.localHorizonTrail && <span className="skyline-line-key">Yerel skyline</span>}
           </div>
         )}
       </div>
@@ -494,7 +558,7 @@ export function StellarObservationPanel({
       )}
 
       <p className="stellar-source-note">
-        {BRIGHT_STAR_CATALOG_SOURCE}. Yerel ufuk etkinse seçilen manuel veya doğrulanmış dosya skyline profili geometrik olarak kullanılır. Atmosferik kırılma, sönümleme, gökyüzü parlaklığı, hava koşulları ve çıplak-göz algı eşiği bu panelde uygulanmaz.
+        {BRIGHT_STAR_CATALOG_SOURCE}. Geometrik yıldız izi ve yerel skyline ana sonuçlardır. Standart kırılma tanısı yalnız yıldız ışını için yaklaşık apparent yüksekliği ayrı gösterir; geometrik skyline ile karma fark yerel optik görünürlük değildir. Sönümleme, gökyüzü parlaklığı, gerçek hava profili, bulut, seeing ve çıplak-göz algı eşiği uygulanmaz.
       </p>
       {prediction.warnings.length > 0 && <p className="stellar-warning">{prediction.warnings[2]}</p>}
     </section>
