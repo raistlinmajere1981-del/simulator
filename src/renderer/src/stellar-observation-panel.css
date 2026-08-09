@@ -1,0 +1,214 @@
+.stellar-observation-panel {
+  grid-column: 1 / -1;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.stellar-panel-heading,
+.stellar-trail-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.stellar-panel-heading h3 {
+  margin: 3px 0 2px;
+  font-size: 20px;
+}
+
+.stellar-panel-heading h3 small {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.68;
+}
+
+.stellar-panel-heading p,
+.stellar-source-note,
+.stellar-warning {
+  margin: 0;
+  color: var(--text-muted, #8f9aae);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.stellar-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.stellar-state {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.stellar-state.visible { color: #91e6bd; background: rgba(78, 194, 139, 0.08); }
+.stellar-state.below { color: #aab3c6; background: rgba(122, 134, 158, 0.08); }
+
+.stellar-controls {
+  display: grid;
+  grid-template-columns: minmax(230px, 2fr) repeat(2, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.stellar-controls label {
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted, #8f9aae);
+}
+
+.stellar-controls select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  padding: 0 9px;
+  color: inherit;
+  background: rgba(10, 15, 25, 0.58);
+}
+
+.stellar-coordinate-grid,
+.stellar-position-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stellar-coordinate-grid article,
+.stellar-position-grid article {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  display: grid;
+  gap: 3px;
+}
+
+.stellar-coordinate-grid span,
+.stellar-position-grid span,
+.stellar-trail-title span,
+.stellar-crossings > span {
+  font-size: 10px;
+  color: var(--text-muted, #8f9aae);
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+}
+
+.stellar-coordinate-grid strong,
+.stellar-position-grid strong,
+.stellar-trail-title strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.stellar-coordinate-grid b {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #8f9aae);
+}
+
+.stellar-trail-card {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 9px;
+  padding: 12px;
+  background: rgba(6, 10, 18, 0.34);
+}
+
+.stellar-trail-title > div {
+  display: grid;
+  gap: 3px;
+}
+
+.stellar-trail-title > div:last-child { text-align: right; }
+
+.stellar-trail-card svg {
+  width: 100%;
+  height: 160px;
+  margin-top: 10px;
+  overflow: visible;
+}
+
+.stellar-horizon-line {
+  stroke: rgba(255, 255, 255, 0.34);
+  stroke-width: 0.45;
+  stroke-dasharray: 2 1.5;
+}
+
+.stellar-guide-line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 0.3;
+}
+
+.stellar-trail-line {
+  stroke: currentColor;
+  stroke-width: 0.9;
+  vector-effect: non-scaling-stroke;
+}
+
+.stellar-trail-axis {
+  position: absolute;
+  left: 8px;
+  top: 55px;
+  bottom: 17px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.stellar-trail-axis span {
+  font-size: 9px;
+  color: var(--text-muted, #8f9aae);
+  background: rgba(8, 12, 20, 0.68);
+  padding: 1px 3px;
+}
+
+.stellar-crossings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stellar-crossings strong {
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  padding: 5px 8px;
+}
+
+.stellar-warning {
+  border-left: 2px solid rgba(255, 190, 90, 0.7);
+  padding-left: 9px;
+}
+
+@media (max-width: 1100px) {
+  .stellar-controls { grid-template-columns: 1fr 1fr; }
+  .stellar-controls label:first-child { grid-column: 1 / -1; }
+  .stellar-coordinate-grid,
+  .stellar-position-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .stellar-panel-heading,
+  .stellar-trail-title { flex-direction: column; }
+  .stellar-heading-actions { justify-content: flex-start; }
+  .stellar-controls,
+  .stellar-coordinate-grid,
+  .stellar-position-grid { grid-template-columns: 1fr; }
+  .stellar-controls label:first-child { grid-column: auto; }
+  .stellar-trail-title > div:last-child { text-align: left; }
+}
