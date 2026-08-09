@@ -14,6 +14,7 @@ import {
   type SimulatorInputs,
   type TerrainProfileSource
 } from './simulator';
+import type { SavedStellarLocalHorizonSource } from './stellar-local-horizon-import';
 import type { ModelInputUncertaintySettings, UncertaintyCombination } from './uncertainty';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 import type { CameraCalibrationUncertainty, PhotoCalibrationMarks, PhotoSourceMetadata, SavedPhotoCalibration } from './photo-calibration';
@@ -25,18 +26,19 @@ import {
   sortManualTerrainPoints,
   validateManualTerrainPoints
 } from '../simulation/manual-terrain-profile';
+import { normalizeStellarLocalHorizonMask } from '../simulation/stellar-local-horizon';
 
 export const PORTABLE_EXPERIMENT_SCHEMA = 'geometric-observation-laboratory/portable-experiment';
-export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 7;
+export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 8;
 export const LOCAL_EXPERIMENT_STORE_SCHEMA = 'geometric-observation-laboratory/local-experiment-store';
-export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 7;
+export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 8;
 
 export interface PortableApplicationInfo {
   name: 'Geometrik Gözlem Laboratuvarı';
   version: string;
 }
 
-export interface PortableExperimentFileV7 {
+export interface PortableExperimentFileV8 {
   schema: typeof PORTABLE_EXPERIMENT_SCHEMA;
   schemaVersion: typeof PORTABLE_EXPERIMENT_SCHEMA_VERSION;
   exportedAtIso: string;
@@ -44,7 +46,7 @@ export interface PortableExperimentFileV7 {
   experiment: SavedExperiment;
 }
 
-export interface LocalExperimentStoreV7 {
+export interface LocalExperimentStoreV8 {
   schema: typeof LOCAL_EXPERIMENT_STORE_SCHEMA;
   schemaVersion: typeof LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION;
   updatedAtIso: string;
@@ -58,7 +60,7 @@ export interface ParsedPortableExperiment {
 }
 
 export interface ParsedLocalExperimentStore {
-  store: LocalExperimentStoreV7;
+  store: LocalExperimentStoreV8;
   migrated: boolean;
   ignoredRecordCount: number;
 }
@@ -604,6 +606,52 @@ function parsePhotoCalibration(value: unknown): SavedPhotoCalibration | null {
   };
 }
 
+function parseStellarLocalHorizonSource(value: unknown): SavedStellarLocalHorizonSource | null {
+  if (!isRecord(value) || !isNonEmptyString(value.fileName) || value.fileName.length > 240 ||
+    !isIsoDate(value.importedAtIso) || (value.format !== 'csv' && value.format !== 'json') ||
+    !Number.isInteger(value.pointCount) || !inRange(value.pointCount, 3, 1_440) ||
+    !inRange(value.maximumAzimuthGapDeg, 0, 360) || !Array.isArray(value.points) ||
+    value.points.length !== value.pointCount || !isStringArray(value.warnings) ||
+    value.warnings.length > 100 || !Number.isInteger(value.fileSizeBytes) ||
+    !inRange(value.fileSizeBytes, 1, 2 * 1024 * 1024) ||
+    typeof value.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(value.sha256) ||
+    typeof value.modifiedAfterImport !== 'boolean') {
+    return null;
+  }
+  const points: SavedStellarLocalHorizonSource['points'] = [];
+  for (const item of value.points) {
+    if (!isRecord(item) || !inRange(item.azimuthDeg, 0, 360) || item.azimuthDeg === 360 ||
+      !inRange(item.altitudeDeg, -90, 90)) return null;
+    points.push({ azimuthDeg: item.azimuthDeg, altitudeDeg: item.altitudeDeg });
+  }
+  let normalized;
+  try {
+    normalized = normalizeStellarLocalHorizonMask({
+      sourceKind: 'external',
+      sourceLabel: value.fileName,
+      points
+    });
+  } catch {
+    return null;
+  }
+  if (normalized.points.length !== value.pointCount ||
+    Math.abs(normalized.maximumAzimuthGapDeg - value.maximumAzimuthGapDeg) > 1e-9) {
+    return null;
+  }
+  return {
+    fileName: value.fileName.trim(),
+    importedAtIso: value.importedAtIso,
+    format: value.format,
+    pointCount: value.pointCount,
+    maximumAzimuthGapDeg: value.maximumAzimuthGapDeg,
+    points: normalized.points.map((point) => ({ ...point })),
+    warnings: [...value.warnings],
+    fileSizeBytes: value.fileSizeBytes,
+    sha256: value.sha256,
+    modifiedAfterImport: value.modifiedAfterImport
+  };
+}
+
 function parseTextSetupHistory(value: unknown): TextExperimentSetupProvenance[] | null {
   if (!Array.isArray(value) || value.length > 50) return null;
   const history: TextExperimentSetupProvenance[] = [];
@@ -683,6 +731,10 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     ? undefined
     : parseTextSetupHistory(value.textSetupHistory);
   if (textSetupHistory === null) return null;
+  const stellarLocalHorizonSource = value.stellarLocalHorizonSource === undefined
+    ? undefined
+    : parseStellarLocalHorizonSource(value.stellarLocalHorizonSource);
+  if (stellarLocalHorizonSource === null) return null;
 
   return {
     id: value.id,
@@ -700,6 +752,7 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     ...(photoCalibration === undefined ? {} : { photoCalibration }),
     ...(photoModelUncertainty === undefined ? {} : { photoModelUncertainty }),
     ...(textSetupHistory === undefined ? {} : { textSetupHistory }),
+    ...(stellarLocalHorizonSource === undefined ? {} : { stellarLocalHorizonSource }),
     inputs,
     manualTerrainPoints,
     terrainProfileSource,
@@ -728,7 +781,7 @@ export function createPortableExperimentFile(
   experiment: SavedExperiment,
   applicationVersion: string,
   exportedAtIso = new Date().toISOString()
-): PortableExperimentFileV7 {
+): PortableExperimentFileV8 {
   return {
     schema: PORTABLE_EXPERIMENT_SCHEMA,
     schemaVersion: PORTABLE_EXPERIMENT_SCHEMA_VERSION,
@@ -750,7 +803,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
-    version !== 5 && version !== 6 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
+    version !== 5 && version !== 6 && version !== 7 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Deney dosyası şema sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
@@ -769,7 +822,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 export function createLocalExperimentStore(
   experiments: SavedExperiment[],
   updatedAtIso = new Date().toISOString()
-): LocalExperimentStoreV7 {
+): LocalExperimentStoreV8 {
   return {
     schema: LOCAL_EXPERIMENT_STORE_SCHEMA,
     schemaVersion: LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
@@ -795,7 +848,7 @@ export function parseLocalExperimentStore(value: unknown): ParsedLocalExperiment
   }
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
-    version !== 5 && version !== 6 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
+    version !== 5 && version !== 6 && version !== 7 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Yerel deney deposu sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
