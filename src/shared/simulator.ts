@@ -5,7 +5,10 @@ import type { SimulationScenarioId } from './scenario';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 import type { ModelInputUncertaintySettings } from './uncertainty';
 import type { TextExperimentSetupProvenance } from './text-experiment-setup';
-import type { ImportedStellarLocalHorizonProfile } from './stellar-local-horizon-import';
+import type {
+  ImportedStellarLocalHorizonProfile,
+  SavedStellarLocalHorizonSource
+} from './stellar-local-horizon-import';
 
 export type DistanceSource = 'manual' | 'coordinates';
 export type TerrainMode = 'off' | 'manual-three-point' | 'manual-points';
@@ -179,6 +182,8 @@ export interface SavedExperiment {
   photoModelUncertainty?: ModelInputUncertaintySettings;
   /** Provenance history for user-approved values extracted from free-form experiment text. */
   textSetupHistory?: TextExperimentSetupProvenance[];
+  /** Optional high-resolution geometric skyline source used by the stellar observation scenario. */
+  stellarLocalHorizonSource?: SavedStellarLocalHorizonSource;
   inputs: SimulatorInputs;
   /**
    * Ordered interior terrain points. Endpoints are derived from the observer

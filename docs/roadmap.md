@@ -676,12 +676,41 @@ Durum: tamamlandı · `1.14.0`
 
 Ayrıntı: [`roadmap-stage-6.15.md`](roadmap-stage-6.15.md)
 
+### Aşama 6.16 — Yüksek çözünürlüklü skyline dosya importu çekirdeği
+
+Durum: tamamlandı · `1.14.1`
+
+- CSV/TSV/TXT ve JSON `azimut → geometrik ufuk yüksekliği` parserı
+- 3–1.440 nokta için mevcut local-horizon maskesiyle ortak doğrulama
+- sırasız kaynak normalizasyonu, duplicate reddi ve maksimum azimut boşluğu tanısı
+- Electron main-process dosya seçimi, 2 MB sınırı, SHA-256 ve dosya boyutu provenansı
+- renderer'a yalnız doğrulanmış/normalize edilmiş profil nesnesi taşıma
+- mevcut 8 yönlü manuel UI ve SavedExperiment şemasını değiştirmeme
+
+Ayrıntı: [`roadmap-stage-6.16.md`](roadmap-stage-6.16.md)
+
+### Aşama 6.17 — Yüksek çözünürlüklü skyline UI, kayıt ve rapor entegrasyonu
+
+Durum: tamamlanma adayı · `1.15.0`
+
+- manuel 8 yön ve doğrulanmış dış dosya kaynak modlarını açıkça ayırma
+- dosya importunu taslak state'te tutup ağır yıldız hesabını yalnız `Uygula ve hesapla` ile başlatma
+- kaynak kartında dosya adı, biçim, nokta sayısı, maksimum boşluk, SHA-256 ve import zamanı
+- yüksek çözünürlüklü noktaları Aşama 6.14 local-horizon trail motoruna bağlama
+- prediction'a yalnız hafif kaynak özeti; tam profili tek `SavedExperiment.stellarLocalHorizonSource` alanında tutma
+- portable/local store şemasını v8'e yükseltip v1–v7 migration'ı koruma
+- pointCount, max-gap, SHA ve profil geometrisini import sırasında yeniden doğrulama
+- HTML raporda skyline dosya provenansı; ham kaynak baytlarını rapora gömmeme
+- 24 noktalı örnek skyline dosyasıyla gerçek Electron manuel doğrulama akışı
+
+Ayrıntı: [`roadmap-stage-6.17.md`](roadmap-stage-6.17.md)
+
 ### Sonraki astronomi dilimleri
 
-- yüksek çözünürlüklü skyline CSV/JSON importu ve kaynak bütünlüğü
-- refraction ile local skyline'ın güvenli karşılaştırma sözleşmesini tanımlama
+- apparent yıldız yüksekliği ile geometrik/doğal local skyline'ın güvenli karşılaştırma sözleşmesini tanımlama
 - resmi BSC5P kaynak dosyası erişildiğinde doğrulanmış 19-yıldız motion veri dosyasını üretip gözlem zincirine bağlama
 - çoklu yıldız / gökyüzü görselleştirmesi
+- DEM veya panorama gibi kaynaklardan açık provenanslı skyline üretimi
 
 ## Aşama 7 — Büyük ölçekli olaylar
 

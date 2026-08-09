@@ -169,7 +169,7 @@ describe('portable experiment format', () => {
     expect(file.schema).toBe(PORTABLE_EXPERIMENT_SCHEMA);
     expect(file.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
     expect(parsed.migrated).toBe(false);
-    expect(parsed.sourceVersion).toBe(7);
+    expect(parsed.sourceVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
     expect(parsed.experiment).toEqual(savedExperimentFixture);
     expect(parsed.experiment.terrainProfileSource?.fileName)
       .toBe('terrain-profile.csv');
