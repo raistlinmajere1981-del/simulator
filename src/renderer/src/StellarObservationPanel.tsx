@@ -226,10 +226,13 @@ export function StellarObservationPanel({
             <input
               type="checkbox"
               checked={localHorizonDraft.localHorizonEnabled}
-              onChange={(event) => setLocalHorizonDraft((current) => ({
-                ...current,
-                localHorizonEnabled: event.currentTarget.checked
-              }))}
+              onChange={(event) => {
+                const localHorizonEnabled = event.currentTarget.checked;
+                setLocalHorizonDraft((current) => ({
+                  ...current,
+                  localHorizonEnabled
+                }));
+              }}
             />
             <span>{localHorizonDraft.localHorizonEnabled ? 'Etkin' : 'Kapalı'}</span>
           </label>
