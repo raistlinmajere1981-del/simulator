@@ -43,6 +43,7 @@ import {
   VISIBILITY_SCENARIOS,
   SUN_MOON_SCENARIO,
   SHADOW_SCENARIO,
+  STELLAR_SCENARIO,
   getSimulationScenario,
   normalizeSimulationScenarioId,
   type SimulationScenarioId
@@ -110,6 +111,15 @@ import {
   type DualShadowComparisonSettings
 } from '../../simulation/dual-shadow-comparison';
 import {
+  DEFAULT_STELLAR_OBSERVATION_SETTINGS,
+  STELLAR_OBSERVATION_MODEL_ID,
+  calculateStellarObservation,
+  createStellarObservationPrediction,
+  readStellarObservationSettings,
+  stellarObservationMetadata,
+  type StellarObservationSettings
+} from '../../simulation/stellar-observation';
+import {
   WATER_SURFACE_APPLICATION_MODEL_ID,
   type WaterSurfaceApplicationResult
 } from '../../simulation/water-surface-application';
@@ -148,6 +158,8 @@ import { SolarScenarioSummary } from './SolarScenarioSummary';
 import { ShadowScenarioSummary } from './ShadowScenarioSummary';
 import { ShadowObservationPanel } from './ShadowObservationPanel';
 import { DualShadowComparisonPanel } from './DualShadowComparisonPanel';
+import { StellarScenarioSummary } from './StellarScenarioSummary';
+import { StellarObservationPanel } from './StellarObservationPanel';
 
 type ModelTone = 'green' | 'amber' | 'violet';
 type ModelShape = 'globe' | 'disk' | 'gleason';
@@ -197,7 +209,7 @@ const scenarios: ScenarioDefinition[] = [
   })),
   { ...SUN_MOON_SCENARIO, enabled: true },
   { ...SHADOW_SCENARIO, enabled: true },
-  { label: 'Yıldız Gözlemleri', icon: '✦', enabled: false },
+  { ...STELLAR_SCENARIO, enabled: true },
   { label: 'Tutulma Simülasyonları', icon: '◐', enabled: false }
 ];
 
@@ -284,7 +296,7 @@ function getPresentation(modelId: string): ModelPresentation {
 }
 
 function isAstronomyScenario(scenarioId: SimulationScenarioId): boolean {
-  return scenarioId === 'sun-moon-observation' || scenarioId === 'shadow-observation';
+  return scenarioId === 'sun-moon-observation' || scenarioId === 'shadow-observation' || scenarioId === 'stellar-observation';
 }
 
 function getMetric(
@@ -455,7 +467,7 @@ function Sidebar({
       <section className="side-section compact">
         <div className="section-heading">
           <span>Modeller</span>
-          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '3 astronomik referans' : activeScenarioId === 'shadow-observation' ? '1 astronomik referans' : '2 fiziksel'}</span>
+          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '3 astronomik referans' : activeScenarioId === 'shadow-observation' || activeScenarioId === 'stellar-observation' ? '1 astronomik referans' : '2 fiziksel'}</span>
         </div>
         {activeScenarioId === 'sun-moon-observation' ? (
           <>
@@ -479,6 +491,12 @@ function Sidebar({
           <div className="model-toggle reference-model">
             <span className="model-dot amber" />
             <span>Gölge Geometrisi · Astronomik Referans</span>
+            <span className="reference-badge">REFERANS</span>
+          </div>
+        ) : activeScenarioId === 'stellar-observation' ? (
+          <div className="model-toggle reference-model">
+            <span className="model-dot violet" />
+            <span>Yıldız Gözlemi · Astronomik Referans</span>
             <span className="reference-badge">REFERANS</span>
           </div>
         ) : (<>
@@ -507,7 +525,9 @@ function Sidebar({
           <div className="saved-empty">
             {activeScenarioId === 'shadow-observation'
               ? 'Gölge yön diyagramı ana deney panelinde gösterilir. Dünya modellerine fiziksel Güneş davranışı atanmaz.'
-              : 'Güneş/Ay konumu ile günlük doğuş-batış zaman çizgisi ana deney alanında gösterilir; ek gökyüzü katmanları sonraki dilimlerde genişletilecektir.'}
+              : activeScenarioId === 'stellar-observation'
+                ? 'Katalog yıldızı, J2000→gözlem tarihi dönüşümü ve geometrik yıldız izi ana deney alanında gösterilir.'
+                : 'Güneş/Ay konumu ile günlük doğuş-batış zaman çizgisi ana deney alanında gösterilir; ek gökyüzü katmanları sonraki dilimlerde genişletilecektir.'}
           </div>
         </section>
       ) : (
@@ -1134,6 +1154,7 @@ export function AppNext(): React.JSX.Element {
   const [activeScenarioId, setActiveScenarioId] = useState<SimulationScenarioId>('target-visibility');
   const [shadowObservationSettings, setShadowObservationSettings] = useState<ShadowObservationSettings>(() => ({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS }));
   const [dualShadowSettings, setDualShadowSettings] = useState<DualShadowComparisonSettings>();
+  const [stellarObservationSettings, setStellarObservationSettings] = useState<StellarObservationSettings>(() => ({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS }));
   const [manualTerrainPoints, setManualTerrainPoints] = useState<ManualTerrainPoint[]>(
     defaultTerrainPoints()
   );
@@ -1221,10 +1242,10 @@ export function AppNext(): React.JSX.Element {
       eyeHeightM: inputs.observerHeightM
     };
 
-    if (activeScenarioId === 'sun-moon-observation') {
+    if (activeScenarioId === 'sun-moon-observation' || activeScenarioId === 'stellar-observation') {
       return {
         id: activeExperimentId,
-        title: activeExperimentName || 'Etkileşimli Güneş ve Ay gözlemi',
+        title: activeExperimentName || (activeScenarioId === 'stellar-observation' ? 'Etkileşimli yıldız gözlemi' : 'Etkileşimli Güneş ve Ay gözlemi'),
         type: 'celestial',
         observer,
         observedAtIso: experimentObservedAtIso,
@@ -1277,7 +1298,7 @@ export function AppNext(): React.JSX.Element {
     return targetExperiment;
   }, [activeExperimentId, activeExperimentName, activeScenarioId, effectiveDistanceKm, experimentObservedAtIso, inputs, terrainProfile]);
 
-  const solarPosition = useMemo(() => isAstronomyScenario(activeScenarioId)
+  const solarPosition = useMemo(() => (activeScenarioId === 'sun-moon-observation' || activeScenarioId === 'shadow-observation')
     ? calculateSolarPosition({
         observedAtIso: experimentObservedAtIso,
         latitudeDeg: inputs.observerLatitudeDeg,
@@ -1338,6 +1359,18 @@ export function AppNext(): React.JSX.Element {
   const dualShadowComparisonPrediction = useMemo(() => dualShadowComparisonResult
     ? createDualShadowComparisonPrediction(dualShadowComparisonResult)
     : undefined, [dualShadowComparisonResult]);
+  const stellarObservationResult = useMemo(() => activeScenarioId === 'stellar-observation'
+    ? calculateStellarObservation({
+        experimentId: activeExperimentId,
+        observedAtIso: experimentObservedAtIso,
+        latitudeDeg: inputs.observerLatitudeDeg,
+        longitudeDeg: inputs.observerLongitudeDeg,
+        settings: stellarObservationSettings
+      })
+    : undefined, [activeExperimentId, activeScenarioId, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg, stellarObservationSettings]);
+  const stellarObservationPrediction = useMemo(() => stellarObservationResult
+    ? createStellarObservationPrediction(stellarObservationResult)
+    : undefined, [stellarObservationResult]);
 
   const context = useMemo(() => ({
     atmosphereMode: atmosphereState.mode,
@@ -1497,6 +1530,7 @@ export function AppNext(): React.JSX.Element {
       setActiveExperimentName('');
       setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
       setDualShadowSettings(undefined);
+      setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
       setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
       setGeoidConversionRecord(undefined);
@@ -1699,9 +1733,13 @@ export function AppNext(): React.JSX.Element {
     const dualShadowPrediction = saved.predictions.find(
       (prediction) => prediction.modelId === DUAL_SHADOW_COMPARISON_MODEL_ID
     );
+    const stellarPrediction = saved.predictions.find(
+      (prediction) => prediction.modelId === STELLAR_OBSERVATION_MODEL_ID
+    );
     setActiveScenarioId(normalizeSimulationScenarioId(saved.scenarioId));
     setShadowObservationSettings(readShadowObservationSettings(shadowPrediction));
     setDualShadowSettings(readDualShadowComparisonSettings(dualShadowPrediction));
+    setStellarObservationSettings(readStellarObservationSettings(stellarPrediction));
     setInputs(saved.inputs);
     setAtmosphereState(saved.atmosphere
       ? cloneAtmosphereExperimentState(saved.atmosphere)
@@ -1774,6 +1812,9 @@ export function AppNext(): React.JSX.Element {
         ...(dualShadowComparisonPrediction
           ? [[dualShadowComparisonMetadata.id, dualShadowComparisonMetadata.version] as const]
           : []),
+        ...(stellarObservationPrediction
+          ? [[stellarObservationMetadata.id, stellarObservationMetadata.version] as const]
+          : []),
         ...(geoidConversionRecord
           ? [[GEOID_CONVERSION_MODEL_ID, geoidConversionRecord.modelVersion] as const]
           : []),
@@ -1797,6 +1838,7 @@ export function AppNext(): React.JSX.Element {
         ...(lunarPositionPrediction ? [lunarPositionPrediction] : []),
         ...(shadowObservationPrediction ? [shadowObservationPrediction] : []),
         ...(dualShadowComparisonPrediction ? [dualShadowComparisonPrediction] : []),
+        ...(stellarObservationPrediction ? [stellarObservationPrediction] : []),
         ...runs.map((run) => run.prediction),
         ...(geoidConversionRecord ? [geoidConversionRecord.prediction] : []),
         ...(waterObservationRecord ? [waterObservationRecord.prediction] : []),
@@ -1821,11 +1863,15 @@ export function AppNext(): React.JSX.Element {
       const savedDualShadowPrediction = saved.predictions.find(
         (prediction) => prediction.modelId === DUAL_SHADOW_COMPARISON_MODEL_ID
       );
+      const savedStellarPrediction = saved.predictions.find(
+        (prediction) => prediction.modelId === STELLAR_OBSERVATION_MODEL_ID
+      );
       setSavedExperiments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       setActiveExperimentId(saved.id);
       setActiveExperimentName(saved.name);
       setShadowObservationSettings(readShadowObservationSettings(savedShadowPrediction));
       setDualShadowSettings(readDualShadowComparisonSettings(savedDualShadowPrediction));
+      setStellarObservationSettings(readStellarObservationSettings(savedStellarPrediction));
       setExperimentObservedAtIso(saved.observedAtIso ?? saved.createdAtIso);
     setObservationUtcOffsetMinutes(saved.observationUtcOffsetMinutes ?? systemUtcOffsetMinutes(new Date(saved.observedAtIso ?? saved.createdAtIso)));
       setAtmosphereState(saved.atmosphere
@@ -1869,6 +1915,7 @@ export function AppNext(): React.JSX.Element {
         setActiveExperimentName('');
         setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
       setDualShadowSettings(undefined);
+      setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
         setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
         setAtmosphereState(createDefaultAtmosphereExperimentState('standard'));
@@ -1923,7 +1970,9 @@ export function AppNext(): React.JSX.Element {
 
   const modelRun = runs.find((run) => run.metadata.id === traceModelId);
   const geoPrediction = geodesicPrediction(geodesic);
-  const selectedMetadata = traceModelId === solarPositionMetadata.id
+  const selectedMetadata = traceModelId === stellarObservationMetadata.id
+    ? stellarObservationMetadata
+    : traceModelId === solarPositionMetadata.id
     ? solarPositionMetadata
     : traceModelId === solarDayEventsMetadata.id
       ? solarDayEventsMetadata
@@ -1940,7 +1989,9 @@ export function AppNext(): React.JSX.Element {
       : traceModelId === WATER_SURFACE_APPLICATION_MODEL_ID
         ? waterApplicationMetadata
         : modelRun?.metadata;
-  const selectedPrediction = traceModelId === solarPositionMetadata.id
+  const selectedPrediction = traceModelId === stellarObservationMetadata.id
+    ? stellarObservationPrediction
+    : traceModelId === solarPositionMetadata.id
     ? solarPositionPrediction
     : traceModelId === solarDayEventsMetadata.id
       ? solarDayEventsPrediction
@@ -1983,6 +2034,7 @@ export function AppNext(): React.JSX.Element {
     setActiveExperimentName('');
     setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
       setDualShadowSettings(undefined);
+      setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
     setExperimentObservedAtIso(new Date().toISOString());
     setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
     setIsDirty(false);
@@ -2029,6 +2081,7 @@ export function AppNext(): React.JSX.Element {
             setActiveExperimentName('');
             setShadowObservationSettings({ ...DEFAULT_SHADOW_OBSERVATION_SETTINGS });
       setDualShadowSettings(undefined);
+      setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
             setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
             setGeoidConversionRecord(undefined);
@@ -2052,6 +2105,15 @@ export function AppNext(): React.JSX.Element {
           <div className="top-grid geodesic-top-grid">
             {activeScenarioId === 'sun-moon-observation' ? (
               <SolarScenarioSummary
+                activeName={activeExperimentName}
+                inputs={inputs}
+                isDirty={isDirty}
+                onCoordinateChange={(key, value) => handleNumberChange(key, value)}
+                onReset={resetExperiment}
+                onSave={() => setSaveDialogOpen(true)}
+              />
+            ) : activeScenarioId === 'stellar-observation' ? (
+              <StellarScenarioSummary
                 activeName={activeExperimentName}
                 inputs={inputs}
                 isDirty={isDirty}
@@ -2100,6 +2162,14 @@ export function AppNext(): React.JSX.Element {
                   </div>
                   <SolarDayEventsPanel result={solarDayEventsResult} onShowTrace={() => setTraceModelId(solarDayEventsMetadata.id)} />
                 </>
+              : activeScenarioId === 'stellar-observation' && stellarObservationResult && stellarObservationPrediction
+              ? <StellarObservationPanel
+                  result={stellarObservationResult}
+                  prediction={stellarObservationPrediction}
+                  settings={stellarObservationSettings}
+                  onChange={(settings) => { setStellarObservationSettings(settings); setIsDirty(true); }}
+                  onShowTrace={() => setTraceModelId(stellarObservationMetadata.id)}
+                />
               : activeScenarioId === 'shadow-observation' && shadowObservationResult && shadowObservationPrediction
               ? <>
                   <ShadowObservationPanel
