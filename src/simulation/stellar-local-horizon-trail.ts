@@ -335,7 +335,7 @@ export function calculateStellarLocalHorizonTrail(
       let cursorMs = startMs;
       let above = firstFiniteNonTangential.geometricClearanceDeg! > 0;
       for (const crossing of localHorizonCrossings) {
-        const crossingMs = new Date(crossing.observedAtIso).getTime();
+        const crossingMs = startMs + crossing.elapsedMinutes * 60_000;
         if (above) visibleDurationMs += Math.max(0, crossingMs - cursorMs);
         cursorMs = crossingMs;
         above = crossing.kind === 'rise';
