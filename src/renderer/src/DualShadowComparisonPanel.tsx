@@ -5,6 +5,7 @@ import type {
   DualShadowStationSettings
 } from '../../simulation/dual-shadow-comparison';
 import type { ShadowObservationResult } from '../../simulation/shadow-observation';
+import { DraftNumberInput } from './DraftNumberInput';
 import { PanelHelpButton } from './HelpSystem';
 import './dual-shadow-comparison-panel.css';
 
@@ -113,27 +114,15 @@ export function DualShadowComparisonPanel({
           <div className="dual-shadow-input-grid">
             <label className="input-field">
               <span>B enlemi</span>
-              <div><input type="number" min={-90} max={90} step={0.000001} value={settings.stationB.latitudeDeg} onChange={(event) => {
-                const value = event.currentTarget.valueAsNumber;
-                if (!Number.isFinite(value) || value < -90 || value > 90) return;
-                onChange(updateStation(settings, { latitudeDeg: value }));
-              }} /><b>°</b></div>
+              <div><DraftNumberInput min={-90} max={90} step={0.000001} value={settings.stationB.latitudeDeg} onCommit={(value) => onChange(updateStation(settings, { latitudeDeg: value }))} /><b>°</b></div>
             </label>
             <label className="input-field">
               <span>B boylamı</span>
-              <div><input type="number" min={-180} max={180} step={0.000001} value={settings.stationB.longitudeDeg} onChange={(event) => {
-                const value = event.currentTarget.valueAsNumber;
-                if (!Number.isFinite(value) || value < -180 || value > 180) return;
-                onChange(updateStation(settings, { longitudeDeg: value }));
-              }} /><b>°</b></div>
+              <div><DraftNumberInput min={-180} max={180} step={0.000001} value={settings.stationB.longitudeDeg} onCommit={(value) => onChange(updateStation(settings, { longitudeDeg: value }))} /><b>°</b></div>
             </label>
             <label className="input-field">
               <span>B gnomon yüksekliği</span>
-              <div><input type="number" min={0.001} max={10000} step={0.01} value={settings.stationB.gnomonHeightM} onChange={(event) => {
-                const value = event.currentTarget.valueAsNumber;
-                if (!Number.isFinite(value) || value <= 0 || value > 10_000) return;
-                onChange(updateStation(settings, { gnomonHeightM: value }));
-              }} /><b>m</b></div>
+              <div><DraftNumberInput min={0.001} max={10000} step={0.01} value={settings.stationB.gnomonHeightM} onCommit={(value) => onChange(updateStation(settings, { gnomonHeightM: value }))} /><b>m</b></div>
             </label>
             <label className="input-field">
               <span>B gözlenen gölge</span>
