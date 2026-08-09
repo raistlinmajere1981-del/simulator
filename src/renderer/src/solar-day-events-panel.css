@@ -1,0 +1,218 @@
+.solar-day-events-panel {
+  grid-column: 1 / -1;
+  padding: 12px 14px;
+}
+
+.solar-day-date-badge {
+  border: 1px solid #3d5c70;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #9fc6d8;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+
+.solar-day-timeline {
+  position: relative;
+  height: 42px;
+  margin: 8px 8px 2px;
+}
+
+.solar-dayline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 20px;
+  height: 2px;
+  background: linear-gradient(90deg, #263746, #d09d3d 48%, #d09d3d 52%, #263746);
+}
+
+.solar-day-timeline::before,
+.solar-day-timeline::after {
+  content: '';
+  position: absolute;
+  top: 15px;
+  width: 1px;
+  height: 12px;
+  background: #536775;
+}
+
+.solar-day-timeline::before { left: 25%; }
+.solar-day-timeline::after { left: 75%; }
+
+.solar-time-label {
+  position: absolute;
+  bottom: 0;
+  color: #6f8390;
+  font-size: 8px;
+  transform: translateX(-50%);
+}
+
+.solar-time-label.start { left: 0; transform: none; }
+.solar-time-label.q1 { left: 25%; }
+.solar-time-label.q2 { left: 50%; }
+.solar-time-label.q3 { left: 75%; }
+.solar-time-label.end { right: 0; left: auto; transform: none; }
+
+.solar-event-marker {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  width: 9px;
+  height: 16px;
+  border-radius: 4px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 10px currentColor;
+}
+
+.solar-event-marker.standard {
+  width: 5px;
+  top: 17px;
+  height: 10px;
+  color: #76b7db;
+  background: currentColor;
+}
+
+.solar-event-marker.geometric {
+  color: #e6ba57;
+  background: currentColor;
+}
+
+.solar-event-marker.noon {
+  top: 11px;
+  width: 10px;
+  height: 20px;
+  color: #f1d267;
+  background: currentColor;
+}
+
+.solar-event-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr .8fr;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.solar-event-card {
+  overflow: hidden;
+  border: 1px solid #2d4655;
+  border-radius: 6px;
+  background: #0e202b;
+}
+
+.solar-event-card.geometric { border-color: #695a2f; }
+.solar-event-card.standard { border-color: #31546a; }
+.solar-event-card.noon { border-color: #58623c; }
+
+.solar-event-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #263c49;
+  background: rgba(19, 40, 52, .7);
+}
+
+.solar-event-card header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.solar-event-card header span {
+  color: #798e9a;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+.solar-event-card header strong {
+  color: #d7e3e8;
+  font-size: 11px;
+}
+
+.solar-event-card header b {
+  color: #b2c2ca;
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.solar-event-card.geometric header b { color: #e6be63; }
+.solar-event-card.standard header b { color: #82c7e8; }
+
+.solar-event-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.solar-event-card dl > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.solar-event-card dl > div + div {
+  border-left: 1px solid #263c49;
+}
+
+.solar-event-card dt {
+  color: #728693;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.solar-event-card dd {
+  margin: 0;
+  color: #d8e5e9;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.solar-event-card small {
+  overflow: hidden;
+  color: #71838d;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.solar-day-comparison-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+  padding: 7px 9px;
+  border: 1px solid #2b4351;
+  border-radius: 4px;
+  background: rgba(14, 34, 46, .75);
+  color: #8499a5;
+  font-size: 9px;
+}
+
+.solar-day-comparison-strip strong {
+  color: #aed7e5;
+  font-size: 11px;
+}
+
+.solar-day-events-note {
+  margin: 7px 0 0;
+  padding: 7px 9px;
+  border-left: 2px solid #b48b39;
+  background: rgba(126, 94, 31, .08);
+  color: #8498a2;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1250px) {
+  .solar-event-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
