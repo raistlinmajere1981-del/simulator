@@ -57,13 +57,13 @@ describe('stellar observation', () => {
       latitudeDeg: 41,
       longitudeDeg: 29,
       settings: {
-        starId: 'hr-424',
+        starId: 'hr-0424',
         trailDurationMinutes: 1_440,
         trailSampleIntervalMinutes: 20
       }
     });
     expect(readStellarObservationSettings(createStellarObservationPrediction(result))).toEqual({
-      starId: 'hr-424',
+      starId: 'hr-0424',
       trailDurationMinutes: 1_440,
       trailSampleIntervalMinutes: 20
     });
