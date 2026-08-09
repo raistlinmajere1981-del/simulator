@@ -24,6 +24,8 @@ Mevcut geometrik Güneş konumu referansından seçilen WGS84 konumu ve açık U
 
 Geometrik `0°` kanalı atmosferik kırılma, Güneş diski yarıçapı ve yerel topoğrafik ufuk içermez. `-0,833°` kanalı gerçek atmosfer ölçümü değildir; üst Güneş kenarı ve standart kırılma için yaygın sabit yaklaşık takvim eşiği olarak ayrıca gösterilir. İki kanal birbiriyle karıştırılmaz.
 
+`-0,833°` değeri dinamik atmosfer profilinden, kullanıcının standart `k` katsayısından veya arazideki gerçek ufuk yüksekliğinden türetilmez. Bu girdiler daha sonra fiziksel görünürlük olayıyla bağlanacaksa ayrı bir sözleşme ve hesap izi gerektirir.
+
 Yerel gün saat dilimi adı veya DST veritabanıyla değil, deneyde açıkça kaydedilen sabit UTC ofsetiyle kurulur. Bu nedenle geçmiş veya gelecekteki bir saha kaydında doğru ofsetin kullanıcı tarafından seçilmiş olması gerekir.
 
 Bu olay geometrisi mevcut astronomik referanstır; İdeal Küre, Tanımlı Düzlem veya başka bir Dünya şekli modelinin Güneş/ışık davranışı olarak otomatik atanmaz.
