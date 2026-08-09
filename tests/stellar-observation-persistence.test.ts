@@ -72,8 +72,11 @@ describe('stellar observation persistence', () => {
     expect(prediction?.metrics.find((metric) => metric.key === 'stellarLocalHorizonEastDeg')?.value).toBe(6);
     expect(prediction?.metrics.find((metric) => metric.key === 'stellarLocalHorizonWestDeg')?.value).toBe(3);
     expect(prediction?.metrics.find((metric) => metric.key === 'stellarLocalHorizonVisibleDurationMinutes')).toBeDefined();
+    expect(prediction?.metrics.find((metric) => metric.key === 'stellarApparentElevationDeg')).toBeDefined();
+    expect(prediction?.metrics.find((metric) => metric.key === 'stellarLocalApparentVisibilityClassified')?.value).toBe(0);
     expect(prediction?.trace.steps.some((step) => step.id.startsWith('precession-'))).toBe(true);
     expect(prediction?.trace.steps.some((step) => step.id.startsWith('local-'))).toBe(true);
+    expect(prediction?.trace.steps.some((step) => step.id === 'standard-refraction-diagnostic')).toBe(true);
   });
 
   it('renders local-horizon metrics, catalog provenance and scientific limits in HTML report', () => {
@@ -88,7 +91,10 @@ describe('stellar observation persistence', () => {
     expect(report).toContain('İz penceresinde yerel ufuk üstü geometrik süre');
     expect(report).toContain('Sekiz yönlü manuel yerel skyline');
     expect(report).toContain('Proper motion');
-    expect(report).toContain('Atmosferik kırılma');
+    expect(report).toContain('Standart atmosferik kırılma tanısı');
+    expect(report).toContain('Standart apparent yıldız yüksekliği');
+    expect(report).toContain('Yerel apparent görünürlük sınıflandırıldı');
+    expect(report).toContain('yerel görünürlük sınıflandırılmadı');
     expect(report).toContain('NASA HEASARC BSC5P');
   });
 
