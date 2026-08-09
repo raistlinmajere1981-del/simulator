@@ -2,6 +2,7 @@ export type HelpPanelId =
   | 'scenario-summary'
   | 'celestial-time'
   | 'solar-position'
+  | 'solar-day-events'
   | 'lunar-position'
   | 'shadow-observation'
   | 'dual-shadow-comparison'
@@ -212,6 +213,23 @@ export const HELP_PANELS: readonly HelpPanelContent[] = [
     commonMistakes: ['Geometrik 0° yüksekliği fotoğraftaki deniz ufkuyla aynı kabul etmek.', 'Negatif yüksekliği hesap hatası sanmak; bu değer Güneşin geometrik ufkun altında olduğunu gösterebilir.'],
     example: 'Aynı koordinatta tarih veya saati değiştirince Güneş yüksekliği ve azimutu canlı olarak yeniden hesaplanır.',
     relatedTerms: ['solar-elevation', 'azimuth', 'declination', 'hour-angle', 'utc-offset']
+  },
+  {
+    id: 'solar-day-events',
+    category: 'Astronomi',
+    title: 'Gün doğumu, gün batımı ve güneş öğlesi',
+    summary: 'Seçilen WGS84 konumu ve açık UTC ofsetli yerel sivil gün için Güneşin ufuk geçişlerini ve gün içindeki en yüksek geometrik konumunu hesaplar. Geometrik 0° ile standart -0,833° görünür referans birbirinden ayrılır.',
+    fields: [
+      { label: 'Geometrik doğuş/batış', unit: 'saat', description: 'Güneş merkezinin geometrik yerel ufukta 0° eşiğini geçtiği olaylar.' },
+      { label: 'Standart görünür doğuş/batış', unit: 'saat', description: 'Güneş merkezi için -0,833° sabit eşiği kullanan yaklaşık takvim referansı; gerçek atmosfer ölçümü değildir.' },
+      { label: 'Eşik üstü süre', unit: 'sa/dk', description: 'Seçilen yerel sivil günün ne kadarında ilgili Güneş merkezi eşiğinin üstünde kalındığı.' },
+      { label: 'Güneş öğlesi', unit: 'saat', description: 'Seçilen yerel gün penceresinde geometrik Güneş yüksekliğinin maksimum olduğu an.' },
+      { label: 'Doğuş/batış azimutu', unit: '°', description: 'İlgili eşik geçişindeki coğrafi kuzeyden saat yönlü Güneş azimutu.' }
+    ],
+    assumptions: ['Yerel gün kaydedilmiş sabit UTC ofsetiyle 00:00–24:00 olarak kurulmuştur.', '0° kanalı atmosferik kırılma ve topoğrafik ufuk içermez.', '-0,833° kanalı sabit üst-kenar + standart kırılma yaklaşımıdır; sahadaki gerçek atmosfer değildir.', 'Bu astronomik referans Dünya şekli modellerine otomatik Güneş/ışık fiziği atamaz.'],
+    commonMistakes: ['-0,833° sonucunu ölçülmüş gerçek atmosferik kırılma sanmak.', 'Yerel topoğrafik ufkun düz geometrik ufukla aynı olduğunu varsaymak.', 'Saat dilimi adı/DST kuralı yerine kaydedilen açık UTC ofsetinin kullanıldığını gözden kaçırmak.', 'Kutup günü/gecesinde doğuş veya batış saati uydurulmasını beklemek.'],
+    example: 'Aynı tarih ve koordinatta standart -0,833° doğuş geometrik 0° merkez doğuşundan biraz daha erken, batış ise biraz daha geç olur.',
+    relatedTerms: ['solar-elevation', 'azimuth', 'utc-offset']
   },
   {
     id: 'lunar-position',

@@ -217,7 +217,7 @@ HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı 
 ## Henüz tamamlanmayan ana ürün işleri
 
 - Gece ışıkları görsel katmanı
-- Gün doğumu/gün batımı, yıldız ve tutulma deneyleri
+- Yıldız ve tutulma deneyleri
 - Toroidal ve içbükey gibi ek geometrik model sözleşmeleri
 
 Son kullanıcı kurulum paketi ve dağıtım işlemleri ürün işlevleri tamamlandıktan sonraki aşamadır.
@@ -288,7 +288,8 @@ Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzeri
 - [`docs/roadmap-stage-6.2.md`](docs/roadmap-stage-6.2.md)
 - [`docs/roadmap-stage-6.3.md`](docs/roadmap-stage-6.3.md)
 - [`docs/roadmap-stage-6.4.md`](docs/roadmap-stage-6.4.md)
+- [`docs/roadmap-stage-6.5.md`](docs/roadmap-stage-6.5.md)
 
 ## Durum
 
-Aktif geliştirme sürümü `1.11.0`dir. Güneş/Ay astronomik referanslarına ek olarak dikey gnomon gölge deneyi; beklenen gölge uzunluğu/yönü, isteğe bağlı saha ölçümü, açık ± belirsizlikler ve yeniden üretilebilir hesap iziyle çalışır. Gölge referansı Dünya modellerine tanımsız bir Güneş geometrisi uydurmaz. Fotoğraf işaretleri artık overlay üzerinde `TABAN` / `TEPE` olarak açıkça adlandırılır; tepe tabanın üstünde değilse kayıt ve model karşılaştırması engellenir. Fotoğraf/kamera kalibrasyonu yerel PNG/JPEG yükleme, SHA-256 provenansı, etkileşimli işaretler ve piksel→açı hesabına ek olarak model sonuçlarıyla **bağımsız açısal gözlem kanalı** üzerinden karşılaştırılır. U1–U2 çizgisi varsayılan olarak yalnız görsel referanstır; fiziksel yerel yatay olduğu kullanıcı tarafından açıkça belirtilmedikçe mutlak taban/tepe açıları puanlanmaz. Görüntüdeki deniz ufku otomatik yerel yatay sayılmaz. Fotoğraf baytları deney JSON’una gömülmez. `1.5.0` ile fotoğraf işaret zarfına isteğe bağlı kamera iç-parametre belirsizlikleri eklenebilir; mesafe, göz/zemin/hedef kotu ve Standart k belirsizlikleri ise modeli nominal girdiden bağımsız alt/üst uçlarda yeniden çözerek fotoğraf karşılaştırmasının birleşik zarfına katılır. Boş belirsizlik alanlarına varsayımsal ± değer atanmaz.
+Aktif geliştirme sürümü `1.12.0`dir. Güneş/Ay senaryosu artık geometrik 0° merkez geçişi ile ayrı -0,833° standart görünür referansı kullanarak günlük doğuş/batış, azimut, eşik-üstü süre ve güneş öğlesini de üretir; kutup günü/gecesinde sahte olay saati oluşturmaz. Güneş/Ay astronomik referanslarına ek olarak dikey gnomon gölge deneyi; beklenen gölge uzunluğu/yönü, isteğe bağlı saha ölçümü, açık ± belirsizlikler ve yeniden üretilebilir hesap iziyle çalışır. Gölge referansı Dünya modellerine tanımsız bir Güneş geometrisi uydurmaz. Fotoğraf işaretleri artık overlay üzerinde `TABAN` / `TEPE` olarak açıkça adlandırılır; tepe tabanın üstünde değilse kayıt ve model karşılaştırması engellenir. Fotoğraf/kamera kalibrasyonu yerel PNG/JPEG yükleme, SHA-256 provenansı, etkileşimli işaretler ve piksel→açı hesabına ek olarak model sonuçlarıyla **bağımsız açısal gözlem kanalı** üzerinden karşılaştırılır. U1–U2 çizgisi varsayılan olarak yalnız görsel referanstır; fiziksel yerel yatay olduğu kullanıcı tarafından açıkça belirtilmedikçe mutlak taban/tepe açıları puanlanmaz. Görüntüdeki deniz ufku otomatik yerel yatay sayılmaz. Fotoğraf baytları deney JSON’una gömülmez. `1.5.0` ile fotoğraf işaret zarfına isteğe bağlı kamera iç-parametre belirsizlikleri eklenebilir; mesafe, göz/zemin/hedef kotu ve Standart k belirsizlikleri ise modeli nominal girdiden bağımsız alt/üst uçlarda yeniden çözerek fotoğraf karşılaştırmasının birleşik zarfına katılır. Boş belirsizlik alanlarına varsayımsal ± değer atanmaz.
