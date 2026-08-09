@@ -3,6 +3,7 @@ import type {
   ShadowObservationResult,
   ShadowObservationSettings
 } from '../../simulation/shadow-observation';
+import { DraftNumberInput } from './DraftNumberInput';
 import { PanelHelpButton } from './HelpSystem';
 import './shadow-observation-panel.css';
 
@@ -64,11 +65,7 @@ export function ShadowObservationPanel({
       <div className="shadow-input-grid">
         <label className="input-field">
           <span>Gnomon yüksekliği</span>
-          <div><input min={0.001} max={10000} step={0.01} type="number" value={settings.gnomonHeightM} onChange={(event) => {
-            const value = event.currentTarget.valueAsNumber;
-            if (!Number.isFinite(value) || value <= 0 || value > 10_000) return;
-            onChange({ ...settings, gnomonHeightM: value });
-          }} /><b>m</b></div>
+          <div><DraftNumberInput min={0.001} max={10000} step={0.01} value={settings.gnomonHeightM} onCommit={(value) => onChange({ ...settings, gnomonHeightM: value })} /><b>m</b></div>
         </label>
         <label className="input-field">
           <span>Gözlenen gölge uzunluğu</span>
