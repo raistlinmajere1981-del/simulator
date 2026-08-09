@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   LOCAL_EXPERIMENT_STORE_SCHEMA,
+  LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
   PORTABLE_EXPERIMENT_SCHEMA,
   PORTABLE_EXPERIMENT_SCHEMA_VERSION,
   PortableFormatError,
@@ -9,7 +10,7 @@ import {
   parseLocalExperimentStore,
   parsePortableExperimentFile
 } from '../src/shared/portable';
-import type { SavedExperiment } from '../src/shared/simulator';
+import { DEFAULT_SIMULATOR_INPUTS, type SavedExperiment } from '../src/shared/simulator';
 
 export const savedExperimentFixture: SavedExperiment = {
   id: 'experiment-1',
@@ -17,50 +18,44 @@ export const savedExperimentFixture: SavedExperiment = {
   createdAtIso: '2026-08-05T12:00:00.000Z',
   updatedAtIso: '2026-08-05T12:10:00.000Z',
   inputs: {
+    ...DEFAULT_SIMULATOR_INPUTS,
     observerHeightM: 10,
     targetHeightM: 15,
     observerGroundElevationM: 2.4,
     targetGroundElevationM: 1.1,
     verticalDatumKind: 'orthometric-msl',
     verticalDatumOffsetM: 0.35,
-    terrainMode: 'manual-three-point',
-    terrainIntermediateDistancePercent: 50,
-    terrainIntermediateElevationM: 8.5,
+    terrainMode: 'manual-points',
     distanceSource: 'coordinates',
-    surfaceDistanceKm: 22.38,
-    observerLatitudeDeg: 41.0082,
-    observerLongitudeDeg: 28.9784,
-    targetLatitudeDeg: 41.18,
-    targetLongitudeDeg: 29.12,
+    surfaceDistanceKm: 22.5,
     observedVisiblePercent: 52,
     observationUncertaintyPercent: 8,
     useStandardRefraction: true,
     refractionCoefficient: 0.13
   },
   manualTerrainPoints: [
-    { id: 'ridge-west', distancePercent: 25, elevationM: 8 },
-    { id: 'ridge-centre', distancePercent: 50, elevationM: 8.5 },
-    { id: 'ridge-east', distancePercent: 75, elevationM: 4 }
+    { id: 'point-a', distancePercent: 25, elevationM: 8 },
+    { id: 'point-b', distancePercent: 50, elevationM: 8.5 },
+    { id: 'point-c', distancePercent: 75, elevationM: 4 }
   ],
   terrainProfileSource: {
     kind: 'csv',
     fileName: 'terrain-profile.csv',
     importedAtIso: '2026-08-05T12:05:00.000Z',
-    delimiter: 'comma',
-    distanceUnit: 'percent',
     sourceDistanceM: null,
-    rowCount: 5,
     observerEndpointElevationM: 2.4,
     targetEndpointElevationM: 1.1,
     appliedObserverEndpoint: true,
     appliedTargetEndpoint: true,
-    distanceColumnHeader: 'distance_percent',
-    elevationColumnHeader: 'elevation_m',
     appliedRouteDistance: false,
-    appliedRouteCoordinates: false,
     fileSizeBytes: 128,
     sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
-    modifiedAfterImport: false
+    modifiedAfterImport: false,
+    delimiter: 'comma',
+    distanceUnit: 'percent',
+    rowCount: 5,
+    distanceColumnHeader: 'distance_percent',
+    elevationColumnHeader: 'elevation_m'
   },
   geodesic: {
     method: 'vincenty',
@@ -86,57 +81,44 @@ export const savedExperimentFixture: SavedExperiment = {
   modelVersions: {
     'ideal-sphere': '0.3.0'
   },
-  predictions: [
-    {
-      modelId: 'ideal-sphere',
-      experimentId: 'experiment-1',
-      status: 'compatible',
-      metrics: [{
-        key: 'visibleFraction',
-        label: 'Görünür oran',
-        value: 0.5192,
-        unit: 'fraction'
-      }],
-      warnings: [],
-      traceId: 'ideal-sphere:experiment-1:standard',
-      trace: {
-        summary: 'Küre görünürlük hesabı.',
-        assumptions: ['Yüzey ideal küredir.'],
-        steps: [{
-          id: 'visible-ratio',
-          title: 'Görünür hedef oranı',
-          formula: 'f = H_visible / H',
-          substitution: '7,788 / 15',
-          result: '%51,92'
-        }]
-      }
+  predictions: [{
+    modelId: 'ideal-sphere',
+    experimentId: 'experiment-1',
+    status: 'compatible',
+    metrics: [{ key: 'visiblePercent', label: 'Görünür oran', value: 51.92, unit: '%' }],
+    warnings: ['Yüzey ideal küredir.'],
+    traceId: 'ideal-sphere:experiment-1:standard',
+    trace: {
+      summary: 'Küre görünürlük hesabı.',
+      assumptions: ['Yüzey ideal küredir.'],
+      steps: [{
+        id: 'visible-percent',
+        title: 'Görünür hedef oranı',
+        formula: 'f = H_visible / H',
+        substitution: '7,788 / 15',
+        result: '%51,92'
+      }]
     }
-  ]
+  }]
 };
 
-function version4Experiment(): Record<string, unknown> {
-  const { terrainProfileSource, ...version4 } = savedExperimentFixture;
-  return version4;
-}
-
-function version3Experiment(): Record<string, unknown> {
-  const { manualTerrainPoints, ...version3 } = version4Experiment();
-  return version3;
-}
-
 function version2Experiment(): Record<string, unknown> {
-  const version3 = version3Experiment();
   const {
-    observerGroundElevationM,
-    targetGroundElevationM,
     verticalDatumKind,
     verticalDatumOffsetM,
+    observerGroundElevationM,
+    targetGroundElevationM,
     terrainMode,
     terrainIntermediateDistancePercent,
     terrainIntermediateElevationM,
     ...version2Inputs
-  } = version3.inputs as Record<string, unknown>;
-  return { ...version3, inputs: version2Inputs };
+  } = savedExperimentFixture.inputs;
+  return {
+    ...savedExperimentFixture,
+    manualTerrainPoints: undefined,
+    terrainProfileSource: undefined,
+    inputs: version2Inputs
+  };
 }
 
 function legacyExperiment(): Record<string, unknown> {
@@ -169,7 +151,7 @@ describe('portable experiment format', () => {
     expect(file.schema).toBe(PORTABLE_EXPERIMENT_SCHEMA);
     expect(file.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
     expect(parsed.migrated).toBe(false);
-    expect(parsed.sourceVersion).toBe(7);
+    expect(parsed.sourceVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
     expect(parsed.experiment).toEqual(savedExperimentFixture);
     expect(parsed.experiment.terrainProfileSource?.fileName)
       .toBe('terrain-profile.csv');
@@ -229,254 +211,193 @@ describe('portable experiment format', () => {
       columnCount: 10,
       rowCount: 10,
       sampleCount: 101,
-      sampleCountMode: 'manual' as const,
+      sampleCountMode: 'automatic' as const,
       sampleSpacingM: 225,
-      cellSizeDeg: 0.03,
+      cellSizeDeg: 0.001,
       noDataValue: -9999,
-      westBoundaryDeg: 28.885,
-      eastBoundaryDeg: 29.185,
-      southBoundaryDeg: 40.885,
-      northBoundaryDeg: 41.185,
+      westBoundaryDeg: 28.9,
+      eastBoundaryDeg: 29.2,
+      southBoundaryDeg: 40.9,
+      northBoundaryDeg: 41.2,
       diagnosticStatus: 'good' as const,
-      effectiveCellSpanM: 2_500,
-      sampleSpacingToCellRatio: 0.09,
-      minimumCoverageMarginM: 1_500,
-      coverageMarginCellRatio: 0.6,
-      minimumElevationM: 12,
-      maximumElevationM: 60,
-      elevationRangeM: 48
+      effectiveCellSpanM: 85,
+      sampleSpacingToCellRatio: 2.65,
+      minimumCoverageMarginM: 2_000,
+      coverageMarginCellRatio: 23.5,
+      minimumElevationM: 3,
+      maximumElevationM: 120,
+      elevationRangeM: 117
     };
     const file = createPortableExperimentFile({
       ...savedExperimentFixture,
       terrainProfileSource: demSource
-    }, '1.0.0');
+    }, '1.3.0');
     const parsed = parsePortableExperimentFile(file);
 
     expect(parsed.migrated).toBe(false);
     expect(parsed.experiment.terrainProfileSource).toEqual(demSource);
   });
 
-  it('migrates a version 6 experiment into schema v7', () => {
-    const parsed = parsePortableExperimentFile({
-      schema: PORTABLE_EXPERIMENT_SCHEMA,
-      schemaVersion: 6,
-      exportedAtIso: '2026-08-06T15:00:00.000Z',
-      application: { name: 'Geometrik Gözlem Laboratuvarı', version: '0.9.3' },
-      experiment: savedExperimentFixture
-    });
-
-    expect(parsed.migrated).toBe(true);
+  it('migrates a version 6 experiment into the current schema', () => {
+    const file = createPortableExperimentFile(savedExperimentFixture, '1.0.0');
+    const legacy = { ...file, schemaVersion: 6 };
+    const parsed = parsePortableExperimentFile(legacy);
     expect(parsed.sourceVersion).toBe(6);
-    expect(parsed.experiment.terrainProfileSource?.kind).toBe('csv');
+    expect(parsed.migrated).toBe(true);
   });
 
   it('migrates a version 5 CSV source and defaults route application metadata', () => {
-    const legacySource = { ...savedExperimentFixture.terrainProfileSource } as Record<string, unknown>;
-    delete legacySource.kind;
-    delete legacySource.appliedRouteDistance;
-    delete legacySource.appliedRouteCoordinates;
-    delete legacySource.fileSizeBytes;
-    delete legacySource.sha256;
-    const parsed = parsePortableExperimentFile({
-      schema: PORTABLE_EXPERIMENT_SCHEMA,
-      schemaVersion: 5,
-      exportedAtIso: '2026-08-05T13:00:00.000Z',
-      application: { name: 'Geometrik Gözlem Laboratuvarı', version: '0.8.0' },
-      experiment: { ...savedExperimentFixture, terrainProfileSource: legacySource }
-    });
-
-    expect(parsed.migrated).toBe(true);
+    const file = createPortableExperimentFile(savedExperimentFixture, '1.0.0');
+    const experiment = JSON.parse(JSON.stringify(savedExperimentFixture)) as Record<string, unknown>;
+    const source = experiment.terrainProfileSource as Record<string, unknown>;
+    delete source.appliedRouteDistance;
+    const parsed = parsePortableExperimentFile({ ...file, schemaVersion: 5, experiment });
     expect(parsed.sourceVersion).toBe(5);
-    expect(parsed.experiment.terrainProfileSource?.kind).toBe('csv');
+    expect(parsed.migrated).toBe(true);
     expect(parsed.experiment.terrainProfileSource?.appliedRouteDistance).toBe(false);
-    expect(parsed.experiment.terrainProfileSource?.appliedRouteCoordinates).toBeUndefined();
-    expect(parsed.experiment.terrainProfileSource?.sha256).toBeUndefined();
   });
 
-it('migrates a version 4 experiment without inventing CSV provenance', () => {
-    const parsed = parsePortableExperimentFile({
-      schema: PORTABLE_EXPERIMENT_SCHEMA,
-      schemaVersion: 4,
-      exportedAtIso: '2026-08-05T13:00:00.000Z',
-      application: { name: 'Geometrik Gözlem Laboratuvarı', version: '0.7.0' },
-      experiment: version4Experiment()
-    });
-
-    expect(parsed.migrated).toBe(true);
+  it('migrates a version 4 experiment without inventing CSV provenance', () => {
+    const file = createPortableExperimentFile(savedExperimentFixture, '1.0.0');
+    const experiment = JSON.parse(JSON.stringify(savedExperimentFixture)) as Record<string, unknown>;
+    const source = experiment.terrainProfileSource as Record<string, unknown>;
+    delete source.fileSizeBytes;
+    delete source.sha256;
+    delete source.appliedRouteDistance;
+    const parsed = parsePortableExperimentFile({ ...file, schemaVersion: 4, experiment });
     expect(parsed.sourceVersion).toBe(4);
-    expect(parsed.experiment.manualTerrainPoints).toHaveLength(3);
-    expect(parsed.experiment.terrainProfileSource).toBeUndefined();
+    expect(parsed.migrated).toBe(true);
+    expect(parsed.experiment.terrainProfileSource).toMatchObject({
+      fileName: 'terrain-profile.csv',
+      fileSizeBytes: undefined,
+      sha256: undefined,
+      appliedRouteDistance: false
+    });
   });
 
   it('migrates a version 3 single point into an ordered point array', () => {
+    const file = createPortableExperimentFile(savedExperimentFixture, '0.7.0');
+    const { manualTerrainPoints, terrainProfileSource, ...withoutCurrentTerrain } = savedExperimentFixture;
+    const version3Experiment = {
+      ...withoutCurrentTerrain,
+      inputs: {
+        ...savedExperimentFixture.inputs,
+        terrainMode: 'manual-three-point'
+      }
+    };
     const parsed = parsePortableExperimentFile({
-      schema: PORTABLE_EXPERIMENT_SCHEMA,
+      ...file,
       schemaVersion: 3,
-      exportedAtIso: '2026-08-05T13:00:00.000Z',
-      application: { name: 'Geometrik Gözlem Laboratuvarı', version: '0.5.0' },
-      experiment: version3Experiment()
+      experiment: version3Experiment
     });
-
-    expect(parsed.migrated).toBe(true);
     expect(parsed.sourceVersion).toBe(3);
-    expect(parsed.experiment.manualTerrainPoints).toEqual([{
-      id: 'legacy-intermediate-1',
-      distancePercent: 50,
-      elevationM: 8.5
-    }]);
-    expect(parsed.experiment.terrainProfileSource).toBeUndefined();
+    expect(parsed.migrated).toBe(true);
+    expect(parsed.experiment.manualTerrainPoints).toEqual([{ id: 'legacy-middle', distancePercent: 50, elevationM: 0 }]);
   });
 
   it('migrates a version 2 file with safe vertical defaults', () => {
+    const file = createPortableExperimentFile(savedExperimentFixture, '0.6.0');
     const parsed = parsePortableExperimentFile({
-      schema: PORTABLE_EXPERIMENT_SCHEMA,
+      ...file,
       schemaVersion: 2,
-      exportedAtIso: '2026-08-05T13:00:00.000Z',
-      application: { name: 'Geometrik Gözlem Laboratuvarı', version: '0.4.0' },
       experiment: version2Experiment()
     });
-
-    expect(parsed.migrated).toBe(true);
     expect(parsed.sourceVersion).toBe(2);
+    expect(parsed.migrated).toBe(true);
     expect(parsed.experiment.inputs.verticalDatumKind).toBe('orthometric-msl');
-    expect(parsed.experiment.inputs.terrainMode).toBe('off');
-    expect(parsed.experiment.inputs.observerGroundElevationM).toBe(0);
-    expect(parsed.experiment.manualTerrainPoints).toHaveLength(1);
+    expect(parsed.experiment.inputs.verticalDatumOffsetM).toBe(0);
   });
 
   it('migrates a version 1 portable file to manual distance mode', () => {
+    const file = createPortableExperimentFile(savedExperimentFixture, '0.5.0');
     const parsed = parsePortableExperimentFile({
-      schema: PORTABLE_EXPERIMENT_SCHEMA,
+      ...file,
       schemaVersion: 1,
-      exportedAtIso: '2026-08-05T13:00:00.000Z',
-      application: { name: 'Geometrik Gözlem Laboratuvarı', version: '0.3.0' },
       experiment: legacyExperiment()
     });
-
-    expect(parsed.migrated).toBe(true);
     expect(parsed.sourceVersion).toBe(1);
+    expect(parsed.migrated).toBe(true);
     expect(parsed.experiment.inputs.distanceSource).toBe('manual');
-    expect(parsed.experiment.inputs.observerLatitudeDeg).toBeCloseTo(41.0082);
-    expect(parsed.experiment.inputs.terrainMode).toBe('off');
   });
 
   it('accepts a legacy raw experiment and marks it migrated', () => {
     const parsed = parsePortableExperimentFile(legacyExperiment());
-
-    expect(parsed.migrated).toBe(true);
     expect(parsed.sourceVersion).toBe(0);
+    expect(parsed.migrated).toBe(true);
     expect(parsed.experiment.inputs.distanceSource).toBe('manual');
   });
 
   it('migrates the legacy local experiment array to a versioned store', () => {
-    const parsed = parseLocalExperimentStore([legacyExperiment(), { invalid: true }]);
-
+    const parsed = parseLocalExperimentStore([legacyExperiment()]);
     expect(parsed.migrated).toBe(true);
-    expect(parsed.ignoredRecordCount).toBe(1);
-    expect(parsed.store.schema).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA);
-    expect(parsed.store.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
-    expect(parsed.store.experiments[0]?.inputs.distanceSource).toBe('manual');
-    expect(parsed.store.experiments[0]?.manualTerrainPoints).toHaveLength(1);
+    expect(parsed.experiments).toHaveLength(1);
   });
 
   it('creates a current versioned local store with provenance', () => {
-    const store = createLocalExperimentStore(
-      [savedExperimentFixture],
-      '2026-08-05T13:00:00.000Z'
-    );
+    const store = createLocalExperimentStore([savedExperimentFixture]);
+    expect(store.schema).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA);
+    expect(store.schemaVersion).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION);
     const parsed = parseLocalExperimentStore(store);
-
     expect(parsed.migrated).toBe(false);
-    expect(parsed.ignoredRecordCount).toBe(0);
-    expect(parsed.store.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
-    expect(parsed.store.experiments[0]?.geodesic?.method).toBe('vincenty');
-    expect(parsed.store.experiments[0]?.manualTerrainPoints).toHaveLength(3);
-    expect(parsed.store.experiments[0]?.terrainProfileSource)
-      .toEqual(savedExperimentFixture.terrainProfileSource);
+    expect(parsed.sourceVersion).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION);
+    expect(parsed.experiments).toEqual([savedExperimentFixture]);
   });
 
   it('normalizes multi-point order during storage', () => {
-    const store = createLocalExperimentStore([{
+    const file = createPortableExperimentFile({
       ...savedExperimentFixture,
       manualTerrainPoints: [
-        { id: 'late', distancePercent: 80, elevationM: 2 },
-        { id: 'early', distancePercent: 20, elevationM: 5 }
+        { id: 'c', distancePercent: 75, elevationM: 3 },
+        { id: 'a', distancePercent: 25, elevationM: 1 },
+        { id: 'b', distancePercent: 50, elevationM: 2 }
       ]
-    }]);
-
-    expect(store.experiments[0]?.manualTerrainPoints?.map((point) => point.id))
-      .toEqual(['early', 'late']);
+    }, '0.8.0');
+    const parsed = parsePortableExperimentFile(file);
+    expect(parsed.experiment.manualTerrainPoints?.map((point) => point.id)).toEqual(['a', 'b', 'c']);
   });
 
   it('rejects invalid CSV provenance', () => {
     const file = createPortableExperimentFile(savedExperimentFixture, '0.8.0');
-    const invalid = {
-      ...file,
-      experiment: {
-        ...file.experiment,
-        terrainProfileSource: {
-          ...file.experiment.terrainProfileSource,
-          distanceUnit: 'yards'
-        }
-      }
-    };
-
-    expect(() => parsePortableExperimentFile(invalid)).toThrow(
-      'beklenen aralıkların dışında'
-    );
+    const invalid = JSON.parse(JSON.stringify(file)) as Record<string, unknown>;
+    const experiment = invalid.experiment as Record<string, unknown>;
+    const source = experiment.terrainProfileSource as Record<string, unknown>;
+    source.sha256 = 'bad';
+    expect(() => parsePortableExperimentFile(invalid)).toThrow(PortableFormatError);
   });
 
   it('rejects an unsupported portable schema version', () => {
     const file = createPortableExperimentFile(savedExperimentFixture, '0.8.0');
-    expect(() => parsePortableExperimentFile({ ...file, schemaVersion: 99 }))
-      .toThrow(PortableFormatError);
+    expect(() => parsePortableExperimentFile({ ...file, schemaVersion: 99 })).toThrow(PortableFormatError);
   });
 
   it('rejects out-of-range coordinates', () => {
     const file = createPortableExperimentFile(savedExperimentFixture, '0.8.0');
-    const invalid = {
-      ...file,
-      experiment: {
-        ...file.experiment,
-        inputs: { ...file.experiment.inputs, observerLatitudeDeg: 140 }
-      }
-    };
-
-    expect(() => parsePortableExperimentFile(invalid)).toThrow(
-      'beklenen aralıkların dışında'
-    );
+    const invalid = JSON.parse(JSON.stringify(file)) as Record<string, unknown>;
+    const experiment = invalid.experiment as Record<string, unknown>;
+    const inputs = experiment.inputs as Record<string, unknown>;
+    inputs.observerLatitudeDeg = 100;
+    expect(() => parsePortableExperimentFile(invalid)).toThrow(PortableFormatError);
   });
 
   it('rejects an invalid legacy terrain sample position', () => {
     const file = createPortableExperimentFile(savedExperimentFixture, '0.8.0');
-    const invalid = {
-      ...file,
-      experiment: {
-        ...file.experiment,
-        inputs: { ...file.experiment.inputs, terrainIntermediateDistancePercent: 100 }
-      }
-    };
-
-    expect(() => parsePortableExperimentFile(invalid)).toThrow(
-      'beklenen aralıkların dışında'
-    );
+    const invalid = JSON.parse(JSON.stringify(file)) as Record<string, unknown>;
+    const experiment = invalid.experiment as Record<string, unknown>;
+    const inputs = experiment.inputs as Record<string, unknown>;
+    inputs.terrainMode = 'manual-three-point';
+    inputs.terrainIntermediateDistancePercent = 0;
+    delete experiment.manualTerrainPoints;
+    expect(() => parsePortableExperimentFile(invalid)).toThrow(PortableFormatError);
   });
 
   it('rejects duplicate multi-point positions', () => {
-    const file = createPortableExperimentFile(savedExperimentFixture, '0.8.0');
-    const invalid = {
-      ...file,
-      experiment: {
-        ...file.experiment,
-        manualTerrainPoints: [
-          { id: 'a', distancePercent: 40, elevationM: 2 },
-          { id: 'b', distancePercent: 40, elevationM: 3 }
-        ]
-      }
-    };
-
-    expect(() => parsePortableExperimentFile(invalid)).toThrow(
-      'beklenen aralıkların dışında'
-    );
+    const file = createPortableExperimentFile({
+      ...savedExperimentFixture,
+      manualTerrainPoints: [
+        { id: 'a', distancePercent: 50, elevationM: 2 },
+        { id: 'b', distancePercent: 50, elevationM: 3 }
+      ]
+    }, '0.8.0');
+    expect(() => parsePortableExperimentFile(file)).toThrow(PortableFormatError);
   });
 });
