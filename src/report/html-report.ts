@@ -360,6 +360,36 @@ function stellarLocalHorizonSourceSection(experiment: SavedExperiment): string {
     </section>`;
 }
 
+function stellarMotionSourceSection(experiment: SavedExperiment): string {
+  const source = experiment.stellarMotionSource;
+  if (!source) return '';
+  const stateClass = source.modifiedAfterImport ? 'source-modified' : 'source-matching';
+  const stateLabel = source.modifiedAfterImport
+    ? 'İçe aktarımdan sonra düzenlendi'
+    : '19 kaynak satırı doğrulanmış kayıtla eşleşiyor';
+  return `
+    <section class="model-section vertical-section">
+      <header class="model-heading">
+        <div><h2>Yıldız proper-motion kaynak provenansı</h2><span>BSC5P fixed-width doğrulanmış 19-yıldız altkümesi</span></div>
+        <strong class="status status-compatible">${source.entryCount}/19 doğrulandı</strong>
+      </header>
+      <div class="source-card ${stateClass}">
+        <div class="source-card-heading"><strong>${escapeHtml(source.fileName)}</strong><span>${escapeHtml(stateLabel)}</span></div>
+        <table><tbody>
+          <tr><td>Katalog</td><td>${escapeHtml(source.sourceCatalog)}</td></tr>
+          <tr><td>Subset</td><td>${escapeHtml(source.subsetId)}@${escapeHtml(source.subsetVersion)}</td></tr>
+          <tr><td>Kaynak biçim</td><td>${escapeHtml(source.sourceFormatId)}@${escapeHtml(source.sourceFormatVersion)}</td></tr>
+          <tr><td>Koordinat / epok</td><td>FK5 / J${inputNumberFormatter.format(source.sourceEpochJulianYear)}</td></tr>
+          <tr><td>Doğrulanmış yıldız</td><td>${source.entryCount}/19</td></tr>
+          <tr><td>Dosya boyutu</td><td>${inputNumberFormatter.format(source.fileSizeBytes)} bayt</td></tr>
+          <tr><td>İçe aktarma</td><td>${formatDate(source.importedAtIso)}</td></tr>
+          <tr><td>SHA-256</td><td><code>${escapeHtml(source.sha256)}</code></td></tr>
+        </tbody></table>
+        <p class="muted">Portable kayıt tüm BSC5P kataloğunu gömmez; doğrulanmış 19 sabit-genişlik kaynak satırını ve seçilen tam dosyanın SHA-256 özetini taşır. Yeniden açılışta bu 19 satır parser ve HR/J2000/V-kadir eşleşmesiyle tekrar doğrulanır.</p>
+      </div>
+    </section>`;
+}
+
 function photoCalibrationSection(experiment: SavedExperiment): string {
   const calibration = experiment.photoCalibration;
   if (!calibration) return '';
@@ -578,6 +608,7 @@ export function createExperimentHtmlReport(
     ${photoModelUncertaintySection(experiment)}
     ${textSetupHistorySection(experiment)}
     ${stellarLocalHorizonSourceSection(experiment)}
+    ${stellarMotionSourceSection(experiment)}
     ${experiment.predictions.map((prediction) => predictionSection(
       prediction,
       experiment.modelVersions[prediction.modelId]
