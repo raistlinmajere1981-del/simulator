@@ -1,0 +1,44 @@
+name: Patch 6.27 panorama report
+on:
+  push:
+    branches: [agent/panorama-skyline-ui]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/panorama-skyline-ui
+      - name: Apply guarded report patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/report/html-report.ts')
+          s = p.read_text()
+          def once(old, new):
+              global s
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'anchor count={count}: {old[:90]!r}')
+              s = s.replace(old, new, 1)
+          once("    : source.format === 'dem'\n      ? 'Kaydedilen noktalar DEM türetim kaydıyla eşleşiyor'\n      : 'Kaydedilen noktalar içe aktarılan kaynakla eşleşiyor';", "    : source.format === 'dem'\n      ? 'Kaydedilen noktalar DEM türetim kaydıyla eşleşiyor'\n      : source.format === 'panorama'\n        ? 'Kaydedilen noktalar panorama işaret/türetim kaydıyla eşleşiyor'\n        : 'Kaydedilen noktalar içe aktarılan kaynakla eşleşiyor';")
+          dem_tail = "          <tr><td>Jeodezik yedek örnek</td><td>${dem.geodesicFallbackSampleCount}</td></tr>` : `\n          <tr><td>Kaynak türü</td><td>Dış skyline dosyası</td></tr>`;"
+          pano_tail = "          <tr><td>Jeodezik yedek örnek</td><td>${dem.geodesicFallbackSampleCount}</td></tr>` : '';\n  const panorama = source.panoramaDerivation;\n  const panoramaRows = source.format === 'panorama' && panorama ? `\n          <tr><td>Kaynak türü</td><td>Panoramadan türetilmiş geometrik 360° skyline</td></tr>\n          <tr><td>Türetim algoritması</td><td>${escapeHtml(panorama.algorithmId)}@${escapeHtml(panorama.algorithmVersion)}</td></tr>\n          <tr><td>Geometri kaynağı</td><td>${panorama.geometrySource === 'gpano-xmp' ? 'GPano XMP' : 'Manuel geometri'}</td></tr>\n          <tr><td>Metadata durumu</td><td>${escapeHtml(panorama.metadataStatusAtImport)} · standart XMP ${panorama.standardXmpPacketFound ? 'var' : 'yok'} · extended XMP ${panorama.extendedXmpPacketFound ? 'var' : 'yok'} · bitmap ölçekleme ${panorama.metadataScaledToImage ? 'uygulandı' : 'uygulanmadı'}</td></tr>\n          <tr><td>Bitmap</td><td>${panorama.geometry.imageWidthPx} × ${panorama.geometry.imageHeightPx} px</td></tr>\n          <tr><td>Tam panorama</td><td>${panorama.geometry.fullPanoWidthPx} × ${panorama.geometry.fullPanoHeightPx} px · crop sol ${panorama.geometry.croppedAreaLeftPx} px · üst ${panorama.geometry.croppedAreaTopPx} px</td></tr>\n          <tr><td>Pose</td><td>heading ${metricNumberFormatters.degree.format(panorama.geometry.poseHeadingDeg)}° · pitch ${metricNumberFormatters.degree.format(panorama.geometry.posePitchDeg)}° · roll ${metricNumberFormatters.degree.format(panorama.geometry.poseRollDeg)}°</td></tr>\n          <tr><td>Panorama kapsamı</td><td>yatay ${metricNumberFormatters.degree.format(panorama.horizontalCoverageDeg)}° · düşey ${metricNumberFormatters.degree.format(panorama.verticalCoverageDeg)}° · tam küre ${panorama.fullSphereCoverage ? 'evet' : 'hayır'}</td></tr>\n          <tr><td>Manuel skyline işaretleri</td><td>${panorama.marks.length} işaret · maksimum azimut boşluğu ${metricNumberFormatters.degree.format(source.maximumAzimuthGapDeg)}°</td></tr>` : '';\n  const sourceRows = demRows || panoramaRows || `\n          <tr><td>Kaynak türü</td><td>Dış skyline dosyası</td></tr>`;"
+          once(dem_tail, pano_tail)
+          once("  const sourceKindLabel = source.format === 'dem'\n    ? 'DEM skyline kaynak provenansı'\n    : 'Yıldız yerel skyline dosya kaynağı';", "  const sourceKindLabel = source.format === 'dem'\n    ? 'DEM skyline kaynak provenansı'\n    : source.format === 'panorama'\n      ? 'Panorama skyline kaynak provenansı'\n      : 'Yıldız yerel skyline dosya kaynağı';")
+          once("  const subtitle = source.format === 'dem'\n    ? 'ESRI ASCII DEM → WGS84/toposentrik geometrik azimut → ufuk yüksekliği profili'\n    : 'Geometrik azimut → ufuk yüksekliği profili';", "  const subtitle = source.format === 'dem'\n    ? 'ESRI ASCII DEM → WGS84/toposentrik geometrik azimut → ufuk yüksekliği profili'\n    : source.format === 'panorama'\n      ? 'Equirectangular panorama pikseli → gerçek azimut / geometrik ufuk yüksekliği'\n      : 'Geometrik azimut → ufuk yüksekliği profili';")
+          once("  const formatLabel = source.format === 'dem'\n    ? 'DEM · türetilmiş geometrik'\n    : source.format.toUpperCase();", "  const formatLabel = source.format === 'dem'\n    ? 'DEM · türetilmiş geometrik'\n    : source.format === 'panorama'\n      ? 'PANORAMA · türetilmiş geometrik'\n      : source.format.toUpperCase();")
+          once('          ${demRows}', '          ${sourceRows}')
+          once('Bu kayıt ham kaynak dosya baytlarını içermez; doğrulanmış/normalize edilmiş geometrik skyline noktalarını ve kaynak bütünlük/türetim özetini taşır. DEM kaynakta geoit değişimi, atmosferik kırılma, bina/bitki örtüsü ve grid dışı arazi türetilmiş profile eklenmez.', 'Bu kayıt ham kaynak dosya veya panorama görüntü baytlarını içermez; doğrulanmış/normalize edilmiş geometrik skyline noktalarını ve kaynak bütünlük/türetim özetini taşır. DEM kaynakta geoit değişimi, atmosferik kırılma, bina/bitki örtüsü ve grid dışı arazi; panorama kaynakta otomatik görüntü segmentasyonu ve optik görünürlük sınıflaması profile eklenmez.')
+          p.write_text(s)
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/report/html-report.ts
+          git commit -m "Report panorama skyline provenance"
+          git push origin HEAD:agent/panorama-skyline-ui
