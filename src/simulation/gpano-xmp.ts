@@ -199,7 +199,8 @@ function parseGeometryFromPacket(
   const pitchRaw = readProperty(xml, prefix, 'PosePitchDegrees');
   const rollRaw = readProperty(xml, prefix, 'PoseRollDegrees');
   const pitch = pitchRaw === null ? 0 : range(finiteNumber(pitchRaw), -90, 90);
-  const roll = rollRaw === null ? 0 : range(finiteNumber(rollRaw), -180, 180);
+  const parsedRoll = rollRaw === null ? 0 : finiteNumber(rollRaw);
+  const roll = parsedRoll !== null && parsedRoll > -180 && parsedRoll <= 180 ? parsedRoll : null;
 
   const missing: string[] = [];
   if (cropWidth === null) missing.push('CroppedAreaImageWidthPixels');
@@ -310,7 +311,7 @@ export function parseGpanoMetadataFromXmpPackets(input: {
     warnings.push('Yalnız Extended XMP bulundu; GPano geometrisi bu sürümde extended paketten çıkarılmıyor.');
   }
   return {
-    status: input.standardPackets.length > 0 ? 'absent' : 'absent',
+    status: 'absent',
     metadataScaledToImage: false,
     standardXmpPacketFound: input.standardPackets.length > 0,
     extendedXmpPacketFound: Boolean(input.extendedPacketFound),
