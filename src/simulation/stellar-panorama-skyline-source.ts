@@ -131,6 +131,13 @@ export function savedStellarLocalHorizonSourceFromPanorama(input: {
       horizontalCoverageDeg: geometry.horizontalCoverageDeg,
       verticalCoverageDeg: geometry.verticalCoverageDeg,
       fullSphereCoverage: geometry.fullSphereCoverage,
+      metadataStatusAtImport: input.draft.metadata.status,
+      ...(input.draft.metadata.projectionType
+        ? { projectionTypeAtImport: input.draft.metadata.projectionType }
+        : {}),
+      metadataScaledToImage: input.draft.metadata.metadataScaledToImage,
+      standardXmpPacketFound: input.draft.metadata.standardXmpPacketFound,
+      extendedXmpPacketFound: input.draft.metadata.extendedXmpPacketFound,
       marks: mappedMarks(input.marks, profile.mappedMarks)
     },
     modifiedAfterImport: false
