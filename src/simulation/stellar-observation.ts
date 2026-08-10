@@ -382,7 +382,7 @@ export function calculateStellarObservation(input: {
             title: 'Yerel skyline kaynağı',
             formula: 'azimut → geometrik yerel ufuk yüksekliği',
             substitution: localHorizon.summary.mode === 'external'
-              ? `${localHorizon.summary.fileName} · SHA-256=${localHorizon.summary.sha256}`
+              ? `${localHorizon.summary.fileName} · kaynak türü=${localHorizon.summary.sourceKind} · SHA-256=${localHorizon.summary.sha256}`
               : localHorizon.summary.label,
             result: `${localHorizon.summary.pointCount} nokta · maksimum azimut boşluğu=${format(localHorizon.summary.maximumAzimuthGapDeg, 3)}°`
           }]
