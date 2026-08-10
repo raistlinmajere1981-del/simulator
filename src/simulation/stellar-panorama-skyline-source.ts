@@ -2,6 +2,7 @@ import type {
   SavedStellarLocalHorizonSource,
   StellarPanoramaGeometry,
   StellarPanoramaGeometrySource,
+  StellarPanoramaMarkingMethod,
   StellarPanoramaSkylineDraft,
   StellarPanoramaSkylineMark
 } from '../shared/stellar-local-horizon-import';
@@ -59,11 +60,12 @@ export function savedStellarLocalHorizonSourceFromPanorama(input: {
   draft: StellarPanoramaSkylineDraft;
   geometry: StellarPanoramaGeometry;
   geometrySource: StellarPanoramaGeometrySource;
+  markingMethod?: StellarPanoramaMarkingMethod;
   marks: readonly PanoramaSkylinePixelMark[];
 }): SavedStellarLocalHorizonSource {
   if (input.marks.length < MINIMUM_MARK_COUNT) {
     throw new StellarPanoramaSkylineSourceError(
-      `Panorama skyline için en az ${MINIMUM_MARK_COUNT} manuel işaret gerekir.`
+      `Panorama skyline için en az ${MINIMUM_MARK_COUNT} işaret gerekir.`
     );
   }
   if (
@@ -106,11 +108,17 @@ export function savedStellarLocalHorizonSourceFromPanorama(input: {
     );
   }
 
+  const markingMethod = input.markingMethod ?? 'manual';
   const warnings = [...input.draft.metadata.warnings, ...profile.warnings];
   if (input.geometrySource === 'manual') {
     warnings.push('Panorama yön/crop geometrisi kullanıcı tarafından manuel girildi; GPano XMP doğrulaması uygulanmadı.');
   } else if (input.draft.metadata.metadataScaledToImage) {
     warnings.push('GPano geometrisi gerçek bitmap boyutuna ölçeklenmiş metadata üzerinden uygulanmıştır.');
+  }
+  if (markingMethod === 'assisted-gradient-v1') {
+    warnings.push('Skyline işaretleri yerel görüntü gradyanı kullanan yardımcı taslaktan kullanıcı tarafından kabul edildi; otomatik doğrulanmış segmentasyon değildir.');
+  } else if (markingMethod === 'assisted-gradient-v1-edited') {
+    warnings.push('Skyline işaretleri görüntü gradyanı yardımcı taslağından başlatıldı ve kullanıcı tarafından elle düzenlendi; otomatik doğrulanmış segmentasyon değildir.');
   }
 
   return {
@@ -127,6 +135,7 @@ export function savedStellarLocalHorizonSourceFromPanorama(input: {
       algorithmId: EQUIRECTANGULAR_PANORAMA_ALGORITHM_ID,
       algorithmVersion: EQUIRECTANGULAR_PANORAMA_ALGORITHM_VERSION,
       geometrySource: input.geometrySource,
+      markingMethod,
       geometry: cloneGeometry(geometry),
       horizontalCoverageDeg: geometry.horizontalCoverageDeg,
       verticalCoverageDeg: geometry.verticalCoverageDeg,
