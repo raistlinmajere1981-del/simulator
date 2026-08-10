@@ -222,11 +222,17 @@ export const solarRouteComparisonMetadata: ModelMetadata = {
 export function createSolarRouteComparisonPrediction(
   result: SolarRouteComparisonResult
 ): ModelPrediction {
+  const start = result.samples[0]!;
+  const end = result.samples[result.samples.length - 1]!;
   return {
     modelId: SOLAR_ROUTE_COMPARISON_MODEL_ID,
     experimentId: result.experimentId,
     status: 'indeterminate',
     metrics: [
+      { key: 'routeStartLatitudeDeg', label: 'Rota A enlemi', value: start.latitudeDeg, unit: 'deg' },
+      { key: 'routeStartLongitudeDeg', label: 'Rota A boylamı', value: start.longitudeDeg, unit: 'deg' },
+      { key: 'routeEndLatitudeDeg', label: 'Rota B enlemi', value: end.latitudeDeg, unit: 'deg' },
+      { key: 'routeEndLongitudeDeg', label: 'Rota B boylamı', value: end.longitudeDeg, unit: 'deg' },
       { key: 'routeDistanceM', label: 'WGS84 rota mesafesi', value: result.routeDistanceM, unit: 'm' },
       { key: 'initialBearingDeg', label: 'Başlangıç rota azimutu', value: result.initialBearingDeg, unit: 'deg' },
       { key: 'startSolarElevationDeg', label: 'A noktası Güneş yüksekliği', value: result.startSolarElevationDeg, unit: 'deg' },

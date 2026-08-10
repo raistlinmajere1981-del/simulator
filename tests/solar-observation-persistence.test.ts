@@ -90,7 +90,9 @@ describe('solar observation persistence', () => {
     expect(report).toContain('Gözlem zamanı · UTC');
     expect(report).toContain('UTC ofset provenansı');
     expect(report).toContain('Gözlemci koordinatı');
-    expect(report).toContain('Geometrik Güneş konumu');
+    expect(report).toContain('Aşama 7 astronomi');
+    expect(report).toContain('Güneş/Ay, günlük/yıllık olaylar');
+    expect(report).toContain('Rota karşılaştırması B');
     expect(report).toContain('Güneş Konumu · Astronomik Referans');
     expect(report).toContain('Geometrik Güneş yüksekliği');
     expect(report).not.toContain('<small>Hedef yüksekliği</small>');

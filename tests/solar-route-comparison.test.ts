@@ -64,7 +64,9 @@ describe('solar route comparison', () => {
     const prediction = createSolarRouteComparisonPrediction(result);
 
     expect(prediction.modelId).toBe(SOLAR_ROUTE_COMPARISON_MODEL_ID);
-    expect(prediction.metrics).toHaveLength(9);
+    expect(prediction.metrics).toHaveLength(13);
+    expect(prediction.metrics.some((metric) => metric.key === 'routeStartLatitudeDeg')).toBe(true);
+    expect(prediction.metrics.some((metric) => metric.key === 'routeEndLongitudeDeg')).toBe(true);
     expect(prediction.trace.steps).toHaveLength(4);
     expect(prediction.warnings.some((warning) => warning.includes('aynı fiziksel UTC'))).toBe(true);
   });
