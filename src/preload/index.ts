@@ -14,6 +14,7 @@ import type {
 import type {
   GenerateStellarDemSkylineResult,
   ImportStellarDemSkylineResult,
+  ImportStellarPanoramaSkylineResult,
   StellarDemSkylineGenerationSettings
 } from '../shared/stellar-local-horizon-import';
 import type { ImportStellarMotionResult } from '../shared/stellar-motion-source';
@@ -41,6 +42,8 @@ const api: SimulatorDesktopApi = {
     ipcRenderer.invoke('stellar-motion:import') as Promise<ImportStellarMotionResult>,
   importStellarDemSkyline: () =>
     ipcRenderer.invoke('stellar-skyline-dem:import') as Promise<ImportStellarDemSkylineResult>,
+  importStellarPanoramaSkyline: () =>
+    ipcRenderer.invoke('stellar-skyline-panorama:import') as Promise<ImportStellarPanoramaSkylineResult>,
   generateStellarDemSkyline: (
     requestId: string,
     settings: StellarDemSkylineGenerationSettings
