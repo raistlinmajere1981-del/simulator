@@ -1,0 +1,157 @@
+name: Patch 6.25 stellar panel
+
+on:
+  push:
+    branches:
+      - agent/dem-skyline-ui
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/dem-skyline-ui
+      - name: Apply guarded stellar panel patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/renderer/src/StellarObservationPanel.tsx')
+          text = path.read_text()
+
+          old_import = "import { DraftNumberInput } from './DraftNumberInput';\n"
+          new_import = old_import + "import { StellarDemSkylineControl } from './StellarDemSkylineControl';\n"
+          if text.count(old_import) != 1:
+              raise SystemExit(f'panel import anchor count={text.count(old_import)}')
+          text = text.replace(old_import, new_import, 1)
+
+          old_clone = '''  return source
+              ? { ...source, points: source.points.map((point) => ({ ...point })), warnings: [...source.warnings] }
+              : undefined;
+          '''
+          new_clone = '''  return source
+              ? {
+                  ...source,
+                  points: source.points.map((point) => ({ ...point })),
+                  warnings: [...source.warnings],
+                  ...(source.demDerivation ? { demDerivation: { ...source.demDerivation } } : {})
+                }
+              : undefined;
+          '''
+          if text.count(old_clone) != 1:
+              raise SystemExit(f'clone source anchor count={text.count(old_clone)}')
+          text = text.replace(old_clone, new_clone, 1)
+
+          old_destructure = '''  settings,
+            externalLocalHorizonSource,
+            stellarMotionSource,
+          '''
+          new_destructure = '''  settings,
+            observerHeightM,
+            externalLocalHorizonSource,
+            stellarMotionSource,
+          '''
+          if text.count(old_destructure) != 1:
+              raise SystemExit(f'props destructure anchor count={text.count(old_destructure)}')
+          text = text.replace(old_destructure, new_destructure, 1)
+
+          old_prop_type = '''  settings: StellarObservationSettings;
+            externalLocalHorizonSource?: SavedStellarLocalHorizonSource;
+          '''
+          new_prop_type = '''  settings: StellarObservationSettings;
+            observerHeightM: number;
+            externalLocalHorizonSource?: SavedStellarLocalHorizonSource;
+          '''
+          if text.count(old_prop_type) != 1:
+              raise SystemExit(f'props type anchor count={text.count(old_prop_type)}')
+          text = text.replace(old_prop_type, new_prop_type, 1)
+
+          old_import_fn_end = '''  const importLocalHorizon = async (): Promise<void> => {
+            setIsImportingHorizon(true);
+            setHorizonImportMessage('');
+            try {
+              const imported = await onImportLocalHorizon();
+              if (!imported) return;
+              setDraftExternalLocalHorizonSource(cloneExternalSource(imported));
+              setLocalHorizonDraft((current) => ({
+                ...current,
+                localHorizonEnabled: true,
+                localHorizonSourceMode: 'external'
+              }));
+              setHorizonImportMessage(`“${imported.fileName}” hazır. Uygula ve hesapla ile yıldız izine bağlanacak.`);
+            } catch (error) {
+              setHorizonImportMessage(error instanceof Error ? error.message : 'Skyline dosyası içe aktarılamadı.');
+            } finally {
+              setIsImportingHorizon(false);
+            }
+          };
+          '''
+          new_import_fn_end = old_import_fn_end + '''
+          const prepareDemSkylineSource = (source: SavedStellarLocalHorizonSource): void => {
+            setDraftExternalLocalHorizonSource(cloneExternalSource(source));
+            setLocalHorizonDraft((current) => ({
+              ...current,
+              localHorizonEnabled: true,
+              localHorizonSourceMode: 'external'
+            }));
+            setHorizonImportMessage(`“${source.fileName}” DEM skyline taslağı hazır. Uygula ve hesapla ile yıldız izine bağlanacak.`);
+          };
+          '''
+          if text.count(old_import_fn_end) != 1:
+              raise SystemExit(f'import function anchor count={text.count(old_import_fn_end)}')
+          text = text.replace(old_import_fn_end, new_import_fn_end, 1)
+
+          old_source_card_start = '''        {draftExternalLocalHorizonSource && (
+                    <div className={usesExternalDraft ? 'stellar-skyline-source-card selected' : 'stellar-skyline-source-card'}>
+          '''
+          new_source_card_start = '''        <StellarDemSkylineControl
+                  observerLatitudeDeg={result.latitudeDeg}
+                  observerLongitudeDeg={result.longitudeDeg}
+                  observerHeightM={observerHeightM}
+                  onPreparedSource={prepareDemSkylineSource}
+                />
+
+                {draftExternalLocalHorizonSource && (
+                    <div className={usesExternalDraft ? 'stellar-skyline-source-card selected' : 'stellar-skyline-source-card'}>
+          '''
+          if text.count(old_source_card_start) != 1:
+              raise SystemExit(f'source card anchor count={text.count(old_source_card_start)}')
+          text = text.replace(old_source_card_start, new_source_card_start, 1)
+
+          old_source_span = '''              <span>{draftExternalLocalHorizonSource.format.toUpperCase()} · {draftExternalLocalHorizonSource.pointCount} nokta · en büyük boşluk {angleFormatter.format(draftExternalLocalHorizonSource.maximumAzimuthGapDeg)}°</span>
+          '''
+          new_source_span = '''              <span>{draftExternalLocalHorizonSource.format === 'dem' ? 'DEM · türetilmiş geometrik' : draftExternalLocalHorizonSource.format.toUpperCase()} · {draftExternalLocalHorizonSource.pointCount} nokta · en büyük boşluk {angleFormatter.format(draftExternalLocalHorizonSource.maximumAzimuthGapDeg)}°</span>
+                  {draftExternalLocalHorizonSource.demDerivation && (
+                    <span>ΔA {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.azimuthStepDeg)}° · Δs {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.distanceStepM)} m · menzil {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.maximumDistanceM / 1_000)} km · {draftExternalLocalHorizonSource.demDerivation.samplingMethod}</span>
+                  )}
+          '''
+          if text.count(old_source_span) != 1:
+              raise SystemExit(f'source span anchor count={text.count(old_source_span)}')
+          text = text.replace(old_source_span, new_source_span, 1)
+
+          old_empty = '''        {localHorizonDraft.localHorizonEnabled && usesExternalDraft && !draftExternalLocalHorizonSource && (
+                    <p className="stellar-skyline-source-empty">Dış profil seçmek için CSV/TSV/TXT/JSON skyline dosyası içe aktar.</p>
+                  )}
+          '''
+          new_empty = '''        {localHorizonDraft.localHorizonEnabled && usesExternalDraft && !draftExternalLocalHorizonSource && (
+                    <p className="stellar-skyline-source-empty">Dış profil için CSV/TSV/TXT/JSON skyline içe aktar veya üstteki ESRI ASCII DEM'den tam 360° geometrik profil üret.</p>
+                  )}
+          '''
+          if text.count(old_empty) != 1:
+              raise SystemExit(f'empty source anchor count={text.count(old_empty)}')
+          text = text.replace(old_empty, new_empty, 1)
+
+          path.write_text(text)
+          PY
+      - name: Commit protected patch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/renderer/src/StellarObservationPanel.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Integrate staged DEM skyline control into stellar panel"
+          git push origin HEAD:agent/dem-skyline-ui
