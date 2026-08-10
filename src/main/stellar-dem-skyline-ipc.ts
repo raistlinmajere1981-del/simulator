@@ -1,4 +1,10 @@
-import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import {
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  type IpcMainInvokeEvent,
+  type OpenDialogOptions
+} from 'electron';
 import { createHash, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { basename } from 'node:path';
@@ -83,9 +89,9 @@ export function registerStellarDemSkylineHandlers(): void {
     async (event): Promise<ImportStellarDemSkylineResult> => {
       purgeExpiredImports();
       const owner = parentWindow(event);
-      const options = {
+      const options: OpenDialogOptions = {
         title: '360° Skyline için ESRI ASCII DEM Seç',
-        properties: ['openFile'] as const,
+        properties: ['openFile'],
         filters: [
           { name: 'ESRI ASCII Grid DEM', extensions: ['asc', 'txt'] },
           { name: 'Tüm Dosyalar', extensions: ['*'] }
