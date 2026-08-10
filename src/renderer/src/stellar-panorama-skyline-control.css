@@ -59,6 +59,12 @@
   cursor: not-allowed;
 }
 
+.stellar-panorama-image-help button.assist-accept {
+  border-color: rgba(205, 167, 77, 0.72);
+  background: rgba(103, 75, 24, 0.72);
+  color: #f4ddb0;
+}
+
 .stellar-panorama-source-card {
   align-items: flex-start;
   padding: 11px 12px;
@@ -134,7 +140,37 @@
 
 .stellar-panorama-image-help > div {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 7px;
+}
+
+.stellar-panorama-assist-status {
+  display: grid;
+  gap: 5px;
+  padding: 10px 11px;
+  border: 1px dashed rgba(203, 159, 66, 0.58);
+  border-left: 3px solid rgba(213, 168, 74, 0.85);
+  border-radius: 6px;
+  background: rgba(91, 65, 20, 0.2);
+  color: #c9b88f;
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+
+.stellar-panorama-assist-status > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px 12px;
+}
+
+.stellar-panorama-assist-status strong {
+  color: #f0d9a8;
+}
+
+.stellar-panorama-assist-status small {
+  color: #d0b878;
 }
 
 .stellar-panorama-image-stage {
@@ -165,9 +201,18 @@
 
 .stellar-panorama-image-stage polyline {
   fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.stellar-panorama-image-stage .stellar-panorama-active-line {
   stroke: rgba(92, 226, 196, 0.92);
   stroke-width: 0.38;
-  vector-effect: non-scaling-stroke;
+}
+
+.stellar-panorama-image-stage .stellar-panorama-assist-line {
+  stroke: rgba(240, 190, 78, 0.96);
+  stroke-width: 0.52;
+  stroke-dasharray: 1.1 0.8;
 }
 
 .stellar-panorama-mark {
@@ -185,6 +230,15 @@
   line-height: 18px;
   cursor: pointer;
   z-index: 2;
+}
+
+.stellar-panorama-mark.compact {
+  min-width: 10px;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border-width: 1px;
+  line-height: 8px;
 }
 
 .stellar-panorama-diagnostics {
@@ -252,5 +306,9 @@
 
   .stellar-panorama-source-card > div:last-child {
     text-align: left;
+  }
+
+  .stellar-panorama-image-help > div {
+    justify-content: flex-start;
   }
 }
