@@ -112,12 +112,8 @@ describe('equirectangular panorama geometry', () => {
   });
 
   it('converts manual skyline pixels into the existing normalized derived local-horizon contract', () => {
-    const marks = [
-      pixelForSphereAngles(-135, 5),
-      pixelForSphereAngles(-45, 5),
-      pixelForSphereAngles(45, 5),
-      pixelForSphereAngles(135, 5)
-    ];
+    const marks = [-157.5, -112.5, -67.5, -22.5, 22.5, 67.5, 112.5, 157.5]
+      .map((headingDeg) => pixelForSphereAngles(headingDeg, 5));
     const profile = buildPanoramaSkylineProfile({
       geometry: fullGeometry,
       sourceLabel: 'synthetic-full-panorama.jpg',
@@ -125,9 +121,12 @@ describe('equirectangular panorama geometry', () => {
     });
     expect(profile.geometry.fullSphereCoverage).toBe(true);
     expect(profile.mask.sourceKind).toBe('derived');
-    expect(profile.mask.points.map((point) => point.azimuthDeg)).toEqual([45, 135, 225, 315]);
+    expect(profile.mask.points).toHaveLength(8);
+    expect(profile.mask.points.map((point) => point.azimuthDeg)).toEqual([
+      22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5
+    ]);
     expect(profile.mask.points.every((point) => Math.abs(point.altitudeDeg - 5) < 1e-10)).toBe(true);
-    expect(profile.mask.maximumAzimuthGapDeg).toBeCloseTo(90, 10);
+    expect(profile.mask.maximumAzimuthGapDeg).toBeCloseTo(45, 10);
     expect(profile.warnings).toHaveLength(0);
   });
 
