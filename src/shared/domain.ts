@@ -11,6 +11,7 @@ export type ModelCapability =
   | 'solar-position'
   | 'lunar-position'
   | 'solar-eclipse-overlap'
+  | 'solar-eclipse-event-search'
   | 'shadow-geometry'
   | 'dual-shadow-comparison'
   | 'stellar-position';
