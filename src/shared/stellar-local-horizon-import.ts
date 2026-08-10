@@ -1,6 +1,10 @@
 export type StellarLocalHorizonImportFormat = 'csv' | 'json' | 'dem' | 'panorama';
 export type StellarDemSkylineSamplingMethod = 'nearest' | 'bilinear';
 export type StellarPanoramaGeometrySource = 'gpano-xmp' | 'manual';
+export type StellarPanoramaMarkingMethod =
+  | 'manual'
+  | 'assisted-gradient-v1'
+  | 'assisted-gradient-v1-edited';
 export type StellarPanoramaMetadataStatus =
   | 'complete'
   | 'absent'
@@ -59,6 +63,8 @@ export interface SavedStellarPanoramaSkylineDerivation {
   algorithmId: string;
   algorithmVersion: string;
   geometrySource: StellarPanoramaGeometrySource;
+  /** Optional for v11 compatibility; missing means fully manual marking. */
+  markingMethod?: StellarPanoramaMarkingMethod;
   geometry: StellarPanoramaGeometry;
   horizontalCoverageDeg: number;
   verticalCoverageDeg: number;
