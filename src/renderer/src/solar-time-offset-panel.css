@@ -1,0 +1,287 @@
+.solar-time-offset-panel {
+  margin-top: 12px;
+  padding: 14px;
+}
+
+.solar-time-offset-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.solar-time-offset-heading h2 {
+  margin: 3px 0 5px;
+}
+
+.solar-time-offset-heading p {
+  max-width: 920px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.solar-time-offset-context {
+  min-width: 210px;
+  padding: 9px 11px;
+  border: 1px solid #355164;
+  border-radius: 7px;
+  background: rgba(18, 39, 51, .7);
+  text-align: right;
+}
+
+.solar-time-offset-context span,
+.solar-time-offset-context strong,
+.solar-time-offset-context small {
+  display: block;
+}
+
+.solar-time-offset-context span {
+  color: #8bbbd0;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.solar-time-offset-context strong {
+  margin-top: 3px;
+  color: #d8e5e9;
+  font-size: 12px;
+}
+
+.solar-time-offset-context small {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.solar-clock-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.solar-clock-card {
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #304958;
+  border-radius: 7px;
+  background: rgba(13, 31, 41, .82);
+}
+
+.solar-clock-card.civil { border-top-color: #6f8491; }
+.solar-clock-card.mean { border-top-color: #61a3b8; }
+.solar-clock-card.apparent { border-top-color: #d6a746; }
+
+.solar-clock-card span,
+.solar-clock-card strong,
+.solar-clock-card small {
+  display: block;
+}
+
+.solar-clock-card span {
+  color: #78909d;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .055em;
+}
+
+.solar-clock-card strong {
+  margin-top: 5px;
+  color: #e0ebef;
+  font-size: 21px;
+  letter-spacing: .025em;
+}
+
+.solar-clock-card.apparent strong { color: #f0c665; }
+
+.solar-clock-card small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: #788b95;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.solar-time-correction-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.solar-time-correction-grid article {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #2b424f;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .012);
+}
+
+.solar-time-correction-grid article.total {
+  border-color: #6f572a;
+  background: rgba(116, 82, 25, .08);
+}
+
+.solar-time-correction-grid span,
+.solar-time-correction-grid strong,
+.solar-time-correction-grid small {
+  display: block;
+}
+
+.solar-time-correction-grid span {
+  color: #718793;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+.solar-time-correction-grid strong {
+  margin-top: 4px;
+  color: #d7e4e9;
+  font-size: 13px;
+}
+
+.solar-time-correction-grid article.total strong { color: #efc66a; }
+
+.solar-time-correction-grid small {
+  margin-top: 3px;
+  color: #72848e;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.solar-time-equation-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid #2d4655;
+  border-radius: 5px;
+  background: #0d1f29;
+  color: #8499a4;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.solar-time-equation-strip b {
+  color: #90bfd1;
+  font-weight: 700;
+}
+
+.solar-time-equation-strip strong {
+  margin-left: auto;
+  color: #e8c067;
+  font-size: 12px;
+}
+
+.solar-time-noon-strip {
+  display: grid;
+  grid-template-columns: minmax(170px, .8fr) minmax(150px, .65fr) 2fr;
+  gap: 0;
+  margin-top: 8px;
+  border: 1px solid #394b36;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(49, 67, 39, .08);
+}
+
+.solar-time-noon-strip > div {
+  padding: 8px 10px;
+}
+
+.solar-time-noon-strip > div + div {
+  border-left: 1px solid #324338;
+}
+
+.solar-time-noon-strip span,
+.solar-time-noon-strip strong {
+  display: block;
+}
+
+.solar-time-noon-strip span {
+  color: #7f9183;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.solar-time-noon-strip strong {
+  margin-top: 3px;
+  color: #dbe6d5;
+  font-size: 12px;
+}
+
+.solar-time-noon-strip p {
+  align-self: center;
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 1px solid #324338;
+  color: #819087;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.solar-time-offset-note {
+  margin: 8px 0 0;
+  padding: 7px 9px;
+  border-left: 2px solid #b58b39;
+  background: rgba(125, 91, 28, .07);
+  color: #7f939d;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1250px) {
+  .solar-time-correction-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .solar-time-noon-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .solar-time-noon-strip p {
+    grid-column: 1 / -1;
+    border-top: 1px solid #324338;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 850px) {
+  .solar-time-offset-heading {
+    flex-direction: column;
+  }
+
+  .solar-time-offset-context {
+    width: 100%;
+    text-align: left;
+  }
+
+  .solar-clock-grid,
+  .solar-time-correction-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .solar-time-equation-strip {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .solar-time-equation-strip strong {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .solar-time-noon-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .solar-time-noon-strip > div + div,
+  .solar-time-noon-strip p {
+    border-top: 1px solid #324338;
+    border-left: 0;
+  }
+}
