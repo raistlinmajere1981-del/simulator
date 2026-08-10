@@ -119,7 +119,8 @@ describe('stellar proper-motion source persistence', () => {
   it('rejects a changed source row instead of trusting copied numeric fields', () => {
     const source = validSource();
     const line = source.entries[0]!.sourceRecord.split('');
-    line[148] = line[148] === '0' ? '1' : '0';
+    const replacement = ' 0.101';
+    for (let index = 0; index < replacement.length; index += 1) line[148 + index] = replacement[index]!;
     source.entries[0] = { ...source.entries[0]!, sourceRecord: line.join('') };
     expect(() => verifiedMotionSubsetFromSavedSource(source)).toThrow();
   });

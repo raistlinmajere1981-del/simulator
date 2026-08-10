@@ -385,6 +385,12 @@ export function StellarObservationPanel({
         ) : (
           <p className="stellar-motion-empty">Kaynak uygulanmadı; yıldız sonuçları proper motion olmadan mevcut J2000 → precession zincirini kullanır.</p>
         )}
+        {stellarMotionSource && result.properMotion && !motionSourceDirty && (
+          <div className="stellar-motion-result">
+            <span>Uygulanan toplam PM kayması <strong>{angleFormatter.format(result.properMotion.angularShiftArcsec)}″</strong></span>
+            <span>J{angleFormatter.format(result.properMotion.sourceEpochJulianYear)} → gözlem epoch'u <strong>{angleFormatter.format(result.properMotion.elapsedJulianYears)} Jülyen yıl</strong></span>
+          </div>
+        )}
         {motionImportMessage && <p className="stellar-motion-message" role="status">{motionImportMessage}</p>}
         <div className="stellar-motion-apply-row">
           <span>{motionSourceDirty ? 'Proper-motion kaynak değişikliği henüz hesaplanmadı.' : stellarMotionSource ? 'Doğrulanmış proper-motion kaynağı hesapta uygulanıyor.' : 'Proper motion kapalı.'}</span>

@@ -787,3 +787,6 @@
 .stellar-motion-apply-row { margin-top: 10px; padding-top: 9px; border-top: 1px solid rgba(92, 121, 139, .28); }
 .stellar-motion-apply-row > div { display: flex; gap: 7px; }
 @media (max-width: 900px) { .stellar-motion-heading, .stellar-motion-apply-row, .stellar-motion-source-card { align-items: stretch; flex-direction: column; } .stellar-motion-apply-row > div { flex-wrap: wrap; } }
+
+.stellar-motion-result { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 9px; padding: 8px 10px; border-radius: 6px; background: rgba(50, 112, 88, .14); color: #9bb2c1; font-size: 11px; }
+.stellar-motion-result strong { margin-left: 4px; color: #b7efd8; }

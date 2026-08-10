@@ -510,7 +510,7 @@ function registerExperimentHandlers(): void {
       const selection = await showOpenDialog(event, {
         title: 'BSC5P Proper Motion Kataloğunu İçe Aktar',
         properties: ['openFile'],
-        filters: [{ name: 'BSC5P catalog / metin dosyası', extensions: ['txt', 'dat', 'catalog', '*'] }]
+        filters: [{ name: 'BSC5P catalog / tüm dosyalar', extensions: ['*'] }]
       });
       const selectedPath = selection.filePaths[0];
       if (selection.canceled || !selectedPath) {
