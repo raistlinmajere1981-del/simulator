@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+const path = 'docs/roadmap.md';
+let text = fs.readFileSync(path, 'utf8');
+function replaceOnce(before, after) {
+  const count = text.split(before).length - 1;
+  if (count !== 1) throw new Error(`roadmap anchor ${count} kez bulundu`);
+  text = text.replace(before, after);
+}
+replaceOnce('Durum: tamamlanma adayı · `1.17.0`', 'Durum: tamamlandı · `1.17.0`');
+const anchor = `### Sonraki astronomi dilimleri\n\n- resmi BSC5P kaynak dosyası erişildiğinde doğrulanmış 19-yıldız motion veri dosyasını üretip gözlem zincirine bağlama\n- DEM veya panorama gibi kaynaklardan açık provenanslı 360° skyline üretimi\n- daha geniş yıldız kataloğu gerekirse performans ve veri-provenans tasarımı\n`;
+const replacement = `### Aşama 6.22 — Doğrulanmış proper-motion kaynağını hesap zincirine uygulama\n\nDurum: tamamlandı · \`1.17.1\`\n\n- doğrulanmış BSC5P motion reference verilirse J2000 katalog yönünü önce proper motion ile gözlem epoch'una taşıma\n- proper motion sonrası mevcut IAU 2006 precession zincirini uygulama\n- seçili yıldız ve 19-yıldız snapshot için aynı motion subset sözleşmesi\n- partial/eksik 19-yıldız subset'i sessizce karıştırmak yerine fail-closed reddetme\n- prediction'a compact PM uygulanma/kayma/bileşen/kaynak-epok metrikleri\n- motion kaynağı verilmezse 1.17.0 geometrik sonucu birebir koruma\n- gerçek BSC5P sayılarını kaynak dosya olmadan tahmin edip ürün kataloğuna gömmeme\n\nAyrıntı: [\`roadmap-stage-6.22.md\`](roadmap-stage-6.22.md)\n\n### Aşama 6.23 — BSC5P proper-motion kaynak importu ve provenans\n\nDurum: tamamlanma adayı · \`1.18.0\`\n\n- resmi BSC5P \`V/50/catalog\` dosyasını Electron dosya seçicisinden alma\n- 19/19 HR + J2000 yön + V-kadir doğrulaması ve PM alanlarını zorunlu tutma\n- tam kaynak dosyanın SHA-256 / boyut / import zamanı provenansı\n- kaynak seçimini taslakta tutup ağır hesabı yalnız \`Uygula ve hesapla\` ile tek seferde çalıştırma\n- seçili yıldız ve 19-yıldız polar snapshot için doğrulanmış PM kaynağını ortak uygulama\n- portable/local-store şemasını v9'a çıkarıp v1–v8 migration'ı koruma\n- tüm katalog yerine yalnız doğrulanmış 19 exact source row'u saklayıp reopen/import sırasında tekrar parser + referans doğrulaması yapma\n- HTML raporda BSC5P proper-motion kaynak provenansı\n- polar özetinde haritada çizilenler, 0° altında çizilmeyenler ve çizilen yıldızların skyline sınıflarını ayrı sayma\n\nAyrıntı: [\`roadmap-stage-6.23.md\`](roadmap-stage-6.23.md)\n\n### Sonraki astronomi dilimleri\n\n- DEM veya panorama gibi kaynaklardan açık provenanslı 360° skyline üretimi\n- daha geniş yıldız kataloğu gerekirse performans ve veri-provenans tasarımı\n- ihtiyaç doğrulanırsa paralaks/radyal hız/perspektif ivmelenmesini ayrı astrometrik katman olarak ele alma\n`;
+replaceOnce(anchor, replacement);
+fs.writeFileSync(path, text);
+console.log('roadmap 6.23 updated');
