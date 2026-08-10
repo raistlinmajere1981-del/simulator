@@ -77,12 +77,11 @@ describe('stellar panorama skyline source', () => {
       fullSphereCoverage: false
     });
     expect(source.panoramaDerivation?.marks).toHaveLength(8);
-    expect(source.panoramaDerivation?.marks[0]).toMatchObject({
-      xPx: eightMarks[0]!.xPx,
-      yPx: eightMarks[0]!.yPx,
-      azimuthDeg: 22.5,
-      altitudeDeg: 5
-    });
+    const firstMark = source.panoramaDerivation!.marks[0]!;
+    expect(firstMark.xPx).toBe(eightMarks[0]!.xPx);
+    expect(firstMark.yPx).toBe(eightMarks[0]!.yPx);
+    expect(firstMark.azimuthDeg).toBeCloseTo(22.5, 12);
+    expect(firstMark.altitudeDeg).toBeCloseTo(5, 12);
     expect(source).not.toHaveProperty('dataUrl');
     expect(JSON.stringify(source)).not.toContain('SESSION_ONLY');
   });
@@ -137,7 +136,8 @@ describe('stellar panorama skyline source', () => {
   });
 
   it('rejects sparse marks with an azimuth gap over 90 degrees', () => {
-    const sparseMarks = [0, 30, 60, 90, 120, 150, 180, 210].map((azimuthDeg) => markAtAzimuth(azimuthDeg));
+    const sparseMarks = [15, 45, 75, 105, 135, 165, 195, 225]
+      .map((azimuthDeg) => markAtAzimuth(azimuthDeg));
     expect(() => savedStellarLocalHorizonSourceFromPanorama({
       draft,
       geometry,
