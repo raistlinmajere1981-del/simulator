@@ -1,6 +1,6 @@
 # Aşama 6.24 — DEM → 360° geometrik skyline çekirdeği
 
-Durum: tamamlanma adayı · `1.18.1`
+Durum: tamamlandı · `1.18.1`
 
 ## Amaç
 
@@ -57,6 +57,10 @@ Her ışın şu durumlardan birini taşır:
 - azimut adımı 360°'yi tam bölmelidir,
 - mevcut Vincenty direct çözümü kullanılır; yakınsama olmazsa mevcut açık `spherical-fallback` davranışı korunur ve sayaç/uyarıya yazılır.
 
+## Sayısal sınır
+
+Aynı enlem/boylamda yalnız yükseklik farkı bulunan iki ECEF noktasının çıkarılması nanometre ölçeğinde East/North kayan nokta artığı bırakabilir. Zenith/nadir yönünde bu artıkların keyfi bir azimut üretmemesi için toposentrik yön çözümü mutlak `1e-8 m` ve bağıl `1e-12 × slantDistance` eşiğinin büyüğünü yatay sıfır toleransı olarak kullanır. Bu eşik DEM ve gözlem ölçeğinin çok altındadır; yalnız sayısal tekilliği tanımlar.
+
 ## Bilimsel sınır
 
 Bu çıktı **geometrik DEM skyline**'dır. Şunlar uygulanmaz:
@@ -73,12 +77,15 @@ Bu nedenle 6.19'daki apparent yıldız yüksekliğiyle otomatik optik görünür
 
 - EPSG 9836 resmi ENU/toposentrik örneğini yeniden üretme,
 - WGS84 ekvator ve kutup geosentrik eksen testleri,
+- zenit/nadir azimut tekilliğinde floating-point artıklarını yön uydurmadan `null` tutma,
 - direct Vincenty bearing-distance regresyonu,
 - tam kapsamalı düz DEM,
 - belirli azimuttaki yüksek DEM hücresini skyline kritik noktası olarak seçme,
 - NODATA yönünü ufuk uydurmadan eksik işaretleme,
 - grid kenarına ulaşan ışını `coverage-limited` işaretleme,
 - geçersiz azimut bölümü / kapsam / örnek bütçesi korumaları.
+
+Final doğrulama: 87 test dosyası / 455 test, strict Node+Web TypeScript, production Electron/Vite build ve `npm audit` 0 açık.
 
 ## Sonraki aşama
 
