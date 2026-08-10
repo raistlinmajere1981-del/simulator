@@ -1,8 +1,6 @@
-import { useMemo, useState } from 'react';
-import {
-  calculateSolarRouteComparison,
-  type SolarRouteComparisonResult,
-  type SolarRouteSample
+import type {
+  SolarRouteComparisonResult,
+  SolarRouteSample
 } from '../../simulation/solar-route-comparison';
 import { formatUtcOffset } from '../../shared/celestial-time';
 import { DraftNumberInput } from './DraftNumberInput';
@@ -95,49 +93,26 @@ function EndpointCard({
 }
 
 export function SolarRouteComparisonPanel({
-  experimentId,
-  observedAtIso,
+  result,
+  error,
   utcOffsetMinutes,
   startLatitudeDeg,
-  startLongitudeDeg
+  startLongitudeDeg,
+  endLatitudeDeg,
+  endLongitudeDeg,
+  onEndLatitudeChange,
+  onEndLongitudeChange
 }: {
-  experimentId: string;
-  observedAtIso: string;
+  result?: SolarRouteComparisonResult;
+  error?: string;
   utcOffsetMinutes: number;
   startLatitudeDeg: number;
   startLongitudeDeg: number;
+  endLatitudeDeg: number;
+  endLongitudeDeg: number;
+  onEndLatitudeChange(value: number): void;
+  onEndLongitudeChange(value: number): void;
 }): React.JSX.Element {
-  const [endLatitudeDeg, setEndLatitudeDeg] = useState(startLatitudeDeg);
-  const [endLongitudeDeg, setEndLongitudeDeg] = useState(() => normalizeLongitude(startLongitudeDeg + 30));
-
-  const calculation = useMemo((): { result?: SolarRouteComparisonResult; error?: string } => {
-    try {
-      return {
-        result: calculateSolarRouteComparison({
-          experimentId,
-          observedAtIso,
-          utcOffsetMinutes,
-          startLatitudeDeg,
-          startLongitudeDeg,
-          endLatitudeDeg,
-          endLongitudeDeg,
-          sampleCount: 5
-        })
-      };
-    } catch (error) {
-      return { error: error instanceof Error ? error.message : 'Rota karşılaştırması hesaplanamadı.' };
-    }
-  }, [
-    endLatitudeDeg,
-    endLongitudeDeg,
-    experimentId,
-    observedAtIso,
-    startLatitudeDeg,
-    startLongitudeDeg,
-    utcOffsetMinutes
-  ]);
-
-  const result = calculation.result;
   const startSample = result?.samples[0];
   const endSample = result?.samples.at(-1);
   const polyline = result?.samples.map((sample) => `${chartX(sample.fraction)},${chartY(sample.solarElevationDeg)}`).join(' ') ?? '';
@@ -157,8 +132,8 @@ export function SolarRouteComparisonPanel({
           <button
             type="button"
             onClick={() => {
-              setEndLatitudeDeg(startLatitudeDeg);
-              setEndLongitudeDeg(normalizeLongitude(startLongitudeDeg + 30));
+              onEndLatitudeChange(startLatitudeDeg);
+              onEndLongitudeChange(normalizeLongitude(startLongitudeDeg + 30));
             }}
           >
             B'yi 30° doğuya al
@@ -184,18 +159,18 @@ export function SolarRouteComparisonPanel({
           </dl>
         </div>
         <EndpointCard
-          label="B · karşılaştırma noktası"
+          label="B · karşılaştırma noktası · kayda dahil"
           latitudeDeg={endLatitudeDeg}
           longitudeDeg={endLongitudeDeg}
           sample={endSample}
           editable
-          onLatitudeChange={setEndLatitudeDeg}
-          onLongitudeChange={setEndLongitudeDeg}
+          onLatitudeChange={onEndLatitudeChange}
+          onLongitudeChange={onEndLongitudeChange}
         />
       </div>
 
-      {calculation.error ? (
-        <div className="solar-route-error">{calculation.error}</div>
+      {error ? (
+        <div className="solar-route-error">{error}</div>
       ) : result ? (
         <>
           <div className="solar-route-diagnostics">
@@ -260,7 +235,7 @@ export function SolarRouteComparisonPanel({
       ) : null}
 
       <p className="solar-route-note">
-        Aynı sabit UTC ofseti bütün rota noktalarında yalnız karşılaştırma amacıyla korunur; bu panel IANA saat dilimi/DST sınırlarını rota boyunca değiştirmez. Atmosferik kırılma, topoğrafik ufuk ve seyahat süresi uygulanmaz.
+        B koordinatı artık deney girdisinin hedef koordinat alanlarında saklanır; kaydetme, yeniden açma ve .ggl.json aktarımı bu karşılaştırma noktasını korur. Aynı sabit UTC ofseti bütün rota noktalarında yalnız karşılaştırma amacıyla kullanılır; IANA saat dilimi/DST sınırları, atmosferik kırılma, topoğrafik ufuk ve seyahat süresi uygulanmaz.
       </p>
     </section>
   );
