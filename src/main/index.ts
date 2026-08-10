@@ -47,6 +47,7 @@ import {
   attachTerrainSourceIntegrity,
   calculateTerrainSourceIntegrity
 } from './terrain-source-integrity';
+import { registerStellarDemSkylineHandlers } from './stellar-dem-skyline-ipc';
 
 const EXPERIMENTS_FILE_NAME = 'experiments.json';
 const MAX_TERRAIN_PROFILE_BYTES = 5 * 1024 * 1024;
@@ -276,6 +277,7 @@ function terrainMappingResult(
 }
 
 function registerExperimentHandlers(): void {
+  registerStellarDemSkylineHandlers();
   ipcMain.handle('experiments:list', async () => readExperiments());
 
   ipcMain.handle(

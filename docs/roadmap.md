@@ -771,10 +771,11 @@ Ayrıntı: [`roadmap-stage-6.22.md`](roadmap-stage-6.22.md)
 
 ### Aşama 6.23 — BSC5P proper-motion kaynak importu ve provenans
 
-Durum: tamamlanma adayı · `1.18.0`
+Durum: tamamlandı · `1.18.0`
 
 - resmi BSC5P `V/50/catalog` dosyasını Electron dosya seçicisinden alma
 - 19/19 HR + J2000 yön + V-kadir doğrulaması ve PM alanlarını zorunlu tutma
+- gerçek katalog dağıtımındaki 160–197 karakter trailing-blank satırlarını güvenli fixed-width çözümleme
 - tam kaynak dosyanın SHA-256 / boyut / import zamanı provenansı
 - kaynak seçimini taslakta tutup ağır hesabı yalnız `Uygula ve hesapla` ile tek seferde çalıştırma
 - seçili yıldız ve 19-yıldız polar snapshot için doğrulanmış PM kaynağını ortak uygulama
@@ -785,9 +786,39 @@ Durum: tamamlanma adayı · `1.18.0`
 
 Ayrıntı: [`roadmap-stage-6.23.md`](roadmap-stage-6.23.md)
 
+### Aşama 6.24 — DEM → 360° geometrik skyline çekirdeği
+
+Durum: tamamlandı · `1.18.1`
+
+- ESRI ASCII Grid'i WGS84 jeodezik ışınlarla 360° tarama
+- EPSG-style geocentric → East/North/Up toposentrik geometri
+- her azimutta maksimum geometrik yükselme açısını skyline olarak seçme
+- complete / coverage-limited / NODATA / no-coverage fail-closed durumları
+- 1440 yön / 500 km / 2.000.000 örnek güvenlik sınırları
+- açık DEM datum → WGS84 elipsoid sabit yükseklik ofseti
+- atmosferik kırılma ve optik görünürlük uygulamama
+
+Ayrıntı: [`roadmap-stage-6.24.md`](roadmap-stage-6.24.md)
+
+### Aşama 6.25 — DEM skyline kaynak üretimi ve Yıldız Gözlemleri entegrasyonu
+
+Durum: tamamlanma adayı · `1.19.0`
+
+- DEM seçimi → taslak; ağır 360° taramayı dosya seçiminden ayırma
+- parse edilmiş grid'i main-process'te geçici requestId ile tutma
+- açık `DEM skyline üret` eylemiyle 360° tarama
+- yalnız tam kapsamada `format: dem` yerel skyline kaynağı üretme
+- yıldız hesabını yine mevcut `Uygula ve hesapla` kapısıyla tek seferde çalıştırma
+- DEM SHA-256 + grid/türetim ayarları + algoritma sürümü provenansı
+- portable/local-store v10 ve v1–v9 migration
+- HTML raporda DEM skyline türetim provenansı
+- sentetik 41×41 ESRI ASCII entegrasyon örneği
+
+Ayrıntı: [`roadmap-stage-6.25.md`](roadmap-stage-6.25.md)
+
 ### Sonraki astronomi dilimleri
 
-- DEM veya panorama gibi kaynaklardan açık provenanslı 360° skyline üretimi
+- panorama/fotoğraf tabanlı 360° skyline için kamera yönelimi ve lens kalibrasyonu
 - daha geniş yıldız kataloğu gerekirse performans ve veri-provenans tasarımı
 - ihtiyaç doğrulanırsa paralaks/radyal hız/perspektif ivmelenmesini ayrı astrometrik katman olarak ele alma
 

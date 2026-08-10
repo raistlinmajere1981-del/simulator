@@ -125,16 +125,16 @@ describe('stellar proper-motion source persistence', () => {
     expect(() => verifiedMotionSubsetFromSavedSource(source)).toThrow();
   });
 
-  it('round-trips the verified source through portable schema v9', () => {
+  it('round-trips the verified source through current portable schema v10', () => {
     const portable = createPortableExperimentFile(
       experimentWithMotionSource(),
-      '1.18.0',
+      '1.19.0',
       '2026-08-10T00:01:00.000Z'
     );
-    expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(9);
-    expect(portable.schemaVersion).toBe(9);
+    expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(10);
+    expect(portable.schemaVersion).toBe(10);
     const parsed = parsePortableExperimentFile(JSON.parse(JSON.stringify(portable)));
-    expect(parsed.sourceVersion).toBe(9);
+    expect(parsed.sourceVersion).toBe(10);
     expect(parsed.migrated).toBe(false);
     expect(parsed.experiment.stellarMotionSource?.entryCount).toBe(19);
     expect(parsed.experiment.stellarMotionSource?.sha256).toBe('a'.repeat(64));
@@ -142,7 +142,7 @@ describe('stellar proper-motion source persistence', () => {
   });
 
   it('rejects portable tampering of a verified motion value', () => {
-    const portable = createPortableExperimentFile(experimentWithMotionSource(), '1.18.0');
+    const portable = createPortableExperimentFile(experimentWithMotionSource(), '1.19.0');
     const raw = JSON.parse(JSON.stringify(portable));
     raw.experiment.stellarMotionSource.entries[2].properMotionDecArcsecPerYear += 0.2;
     expect(() => parsePortableExperimentFile(raw)).toThrow('eksik, bozuk');

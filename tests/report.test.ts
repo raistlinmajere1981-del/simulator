@@ -16,7 +16,7 @@ describe('experiment html report', () => {
     expect(html).toContain('Başlangıç azimutu');
     expect(html).toContain('wgs84:fixture');
     expect(html).toContain('Düşey Referans ve Arazi');
-    expect(html).toContain('Taşınabilir deney şeması v9');
+    expect(html).toContain('Taşınabilir deney şeması v10');
     expect(html).toContain('Ortalama deniz seviyesi');
     expect(html).toContain('Datum / gelgit ofseti');
     expect(html).toContain('3 ara noktalı manuel profil');

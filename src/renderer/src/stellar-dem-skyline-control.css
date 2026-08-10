@@ -1,0 +1,178 @@
+.stellar-dem-skyline-control {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #294457;
+  border-radius: 7px;
+  background: rgba(8, 20, 29, 0.42);
+}
+
+.stellar-dem-skyline-heading,
+.stellar-dem-generate-row,
+.stellar-dem-source-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.stellar-dem-skyline-heading > div,
+.stellar-dem-source-card > div {
+  display: grid;
+  gap: 3px;
+}
+
+.stellar-dem-skyline-heading strong {
+  color: #d9e6ee;
+  font-size: 12px;
+}
+
+.stellar-dem-skyline-heading span,
+.stellar-dem-generate-row > span,
+.stellar-dem-source-card span,
+.stellar-dem-source-card small {
+  color: #8498a7;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.stellar-dem-skyline-heading button,
+.stellar-dem-generate-row button {
+  min-height: 31px;
+  padding: 6px 10px;
+  border: 1px solid #42657b;
+  border-radius: 4px;
+  color: #bcd9ea;
+  background: #102432;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.stellar-dem-generate-row button {
+  border-color: #39765d;
+  color: #9ce3bf;
+  background: #102d23;
+}
+
+.stellar-dem-skyline-heading button:disabled,
+.stellar-dem-generate-row button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.stellar-dem-source-card {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #385668;
+  border-radius: 5px;
+  background: rgba(21, 39, 51, 0.72);
+}
+
+.stellar-dem-source-card strong {
+  color: #ddeaf2;
+  font-size: 12px;
+}
+
+.stellar-dem-source-card code {
+  padding: 0;
+  border: 0;
+  color: #9fc6dc;
+  background: transparent;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+}
+
+.stellar-dem-source-card > div:last-child {
+  min-width: 230px;
+  text-align: right;
+}
+
+.stellar-dem-settings {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.stellar-dem-settings label {
+  display: grid;
+  gap: 5px;
+}
+
+.stellar-dem-settings label > span {
+  color: #8396a5;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.stellar-dem-settings input,
+.stellar-dem-settings select {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 5px 7px;
+  border: 1px solid #334c5e;
+  border-radius: 4px;
+  color: #d8e4ec;
+  background: #0d1923;
+}
+
+.stellar-dem-generate-row {
+  align-items: center;
+  margin-top: 10px;
+}
+
+.stellar-dem-diagnostics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-left: 2px solid #418368;
+  color: #8fa5b4;
+  background: rgba(21, 52, 42, .35);
+  font-size: 10px;
+}
+
+.stellar-dem-diagnostics.incomplete {
+  border-left-color: #b88b3b;
+  background: rgba(69, 52, 24, .32);
+}
+
+.stellar-dem-diagnostics strong {
+  color: #d7e7ef;
+}
+
+.stellar-dem-message {
+  margin: 9px 0 0;
+  color: #9bc8ae;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.stellar-dem-message.warning {
+  color: #d3ae69;
+}
+
+@media (max-width: 1250px) {
+  .stellar-dem-settings {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .stellar-dem-skyline-heading,
+  .stellar-dem-generate-row,
+  .stellar-dem-source-card {
+    display: grid;
+  }
+
+  .stellar-dem-source-card > div:last-child {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .stellar-dem-settings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1796,7 +1796,10 @@ export function AppNext(): React.JSX.Element {
       ? {
           ...saved.stellarLocalHorizonSource,
           points: saved.stellarLocalHorizonSource.points.map((point) => ({ ...point })),
-          warnings: [...saved.stellarLocalHorizonSource.warnings]
+          warnings: [...saved.stellarLocalHorizonSource.warnings],
+          ...(saved.stellarLocalHorizonSource.demDerivation
+            ? { demDerivation: { ...saved.stellarLocalHorizonSource.demDerivation } }
+            : {})
         }
       : undefined;
     const safeStellarSettings = storedStellarSettings.localHorizonSourceMode === 'external' && !storedStellarSource
@@ -1949,7 +1952,10 @@ export function AppNext(): React.JSX.Element {
           ? {
               ...saved.stellarLocalHorizonSource,
               points: saved.stellarLocalHorizonSource.points.map((point) => ({ ...point })),
-              warnings: [...saved.stellarLocalHorizonSource.warnings]
+              warnings: [...saved.stellarLocalHorizonSource.warnings],
+              ...(saved.stellarLocalHorizonSource.demDerivation
+                ? { demDerivation: { ...saved.stellarLocalHorizonSource.demDerivation } }
+                : {})
             }
           : undefined;
         setStellarLocalHorizonSource(reopenedStellarSource);
@@ -2261,6 +2267,7 @@ export function AppNext(): React.JSX.Element {
                   result={stellarObservationResult}
                   prediction={stellarObservationPrediction}
                   settings={stellarObservationSettings}
+                  observerHeightM={inputs.observerHeightM}
                   externalLocalHorizonSource={stellarLocalHorizonSource}
                   stellarMotionSource={stellarMotionSource}
                   onChange={(settings) => { setStellarObservationSettings(settings); setIsDirty(true); }}

@@ -9,6 +9,7 @@ import type { ModelPrediction } from '../../shared/domain';
 import type { SavedStellarLocalHorizonSource } from '../../shared/stellar-local-horizon-import';
 import type { SavedStellarMotionSource } from '../../shared/stellar-motion-source';
 import { DraftNumberInput } from './DraftNumberInput';
+import { StellarDemSkylineControl } from './StellarDemSkylineControl';
 import { projectStellarSkyPoint, stellarSkyMarkerRadius } from './stellar-sky-visualization';
 import './stellar-observation-panel.css';
 
@@ -143,7 +144,12 @@ function cloneExternalSource(
   source: SavedStellarLocalHorizonSource | undefined
 ): SavedStellarLocalHorizonSource | undefined {
   return source
-    ? { ...source, points: source.points.map((point) => ({ ...point })), warnings: [...source.warnings] }
+    ? {
+        ...source,
+        points: source.points.map((point) => ({ ...point })),
+        warnings: [...source.warnings],
+        ...(source.demDerivation ? { demDerivation: { ...source.demDerivation } } : {})
+      }
     : undefined;
 }
 
@@ -163,6 +169,7 @@ export function StellarObservationPanel({
   result,
   prediction,
   settings,
+  observerHeightM,
   externalLocalHorizonSource,
   stellarMotionSource,
   onChange,
@@ -175,6 +182,7 @@ export function StellarObservationPanel({
   result: StellarObservationResult;
   prediction: ModelPrediction;
   settings: StellarObservationSettings;
+  observerHeightM: number;
   externalLocalHorizonSource?: SavedStellarLocalHorizonSource;
   stellarMotionSource?: SavedStellarMotionSource;
   onChange(settings: StellarObservationSettings): void;
@@ -297,6 +305,16 @@ export function StellarObservationPanel({
       setIsImportingHorizon(false);
     }
   };
+
+  const prepareDemSkylineSource = (source: SavedStellarLocalHorizonSource): void => {
+  setDraftExternalLocalHorizonSource(cloneExternalSource(source));
+  setLocalHorizonDraft((current) => ({
+    ...current,
+    localHorizonEnabled: true,
+    localHorizonSourceMode: 'external'
+  }));
+  setHorizonImportMessage(`“${source.fileName}” DEM skyline taslağı hazır. Uygula ve hesapla ile yıldız izine bağlanacak.`);
+};
 
   return (
     <section className="panel stellar-observation-panel">
@@ -503,12 +521,22 @@ export function StellarObservationPanel({
           </button>
         </div>
 
-        {draftExternalLocalHorizonSource && (
+        <StellarDemSkylineControl
+        observerLatitudeDeg={result.latitudeDeg}
+        observerLongitudeDeg={result.longitudeDeg}
+        observerHeightM={observerHeightM}
+        onPreparedSource={prepareDemSkylineSource}
+      />
+
+      {draftExternalLocalHorizonSource && (
           <div className={usesExternalDraft ? 'stellar-skyline-source-card selected' : 'stellar-skyline-source-card'}>
             <div>
               <small>DOSYA SKYLINE KAYNAĞI</small>
               <strong>{draftExternalLocalHorizonSource.fileName}</strong>
-              <span>{draftExternalLocalHorizonSource.format.toUpperCase()} · {draftExternalLocalHorizonSource.pointCount} nokta · en büyük boşluk {angleFormatter.format(draftExternalLocalHorizonSource.maximumAzimuthGapDeg)}°</span>
+              <span>{draftExternalLocalHorizonSource.format === 'dem' ? 'DEM · türetilmiş geometrik' : draftExternalLocalHorizonSource.format.toUpperCase()} · {draftExternalLocalHorizonSource.pointCount} nokta · en büyük boşluk {angleFormatter.format(draftExternalLocalHorizonSource.maximumAzimuthGapDeg)}°</span>
+        {draftExternalLocalHorizonSource.demDerivation && (
+          <span>ΔA {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.azimuthStepDeg)}° · Δs {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.distanceStepM)} m · menzil {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.maximumDistanceM / 1_000)} km · {draftExternalLocalHorizonSource.demDerivation.samplingMethod}</span>
+        )}
             </div>
             <div>
               <span>SHA-256 <code title={draftExternalLocalHorizonSource.sha256}>{draftExternalLocalHorizonSource.sha256.slice(0, 12)}…</code></span>
@@ -540,7 +568,7 @@ export function StellarObservationPanel({
         )}
 
         {localHorizonDraft.localHorizonEnabled && usesExternalDraft && !draftExternalLocalHorizonSource && (
-          <p className="stellar-skyline-source-empty">Dış profil seçmek için CSV/TSV/TXT/JSON skyline dosyası içe aktar.</p>
+          <p className="stellar-skyline-source-empty">Dış profil için CSV/TSV/TXT/JSON skyline içe aktar veya üstteki ESRI ASCII DEM'den tam 360° geometrik profil üret.</p>
         )}
         {draftExternalLocalHorizonSource && draftExternalLocalHorizonSource.warnings.length > 0 && usesExternalDraft && (
           <div className="stellar-skyline-source-warnings">
