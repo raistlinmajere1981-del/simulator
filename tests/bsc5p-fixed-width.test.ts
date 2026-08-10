@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BSC5P_FIXED_WIDTH_MIN_RECORD_LENGTH,
   BSC5P_FIXED_WIDTH_RECORD_LENGTH,
   Bsc5pFixedWidthError,
   parseBsc5pFixedWidthCatalog,
@@ -94,6 +95,29 @@ describe('BSC5P fixed-width parser', () => {
     expect(record.hasNote).toBe(false);
   });
 
+  it('accepts a right-trimmed distributed record and pads only for field extraction', () => {
+    const full = makeRecord({ parallax: null, radialVelocity: null, note: false });
+    const distributed = full.slice(0, BSC5P_FIXED_WIDTH_MIN_RECORD_LENGTH);
+    const record = parseBsc5pFixedWidthRecord(distributed);
+
+    expect(distributed).toHaveLength(160);
+    expect(record.rawLine).toBe(distributed);
+    expect(record.properMotionRaStarArcsecPerYear).toBe(-0.5);
+    expect(record.properMotionDecArcsecPerYear).toBe(-1.2);
+    expect(record.parallaxArcsec).toBeNull();
+    expect(record.radialVelocityKmPerSec).toBeNull();
+    expect(record.hasNote).toBe(false);
+  });
+
+  it('accepts a 196-character record whose missing final NoteFlag column is blank', () => {
+    const distributed = makeRecord({ note: false }).slice(0, 196);
+    const record = parseBsc5pFixedWidthRecord(distributed);
+
+    expect(record.rawLine).toHaveLength(196);
+    expect(record.radialVelocityKmPerSec).toBe(-12);
+    expect(record.hasNote).toBe(false);
+  });
+
   it('accepts records whose complete J2000 position is blank', () => {
     const line = makeRecord().split('');
     for (let index = 75; index < 90; index += 1) line[index] = ' ';
@@ -108,15 +132,16 @@ describe('BSC5P fixed-width parser', () => {
     expect(() => parseBsc5pFixedWidthRecord(line.join(''))).toThrow(Bsc5pFixedWidthError);
   });
 
-  it('rejects wrong record length and invalid coordinate ranges', () => {
-    expect(() => parseBsc5pFixedWidthRecord('2491')).toThrow('197');
+  it('rejects genuinely truncated or overlong records and invalid coordinate ranges', () => {
+    expect(() => parseBsc5pFixedWidthRecord(makeRecord().slice(0, 159))).toThrow('160..197');
+    expect(() => parseBsc5pFixedWidthRecord(`${makeRecord()}X`)).toThrow('160..197');
     expect(() => parseBsc5pFixedWidthRecord(makeRecord({ raHours: 24 }))).toThrow('RA saati');
     expect(() => parseBsc5pFixedWidthRecord(makeRecord({ decDegrees: 90, decMinutes: 1 }))).toThrow('±90°');
   });
 
   it('parses a catalog text and rejects duplicate HR identifiers', () => {
     const first = makeRecord({ hr: 2491 });
-    const second = makeRecord({ hr: 7001, name: 'SECOND' });
+    const second = makeRecord({ hr: 7001, name: 'SECOND' }).slice(0, 196);
     expect(parseBsc5pFixedWidthCatalog(`${first}\n${second}\n`)).toHaveLength(2);
     expect(() => parseBsc5pFixedWidthCatalog(`${first}\n${first}`)).toThrow('yinelenen HR');
   });
