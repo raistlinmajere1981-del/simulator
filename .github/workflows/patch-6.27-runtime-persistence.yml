@@ -1,0 +1,51 @@
+name: Patch 6.27 panorama runtime persistence
+on:
+  push:
+    branches: [agent/panorama-skyline-ui]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/panorama-skyline-ui
+      - name: Apply guarded runtime patches
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          def patch_once(path, old, new):
+              p = Path(path)
+              s = p.read_text()
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: anchor count={count}: {old[:80]!r}')
+              p.write_text(s.replace(old, new, 1))
+
+          path = 'src/renderer/src/AppNext.tsx'
+          first = "          ...(saved.stellarLocalHorizonSource.demDerivation\n            ? { demDerivation: { ...saved.stellarLocalHorizonSource.demDerivation } }\n            : {})"
+          first_new = first + ",\n          ...(saved.stellarLocalHorizonSource.panoramaDerivation\n            ? { panoramaDerivation: {\n                ...saved.stellarLocalHorizonSource.panoramaDerivation,\n                geometry: { ...saved.stellarLocalHorizonSource.panoramaDerivation.geometry },\n                marks: saved.stellarLocalHorizonSource.panoramaDerivation.marks.map((mark) => ({ ...mark }))\n              } }\n            : {})"
+          patch_once(path, first, first_new)
+
+          second = "              ...(saved.stellarLocalHorizonSource.demDerivation\n                ? { demDerivation: { ...saved.stellarLocalHorizonSource.demDerivation } }\n                : {})"
+          second_new = second + ",\n              ...(saved.stellarLocalHorizonSource.panoramaDerivation\n                ? { panoramaDerivation: {\n                    ...saved.stellarLocalHorizonSource.panoramaDerivation,\n                    geometry: { ...saved.stellarLocalHorizonSource.panoramaDerivation.geometry },\n                    marks: saved.stellarLocalHorizonSource.panoramaDerivation.marks.map((mark) => ({ ...mark }))\n                  } }\n                : {})"
+          patch_once(path, second, second_new)
+
+          path = 'src/simulation/stellar-observation.ts'
+          patch_once(path, "export const STELLAR_OBSERVATION_MODEL_VERSION = '0.7.0';", "export const STELLAR_OBSERVATION_MODEL_VERSION = '0.8.0';")
+          patch_once(path, "  demDerivation?: SavedStellarLocalHorizonSource['demDerivation'];", "  demDerivation?: SavedStellarLocalHorizonSource['demDerivation'];\n  panoramaDerivation?: SavedStellarLocalHorizonSource['panoramaDerivation'];")
+          patch_once(path, "    sourceKind: source.format === 'dem' ? 'derived' : 'external',", "    sourceKind: source.format === 'dem' || source.format === 'panorama' ? 'derived' : 'external',")
+          patch_once(path, "      ...(source.demDerivation ? { demDerivation: { ...source.demDerivation } } : {}),", "      ...(source.demDerivation ? { demDerivation: { ...source.demDerivation } } : {}),\n      ...(source.panoramaDerivation\n        ? { panoramaDerivation: {\n            ...source.panoramaDerivation,\n            geometry: { ...source.panoramaDerivation.geometry },\n            marks: source.panoramaDerivation.marks.map((mark) => ({ ...mark }))\n          } }\n        : {}),")
+          old_warning = "    : localHorizon.summary?.format === 'dem' && localHorizon.summary.demDerivation\n      ? `DEM'den türetilmiş geometrik skyline uygulanır: ${localHorizon.summary.fileName}; ${localHorizon.summary.pointCount} nokta; ΔA=${format(localHorizon.summary.demDerivation.azimuthStepDeg, 3)}°; Δs=${format(localHorizon.summary.demDerivation.distanceStepM, 1)} m; s_max=${format(localHorizon.summary.demDerivation.maximumDistanceM / 1_000, 2)} km; SHA-256=${localHorizon.summary.sha256}.`\n      : localHorizon.summary?.mode === 'external'"
+          new_warning = "    : localHorizon.summary?.format === 'dem' && localHorizon.summary.demDerivation\n      ? `DEM'den türetilmiş geometrik skyline uygulanır: ${localHorizon.summary.fileName}; ${localHorizon.summary.pointCount} nokta; ΔA=${format(localHorizon.summary.demDerivation.azimuthStepDeg, 3)}°; Δs=${format(localHorizon.summary.demDerivation.distanceStepM, 1)} m; s_max=${format(localHorizon.summary.demDerivation.maximumDistanceM / 1_000, 2)} km; SHA-256=${localHorizon.summary.sha256}.`\n      : localHorizon.summary?.format === 'panorama' && localHorizon.summary.panoramaDerivation\n        ? `Panoramadan türetilmiş geometrik skyline uygulanır: ${localHorizon.summary.fileName}; ${localHorizon.summary.pointCount} işaret; geometri=${localHorizon.summary.panoramaDerivation.geometrySource}; heading=${format(localHorizon.summary.panoramaDerivation.geometry.poseHeadingDeg, 3)}°; maksimum azimut boşluğu=${format(localHorizon.summary.maximumAzimuthGapDeg, 3)}°; SHA-256=${localHorizon.summary.sha256}.`\n        : localHorizon.summary?.mode === 'external'"
+          patch_once(path, old_warning, new_warning)
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/renderer/src/AppNext.tsx src/simulation/stellar-observation.ts
+          git commit -m "Preserve panorama provenance through stellar runtime"
+          git push origin HEAD:agent/panorama-skyline-ui
