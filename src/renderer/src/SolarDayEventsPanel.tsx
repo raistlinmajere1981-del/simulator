@@ -5,8 +5,10 @@ import type {
   SolarThresholdEvents
 } from '../../simulation/solar-day-events';
 import { calculateSolarSeasonEvents } from '../../simulation/solar-season-events';
+import { calculateSolarTimeOffset } from '../../simulation/solar-time-offset';
 import { PanelHelpButton } from './HelpSystem';
 import { SolarSeasonEventsPanel } from './SolarSeasonEventsPanel';
+import { SolarTimeOffsetPanel } from './SolarTimeOffsetPanel';
 import './solar-day-events-panel.css';
 
 const numberFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
@@ -73,6 +75,17 @@ export function SolarDayEventsPanel({
   const seasonalYear = Number(result.localDate.slice(0, 4));
   const seasonalYearSupported = Number.isInteger(seasonalYear) &&
     seasonalYear >= MIN_SEASON_YEAR && seasonalYear <= MAX_SEASON_YEAR;
+  const solarTimeResult = useMemo(() => calculateSolarTimeOffset({
+    experimentId: result.experimentId,
+    observedAtIso: result.observedAtIso,
+    utcOffsetMinutes: result.utcOffsetMinutes,
+    longitudeDeg: result.longitudeDeg
+  }), [
+    result.experimentId,
+    result.longitudeDeg,
+    result.observedAtIso,
+    result.utcOffsetMinutes
+  ]);
   const seasonResult = useMemo(() => {
     if (!seasonalYearSupported) return undefined;
     return calculateSolarSeasonEvents({
@@ -166,6 +179,8 @@ export function SolarDayEventsPanel({
           0° kanalı Güneş merkezinin geometrik ufuk geçişidir. -0,833° kanalı gerçek atmosfer ölçümü değildir; Güneşin görünür üst kenarı ve standart kırılma için kullanılan sabit yaklaşık takvim eşiğidir. Yerel gün, kaydedilmiş açık UTC ofsetiyle kurulmuştur; saat dilimi adı veya DST kuralı otomatik uygulanmaz.
         </p>
       </section>
+
+      <SolarTimeOffsetPanel result={solarTimeResult} solarNoonIso={result.solarNoonIso} />
 
       {seasonResult ? (
         <SolarSeasonEventsPanel result={seasonResult} />
