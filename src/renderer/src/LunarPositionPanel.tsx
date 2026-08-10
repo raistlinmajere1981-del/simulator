@@ -1,6 +1,7 @@
 import type { LunarPositionResult } from '../../simulation/lunar-position';
 import { calculateSolarEclipseOverlap } from '../../simulation/solar-eclipse-overlap';
 import { calculateSolarPosition } from '../../simulation/solar-position';
+import { EclipseEventSearchPanel } from './EclipseEventSearchPanel';
 import { EclipseOverlapPanel } from './EclipseOverlapPanel';
 import { PanelHelpButton } from './HelpSystem';
 import './lunar-position-panel.css';
@@ -81,6 +82,11 @@ export function LunarPositionPanel({
       </section>
 
       <EclipseOverlapPanel result={eclipseOverlap} />
+      <EclipseEventSearchPanel
+        anchorObservedAtIso={result.observedAtIso}
+        latitudeDeg={result.latitudeDeg}
+        longitudeDeg={result.longitudeDeg}
+      />
     </>
   );
 }
