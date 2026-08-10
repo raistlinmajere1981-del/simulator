@@ -1,0 +1,49 @@
+name: Patch 6.27 panorama panel safe
+on:
+  push:
+    branches: [agent/panorama-skyline-ui]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/panorama-skyline-ui
+      - name: Apply guarded panel patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/renderer/src/StellarObservationPanel.tsx')
+          s = p.read_text()
+          def once(old, new):
+              global s
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'anchor count={count}: {old[:80]!r}')
+              s = s.replace(old, new, 1)
+          once("import { StellarDemSkylineControl } from './StellarDemSkylineControl';", "import { StellarDemSkylineControl } from './StellarDemSkylineControl';\nimport { StellarPanoramaSkylineControl } from './StellarPanoramaSkylineControl';")
+          once("        ...(source.demDerivation ? { demDerivation: { ...source.demDerivation } } : {})", "        ...(source.demDerivation ? { demDerivation: { ...source.demDerivation } } : {}),\n        ...(source.panoramaDerivation\n          ? { panoramaDerivation: {\n              ...source.panoramaDerivation,\n              geometry: { ...source.panoramaDerivation.geometry },\n              marks: source.panoramaDerivation.marks.map((mark) => ({ ...mark }))\n            } }\n          : {})")
+          prepare_anchor = "  const prepareDemSkylineSource = (source: SavedStellarLocalHorizonSource): void => {\n  setDraftExternalLocalHorizonSource(cloneExternalSource(source));\n  setLocalHorizonDraft((current) => ({\n    ...current,\n    localHorizonEnabled: true,\n    localHorizonSourceMode: 'external'\n  }));\n  setHorizonImportMessage(`“${source.fileName}” DEM skyline taslağı hazır. Uygula ve hesapla ile yıldız izine bağlanacak.`);\n};\n"
+          prepare_add = prepare_anchor + "\n  const preparePanoramaSkylineSource = (source: SavedStellarLocalHorizonSource): void => {\n    setDraftExternalLocalHorizonSource(cloneExternalSource(source));\n    setLocalHorizonDraft((current) => ({\n      ...current,\n      localHorizonEnabled: true,\n      localHorizonSourceMode: 'external'\n    }));\n    setHorizonImportMessage(`“${source.fileName}” panorama skyline taslağı hazır. Uygula ve hesapla ile yıldız izine bağlanacak.`);\n  };\n"
+          once(prepare_anchor, prepare_add)
+          dem_anchor = "        <StellarDemSkylineControl\n        observerLatitudeDeg={result.latitudeDeg}\n        observerLongitudeDeg={result.longitudeDeg}\n        observerHeightM={observerHeightM}\n        onPreparedSource={prepareDemSkylineSource}\n      />\n"
+          dem_add = dem_anchor + "\n        <StellarPanoramaSkylineControl\n          onPreparedSource={preparePanoramaSkylineSource}\n        />\n"
+          once(dem_anchor, dem_add)
+          once("              <small>DOSYA SKYLINE KAYNAĞI</small>", "              <small>YEREL SKYLINE KAYNAĞI</small>")
+          once("              <span>{draftExternalLocalHorizonSource.format === 'dem' ? 'DEM · türetilmiş geometrik' : draftExternalLocalHorizonSource.format.toUpperCase()} · {draftExternalLocalHorizonSource.pointCount} nokta · en büyük boşluk {angleFormatter.format(draftExternalLocalHorizonSource.maximumAzimuthGapDeg)}°</span>", "              <span>{draftExternalLocalHorizonSource.format === 'dem' ? 'DEM · türetilmiş geometrik' : draftExternalLocalHorizonSource.format === 'panorama' ? 'PANORAMA · türetilmiş geometrik' : draftExternalLocalHorizonSource.format.toUpperCase()} · {draftExternalLocalHorizonSource.pointCount} nokta · en büyük boşluk {angleFormatter.format(draftExternalLocalHorizonSource.maximumAzimuthGapDeg)}°</span>")
+          dem_detail = "        {draftExternalLocalHorizonSource.demDerivation && (\n          <span>ΔA {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.azimuthStepDeg)}° · Δs {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.distanceStepM)} m · menzil {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.maximumDistanceM / 1_000)} km · {draftExternalLocalHorizonSource.demDerivation.samplingMethod}</span>\n        )}\n"
+          pano_detail = dem_detail + "        {draftExternalLocalHorizonSource.panoramaDerivation && (\n          <span>{draftExternalLocalHorizonSource.panoramaDerivation.geometrySource === 'gpano-xmp' ? 'GPano XMP' : 'Manuel geometri'} · yatay {angleFormatter.format(draftExternalLocalHorizonSource.panoramaDerivation.horizontalCoverageDeg)}° · heading {angleFormatter.format(draftExternalLocalHorizonSource.panoramaDerivation.geometry.poseHeadingDeg)}° · {draftExternalLocalHorizonSource.panoramaDerivation.marks.length} işaret</span>\n        )}\n"
+          once(dem_detail, pano_detail)
+          once("Dış profil için CSV/TSV/TXT/JSON skyline içe aktar veya üstteki ESRI ASCII DEM'den tam 360° geometrik profil üret.", "Dış profil için CSV/TSV/TXT/JSON skyline içe aktar, ESRI ASCII DEM'den profil üret veya 360° panoramayı manuel işaretle.")
+          p.write_text(s)
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/renderer/src/StellarObservationPanel.tsx
+          git commit -m "Integrate panorama skyline editor into stellar panel"
+          git push origin HEAD:agent/panorama-skyline-ui
