@@ -1799,6 +1799,13 @@ export function AppNext(): React.JSX.Element {
           warnings: [...saved.stellarLocalHorizonSource.warnings],
           ...(saved.stellarLocalHorizonSource.demDerivation
             ? { demDerivation: { ...saved.stellarLocalHorizonSource.demDerivation } }
+            : {}),
+          ...(saved.stellarLocalHorizonSource.panoramaDerivation
+            ? { panoramaDerivation: {
+                ...saved.stellarLocalHorizonSource.panoramaDerivation,
+                geometry: { ...saved.stellarLocalHorizonSource.panoramaDerivation.geometry },
+                marks: saved.stellarLocalHorizonSource.panoramaDerivation.marks.map((mark) => ({ ...mark }))
+              } }
             : {})
         }
       : undefined;
@@ -1955,6 +1962,13 @@ export function AppNext(): React.JSX.Element {
               warnings: [...saved.stellarLocalHorizonSource.warnings],
               ...(saved.stellarLocalHorizonSource.demDerivation
                 ? { demDerivation: { ...saved.stellarLocalHorizonSource.demDerivation } }
+                : {}),
+              ...(saved.stellarLocalHorizonSource.panoramaDerivation
+                ? { panoramaDerivation: {
+                    ...saved.stellarLocalHorizonSource.panoramaDerivation,
+                    geometry: { ...saved.stellarLocalHorizonSource.panoramaDerivation.geometry },
+                    marks: saved.stellarLocalHorizonSource.panoramaDerivation.marks.map((mark) => ({ ...mark }))
+                  } }
                 : {})
             }
           : undefined;

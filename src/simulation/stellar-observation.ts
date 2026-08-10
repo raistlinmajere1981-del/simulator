@@ -31,7 +31,7 @@ import {
 import type { StellarProperMotionResult } from './stellar-proper-motion';
 
 export const STELLAR_OBSERVATION_MODEL_ID = 'stellar-observation-reference';
-export const STELLAR_OBSERVATION_MODEL_VERSION = '0.7.0';
+export const STELLAR_OBSERVATION_MODEL_VERSION = '0.8.0';
 
 export type StellarLocalHorizonSourceMode = 'manual' | 'external';
 
@@ -91,6 +91,7 @@ export interface StellarObservationLocalHorizonSourceSummary {
   importedAtIso?: string;
   format?: SavedStellarLocalHorizonSource['format'];
   demDerivation?: SavedStellarLocalHorizonSource['demDerivation'];
+  panoramaDerivation?: SavedStellarLocalHorizonSource['panoramaDerivation'];
   warnings: string[];
 }
 
@@ -158,7 +159,7 @@ function localHorizonMaskFromSettings(settings: StellarObservationSettings): Ste
 
 function localHorizonMaskFromExternal(source: SavedStellarLocalHorizonSource): StellarLocalHorizonMask {
   return {
-    sourceKind: source.format === 'dem' ? 'derived' : 'external',
+    sourceKind: source.format === 'dem' || source.format === 'panorama' ? 'derived' : 'external',
     sourceLabel: source.fileName,
     points: source.points.map((point) => ({ ...point }))
   };
@@ -229,6 +230,13 @@ function resolveLocalHorizon(input: {
       importedAtIso: source.importedAtIso,
       format: source.format,
       ...(source.demDerivation ? { demDerivation: { ...source.demDerivation } } : {}),
+      ...(source.panoramaDerivation
+        ? { panoramaDerivation: {
+            ...source.panoramaDerivation,
+            geometry: { ...source.panoramaDerivation.geometry },
+            marks: source.panoramaDerivation.marks.map((mark) => ({ ...mark }))
+          } }
+        : {}),
       warnings: [...source.warnings]
     }
   };
@@ -309,7 +317,9 @@ export function calculateStellarObservation(input: {
     ? 'Yerel/topoğrafik ufuk kapalıdır; geometrik görünürlük yalnız 0° astronomik ufuk anlamındadır.'
     : localHorizon.summary?.format === 'dem' && localHorizon.summary.demDerivation
       ? `DEM'den türetilmiş geometrik skyline uygulanır: ${localHorizon.summary.fileName}; ${localHorizon.summary.pointCount} nokta; ΔA=${format(localHorizon.summary.demDerivation.azimuthStepDeg, 3)}°; Δs=${format(localHorizon.summary.demDerivation.distanceStepM, 1)} m; s_max=${format(localHorizon.summary.demDerivation.maximumDistanceM / 1_000, 2)} km; SHA-256=${localHorizon.summary.sha256}.`
-      : localHorizon.summary?.mode === 'external'
+      : localHorizon.summary?.format === 'panorama' && localHorizon.summary.panoramaDerivation
+        ? `Panoramadan türetilmiş geometrik skyline uygulanır: ${localHorizon.summary.fileName}; ${localHorizon.summary.pointCount} işaret; geometri=${localHorizon.summary.panoramaDerivation.geometrySource}; heading=${format(localHorizon.summary.panoramaDerivation.geometry.poseHeadingDeg, 3)}°; maksimum azimut boşluğu=${format(localHorizon.summary.maximumAzimuthGapDeg, 3)}°; SHA-256=${localHorizon.summary.sha256}.`
+        : localHorizon.summary?.mode === 'external'
         ? `Dış yerel skyline uygulanır: ${localHorizon.summary.fileName}; ${localHorizon.summary.pointCount} nokta; maksimum azimut boşluğu=${format(localHorizon.summary.maximumAzimuthGapDeg, 3)}°; SHA-256=${localHorizon.summary.sha256}.`
         : 'Sekiz yönlü manuel yerel skyline maskesi geometrik yıldız izine uygulanır; ara azimutlar döngüsel doğrusal interpolasyonla çözülür.';
   const motionWarning = resolved.properMotion
