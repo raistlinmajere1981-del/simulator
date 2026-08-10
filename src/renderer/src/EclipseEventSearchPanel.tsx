@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { searchSolarEclipseEventWindow } from '../../simulation/solar-eclipse-event-search';
 import {
-  searchSolarEclipseEventWindow,
-  type SolarEclipseEventSearchResult
-} from '../../simulation/solar-eclipse-event-search';
-import type { SolarEclipseOverlapResult } from '../../simulation/solar-eclipse-overlap';
+  snapshotSolarEclipseEventSearch,
+  type SolarEclipseEventSearchSnapshot
+} from '../../simulation/solar-eclipse-event-search-prediction';
+import type { SolarEclipseInstantGeometryClass } from '../../simulation/solar-eclipse-overlap';
 import './eclipse-event-search-panel.css';
 
 const percentFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 3 });
@@ -24,47 +25,65 @@ function utcTime(value: string | null): string {
   return value ? `${utcFormatter.format(new Date(value))} UTC` : 'Pencere dışında';
 }
 
-function geometryLabel(result: SolarEclipseOverlapResult | null): string {
-  if (!result) return '—';
-  switch (result.geometryClass) {
+function geometryLabel(value: SolarEclipseInstantGeometryClass | null): string {
+  switch (value) {
     case 'partial-overlap': return 'Kısmi örtüşme';
     case 'total-type-contained': return 'Tam-tip iç kapsama';
     case 'annular-type-contained': return 'Halkalı-tip iç kapsama';
-    default: return 'Örtüşme yok';
+    case 'no-overlap': return 'Örtüşme yok';
+    default: return '—';
   }
+}
+
+function searchKey(anchorObservedAtIso: string, latitudeDeg: number, longitudeDeg: number, halfWindowHours: number): string {
+  return `${anchorObservedAtIso}|${latitudeDeg.toFixed(8)}|${longitudeDeg.toFixed(8)}|${halfWindowHours}`;
 }
 
 export function EclipseEventSearchPanel({
   anchorObservedAtIso,
   latitudeDeg,
-  longitudeDeg
+  longitudeDeg,
+  initialSnapshot,
+  onSnapshotChange,
+  onShowTrace
 }: {
   anchorObservedAtIso: string;
   latitudeDeg: number;
   longitudeDeg: number;
+  initialSnapshot?: SolarEclipseEventSearchSnapshot;
+  onSnapshotChange?: (snapshot: SolarEclipseEventSearchSnapshot | undefined) => void;
+  onShowTrace?: () => void;
 }): React.JSX.Element {
-  const [halfWindowHours, setHalfWindowHours] = useState(12);
-  const [result, setResult] = useState<SolarEclipseEventSearchResult>();
+  const [halfWindowHours, setHalfWindowHours] = useState(initialSnapshot?.halfWindowHours ?? 12);
+  const [snapshot, setSnapshot] = useState<SolarEclipseEventSearchSnapshot | undefined>(initialSnapshot);
   const [error, setError] = useState<string>();
-  const [searchedKey, setSearchedKey] = useState<string>();
-  const currentKey = `${anchorObservedAtIso}|${latitudeDeg.toFixed(8)}|${longitudeDeg.toFixed(8)}|${halfWindowHours}`;
-  const stale = result !== undefined && searchedKey !== currentKey;
+
+  useEffect(() => {
+    setSnapshot(initialSnapshot);
+    if (initialSnapshot) setHalfWindowHours(initialSnapshot.halfWindowHours);
+  }, [initialSnapshot]);
+
+  const currentKey = searchKey(anchorObservedAtIso, latitudeDeg, longitudeDeg, halfWindowHours);
+  const snapshotKey = snapshot
+    ? searchKey(snapshot.anchorObservedAtIso, snapshot.latitudeDeg, snapshot.longitudeDeg, snapshot.halfWindowHours)
+    : undefined;
+  const stale = snapshot !== undefined && snapshotKey !== currentKey;
 
   const runSearch = (): void => {
     try {
       setError(undefined);
-      const next = searchSolarEclipseEventWindow({
+      const next = snapshotSolarEclipseEventSearch(searchSolarEclipseEventWindow({
         anchorObservedAtIso,
         latitudeDeg,
         longitudeDeg,
         halfWindowHours,
         coarseStepMinutes: 5
-      });
-      setResult(next);
-      setSearchedKey(currentKey);
+      }));
+      setSnapshot(next);
+      onSnapshotChange?.(next);
     } catch (caught) {
-      setResult(undefined);
-      setSearchedKey(undefined);
+      setSnapshot(undefined);
+      onSnapshotChange?.(undefined);
       setError(caught instanceof Error ? caught.message : 'Tutulma zaman penceresi taranamadı.');
     }
   };
@@ -73,9 +92,9 @@ export function EclipseEventSearchPanel({
     <section className="eclipse-event-search-panel panel">
       <div className="eclipse-event-search-heading">
         <div>
-          <span className="eyebrow">Aşama 7.3 · kontrollü zaman penceresi</span>
+          <span className="eyebrow">Aşama 7.4 · kaydedilebilir zaman penceresi</span>
           <h2>Yerel disk örtüşme olayı ara</h2>
-          <p>Seçili gözlem anının çevresini tarar; varsa örtüşmenin yaklaşık başlangıcını, maksimumunu ve bitişini düşük hassasiyetli modelle bulur.</p>
+          <p>Seçili gözlem anının çevresini tarar; varsa örtüşmenin yaklaşık başlangıcını, maksimumunu ve bitişini düşük hassasiyetli modelle bulur. Son tarama ayrı tutulma senaryosunda deney kaydına eklenebilir.</p>
         </div>
         <div className="eclipse-event-search-controls">
           <label>
@@ -87,6 +106,7 @@ export function EclipseEventSearchPanel({
               <option value={48}>±48 saat</option>
             </select>
           </label>
+          {snapshot && onShowTrace && <button type="button" className="secondary" onClick={onShowTrace}>Hesap izi</button>}
           <button type="button" onClick={runSearch}>Pencereyi tara</button>
         </div>
       </div>
@@ -95,57 +115,58 @@ export function EclipseEventSearchPanel({
         <span>Merkez zaman <strong>{utcTime(anchorObservedAtIso)}</strong></span>
         <span>Konum <strong>{latitudeDeg.toFixed(5)}°, {longitudeDeg.toFixed(5)}°</strong></span>
         <span>Kaba adım <strong>5 dk</strong></span>
+        {snapshot && <span>Kayıt durumu <strong>{stale ? 'ESKİ SONUÇ' : 'KAYDA HAZIR'}</strong></span>}
       </div>
 
       {error && <div className="eclipse-event-search-error">{error}</div>}
-      {!result && !error && (
+      {!snapshot && !error && (
         <div className="eclipse-event-search-empty">
           Bu tarama kullanıcı isteğiyle çalışır. Böylece her tarih veya koordinat değişiminde yüzlerce astronomik örnek otomatik hesaplanmaz.
         </div>
       )}
 
-      {result && (
+      {snapshot && (
         <>
           {stale && (
             <div className="eclipse-event-search-stale">
-              Tarih, konum veya pencere değişti. Aşağıdaki sonuç önceki taramaya aittir; güncellemek için yeniden tara.
+              Tarih, konum veya pencere değişti. Aşağıdaki sonuç önceki taramaya aittir ve kayda güncel sonuç olarak eklenmez; yeniden tara.
             </div>
           )}
 
-          {result.status === 'overlap-found' && result.maximumOverlap ? (
+          {snapshot.status === 'overlap-found' && snapshot.maximumSolarDiskCoveredFraction !== null ? (
             <>
               <div className="eclipse-event-timeline">
                 <article>
                   <small>Örtüşme başlangıcı</small>
-                  <strong>{utcTime(result.overlapStartIso)}</strong>
-                  <span>{result.windowClipsEventStart ? 'Arama penceresinden önce başlamış olabilir' : 'Dış disk sınırı · yaklaşık'}</span>
+                  <strong>{utcTime(snapshot.overlapStartIso)}</strong>
+                  <span>{snapshot.windowClipsEventStart ? 'Arama penceresinden önce başlamış olabilir' : 'Dış disk sınırı · yaklaşık'}</span>
                 </article>
                 <article className="peak">
                   <small>Maksimum örtüşme</small>
-                  <strong>{utcTime(result.maximumOverlapIso)}</strong>
-                  <span>%{percentFormatter.format(result.maximumOverlap.solarDiskCoveredFraction * 100)} Güneş disk alanı</span>
+                  <strong>{utcTime(snapshot.maximumOverlapIso)}</strong>
+                  <span>%{percentFormatter.format(snapshot.maximumSolarDiskCoveredFraction * 100)} Güneş disk alanı</span>
                 </article>
                 <article>
                   <small>Örtüşme bitişi</small>
-                  <strong>{utcTime(result.overlapEndIso)}</strong>
-                  <span>{result.windowClipsEventEnd ? 'Arama penceresinden sonra sürebilir' : 'Dış disk sınırı · yaklaşık'}</span>
+                  <strong>{utcTime(snapshot.overlapEndIso)}</strong>
+                  <span>{snapshot.windowClipsEventEnd ? 'Arama penceresinden sonra sürebilir' : 'Dış disk sınırı · yaklaşık'}</span>
                 </article>
               </div>
 
               <div className="eclipse-event-metrics">
-                <div><small>Örtüşme süresi</small><strong>{result.overlapDurationMinutes === null ? 'Pencere ile sınırlı' : `${durationFormatter.format(result.overlapDurationMinutes)} dk`}</strong></div>
-                <div><small>Maksimum sınıf</small><strong>{geometryLabel(result.maximumOverlap)}</strong></div>
-                <div><small>Maksimum merkez ayrımı</small><strong>{angleFormatter.format(result.maximumOverlap.centerSeparationDeg)}°</strong></div>
-                <div><small>Maksimum çap örtme oranı</small><strong>%{percentFormatter.format(result.maximumOverlap.solarDiameterCoverageRatio * 100)}</strong></div>
-                <div><small>Maksimumda geometrik ufuk</small><strong>{result.maximumOverlap.bothCentersAboveGeometricHorizon ? 'İki merkez üstte' : 'En az bir merkez altta'}</strong></div>
-                <div><small>Kaba tarama örneği</small><strong>{result.coarseSampleCount}</strong></div>
+                <div><small>Örtüşme süresi</small><strong>{snapshot.overlapDurationMinutes === null ? 'Pencere ile sınırlı' : `${durationFormatter.format(snapshot.overlapDurationMinutes)} dk`}</strong></div>
+                <div><small>Maksimum sınıf</small><strong>{geometryLabel(snapshot.maximumGeometryClass)}</strong></div>
+                <div><small>Maksimum merkez ayrımı</small><strong>{snapshot.maximumCenterSeparationDeg === null ? '—' : `${angleFormatter.format(snapshot.maximumCenterSeparationDeg)}°`}</strong></div>
+                <div><small>Maksimum çap örtme oranı</small><strong>{snapshot.maximumSolarDiameterCoverageRatio === null ? '—' : `%${percentFormatter.format(snapshot.maximumSolarDiameterCoverageRatio * 100)}`}</strong></div>
+                <div><small>Maksimumda geometrik ufuk</small><strong>{snapshot.maximumBothCentersAboveGeometricHorizon === null ? '—' : snapshot.maximumBothCentersAboveGeometricHorizon ? 'İki merkez üstte' : 'En az bir merkez altta'}</strong></div>
+                <div><small>Kaba tarama örneği</small><strong>{snapshot.coarseSampleCount}</strong></div>
               </div>
 
-              {result.containedStartIso && result.containedEndIso && (
+              {snapshot.containedStartIso && snapshot.containedEndIso && (
                 <div className="eclipse-contained-strip">
                   <strong>İç kapsama aralığı bulundu</strong>
-                  <span>{utcTime(result.containedStartIso)} → {utcTime(result.containedEndIso)}</span>
-                  <span>{result.containedDurationMinutes === null ? '' : `≈ ${durationFormatter.format(result.containedDurationMinutes)} dk`}</span>
+                  <span>{utcTime(snapshot.containedStartIso)} → {utcTime(snapshot.containedEndIso)}</span>
+                  <span>{snapshot.containedDurationMinutes === null ? '' : `≈ ${durationFormatter.format(snapshot.containedDurationMinutes)} dk`}</span>
                 </div>
               )}
             </>
@@ -157,8 +178,8 @@ export function EclipseEventSearchPanel({
               </div>
               <div>
                 <small>En yakın yaklaşım</small>
-                <strong>{utcTime(result.closestApproachIso)}</strong>
-                <span>Dış limb açıklığı {angleFormatter.format(result.closestApproach.outerLimbClearanceDeg)}°</span>
+                <strong>{utcTime(snapshot.closestApproachIso)}</strong>
+                <span>Dış limb açıklığı {angleFormatter.format(snapshot.closestApproachOuterLimbClearanceDeg)}°</span>
               </div>
             </div>
           )}
