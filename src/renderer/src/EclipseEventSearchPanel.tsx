@@ -106,7 +106,7 @@ export function EclipseEventSearchPanel({
               <option value={48}>±48 saat</option>
             </select>
           </label>
-          {snapshot && onShowTrace && <button type="button" className="secondary" onClick={onShowTrace}>Hesap izi</button>}
+          {snapshot && !stale && onShowTrace && <button type="button" className="secondary" onClick={onShowTrace}>Hesap izi</button>}
           <button type="button" onClick={runSearch}>Pencereyi tara</button>
         </div>
       </div>
