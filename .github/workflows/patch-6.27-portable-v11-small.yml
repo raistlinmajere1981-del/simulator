@@ -1,0 +1,63 @@
+name: Patch 6.27 portable v11 compact
+on:
+  push:
+    branches: [agent/panorama-skyline-ui]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/panorama-skyline-ui
+      - name: Apply guarded portable patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/shared/portable.ts')
+          s = p.read_text()
+
+          def once(old, new):
+              global s
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'anchor count={count} for {old!r}')
+              s = s.replace(old, new, 1)
+
+          once(
+              "import { normalizeStellarLocalHorizonMask } from '../simulation/stellar-local-horizon';",
+              "import { normalizeStellarLocalHorizonMask } from '../simulation/stellar-local-horizon';\nimport { parseSavedStellarPanoramaLocalHorizonSource } from '../simulation/stellar-panorama-skyline-persistence';"
+          )
+          once('export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 10;', 'export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 11;')
+          once('export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 10;', 'export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 11;')
+          s = s.replace('PortableExperimentFileV10', 'PortableExperimentFileV11')
+          s = s.replace('LocalExperimentStoreV10', 'LocalExperimentStoreV11')
+
+          anchor = "function parseStellarLocalHorizonSource(value: unknown): SavedStellarLocalHorizonSource | null {\n"
+          once(
+              anchor,
+              anchor + "  if (isRecord(value) && value.format === 'panorama') {\n    return parseSavedStellarPanoramaLocalHorizonSource(value);\n  }\n"
+          )
+
+          chain = "    version !== 5 && version !== 6 && version !== 7 && version !== 8 && version !== 9 &&\n    version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION)"
+          once(
+              chain,
+              "    version !== 5 && version !== 6 && version !== 7 && version !== 8 && version !== 9 &&\n    version !== 10 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION)"
+          )
+          local_chain = "    version !== 5 && version !== 6 && version !== 7 && version !== 8 && version !== 9 &&\n    version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION)"
+          once(
+              local_chain,
+              "    version !== 5 && version !== 6 && version !== 7 && version !== 8 && version !== 9 &&\n    version !== 10 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION)"
+          )
+
+          p.write_text(s)
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/shared/portable.ts
+          git commit -m "Add portable v11 panorama source support"
+          git push origin HEAD:agent/panorama-skyline-ui
