@@ -63,6 +63,11 @@ export interface SavedStellarPanoramaSkylineDerivation {
   horizontalCoverageDeg: number;
   verticalCoverageDeg: number;
   fullSphereCoverage: boolean;
+  metadataStatusAtImport: StellarPanoramaMetadataStatus;
+  projectionTypeAtImport?: string;
+  metadataScaledToImage: boolean;
+  standardXmpPacketFound: boolean;
+  extendedXmpPacketFound: boolean;
   marks: StellarPanoramaSkylineMark[];
 }
 
