@@ -802,7 +802,7 @@ Ayrıntı: [`roadmap-stage-6.24.md`](roadmap-stage-6.24.md)
 
 ### Aşama 6.25 — DEM skyline kaynak üretimi ve Yıldız Gözlemleri entegrasyonu
 
-Durum: tamamlanma adayı · `1.19.0`
+Durum: tamamlandı · `1.19.0`
 
 - DEM seçimi → taslak; ağır 360° taramayı dosya seçiminden ayırma
 - parse edilmiş grid'i main-process'te geçici requestId ile tutma
@@ -813,12 +813,31 @@ Durum: tamamlanma adayı · `1.19.0`
 - portable/local-store v10 ve v1–v9 migration
 - HTML raporda DEM skyline türetim provenansı
 - sentetik 41×41 ESRI ASCII entegrasyon örneği
+- gerçek Electron kontrolünde 20 km tam kapsama ve 100 km fail-closed doğrulaması
 
 Ayrıntı: [`roadmap-stage-6.25.md`](roadmap-stage-6.25.md)
 
+### Aşama 6.26 — Equirectangular panorama skyline geometrisi çekirdeği
+
+Durum: tamamlandı · `1.19.1`
+
+- Google Photo Sphere equirectangular full-pano / crop geometri sözleşmesi
+- sabit yerel çerçeve X=Doğu, Y=Kuzey, Z=Yukarı
+- `PoseHeading / PosePitch / PoseRoll` için resmi Euler sıra ve işaretleri
+- panorama pikseli → gerçek azimut / geometrik yükseklik dönüşümü
+- gerçek yön → panorama pikseli ters dönüşümü ve crop dışına yön uydurmama
+- piksel-merkezi convention ve yatay seam davranışı
+- manuel panorama skyline işaretlerini mevcut `derived` local-horizon maskesine dönüştürme
+- partial panoramayı sessizce tam 360° gözlem saymama
+- otomatik görüntü segmentasyonu ve XMP dosya parserını sonraki dilime bırakma
+
+Ayrıntı: [`roadmap-stage-6.26.md`](roadmap-stage-6.26.md)
+
 ### Sonraki astronomi dilimleri
 
-- panorama/fotoğraf tabanlı 360° skyline için kamera yönelimi ve lens kalibrasyonu
+- GPano XMP metadata importu ve panorama üzerinde manuel skyline işaretleme UI
+- panorama kaynak provenansını save/reopen, portable kayıt ve HTML rapora bağlama
+- otomatik skyline segmentasyonunu yalnız doğrulanabilir manuel zincirden sonra değerlendirme
 - daha geniş yıldız kataloğu gerekirse performans ve veri-provenans tasarımı
 - ihtiyaç doğrulanırsa paralaks/radyal hız/perspektif ivmelenmesini ayrı astrometrik katman olarak ele alma
 
