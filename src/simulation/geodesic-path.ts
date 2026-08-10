@@ -16,6 +16,10 @@ function normalizeLongitude(degrees: number): number {
   return ((degrees + 540) % 360) - 180;
 }
 
+function normalizeBearing(degrees: number): number {
+  return (degrees % 360 + 360) % 360;
+}
+
 export interface Wgs84GeodesicPath {
   start: GeographicCoordinate;
   end: GeographicCoordinate;
@@ -139,6 +143,35 @@ function vincentyDirect(
   return {
     latitudeDeg: toDegrees(latitude2),
     longitudeDeg: normalizeLongitude(toDegrees(longitude1 + longitudeCorrection))
+  };
+}
+
+export function coordinateAtWgs84BearingDistance(
+  start: GeographicCoordinate,
+  bearingDeg: number,
+  distanceM: number
+): GeodesicPathPoint {
+  if (!isValidCoordinate(start)) {
+    throw new RangeError('Başlangıç koordinatı WGS84 enlem/boylam sınırlarında olmalı.');
+  }
+  if (!Number.isFinite(bearingDeg)) {
+    throw new RangeError('Azimut sonlu bir derece değeri olmalı.');
+  }
+  if (!Number.isFinite(distanceM) || distanceM < 0) {
+    throw new RangeError('Doğrudan jeodezik mesafe negatif olmayan sonlu bir değer olmalı.');
+  }
+  if (distanceM === 0) {
+    return { coordinate: { ...start }, method: 'vincenty' };
+  }
+
+  const normalizedBearingDeg = normalizeBearing(bearingDeg);
+  const coordinate = vincentyDirect(start, normalizedBearingDeg, distanceM);
+  if (coordinate) return { coordinate, method: 'vincenty' };
+
+  return {
+    coordinate: sphericalDirect(start, normalizedBearingDeg, distanceM),
+    method: 'spherical-fallback',
+    warning: 'WGS84 doğrudan çözümü yakınsamayıp küresel rota noktası kullanıldı.'
   };
 }
 
