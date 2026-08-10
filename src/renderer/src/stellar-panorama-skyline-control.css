@@ -1,0 +1,258 @@
+.stellar-panorama-control {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(96, 145, 166, 0.28);
+  border-radius: 10px;
+  background: rgba(7, 19, 27, 0.28);
+}
+
+.stellar-panorama-heading,
+.stellar-panorama-source-card,
+.stellar-panorama-image-help,
+.stellar-panorama-prepare-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.stellar-panorama-heading > div,
+.stellar-panorama-source-card > div {
+  display: grid;
+  gap: 4px;
+}
+
+.stellar-panorama-heading strong,
+.stellar-panorama-source-card strong {
+  color: var(--text-primary, #edf6f8);
+}
+
+.stellar-panorama-heading span,
+.stellar-panorama-source-card span,
+.stellar-panorama-image-help span,
+.stellar-panorama-prepare-row span,
+.stellar-panorama-geometry-mode span {
+  color: var(--text-muted, #8da3ad);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.stellar-panorama-heading button,
+.stellar-panorama-geometry-mode button,
+.stellar-panorama-image-help button,
+.stellar-panorama-prepare-row button {
+  border: 1px solid rgba(104, 164, 190, 0.45);
+  border-radius: 6px;
+  background: rgba(19, 42, 54, 0.8);
+  color: #d9edf3;
+  padding: 8px 11px;
+  cursor: pointer;
+}
+
+.stellar-panorama-heading button:disabled,
+.stellar-panorama-geometry-mode button:disabled,
+.stellar-panorama-image-help button:disabled,
+.stellar-panorama-prepare-row button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.stellar-panorama-source-card {
+  align-items: flex-start;
+  padding: 11px 12px;
+  border: 1px solid rgba(102, 157, 179, 0.32);
+  border-radius: 7px;
+  background: rgba(17, 38, 49, 0.58);
+}
+
+.stellar-panorama-source-card > div:last-child {
+  text-align: right;
+}
+
+.stellar-panorama-source-card small {
+  color: #7fa5b5;
+  font-size: 0.68rem;
+  letter-spacing: 0.045em;
+}
+
+.stellar-panorama-source-card code {
+  color: #a8cad5;
+}
+
+.stellar-panorama-geometry-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stellar-panorama-geometry-mode button.selected {
+  border-color: rgba(85, 202, 181, 0.72);
+  background: rgba(31, 87, 76, 0.62);
+  color: #c8f1e7;
+}
+
+.stellar-panorama-geometry-mode span {
+  margin-left: 4px;
+}
+
+.stellar-panorama-geometry-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.stellar-panorama-geometry-grid label {
+  display: grid;
+  gap: 5px;
+}
+
+.stellar-panorama-geometry-grid label > span {
+  color: #839ba6;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+}
+
+.stellar-panorama-geometry-grid input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 32px;
+  border: 1px solid rgba(96, 137, 153, 0.38);
+  border-radius: 5px;
+  background: rgba(9, 24, 32, 0.8);
+  color: #dbe9ed;
+  padding: 6px 8px;
+}
+
+.stellar-panorama-geometry-grid input:disabled {
+  color: #80949d;
+  background: rgba(12, 24, 30, 0.55);
+}
+
+.stellar-panorama-image-help > div {
+  display: flex;
+  gap: 7px;
+}
+
+.stellar-panorama-image-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(101, 151, 171, 0.36);
+  border-radius: 8px;
+  background: #05090b;
+  line-height: 0;
+  user-select: none;
+}
+
+.stellar-panorama-image-stage > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 420px;
+  object-fit: contain;
+  cursor: crosshair;
+}
+
+.stellar-panorama-image-stage > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.stellar-panorama-image-stage polyline {
+  fill: none;
+  stroke: rgba(92, 226, 196, 0.92);
+  stroke-width: 0.38;
+  vector-effect: non-scaling-stroke;
+}
+
+.stellar-panorama-mark {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(225, 255, 248, 0.95);
+  background: rgba(27, 111, 92, 0.9);
+  color: #f2fffb;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 18px;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.stellar-panorama-diagnostics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 9px 11px;
+  border-left: 2px solid rgba(73, 188, 163, 0.78);
+  background: rgba(27, 72, 63, 0.24);
+  color: #9fb4bc;
+  font-size: 0.75rem;
+}
+
+.stellar-panorama-diagnostics strong {
+  color: #d9eee9;
+}
+
+.stellar-panorama-mark-readout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 12px;
+  color: #8ca3ad;
+  font-size: 0.72rem;
+}
+
+.stellar-panorama-prepare-row {
+  padding-top: 2px;
+}
+
+.stellar-panorama-prepare-row button {
+  border-color: rgba(73, 178, 144, 0.55);
+  background: rgba(24, 82, 65, 0.78);
+  color: #c8f2e4;
+}
+
+.stellar-panorama-warning,
+.stellar-panorama-message {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 2px solid rgba(194, 152, 71, 0.8);
+  background: rgba(93, 71, 28, 0.18);
+  color: #cbb98f;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.stellar-panorama-message.prepared {
+  border-left-color: rgba(68, 184, 145, 0.85);
+  background: rgba(27, 80, 63, 0.22);
+  color: #a9d9c8;
+}
+
+@media (max-width: 980px) {
+  .stellar-panorama-geometry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stellar-panorama-heading,
+  .stellar-panorama-source-card,
+  .stellar-panorama-image-help,
+  .stellar-panorama-prepare-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .stellar-panorama-source-card > div:last-child {
+    text-align: left;
+  }
+}
