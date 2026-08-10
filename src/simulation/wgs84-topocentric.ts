@@ -8,6 +8,8 @@ const toRadians = (degrees: number): number => degrees * Math.PI / 180;
 const toDegrees = (radians: number): number => radians * 180 / Math.PI;
 const WGS84_ECCENTRICITY_SQUARED =
   WGS84_FLATTENING * (2 - WGS84_FLATTENING);
+const TOPOCENTRIC_HORIZONTAL_ZERO_ABSOLUTE_M = 1e-8;
+const TOPOCENTRIC_HORIZONTAL_ZERO_RELATIVE = 1e-12;
 
 export interface Wgs84GeodeticCoordinate extends GeographicCoordinate {
   ellipsoidalHeightM: number;
@@ -140,11 +142,19 @@ export function topocentricDirectionBetween(
     throw new RangeError('Toposentrik yön için başlangıç ve hedef 3B konumları farklı olmalı.');
   }
 
+  // ECEF coordinates are ~10^6 m. Subtracting two points that differ only
+  // vertically can leave nanometre-scale horizontal round-off. Such residue
+  // must not invent an arbitrary azimuth at the zenith or nadir.
+  const horizontalZeroToleranceM = Math.max(
+    TOPOCENTRIC_HORIZONTAL_ZERO_ABSOLUTE_M,
+    slantDistanceM * TOPOCENTRIC_HORIZONTAL_ZERO_RELATIVE
+  );
+
   return {
     ...topocentric,
     horizontalDistanceM,
     slantDistanceM,
-    azimuthDeg: horizontalDistanceM <= Number.EPSILON
+    azimuthDeg: horizontalDistanceM <= horizontalZeroToleranceM
       ? null
       : normalizeAzimuth(toDegrees(Math.atan2(
         topocentric.eastM,
