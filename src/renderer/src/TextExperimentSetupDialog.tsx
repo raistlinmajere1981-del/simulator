@@ -20,7 +20,8 @@ const scenarioLabels: Record<SimulationScenarioId, string> = {
   'long-distance-visibility': 'Uzun Mesafe Görüş',
   'sun-moon-observation': 'Güneş ve Ay Gözlemleri',
   'shadow-observation': 'Gölge Deneyi',
-  'stellar-observation': 'Yıldız Gözlemleri'
+  'stellar-observation': 'Yıldız Gözlemleri',
+  'eclipse-simulation': 'Güneş Tutulması Simülasyonu'
 };
 
 const atmosphereLabels: Record<AtmosphereMode, string> = {
