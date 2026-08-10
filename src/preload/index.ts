@@ -20,7 +20,7 @@ import type {
 import type { ImportStellarMotionResult } from '../shared/stellar-motion-source';
 
 const api: SimulatorDesktopApi = {
-  version: '1.22.1',
+  version: '1.23.0',
   platform: process.platform,
   listExperiments: () =>
     ipcRenderer.invoke('experiments:list') as Promise<SavedExperiment[]>,
