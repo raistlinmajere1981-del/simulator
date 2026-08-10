@@ -46,6 +46,7 @@ import {
   SUN_MOON_SCENARIO,
   SHADOW_SCENARIO,
   STELLAR_SCENARIO,
+  ECLIPSE_SCENARIO,
   getSimulationScenario,
   normalizeSimulationScenarioId,
   type SimulationScenarioId
@@ -94,6 +95,14 @@ import {
 } from '../../simulation/solar-day-events';
 import { calculateLunarPosition } from '../../simulation/lunar-position';
 import { createLunarPositionPrediction, lunarPositionMetadata } from '../../simulation/lunar-position-prediction';
+import { calculateSolarEclipseOverlap } from '../../simulation/solar-eclipse-overlap';
+import { createSolarEclipseOverlapPrediction, solarEclipseOverlapMetadata } from '../../simulation/solar-eclipse-overlap-prediction';
+import {
+  createSolarEclipseEventSearchPrediction,
+  readSolarEclipseEventSearchSnapshot,
+  solarEclipseEventSearchMetadata,
+  type SolarEclipseEventSearchSnapshot
+} from '../../simulation/solar-eclipse-event-search-prediction';
 import {
   DEFAULT_SHADOW_OBSERVATION_SETTINGS,
   SHADOW_OBSERVATION_MODEL_ID,
@@ -157,6 +166,8 @@ import { CelestialTimeCard } from './CelestialTimeCard';
 import { SolarPositionPanel } from './SolarPositionPanel';
 import { SolarDayEventsPanel } from './SolarDayEventsPanel';
 import { LunarPositionPanel } from './LunarPositionPanel';
+import { EclipseScenarioSummary } from './EclipseScenarioSummary';
+import { EclipseSimulationPanel } from './EclipseSimulationPanel';
 import { SolarScenarioSummary } from './SolarScenarioSummary';
 import { ShadowScenarioSummary } from './ShadowScenarioSummary';
 import { ShadowObservationPanel } from './ShadowObservationPanel';
@@ -214,7 +225,7 @@ const scenarios: ScenarioDefinition[] = [
   { ...SUN_MOON_SCENARIO, enabled: true },
   { ...SHADOW_SCENARIO, enabled: true },
   { ...STELLAR_SCENARIO, enabled: true },
-  { label: 'Tutulma Simülasyonları', icon: '◐', enabled: false }
+  { ...ECLIPSE_SCENARIO, enabled: true }
 ];
 
 const presentationByModelId: Record<string, ModelPresentation> = {
@@ -300,7 +311,7 @@ function getPresentation(modelId: string): ModelPresentation {
 }
 
 function isAstronomyScenario(scenarioId: SimulationScenarioId): boolean {
-  return scenarioId === 'sun-moon-observation' || scenarioId === 'shadow-observation' || scenarioId === 'stellar-observation';
+  return scenarioId === 'sun-moon-observation' || scenarioId === 'shadow-observation' || scenarioId === 'stellar-observation' || scenarioId === 'eclipse-simulation';
 }
 
 function getMetric(
@@ -471,7 +482,7 @@ function Sidebar({
       <section className="side-section compact">
         <div className="section-heading">
           <span>Modeller</span>
-          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '3 astronomik referans' : activeScenarioId === 'shadow-observation' || activeScenarioId === 'stellar-observation' ? '1 astronomik referans' : '2 fiziksel'}</span>
+          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '3 astronomik referans' : activeScenarioId === 'eclipse-simulation' ? '2 tutulma referansı' : activeScenarioId === 'shadow-observation' || activeScenarioId === 'stellar-observation' ? '1 astronomik referans' : '2 fiziksel'}</span>
         </div>
         {activeScenarioId === 'sun-moon-observation' ? (
           <>
@@ -488,6 +499,19 @@ function Sidebar({
             <div className="model-toggle reference-model">
               <span className="model-dot green" />
               <span>Gün Doğumu / Batımı · Astronomik Referans</span>
+              <span className="reference-badge">REFERANS</span>
+            </div>
+          </>
+        ) : activeScenarioId === 'eclipse-simulation' ? (
+          <>
+            <div className="model-toggle reference-model">
+              <span className="model-dot amber" />
+              <span>Anlık Güneş–Ay Disk Geometrisi</span>
+              <span className="reference-badge">REFERANS</span>
+            </div>
+            <div className="model-toggle reference-model">
+              <span className="model-dot violet" />
+              <span>Yerel Tutulma Zaman Araması</span>
               <span className="reference-badge">REFERANS</span>
             </div>
           </>
@@ -527,11 +551,13 @@ function Sidebar({
             <span className="section-state">astronomi · sonraki dilim</span>
           </div>
           <div className="saved-empty">
-            {activeScenarioId === 'shadow-observation'
-              ? 'Gölge yön diyagramı ana deney panelinde gösterilir. Dünya modellerine fiziksel Güneş davranışı atanmaz.'
-              : activeScenarioId === 'stellar-observation'
-                ? 'Katalog yıldızı, J2000→gözlem tarihi dönüşümü, geometrik yıldız izi ve isteğe bağlı yerel skyline ana deney alanında gösterilir.'
-                : 'Güneş/Ay konumu ile günlük doğuş-batış zaman çizgisi ana deney alanında gösterilir; ek gökyüzü katmanları sonraki dilimlerde genişletilecektir.'}
+            {activeScenarioId === 'eclipse-simulation'
+              ? 'Anlık Güneş–Ay disk geometrisi ve kullanıcı kontrollü yerel tutulma zaman penceresi ana deney alanında gösterilir.'
+              : activeScenarioId === 'shadow-observation'
+                ? 'Gölge yön diyagramı ana deney panelinde gösterilir. Dünya modellerine fiziksel Güneş davranışı atanmaz.'
+                : activeScenarioId === 'stellar-observation'
+                  ? 'Katalog yıldızı, J2000→gözlem tarihi dönüşümü, geometrik yıldız izi ve isteğe bağlı yerel skyline ana deney alanında gösterilir.'
+                  : 'Güneş/Ay konumu ile günlük doğuş-batış zaman çizgisi ana deney alanında gösterilir; ek gökyüzü katmanları sonraki dilimlerde genişletilecektir.'}
           </div>
         </section>
       ) : (
@@ -1160,6 +1186,7 @@ export function AppNext(): React.JSX.Element {
   const [stellarObservationSettings, setStellarObservationSettings] = useState<StellarObservationSettings>(() => ({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS }));
   const [stellarLocalHorizonSource, setStellarLocalHorizonSource] = useState<SavedStellarLocalHorizonSource>();
   const [stellarMotionSource, setStellarMotionSource] = useState<SavedStellarMotionSource>();
+  const [eclipseEventSearchSnapshot, setEclipseEventSearchSnapshot] = useState<SolarEclipseEventSearchSnapshot>();
   const [manualTerrainPoints, setManualTerrainPoints] = useState<ManualTerrainPoint[]>(
     defaultTerrainPoints()
   );
@@ -1247,10 +1274,14 @@ export function AppNext(): React.JSX.Element {
       eyeHeightM: inputs.observerHeightM
     };
 
-    if (activeScenarioId === 'sun-moon-observation' || activeScenarioId === 'stellar-observation') {
+    if (activeScenarioId === 'sun-moon-observation' || activeScenarioId === 'stellar-observation' || activeScenarioId === 'eclipse-simulation') {
       return {
         id: activeExperimentId,
-        title: activeExperimentName || (activeScenarioId === 'stellar-observation' ? 'Etkileşimli yıldız gözlemi' : 'Etkileşimli Güneş ve Ay gözlemi'),
+        title: activeExperimentName || (activeScenarioId === 'stellar-observation'
+          ? 'Etkileşimli yıldız gözlemi'
+          : activeScenarioId === 'eclipse-simulation'
+            ? 'Etkileşimli tutulma simülasyonu'
+            : 'Etkileşimli Güneş ve Ay gözlemi'),
         type: 'celestial',
         observer,
         observedAtIso: experimentObservedAtIso,
@@ -1303,14 +1334,14 @@ export function AppNext(): React.JSX.Element {
     return targetExperiment;
   }, [activeExperimentId, activeExperimentName, activeScenarioId, effectiveDistanceKm, experimentObservedAtIso, inputs, terrainProfile]);
 
-  const solarPosition = useMemo(() => (activeScenarioId === 'sun-moon-observation' || activeScenarioId === 'shadow-observation')
+  const solarPosition = useMemo(() => (activeScenarioId === 'sun-moon-observation' || activeScenarioId === 'shadow-observation' || activeScenarioId === 'eclipse-simulation')
     ? calculateSolarPosition({
         observedAtIso: experimentObservedAtIso,
         latitudeDeg: inputs.observerLatitudeDeg,
         longitudeDeg: inputs.observerLongitudeDeg
       })
     : undefined, [activeScenarioId, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg]);
-  const solarPositionPrediction = useMemo(() => activeScenarioId === 'sun-moon-observation' && solarPosition
+  const solarPositionPrediction = useMemo(() => (activeScenarioId === 'sun-moon-observation' || activeScenarioId === 'eclipse-simulation') && solarPosition
     ? createSolarPositionPrediction(activeExperimentId, solarPosition)
     : undefined, [activeExperimentId, activeScenarioId, solarPosition]);
   const solarDayEventsResult = useMemo(() => activeScenarioId === 'sun-moon-observation'
@@ -1325,7 +1356,7 @@ export function AppNext(): React.JSX.Element {
   const solarDayEventsPrediction = useMemo(() => solarDayEventsResult
     ? createSolarDayEventsPrediction(solarDayEventsResult)
     : undefined, [solarDayEventsResult]);
-  const lunarPosition = useMemo(() => activeScenarioId === 'sun-moon-observation' && solarPosition
+  const lunarPosition = useMemo(() => (activeScenarioId === 'sun-moon-observation' || activeScenarioId === 'eclipse-simulation') && solarPosition
     ? calculateLunarPosition({
         observedAtIso: experimentObservedAtIso,
         latitudeDeg: inputs.observerLatitudeDeg,
@@ -1336,6 +1367,22 @@ export function AppNext(): React.JSX.Element {
   const lunarPositionPrediction = useMemo(() => lunarPosition
     ? createLunarPositionPrediction(activeExperimentId, lunarPosition)
     : undefined, [activeExperimentId, lunarPosition]);
+  const eclipseOverlapResult = useMemo(() => activeScenarioId === 'eclipse-simulation' && solarPosition && lunarPosition
+    ? calculateSolarEclipseOverlap({ solarPosition, lunarPosition })
+    : undefined, [activeScenarioId, lunarPosition, solarPosition]);
+  const eclipseOverlapPrediction = useMemo(() => eclipseOverlapResult
+    ? createSolarEclipseOverlapPrediction(activeExperimentId, eclipseOverlapResult)
+    : undefined, [activeExperimentId, eclipseOverlapResult]);
+  const eclipseEventSearchSnapshotCurrent = useMemo(() => {
+    if (activeScenarioId !== 'eclipse-simulation' || !eclipseEventSearchSnapshot) return false;
+    const normalizedObservedAtIso = new Date(experimentObservedAtIso).toISOString();
+    return eclipseEventSearchSnapshot.anchorObservedAtIso === normalizedObservedAtIso &&
+      Math.abs(eclipseEventSearchSnapshot.latitudeDeg - inputs.observerLatitudeDeg) <= 1e-8 &&
+      Math.abs(eclipseEventSearchSnapshot.longitudeDeg - inputs.observerLongitudeDeg) <= 1e-8;
+  }, [activeScenarioId, eclipseEventSearchSnapshot, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg]);
+  const eclipseEventSearchPrediction = useMemo(() => eclipseEventSearchSnapshotCurrent && eclipseEventSearchSnapshot
+    ? createSolarEclipseEventSearchPrediction(activeExperimentId, eclipseEventSearchSnapshot)
+    : undefined, [activeExperimentId, eclipseEventSearchSnapshot, eclipseEventSearchSnapshotCurrent]);
   const shadowObservationResult = useMemo(() => activeScenarioId === 'shadow-observation' && solarPosition
     ? calculateShadowObservation({
         experimentId: activeExperimentId,
@@ -1548,6 +1595,7 @@ export function AppNext(): React.JSX.Element {
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
       setStellarLocalHorizonSource(undefined);
       setStellarMotionSource(undefined);
+      setEclipseEventSearchSnapshot(undefined);
       setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
       setGeoidConversionRecord(undefined);
@@ -1791,6 +1839,9 @@ export function AppNext(): React.JSX.Element {
     const stellarPrediction = saved.predictions.find(
       (prediction) => prediction.modelId === STELLAR_OBSERVATION_MODEL_ID
     );
+    const eclipseEventPrediction = saved.predictions.find(
+      (prediction) => prediction.modelId === solarEclipseEventSearchMetadata.id
+    );
     const storedStellarSettings = readStellarObservationSettings(stellarPrediction);
     const storedStellarSource = saved.stellarLocalHorizonSource
       ? {
@@ -1820,6 +1871,7 @@ export function AppNext(): React.JSX.Element {
     setStellarMotionSource(saved.stellarMotionSource
       ? { ...saved.stellarMotionSource, entries: saved.stellarMotionSource.entries.map((entry) => ({ ...entry })) }
       : undefined);
+    setEclipseEventSearchSnapshot(readSolarEclipseEventSearchSnapshot(eclipseEventPrediction));
     setInputs(saved.inputs);
     setAtmosphereState(saved.atmosphere
       ? cloneAtmosphereExperimentState(saved.atmosphere)
@@ -1888,6 +1940,12 @@ export function AppNext(): React.JSX.Element {
         ...(lunarPositionPrediction
           ? [[lunarPositionMetadata.id, lunarPositionMetadata.version] as const]
           : []),
+        ...(eclipseOverlapPrediction
+          ? [[solarEclipseOverlapMetadata.id, solarEclipseOverlapMetadata.version] as const]
+          : []),
+        ...(eclipseEventSearchPrediction
+          ? [[solarEclipseEventSearchMetadata.id, solarEclipseEventSearchMetadata.version] as const]
+          : []),
         ...(shadowObservationPrediction
           ? [[shadowObservationMetadata.id, shadowObservationMetadata.version] as const]
           : []),
@@ -1918,6 +1976,8 @@ export function AppNext(): React.JSX.Element {
         ...(solarPositionPrediction ? [solarPositionPrediction] : []),
         ...(solarDayEventsPrediction ? [solarDayEventsPrediction] : []),
         ...(lunarPositionPrediction ? [lunarPositionPrediction] : []),
+        ...(eclipseOverlapPrediction ? [eclipseOverlapPrediction] : []),
+        ...(eclipseEventSearchPrediction ? [eclipseEventSearchPrediction] : []),
         ...(shadowObservationPrediction ? [shadowObservationPrediction] : []),
         ...(dualShadowComparisonPrediction ? [dualShadowComparisonPrediction] : []),
         ...(stellarObservationPrediction ? [stellarObservationPrediction] : []),
@@ -1947,6 +2007,9 @@ export function AppNext(): React.JSX.Element {
       );
       const savedStellarPrediction = saved.predictions.find(
         (prediction) => prediction.modelId === STELLAR_OBSERVATION_MODEL_ID
+      );
+      const savedEclipseEventPrediction = saved.predictions.find(
+        (prediction) => prediction.modelId === solarEclipseEventSearchMetadata.id
       );
       setSavedExperiments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       setActiveExperimentId(saved.id);
@@ -1980,6 +2043,7 @@ export function AppNext(): React.JSX.Element {
           ? { ...reopenedStellarSettings, localHorizonEnabled: false, localHorizonSourceMode: 'manual' }
           : reopenedStellarSettings);
       }
+      setEclipseEventSearchSnapshot(readSolarEclipseEventSearchSnapshot(savedEclipseEventPrediction));
       setExperimentObservedAtIso(saved.observedAtIso ?? saved.createdAtIso);
     setObservationUtcOffsetMinutes(saved.observationUtcOffsetMinutes ?? systemUtcOffsetMinutes(new Date(saved.observedAtIso ?? saved.createdAtIso)));
       setAtmosphereState(saved.atmosphere
@@ -2026,6 +2090,7 @@ export function AppNext(): React.JSX.Element {
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
       setStellarLocalHorizonSource(undefined);
       setStellarMotionSource(undefined);
+      setEclipseEventSearchSnapshot(undefined);
         setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
         setAtmosphereState(createDefaultAtmosphereExperimentState('standard'));
@@ -2080,7 +2145,11 @@ export function AppNext(): React.JSX.Element {
 
   const modelRun = runs.find((run) => run.metadata.id === traceModelId);
   const geoPrediction = geodesicPrediction(geodesic);
-  const selectedMetadata = traceModelId === stellarObservationMetadata.id
+  const selectedMetadata = traceModelId === solarEclipseOverlapMetadata.id
+    ? solarEclipseOverlapMetadata
+    : traceModelId === solarEclipseEventSearchMetadata.id
+      ? solarEclipseEventSearchMetadata
+      : traceModelId === stellarObservationMetadata.id
     ? stellarObservationMetadata
     : traceModelId === solarPositionMetadata.id
     ? solarPositionMetadata
@@ -2099,7 +2168,11 @@ export function AppNext(): React.JSX.Element {
       : traceModelId === WATER_SURFACE_APPLICATION_MODEL_ID
         ? waterApplicationMetadata
         : modelRun?.metadata;
-  const selectedPrediction = traceModelId === stellarObservationMetadata.id
+  const selectedPrediction = traceModelId === solarEclipseOverlapMetadata.id
+    ? eclipseOverlapPrediction
+    : traceModelId === solarEclipseEventSearchMetadata.id
+      ? eclipseEventSearchPrediction
+      : traceModelId === stellarObservationMetadata.id
     ? stellarObservationPrediction
     : traceModelId === solarPositionMetadata.id
     ? solarPositionPrediction
@@ -2147,6 +2220,7 @@ export function AppNext(): React.JSX.Element {
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
       setStellarLocalHorizonSource(undefined);
       setStellarMotionSource(undefined);
+      setEclipseEventSearchSnapshot(undefined);
     setExperimentObservedAtIso(new Date().toISOString());
     setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
     setIsDirty(false);
@@ -2196,6 +2270,7 @@ export function AppNext(): React.JSX.Element {
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
       setStellarLocalHorizonSource(undefined);
       setStellarMotionSource(undefined);
+      setEclipseEventSearchSnapshot(undefined);
             setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
             setGeoidConversionRecord(undefined);
@@ -2219,6 +2294,15 @@ export function AppNext(): React.JSX.Element {
           <div className="top-grid geodesic-top-grid">
             {activeScenarioId === 'sun-moon-observation' ? (
               <SolarScenarioSummary
+                activeName={activeExperimentName}
+                inputs={inputs}
+                isDirty={isDirty}
+                onCoordinateChange={(key, value) => handleNumberChange(key, value)}
+                onReset={resetExperiment}
+                onSave={() => setSaveDialogOpen(true)}
+              />
+            ) : activeScenarioId === 'eclipse-simulation' ? (
+              <EclipseScenarioSummary
                 activeName={activeExperimentName}
                 inputs={inputs}
                 isDirty={isDirty}
@@ -2276,6 +2360,18 @@ export function AppNext(): React.JSX.Element {
                   </div>
                   <SolarDayEventsPanel result={solarDayEventsResult} onShowTrace={() => setTraceModelId(solarDayEventsMetadata.id)} />
                 </>
+              : activeScenarioId === 'eclipse-simulation' && solarPosition && lunarPosition && eclipseOverlapPrediction
+              ? <EclipseSimulationPanel
+                  solarPosition={solarPosition}
+                  lunarPosition={lunarPosition}
+                  eventSearchSnapshot={eclipseEventSearchSnapshot}
+                  onEventSearchSnapshotChange={(snapshot) => {
+                    setEclipseEventSearchSnapshot(snapshot);
+                    setIsDirty(true);
+                  }}
+                  onShowOverlapTrace={() => setTraceModelId(solarEclipseOverlapMetadata.id)}
+                  onShowEventSearchTrace={() => setTraceModelId(solarEclipseEventSearchMetadata.id)}
+                />
               : activeScenarioId === 'stellar-observation' && stellarObservationResult && stellarObservationPrediction
               ? <StellarObservationPanel
                   result={stellarObservationResult}
