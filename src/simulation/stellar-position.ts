@@ -18,6 +18,8 @@ export interface StellarPositionInput {
   /** Mean-equator/equinox-of-date declination. */
   declinationDeg: number;
   label?: string;
+  /** High-frequency inner loops (root scans) can skip the expensive trace. */
+  includeTrace?: boolean;
 }
 
 export interface StellarPositionResult {
@@ -208,54 +210,57 @@ export function calculateStellarPosition(input: StellarPositionInput): StellarPo
   const aboveGeometricHorizon = elevationDeg >= -HORIZON_EPSILON_DEG;
 
   const traceId = `${STELLAR_POSITION_ALGORITHM_ID}:${observedAtIso}:${input.latitudeDeg.toFixed(6)}:${input.longitudeDeg.toFixed(6)}:${input.rightAscensionDeg.toFixed(6)}:${input.declinationDeg.toFixed(6)}`;
-  const trace: CalculationTrace = {
-    summary: 'Gözlem tarihine ait ekvatoryal yıldız koordinatı, yaklaşık yerel ortalama yıldız zamanı üzerinden geometrik yükseklik ve azimuta dönüştürüldü.',
-    assumptions: [
-      'Sağ açıklık ve deklinasyon gözlem tarihinin ortalama ekvator/equinox sistemine aittir; J2000/ICRS koordinatı sessizce of-date kabul edilmez.',
-      'UTC, yaklaşık GMST hesabında UT1 için pratik vekil olarak kullanılır.',
-      'Nutation ve equation-of-equinoxes uygulanmaz; yerel ortalama yıldız zamanı (LMST) kullanılır.',
-      'Yıllık precession, proper motion, parallax ve aberration bu çekirdekte uygulanmaz.',
-      'Atmosferik kırılma, sönümleme, gökyüzü parlaklığı ve topoğrafik ufuk uygulanmaz; görünürlük yalnız geometrik 0° ufuk anlamındadır.',
-      'Azimut coğrafi kuzeyden saat yönünde 0°–360° aralığındadır; yıldız tam zenit/nadir doğrultusundaysa azimut tanımsızdır.'
-    ],
-    steps: [
-      {
-        id: 'julian-time',
-        title: 'Julian zaman ölçeği',
-        formula: 'JD = unix_ms / 86400000 + 2440587.5; T = (JD - 2451545) / 36525',
-        substitution: observedAtIso,
-        result: `JD=${format(julianDay)}; T=${format(julianCentury, 9)}`
-      },
-      {
-        id: 'sidereal-time',
-        title: 'Yerel ortalama yıldız zamanı',
-        formula: 'LMST = GMST + λ',
-        substitution: `GMST=${format(greenwichMeanSiderealTimeDeg)}°; λ=${format(input.longitudeDeg)}°`,
-        result: `LMST=${format(localMeanSiderealTimeDeg)}°`
-      },
-      {
-        id: 'hour-angle',
-        title: 'Yıldız saat açısı',
-        formula: 'H = LMST - α',
-        substitution: `LMST=${format(localMeanSiderealTimeDeg)}°; α=${format(input.rightAscensionDeg)}°`,
-        result: `H=${format(hourAngleDeg)}°`
-      },
-      {
-        id: 'horizontal-position',
-        title: 'Yerel yatay koordinatlar',
-        formula: 'sin(h)=sinφ·sinδ+cosφ·cosδ·cosH; A=atan2(E,N)',
-        substitution: `φ=${format(input.latitudeDeg)}°; δ=${format(input.declinationDeg)}°; H=${format(hourAngleDeg)}°`,
-        result: `yükseklik=${format(elevationDeg)}°; azimut=${azimuthDeg === null ? 'tanımsız' : `${format(azimuthDeg)}°`}`
-      },
-      {
-        id: 'horizon-class',
-        title: 'Geometrik ufuk sınıfı',
-        formula: 'h_üst=alt(H=0°); h_alt=alt(H=180°)',
-        substitution: `h_üst=${format(upperCulminationElevationDeg)}°; h_alt=${format(lowerCulminationElevationDeg)}°`,
-        result: horizonClass
+  const includeTrace = input.includeTrace !== false;
+  const trace: CalculationTrace = includeTrace
+    ? {
+        summary: 'Gözlem tarihine ait ekvatoryal yıldız koordinatı, yaklaşık yerel ortalama yıldız zamanı üzerinden geometrik yükseklik ve azimuta dönüştürüldü.',
+        assumptions: [
+          'Sağ açıklık ve deklinasyon gözlem tarihinin ortalama ekvator/equinox sistemine aittir; J2000/ICRS koordinatı sessizce of-date kabul edilmez.',
+          'UTC, yaklaşık GMST hesabında UT1 için pratik vekil olarak kullanılır.',
+          'Nutation ve equation-of-equinoxes uygulanmaz; yerel ortalama yıldız zamanı (LMST) kullanılır.',
+          'Yıllık precession, proper motion, parallax ve aberration bu çekirdekte uygulanmaz.',
+          'Atmosferik kırılma, sönümleme, gökyüzü parlaklığı ve topoğrafik ufuk uygulanmaz; görünürlük yalnız geometrik 0° ufuk anlamındadır.',
+          'Azimut coğrafi kuzeyden saat yönünde 0°–360° aralığındadır; yıldız tam zenit/nadir doğrultusundaysa azimut tanımsızdır.'
+        ],
+        steps: [
+          {
+            id: 'julian-time',
+            title: 'Julian zaman ölçeği',
+            formula: 'JD = unix_ms / 86400000 + 2440587.5; T = (JD - 2451545) / 36525',
+            substitution: observedAtIso,
+            result: `JD=${format(julianDay)}; T=${format(julianCentury, 9)}`
+          },
+          {
+            id: 'sidereal-time',
+            title: 'Yerel ortalama yıldız zamanı',
+            formula: 'LMST = GMST + λ',
+            substitution: `GMST=${format(greenwichMeanSiderealTimeDeg)}°; λ=${format(input.longitudeDeg)}°`,
+            result: `LMST=${format(localMeanSiderealTimeDeg)}°`
+          },
+          {
+            id: 'hour-angle',
+            title: 'Yıldız saat açısı',
+            formula: 'H = LMST - α',
+            substitution: `LMST=${format(localMeanSiderealTimeDeg)}°; α=${format(input.rightAscensionDeg)}°`,
+            result: `H=${format(hourAngleDeg)}°`
+          },
+          {
+            id: 'horizontal-position',
+            title: 'Yerel yatay koordinatlar',
+            formula: 'sin(h)=sinφ·sinδ+cosφ·cosδ·cosH; A=atan2(E,N)',
+            substitution: `φ=${format(input.latitudeDeg)}°; δ=${format(input.declinationDeg)}°; H=${format(hourAngleDeg)}°`,
+            result: `yükseklik=${format(elevationDeg)}°; azimut=${azimuthDeg === null ? 'tanımsız' : `${format(azimuthDeg)}°`}`
+          },
+          {
+            id: 'horizon-class',
+            title: 'Geometrik ufuk sınıfı',
+            formula: 'h_üst=alt(H=0°); h_alt=alt(H=180°)',
+            substitution: `h_üst=${format(upperCulminationElevationDeg)}°; h_alt=${format(lowerCulminationElevationDeg)}°`,
+            result: horizonClass
+          }
+        ]
       }
-    ]
-  };
+    : { summary: '', assumptions: [], steps: [] };
 
   return {
     observedAtIso,

@@ -123,7 +123,8 @@ function positionAtMs(input: StellarLocalHorizonTrailInput, timestampMs: number)
     longitudeDeg: input.longitudeDeg,
     rightAscensionDeg: input.rightAscensionDeg,
     declinationDeg: input.declinationDeg,
-    label: input.label
+    label: input.label,
+    includeTrace: false
   });
 }
 
