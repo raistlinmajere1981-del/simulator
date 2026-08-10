@@ -6,8 +6,7 @@ export type SimulationScenarioId =
   | 'long-distance-visibility'
   | 'sun-moon-observation'
   | 'shadow-observation'
-  | 'stellar-observation'
-  | 'eclipse-simulation';
+  | 'stellar-observation';
 
 export interface SimulationScenarioDefinition {
   id: SimulationScenarioId;
@@ -93,24 +92,11 @@ export const STELLAR_SCENARIO: SimulationScenarioDefinition = {
   usesTerrain: false
 };
 
-export const ECLIPSE_SCENARIO: SimulationScenarioDefinition = {
-  id: 'eclipse-simulation',
-  label: 'Tutulma Simülasyonları',
-  icon: '◐',
-  experimentType: 'celestial',
-  description: 'Seçili gözlemci ve anda Güneş ile Ay apparent disklerinin düşük hassasiyetli yerel örtüşme geometrisini karşılaştırır.',
-  usesTarget: false,
-  usesObservation: false,
-  usesRoute: false,
-  usesTerrain: false
-};
-
 export const ALL_SIMULATION_SCENARIOS: readonly SimulationScenarioDefinition[] = [
   ...VISIBILITY_SCENARIOS,
   SUN_MOON_SCENARIO,
   SHADOW_SCENARIO,
-  STELLAR_SCENARIO,
-  ECLIPSE_SCENARIO
+  STELLAR_SCENARIO
 ] as const;
 
 const scenarioById = new Map(
@@ -122,8 +108,7 @@ export function normalizeSimulationScenarioId(value: unknown): SimulationScenari
     value === 'long-distance-visibility' ||
     value === 'sun-moon-observation' ||
     value === 'shadow-observation' ||
-    value === 'stellar-observation' ||
-    value === 'eclipse-simulation'
+    value === 'stellar-observation'
     ? value
     : 'target-visibility';
 }
