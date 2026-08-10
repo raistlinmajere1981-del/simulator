@@ -2,6 +2,7 @@ import type {
   SavedStellarLocalHorizonSource,
   SavedStellarPanoramaSkylineDerivation,
   StellarPanoramaGeometry,
+  StellarPanoramaMarkingMethod,
   StellarPanoramaMetadataStatus
 } from '../shared/stellar-local-horizon-import';
 import {
@@ -46,6 +47,10 @@ function sha256(value: unknown): value is string {
 function metadataStatus(value: unknown): value is StellarPanoramaMetadataStatus {
   return value === 'complete' || value === 'absent' || value === 'incomplete' ||
     value === 'unsupported-projection' || value === 'incompatible-scale';
+}
+
+function markingMethod(value: unknown): value is StellarPanoramaMarkingMethod {
+  return value === 'manual' || value === 'assisted-gradient-v1' || value === 'assisted-gradient-v1-edited';
 }
 
 function parseGeometry(value: unknown): StellarPanoramaGeometry | null {
@@ -105,6 +110,7 @@ export function parseSavedStellarPanoramaLocalHorizonSource(
   if (derivationValue.algorithmId !== EQUIRECTANGULAR_PANORAMA_ALGORITHM_ID ||
     derivationValue.algorithmVersion !== EQUIRECTANGULAR_PANORAMA_ALGORITHM_VERSION ||
     (derivationValue.geometrySource !== 'gpano-xmp' && derivationValue.geometrySource !== 'manual') ||
+    (derivationValue.markingMethod !== undefined && !markingMethod(derivationValue.markingMethod)) ||
     !metadataStatus(derivationValue.metadataStatusAtImport) ||
     (derivationValue.projectionTypeAtImport !== undefined &&
       !nonEmptyString(derivationValue.projectionTypeAtImport, 100)) ||
@@ -203,6 +209,7 @@ export function parseSavedStellarPanoramaLocalHorizonSource(
     algorithmId: EQUIRECTANGULAR_PANORAMA_ALGORITHM_ID,
     algorithmVersion: EQUIRECTANGULAR_PANORAMA_ALGORITHM_VERSION,
     geometrySource: derivationValue.geometrySource,
+    markingMethod: markingMethod(derivationValue.markingMethod) ? derivationValue.markingMethod : 'manual',
     geometry: { ...geometry },
     horizontalCoverageDeg: derivationValue.horizontalCoverageDeg,
     verticalCoverageDeg: derivationValue.verticalCoverageDeg,
