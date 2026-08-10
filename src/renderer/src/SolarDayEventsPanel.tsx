@@ -9,6 +9,7 @@ import { calculateSolarTimeOffset } from '../../simulation/solar-time-offset';
 import { PanelHelpButton } from './HelpSystem';
 import { SolarSeasonEventsPanel } from './SolarSeasonEventsPanel';
 import { SolarTimeOffsetPanel } from './SolarTimeOffsetPanel';
+import { SolarRouteComparisonPanel } from './SolarRouteComparisonPanel';
 import './solar-day-events-panel.css';
 
 const numberFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
@@ -193,6 +194,14 @@ export function SolarDayEventsPanel({
           </p>
         </section>
       )}
+
+      <SolarRouteComparisonPanel
+        experimentId={result.experimentId}
+        observedAtIso={result.observedAtIso}
+        utcOffsetMinutes={result.utcOffsetMinutes}
+        startLatitudeDeg={result.latitudeDeg}
+        startLongitudeDeg={result.longitudeDeg}
+      />
     </>
   );
 }
