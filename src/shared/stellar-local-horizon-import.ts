@@ -1,9 +1,69 @@
-export type StellarLocalHorizonImportFormat = 'csv' | 'json' | 'dem';
+export type StellarLocalHorizonImportFormat = 'csv' | 'json' | 'dem' | 'panorama';
 export type StellarDemSkylineSamplingMethod = 'nearest' | 'bilinear';
+export type StellarPanoramaGeometrySource = 'gpano-xmp' | 'manual';
+export type StellarPanoramaMetadataStatus =
+  | 'complete'
+  | 'absent'
+  | 'incomplete'
+  | 'unsupported-projection'
+  | 'incompatible-scale';
 
 export interface StellarLocalHorizonImportPoint {
   azimuthDeg: number;
   altitudeDeg: number;
+}
+
+export interface StellarPanoramaGeometry {
+  imageWidthPx: number;
+  imageHeightPx: number;
+  fullPanoWidthPx: number;
+  fullPanoHeightPx: number;
+  croppedAreaLeftPx: number;
+  croppedAreaTopPx: number;
+  poseHeadingDeg: number;
+  posePitchDeg: number;
+  poseRollDeg: number;
+}
+
+export interface StellarPanoramaSkylineMark {
+  xPx: number;
+  yPx: number;
+  azimuthDeg: number;
+  altitudeDeg: number;
+}
+
+export interface StellarPanoramaMetadataSummary {
+  status: StellarPanoramaMetadataStatus;
+  geometry?: StellarPanoramaGeometry;
+  projectionType?: string;
+  metadataScaledToImage: boolean;
+  standardXmpPacketFound: boolean;
+  extendedXmpPacketFound: boolean;
+  warnings: string[];
+}
+
+/** Session-only panorama import draft. dataUrl is never persisted in SavedExperiment. */
+export interface StellarPanoramaSkylineDraft {
+  fileName: string;
+  importedAtIso: string;
+  fileSizeBytes: number;
+  sha256: string;
+  mimeType: 'image/jpeg' | 'image/png';
+  imageWidthPx: number;
+  imageHeightPx: number;
+  dataUrl: string;
+  metadata: StellarPanoramaMetadataSummary;
+}
+
+export interface SavedStellarPanoramaSkylineDerivation {
+  algorithmId: string;
+  algorithmVersion: string;
+  geometrySource: StellarPanoramaGeometrySource;
+  geometry: StellarPanoramaGeometry;
+  horizontalCoverageDeg: number;
+  verticalCoverageDeg: number;
+  fullSphereCoverage: boolean;
+  marks: StellarPanoramaSkylineMark[];
 }
 
 export interface StellarDemSkylineDraft {
@@ -56,6 +116,7 @@ export interface ImportedStellarLocalHorizonProfile {
   fileSizeBytes: number;
   sha256: string;
   demDerivation?: SavedStellarDemSkylineDerivation;
+  panoramaDerivation?: SavedStellarPanoramaSkylineDerivation;
 }
 
 export interface SavedStellarLocalHorizonSource extends ImportedStellarLocalHorizonProfile {
@@ -82,4 +143,11 @@ export interface GenerateStellarDemSkylineResult {
     noDataAffectedRayCount: number;
     noCoverageRayCount: number;
   };
+}
+
+export interface ImportStellarPanoramaSkylineResult {
+  status: 'success' | 'cancelled';
+  message: string;
+  filePath?: string;
+  draft?: StellarPanoramaSkylineDraft;
 }
