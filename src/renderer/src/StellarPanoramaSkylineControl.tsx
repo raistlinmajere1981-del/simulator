@@ -3,6 +3,7 @@ import type {
   SavedStellarLocalHorizonSource,
   StellarPanoramaGeometry,
   StellarPanoramaGeometrySource,
+  StellarPanoramaMarkingMethod,
   StellarPanoramaSkylineDraft
 } from '../../shared/stellar-local-horizon-import';
 import {
@@ -11,15 +12,24 @@ import {
   validateEquirectangularPanoramaGeometry,
   type PanoramaSkylinePixelMark
 } from '../../simulation/equirectangular-panorama';
+import { suggestPanoramaSkyline } from '../../simulation/panorama-skyline-assist';
 import { savedStellarLocalHorizonSourceFromPanorama } from '../../simulation/stellar-panorama-skyline-source';
 import { DraftNumberInput } from './DraftNumberInput';
 import './stellar-panorama-skyline-control.css';
 
 const numberFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
 const angleFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 3 });
+const confidenceFormatter = new Intl.NumberFormat('tr-TR', { style: 'percent', maximumFractionDigits: 0 });
 
 interface StellarPanoramaSkylineControlProps {
   onPreparedSource(source: SavedStellarLocalHorizonSource): void;
+}
+
+interface AssistedSkylineDraft {
+  marks: PanoramaSkylinePixelMark[];
+  confidence: number;
+  algorithmVersion: string;
+  warnings: string[];
 }
 
 function formatBytes(bytes: number): string {
@@ -60,10 +70,58 @@ function metadataStatusLabel(draft: StellarPanoramaSkylineDraft): string {
   }
 }
 
+function markingMethodLabel(method: StellarPanoramaMarkingMethod): string {
+  if (method === 'assisted-gradient-v1') return 'Yardımcı gradyan taslağı · kullanıcı kabul etti';
+  if (method === 'assisted-gradient-v1-edited') return 'Yardımcı gradyan taslağı · elle düzenlendi';
+  return 'Manuel işaretleme';
+}
+
+function editedMarkingMethod(method: StellarPanoramaMarkingMethod): StellarPanoramaMarkingMethod {
+  return method === 'manual' ? 'manual' : 'assisted-gradient-v1-edited';
+}
+
 function markPercent(mark: PanoramaSkylinePixelMark, draft: StellarPanoramaSkylineDraft): { left: string; top: string } {
   return {
     left: `${((mark.xPx + 0.5) / draft.imageWidthPx) * 100}%`,
     top: `${((mark.yPx + 0.5) / draft.imageHeightPx) * 100}%`
+  };
+}
+
+async function createAssistedDraft(draft: StellarPanoramaSkylineDraft): Promise<AssistedSkylineDraft> {
+  const image = new Image();
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error('Panorama yardımcı taslak için bitmap olarak açılamadı.'));
+    image.src = draft.dataUrl;
+  });
+
+  const maximumAnalysisWidth = 720;
+  const scale = Math.min(1, maximumAnalysisWidth / image.naturalWidth);
+  const width = Math.max(16, Math.round(image.naturalWidth * scale));
+  const height = Math.max(16, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Panorama yardımcı taslak için Canvas 2D bağlamı açılamadı.');
+  context.drawImage(image, 0, 0, width, height);
+  const pixels = context.getImageData(0, 0, width, height);
+  const result = suggestPanoramaSkyline({ width, height, data: pixels.data }, { sampleCount: 72 });
+  const marks = result.marks.map((mark) => ({
+    xPx: Math.max(0, Math.min(
+      draft.imageWidthPx - 1,
+      ((mark.xPx + 0.5) / width) * draft.imageWidthPx - 0.5
+    )),
+    yPx: Math.max(0, Math.min(
+      draft.imageHeightPx - 1,
+      ((mark.yPx + 0.5) / height) * draft.imageHeightPx - 0.5
+    ))
+  }));
+  return {
+    marks,
+    confidence: result.confidence,
+    algorithmVersion: result.algorithmVersion,
+    warnings: result.warnings
   };
 }
 
@@ -74,7 +132,10 @@ export function StellarPanoramaSkylineControl({
   const [geometrySource, setGeometrySource] = useState<StellarPanoramaGeometrySource>('manual');
   const [geometry, setGeometry] = useState<StellarPanoramaGeometry>();
   const [marks, setMarks] = useState<PanoramaSkylinePixelMark[]>([]);
+  const [markingMethod, setMarkingMethod] = useState<StellarPanoramaMarkingMethod>('manual');
+  const [assistedDraft, setAssistedDraft] = useState<AssistedSkylineDraft>();
   const [isImporting, setIsImporting] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const [message, setMessage] = useState('');
   const [preparedSha, setPreparedSha] = useState('');
 
@@ -132,6 +193,8 @@ export function StellarPanoramaSkylineControl({
       setGeometrySource(hasVerifiedGpano ? 'gpano-xmp' : 'manual');
       setGeometry(cloneGeometry(hasVerifiedGpano ? imported.metadata.geometry! : defaultManualGeometry(imported)));
       setMarks([]);
+      setMarkingMethod('manual');
+      setAssistedDraft(undefined);
       setMessage(result.message);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Panorama görüntüsü içe aktarılamadı.');
@@ -164,6 +227,13 @@ export function StellarPanoramaSkylineControl({
     });
   };
 
+  const markEdited = (): void => {
+    setMarkingMethod((current) => editedMarkingMethod(current));
+    setAssistedDraft(undefined);
+    setPreparedSha('');
+    setMessage('');
+  };
+
   const addMark = (event: React.MouseEvent<HTMLImageElement>): void => {
     if (!draft || !geometry || marks.length >= 1_440) return;
     const rect = event.currentTarget.getBoundingClientRect();
@@ -177,8 +247,33 @@ export function StellarPanoramaSkylineControl({
       ((event.clientY - rect.top) / rect.height) * draft.imageHeightPx - 0.5
     ));
     setMarks((current) => [...current, { xPx, yPx }]);
+    markEdited();
+  };
+
+  const suggestDraft = async (): Promise<void> => {
+    if (!draft) return;
+    setIsSuggesting(true);
     setPreparedSha('');
     setMessage('');
+    try {
+      const suggestion = await createAssistedDraft(draft);
+      setAssistedDraft(suggestion);
+      setMessage(`Yardımcı skyline taslağı üretildi (${suggestion.marks.length} nokta · güven ${confidenceFormatter.format(suggestion.confidence)}). Hesaba girmeden önce çizgiyi kontrol edip açıkça kabul et.`);
+    } catch (error) {
+      setAssistedDraft(undefined);
+      setMessage(error instanceof Error ? error.message : 'Panorama yardımcı skyline taslağı üretilemedi.');
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const acceptAssistedDraft = (): void => {
+    if (!assistedDraft) return;
+    setMarks(assistedDraft.marks.map((mark) => ({ ...mark })));
+    setMarkingMethod('assisted-gradient-v1');
+    setAssistedDraft(undefined);
+    setPreparedSha('');
+    setMessage('Yardımcı skyline taslağı işaretlere aktarıldı. Noktaları silebilir veya elle yeni noktalar ekleyebilirsin; böyle bir değişiklik provenansta ayrıca işaretlenir.');
   };
 
   const prepare = (): void => {
@@ -191,6 +286,7 @@ export function StellarPanoramaSkylineControl({
         draft,
         geometry,
         geometrySource,
+        markingMethod,
         marks
       });
       onPreparedSource({
@@ -221,13 +317,14 @@ export function StellarPanoramaSkylineControl({
     preview?.maximumGapDeg !== undefined && preview.maximumGapDeg <= 90 + 1e-9;
   const marksReady = marks.length >= 8;
   const canPrepare = Boolean(draft && geometry && marksReady && coverageReady && gapReady && !preview?.error);
+  const compactMarks = markingMethod !== 'manual' && marks.length > 24;
 
   return (
     <div className="stellar-panorama-control">
       <div className="stellar-panorama-heading">
         <div>
           <strong>Panoramadan 360° geometrik skyline</strong>
-          <span>JPEG/PNG seçilir; görüntü üzerinde skyline noktaları elle işaretlenir. Otomatik görüntü segmentasyonu uygulanmaz.</span>
+          <span>Skyline elle işaretlenebilir veya yerel görüntü gradyanından kullanıcı-denetimli bir taslak önerilebilir. Yardımcı taslak otomatik doğrulanmış segmentasyon değildir.</span>
         </div>
         <button type="button" disabled={isImporting} onClick={() => void importPanorama()}>
           {isImporting ? 'Panorama okunuyor…' : 'Panorama seç'}
@@ -304,18 +401,41 @@ export function StellarPanoramaSkylineControl({
           </div>
 
           <div className="stellar-panorama-image-help">
-            <span>Skyline çizgisini görüntü üzerinde soldan sağa noktalayın. En az 8 nokta gerekir; azimutta 90°’den büyük boşluk kabul edilmez.</span>
+            <span>Elle noktalayabilir veya “Skyline taslağı öner” ile yalnız editör içinde çalışan gradyan yardımcısını kullanabilirsin. Öneri kendiliğinden kaynak veya hesap sonucu olmaz.</span>
             <div>
-              <button type="button" disabled={marks.length === 0} onClick={() => { setMarks((current) => current.slice(0, -1)); setPreparedSha(''); setMessage(''); }}>Son noktayı geri al</button>
-              <button type="button" disabled={marks.length === 0} onClick={() => { setMarks([]); setPreparedSha(''); setMessage(''); }}>Temizle</button>
+              <button type="button" disabled={isSuggesting} onClick={() => void suggestDraft()}>{isSuggesting ? 'Taslak aranıyor…' : 'Skyline taslağı öner'}</button>
+              {assistedDraft && <button type="button" className="assist-accept" onClick={acceptAssistedDraft}>Taslağı işaretlere aktar</button>}
+              {assistedDraft && <button type="button" onClick={() => { setAssistedDraft(undefined); setMessage('Yardımcı skyline taslağı atıldı; mevcut işaretler değiştirilmedi.'); }}>Taslağı at</button>}
+              <button type="button" disabled={marks.length === 0} onClick={() => { setMarks((current) => current.slice(0, -1)); markEdited(); }}>Son noktayı geri al</button>
+              <button type="button" disabled={marks.length === 0} onClick={() => { setMarks([]); markEdited(); }}>Temizle</button>
             </div>
           </div>
+
+          {assistedDraft && (
+            <div className="stellar-panorama-assist-status">
+              <div>
+                <strong>Yardımcı taslak · henüz uygulanmadı</strong>
+                <span>{assistedDraft.marks.length} nokta · güven göstergesi {confidenceFormatter.format(assistedDraft.confidence)} · gradient-dp v{assistedDraft.algorithmVersion}</span>
+              </div>
+              <span>Çizgiyi özellikle ağaç, bina, bulut ve 0°/360° seam çevresinde kontrol et. Güven göstergesi bilimsel doğruluk olasılığı değildir.</span>
+              {assistedDraft.warnings.map((warning, index) => <small key={`${warning}-${index}`}>{warning}</small>)}
+            </div>
+          )}
 
           <div className="stellar-panorama-image-stage">
             <img src={draft.dataUrl} alt="Skyline noktaları işaretlenecek panorama" draggable={false} onClick={addMark} />
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              {assistedDraft && assistedDraft.marks.length > 1 && (
+                <polyline
+                  className="stellar-panorama-assist-line"
+                  points={assistedDraft.marks
+                    .map((mark) => `${((mark.xPx + 0.5) / draft.imageWidthPx) * 100},${((mark.yPx + 0.5) / draft.imageHeightPx) * 100}`)
+                    .join(' ')}
+                />
+              )}
               {mappedMarks.length > 1 && (
                 <polyline
+                  className="stellar-panorama-active-line"
                   points={[...mappedMarks]
                     .sort((left, right) => left.xPx - right.xPx)
                     .map((mark) => `${((mark.xPx + 0.5) / draft.imageWidthPx) * 100},${((mark.yPx + 0.5) / draft.imageHeightPx) * 100}`)
@@ -329,24 +449,25 @@ export function StellarPanoramaSkylineControl({
                 <button
                   key={`${mark.xPx}-${mark.yPx}-${index}`}
                   type="button"
-                  className="stellar-panorama-mark"
+                  className={`stellar-panorama-mark${compactMarks ? ' compact' : ''}`}
                   style={position}
+                  aria-label={`Skyline noktası ${index + 1}`}
                   title={mark.azimuthDeg === null
                     ? `Nokta ${index + 1}`
                     : `Nokta ${index + 1} · A ${angleFormatter.format(mark.azimuthDeg)}° · h ${angleFormatter.format(mark.altitudeDeg ?? 0)}°`}
                   onClick={(event) => {
                     event.stopPropagation();
                     setMarks((current) => current.filter((_, markIndex) => markIndex !== index));
-                    setPreparedSha('');
-                    setMessage('');
+                    markEdited();
                   }}
-                >{index + 1}</button>
+                >{compactMarks ? '' : index + 1}</button>
               );
             })}
           </div>
 
           <div className="stellar-panorama-diagnostics">
             <span>Nokta <strong>{marks.length}</strong>/8+</span>
+            <span>İşaret kaynağı <strong>{markingMethodLabel(markingMethod)}</strong></span>
             <span>Yatay kapsam <strong>{preview?.horizontalCoverageDeg === null || preview?.horizontalCoverageDeg === undefined ? '—' : `${angleFormatter.format(preview.horizontalCoverageDeg)}°`}</strong></span>
             <span>Düşey kapsam <strong>{preview?.verticalCoverageDeg === null || preview?.verticalCoverageDeg === undefined ? '—' : `${angleFormatter.format(preview.verticalCoverageDeg)}°`}</strong></span>
             <span>En büyük azimut boşluğu <strong>{preview?.maximumGapDeg === null || preview?.maximumGapDeg === undefined ? '—' : `${angleFormatter.format(preview.maximumGapDeg)}°`}</strong></span>
