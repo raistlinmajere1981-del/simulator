@@ -65,6 +65,7 @@ const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 const INTEGER_LIMIT = 200_000;
 const ANGLE_EPSILON_DEG = 1e-10;
+const WARNING_THRESHOLD_EPSILON_DEG = 1e-9;
 
 function radians(valueDeg: number): number {
   return valueDeg * DEG_TO_RAD;
@@ -358,11 +359,11 @@ export function buildPanoramaSkylineProfile(input: {
       `Panorama tam 360°×180° küreyi kapsamıyor (${geometry.horizontalCoverageDeg.toFixed(3)}° × ${geometry.verticalCoverageDeg.toFixed(3)}°); eksik azimutlar otomatik olarak gözlenmiş kabul edilmemelidir.`
     );
   }
-  if (mask.maximumAzimuthGapDeg > 90) {
+  if (mask.maximumAzimuthGapDeg > 90 + WARNING_THRESHOLD_EPSILON_DEG) {
     warnings.push(
       `Manuel skyline işaretleri arasındaki en büyük azimut boşluğu ${mask.maximumAzimuthGapDeg.toFixed(3)}°; doğrusal interpolasyon bu aralıkta kaba olabilir.`
     );
-  } else if (mask.maximumAzimuthGapDeg > 45) {
+  } else if (mask.maximumAzimuthGapDeg > 45 + WARNING_THRESHOLD_EPSILON_DEG) {
     warnings.push(
       `Manuel skyline işaretleri arasındaki en büyük azimut boşluğu ${mask.maximumAzimuthGapDeg.toFixed(3)}°; bu aralık dikkatle yorumlanmalıdır.`
     );
