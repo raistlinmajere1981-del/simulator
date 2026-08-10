@@ -833,11 +833,30 @@ Durum: tamamlandı · `1.19.1`
 
 Ayrıntı: [`roadmap-stage-6.26.md`](roadmap-stage-6.26.md)
 
+### Aşama 6.27 — Panorama skyline importu, işaretleme ve provenans
+
+Durum: tamamlanma adayı · `1.20.0`
+
+- JPEG/PNG panorama importu, SHA-256 ve oturumluk görüntü editörü
+- JPEG standard XMP içinden GPano equirectangular crop / pose metadata çözümleme
+- uniform-resize metadata uyarlaması; aspect-ratio mismatch fail-closed
+- Extended XMP'yi tespit edip eksik alanları sessizce birleştirmeme
+- GPano XMP ve açık manuel geometri kaynak modlarını ayırma
+- panorama üzerinde kullanıcı kontrollü skyline işaretleme
+- yalnız 360° yatay kapsam + en az 8 işaret + en fazla 90° azimut boşluğunda kaynak üretme
+- mevcut `Uygula ve hesapla` kapısıyla yıldız local-horizon zincirine bağlama
+- `format: panorama` / `derived` kaynak provenansı; ham görüntü baytlarını kaydetmeme
+- portable/local-store v11 ve v1–v10 migration
+- persisted piksel → azimut/yükseklik değerlerini reopen sırasında yeniden hesaplayarak tamper kontrolü
+- HTML raporda GPano/manual, pose/crop/XMP/işaret provenansı
+- sentetik 1600×800 manuel panorama Electron fixture'ı
+
+Ayrıntı: [`roadmap-stage-6.27.md`](roadmap-stage-6.27.md)
+
 ### Sonraki astronomi dilimleri
 
-- GPano XMP metadata importu ve panorama üzerinde manuel skyline işaretleme UI
-- panorama kaynak provenansını save/reopen, portable kayıt ve HTML rapora bağlama
-- otomatik skyline segmentasyonunu yalnız doğrulanabilir manuel zincirden sonra değerlendirme
+- otomatik skyline segmentasyonunu yalnız doğrulanmış manuel/provenanslı zincirden sonra kullanıcı-denetimli taslak olarak değerlendirme
+- gerçek GPano panorama örnekleriyle ek saha doğrulamaları gerekirse fixture/provenans setini genişletme
 - daha geniş yıldız kataloğu gerekirse performans ve veri-provenans tasarımı
 - ihtiyaç doğrulanırsa paralaks/radyal hız/perspektif ivmelenmesini ayrı astrometrik katman olarak ele alma
 

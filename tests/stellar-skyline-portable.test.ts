@@ -45,11 +45,11 @@ function experiment(): SavedExperiment {
   };
 }
 
-describe('stellar skyline portable v10', () => {
+describe('stellar skyline portable v11', () => {
   it('round-trips a validated external skyline source without requiring DEM provenance', () => {
     const portable = createPortableExperimentFile(experiment(), '1.19.0', '2026-08-09T21:00:00.000Z');
-    expect(portable.schemaVersion).toBe(10);
-    expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(10);
+    expect(portable.schemaVersion).toBe(11);
+    expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(11);
     const parsed = parsePortableExperimentFile(portable);
     expect(parsed.migrated).toBe(false);
     expect(parsed.experiment.stellarLocalHorizonSource).toEqual(source);

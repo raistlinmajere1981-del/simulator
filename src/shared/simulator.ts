@@ -9,6 +9,7 @@ import type {
   GenerateStellarDemSkylineResult,
   ImportedStellarLocalHorizonProfile,
   ImportStellarDemSkylineResult,
+  ImportStellarPanoramaSkylineResult,
   SavedStellarLocalHorizonSource,
   StellarDemSkylineGenerationSettings
 } from './stellar-local-horizon-import';
@@ -330,6 +331,7 @@ export interface SimulatorDesktopApi {
   importStellarLocalHorizon(): Promise<ImportStellarLocalHorizonResult>;
   importStellarMotionSource(): Promise<ImportStellarMotionResult>;
   importStellarDemSkyline(): Promise<ImportStellarDemSkylineResult>;
+  importStellarPanoramaSkyline(): Promise<ImportStellarPanoramaSkylineResult>;
   generateStellarDemSkyline(
     requestId: string,
     settings: StellarDemSkylineGenerationSettings
