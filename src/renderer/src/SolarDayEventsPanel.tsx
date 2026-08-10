@@ -11,6 +11,8 @@ import './solar-day-events-panel.css';
 
 const numberFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
 const angleFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
+const MIN_SEASON_YEAR = 1900;
+const MAX_SEASON_YEAR = 2100;
 
 function localClock(iso: string | null, offsetMinutes: number): string {
   if (!iso) return '—';
@@ -69,18 +71,24 @@ export function SolarDayEventsPanel({
   const standardSetMinute = localMinuteOfDay(result.standardApparent.setIso, result.utcOffsetMinutes);
   const noonMinute = localMinuteOfDay(result.solarNoonIso, result.utcOffsetMinutes);
   const seasonalYear = Number(result.localDate.slice(0, 4));
-  const seasonResult = useMemo(() => calculateSolarSeasonEvents({
-    experimentId: result.experimentId,
-    year: seasonalYear,
-    latitudeDeg: result.latitudeDeg,
-    longitudeDeg: result.longitudeDeg,
-    utcOffsetMinutes: result.utcOffsetMinutes
-  }), [
+  const seasonalYearSupported = Number.isInteger(seasonalYear) &&
+    seasonalYear >= MIN_SEASON_YEAR && seasonalYear <= MAX_SEASON_YEAR;
+  const seasonResult = useMemo(() => {
+    if (!seasonalYearSupported) return undefined;
+    return calculateSolarSeasonEvents({
+      experimentId: result.experimentId,
+      year: seasonalYear,
+      latitudeDeg: result.latitudeDeg,
+      longitudeDeg: result.longitudeDeg,
+      utcOffsetMinutes: result.utcOffsetMinutes
+    });
+  }, [
     result.experimentId,
     result.latitudeDeg,
     result.longitudeDeg,
     result.utcOffsetMinutes,
-    seasonalYear
+    seasonalYear,
+    seasonalYearSupported
   ]);
 
   return (
@@ -159,7 +167,17 @@ export function SolarDayEventsPanel({
         </p>
       </section>
 
-      <SolarSeasonEventsPanel result={seasonResult} />
+      {seasonResult ? (
+        <SolarSeasonEventsPanel result={seasonResult} />
+      ) : (
+        <section className="solar-season-panel panel">
+          <span className="eyebrow">Aşama 7.5 · yıllık Güneş döngüsü</span>
+          <h2>Yıllık mevsim referansı bu yıl için kapalı</h2>
+          <p className="solar-season-note">
+            İlk doğrulama aralığı {MIN_SEASON_YEAR}–{MAX_SEASON_YEAR}. Günlük Güneş hesabı çalışmaya devam eder; bu aralığın dışındaki yıllarda ekinoks/gündönümü kartları güvenli biçimde üretilmez.
+          </p>
+        </section>
+      )}
     </>
   );
 }
