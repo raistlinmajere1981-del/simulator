@@ -1,0 +1,83 @@
+name: Patch 6.27 v11 and trace
+on:
+  push:
+    branches: [agent/panorama-skyline-ui]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/panorama-skyline-ui
+      - name: Apply guarded changes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              s = p.read_text()
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: anchor count={count} for {old!r}')
+              p.write_text(s.replace(old, new, 1))
+
+          replace_once(
+              'src/simulation/stellar-observation.ts',
+              "              ? `${localHorizon.summary.fileName} · SHA-256=${localHorizon.summary.sha256}`",
+              "              ? `${localHorizon.summary.fileName} · kaynak türü=${localHorizon.summary.sourceKind} · SHA-256=${localHorizon.summary.sha256}`"
+          )
+
+          p = Path('tests/portable-dem-skyline.test.ts')
+          s = p.read_text()
+          for old, new in [
+              ("describe('portable v10 DEM skyline provenance'", "describe('portable v11 DEM skyline provenance'"),
+              ('expect(file.schemaVersion).toBe(10);', 'expect(file.schemaVersion).toBe(11);'),
+              ('expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(10);', 'expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(11);')
+          ]:
+              if s.count(old) != 1:
+                  raise SystemExit(f'portable-dem anchor count={s.count(old)}: {old}')
+              s = s.replace(old, new, 1)
+          p.write_text(s)
+
+          p = Path('tests/stellar-motion-source.test.ts')
+          s = p.read_text()
+          for old, new in [
+              ("round-trips the verified source through current portable schema v10", "round-trips the verified source through current portable schema v11"),
+              ('expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(10);', 'expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(11);'),
+              ('expect(portable.schemaVersion).toBe(10);', 'expect(portable.schemaVersion).toBe(11);'),
+              ('expect(parsed.sourceVersion).toBe(10);', 'expect(parsed.sourceVersion).toBe(11);')
+          ]:
+              if s.count(old) != 1:
+                  raise SystemExit(f'motion anchor count={s.count(old)}: {old}')
+              s = s.replace(old, new, 1)
+          p.write_text(s)
+
+          p = Path('tests/stellar-skyline-portable.test.ts')
+          s = p.read_text()
+          for old, new in [
+              ("describe('stellar skyline portable v10'", "describe('stellar skyline portable v11'"),
+              ('expect(portable.schemaVersion).toBe(10);', 'expect(portable.schemaVersion).toBe(11);'),
+              ('expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(10);', 'expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(11);')
+          ]:
+              if s.count(old) != 1:
+                  raise SystemExit(f'skyline anchor count={s.count(old)}: {old}')
+              s = s.replace(old, new, 1)
+          p.write_text(s)
+
+          replace_once(
+              'tests/report.test.ts',
+              "expect(html).toContain('Taşınabilir deney şeması v10');",
+              "expect(html).toContain('Taşınabilir deney şeması v11');"
+          )
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/simulation/stellar-observation.ts tests/portable-dem-skyline.test.ts tests/stellar-motion-source.test.ts tests/stellar-skyline-portable.test.ts tests/report.test.ts
+          git commit -m "Align portable v11 tests and expose derived skyline trace"
+          git push origin HEAD:agent/panorama-skyline-ui
