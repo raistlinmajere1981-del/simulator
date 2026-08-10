@@ -1,0 +1,66 @@
+name: Patch 6.27 roadmap
+on:
+  push:
+    branches: [agent/panorama-skyline-ui]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/panorama-skyline-ui
+      - name: Apply roadmap patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('docs/roadmap.md')
+          s = p.read_text()
+          old = '''### Sonraki astronomi dilimleri
+
+          - GPano XMP metadata importu ve panorama üzerinde manuel skyline işaretleme UI
+          - panorama kaynak provenansını save/reopen, portable kayıt ve HTML rapora bağlama
+          - otomatik skyline segmentasyonunu yalnız doğrulanabilir manuel zincirden sonra değerlendirme
+          - daha geniş yıldız kataloğu gerekirse performans ve veri-provenans tasarımı
+          - ihtiyaç doğrulanırsa paralaks/radyal hız/perspektif ivmelenmesini ayrı astrometrik katman olarak ele alma
+          '''.replace('          ', '')
+          new = '''### Aşama 6.27 — Panorama skyline importu, işaretleme ve provenans
+
+          Durum: tamamlanma adayı · `1.20.0`
+
+          - JPEG/PNG panorama importu, SHA-256 ve oturumluk görüntü editörü
+          - JPEG standard XMP içinden GPano equirectangular crop / pose metadata çözümleme
+          - uniform-resize metadata uyarlaması; aspect-ratio mismatch fail-closed
+          - Extended XMP'yi tespit edip eksik alanları sessizce birleştirmeme
+          - GPano XMP ve açık manuel geometri kaynak modlarını ayırma
+          - panorama üzerinde kullanıcı kontrollü skyline işaretleme
+          - yalnız 360° yatay kapsam + en az 8 işaret + en fazla 90° azimut boşluğunda kaynak üretme
+          - mevcut `Uygula ve hesapla` kapısıyla yıldız local-horizon zincirine bağlama
+          - `format: panorama` / `derived` kaynak provenansı; ham görüntü baytlarını kaydetmeme
+          - portable/local-store v11 ve v1–v10 migration
+          - persisted piksel → azimut/yükseklik değerlerini reopen sırasında yeniden hesaplayarak tamper kontrolü
+          - HTML raporda GPano/manual, pose/crop/XMP/işaret provenansı
+          - sentetik 1600×800 manuel panorama Electron fixture'ı
+
+          Ayrıntı: [`roadmap-stage-6.27.md`](roadmap-stage-6.27.md)
+
+          ### Sonraki astronomi dilimleri
+
+          - otomatik skyline segmentasyonunu yalnız doğrulanmış manuel/provenanslı zincirden sonra kullanıcı-denetimli taslak olarak değerlendirme
+          - gerçek GPano panorama örnekleriyle ek saha doğrulamaları gerekirse fixture/provenans setini genişletme
+          - daha geniş yıldız kataloğu gerekirse performans ve veri-provenans tasarımı
+          - ihtiyaç doğrulanırsa paralaks/radyal hız/perspektif ivmelenmesini ayrı astrometrik katman olarak ele alma
+          '''.replace('          ', '')
+          if s.count(old) != 1:
+              raise SystemExit(f'roadmap anchor count={s.count(old)}')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/roadmap.md
+          git commit -m "Update roadmap for stage 6.27"
+          git push origin HEAD:agent/panorama-skyline-ui
