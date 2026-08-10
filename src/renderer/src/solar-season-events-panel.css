@@ -1,0 +1,243 @@
+.solar-season-panel {
+  grid-column: 1 / -1;
+  margin-top: 12px;
+  padding: 12px 14px;
+}
+
+.solar-season-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.solar-season-heading h2 {
+  margin: 3px 0 5px;
+}
+
+.solar-season-heading p {
+  margin: 0;
+  max-width: 900px;
+  color: #8498a2;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.solar-season-context {
+  min-width: 170px;
+  border: 1px solid #31546a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: right;
+  background: rgba(14, 34, 46, .75);
+}
+
+.solar-season-context span,
+.solar-season-context strong {
+  display: block;
+}
+
+.solar-season-context span {
+  color: #7892a0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+.solar-season-context strong {
+  margin-top: 3px;
+  color: #d8e5e9;
+  font-size: 11px;
+}
+
+.solar-season-track {
+  position: relative;
+  height: 24px;
+  margin: 2px 8px 8px;
+}
+
+.solar-season-track-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 11px;
+  height: 1px;
+  background: linear-gradient(90deg, #5c8fa3, #d09d3d, #5c8fa3, #d09d3d);
+  opacity: .75;
+}
+
+.solar-season-track-marker {
+  position: absolute;
+  top: 6px;
+  width: 11px;
+  height: 11px;
+  margin-left: -5px;
+  border-radius: 50%;
+  border: 2px solid #8ea3ad;
+  background: #0e202b;
+  box-shadow: 0 0 8px rgba(160, 196, 211, .2);
+}
+
+.solar-season-track-marker.equinox {
+  border-color: #71b8c8;
+}
+
+.solar-season-track-marker.solstice {
+  border-color: #d4a33c;
+}
+
+.solar-season-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.solar-season-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #2d4655;
+  border-radius: 6px;
+  background: #0e202b;
+}
+
+.solar-season-card.equinox {
+  border-top-color: #4f8ea2;
+}
+
+.solar-season-card.solstice {
+  border-top-color: #8c6d30;
+}
+
+.solar-season-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 54px;
+  padding: 9px 10px 8px;
+  border-bottom: 1px solid #263c49;
+  background: rgba(19, 40, 52, .7);
+}
+
+.solar-season-card header small,
+.solar-season-card header strong {
+  display: block;
+}
+
+.solar-season-card header small {
+  min-height: 25px;
+  color: #798e9a;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.solar-season-card header strong {
+  margin-top: 2px;
+  color: #d7e3e8;
+  font-size: 11px;
+}
+
+.solar-season-card header b {
+  flex: 0 0 auto;
+  color: #9fb4bf;
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.solar-season-card.equinox header b {
+  color: #82c7e8;
+}
+
+.solar-season-card.solstice header b {
+  color: #e6be63;
+}
+
+.solar-season-event-time {
+  padding: 8px 10px;
+  border-bottom: 1px solid #263c49;
+  background: rgba(14, 34, 46, .72);
+}
+
+.solar-season-event-time strong,
+.solar-season-event-time span {
+  display: block;
+}
+
+.solar-season-event-time strong {
+  color: #d8e5e9;
+  font-size: 10px;
+}
+
+.solar-season-event-time span {
+  margin-top: 3px;
+  color: #71838d;
+  font-size: 8px;
+}
+
+.solar-season-card dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+}
+
+.solar-season-card dl > div {
+  min-width: 0;
+  padding: 8px 9px;
+  border-top: 1px solid rgba(38, 60, 73, .7);
+}
+
+.solar-season-card dl > div:nth-child(odd) {
+  border-right: 1px solid #263c49;
+}
+
+.solar-season-card dt {
+  margin-bottom: 3px;
+  color: #728693;
+  font-size: 7px;
+  text-transform: uppercase;
+  letter-spacing: .035em;
+}
+
+.solar-season-card dd {
+  margin: 0;
+  color: #d8e5e9;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.solar-season-note {
+  margin: 9px 0 0;
+  padding: 7px 9px;
+  border-left: 2px solid #b48b39;
+  background: rgba(126, 94, 31, .08);
+  color: #8498a2;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1250px) {
+  .solar-season-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .solar-season-heading {
+    flex-direction: column;
+  }
+
+  .solar-season-context {
+    width: 100%;
+    text-align: left;
+  }
+
+  .solar-season-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .solar-season-track {
+    display: none;
+  }
+}
