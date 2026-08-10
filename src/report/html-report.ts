@@ -336,26 +336,50 @@ function stellarLocalHorizonSourceSection(experiment: SavedExperiment): string {
   if (!source) return '';
   const stateClass = source.modifiedAfterImport ? 'source-modified' : 'source-matching';
   const stateLabel = source.modifiedAfterImport
-    ? 'İçe aktarımdan sonra düzenlendi'
-    : 'Kaydedilen noktalar içe aktarılan kaynakla eşleşiyor';
+    ? 'İçe aktarımdan / üretimden sonra düzenlendi'
+    : source.format === 'dem'
+      ? 'Kaydedilen noktalar DEM türetim kaydıyla eşleşiyor'
+      : 'Kaydedilen noktalar içe aktarılan kaynakla eşleşiyor';
+  const dem = source.demDerivation;
+  const demRows = source.format === 'dem' && dem ? `
+          <tr><td>Kaynak türü</td><td>DEM’den türetilmiş geometrik 360° skyline</td></tr>
+          <tr><td>Türetim algoritması</td><td>${escapeHtml(dem.algorithmId)}@${escapeHtml(dem.algorithmVersion)}</td></tr>
+          <tr><td>Gözlemci</td><td>${coordinateFormatter.format(dem.observerLatitudeDeg)}°, ${coordinateFormatter.format(dem.observerLongitudeDeg)}° · göz yüksekliği ${inputNumberFormatter.format(dem.observerHeightM)} m</td></tr>
+          <tr><td>DEM → WGS84 elipsoid ofseti</td><td>${inputNumberFormatter.format(dem.heightDatumToEllipsoidOffsetM)} m</td></tr>
+          <tr><td>Azimut örnekleme</td><td>ΔA ${metricNumberFormatters.degree.format(dem.azimuthStepDeg)}° · ${source.pointCount} yön</td></tr>
+          <tr><td>Mesafe örnekleme</td><td>Δs ${inputNumberFormatter.format(dem.distanceStepM)} m · maksimum ${inputNumberFormatter.format(dem.maximumDistanceM / 1_000)} km</td></tr>
+          <tr><td>DEM örnekleme</td><td>${dem.samplingMethod === 'bilinear' ? 'Bilinear' : 'En yakın hücre'}</td></tr>
+          <tr><td>360° kapsama</td><td>${dem.completeCoverage ? 'Tam' : 'Eksik'} · tam ${dem.completeRayCount}/${source.pointCount} · kapsam-sınırlı ${dem.coverageLimitedRayCount} · NODATA-etkili ${dem.noDataAffectedRayCount} · kapsamasız ${dem.noCoverageRayCount}</td></tr>
+          <tr><td>Jeodezik yedek örnek</td><td>${dem.geodesicFallbackSampleCount}</td></tr>` : `
+          <tr><td>Kaynak türü</td><td>Dış skyline dosyası</td></tr>`;
+  const sourceKindLabel = source.format === 'dem'
+    ? 'DEM skyline kaynak provenansı'
+    : 'Yıldız yerel skyline dosya kaynağı';
+  const subtitle = source.format === 'dem'
+    ? 'ESRI ASCII DEM → WGS84/toposentrik geometrik azimut → ufuk yüksekliği profili'
+    : 'Geometrik azimut → ufuk yüksekliği profili';
+  const formatLabel = source.format === 'dem'
+    ? 'DEM · türetilmiş geometrik'
+    : source.format.toUpperCase();
   return `
     <section class="model-section vertical-section">
       <header class="model-heading">
-        <div><h2>Yıldız yerel skyline dosya kaynağı</h2><span>Geometrik azimut → ufuk yüksekliği profili</span></div>
+        <div><h2>${sourceKindLabel}</h2><span>${subtitle}</span></div>
         <strong class="status status-compatible">${source.pointCount} nokta</strong>
       </header>
       <div class="source-card ${stateClass}">
         <div class="source-card-heading"><strong>${escapeHtml(source.fileName)}</strong><span>${escapeHtml(stateLabel)}</span></div>
         <table><tbody>
-          <tr><td>Biçim</td><td>${escapeHtml(source.format.toUpperCase())}</td></tr>
+          <tr><td>Biçim</td><td>${escapeHtml(formatLabel)}</td></tr>
           <tr><td>Nokta sayısı</td><td>${source.pointCount}</td></tr>
           <tr><td>En büyük azimut boşluğu</td><td>${metricNumberFormatters.degree.format(source.maximumAzimuthGapDeg)}°</td></tr>
           <tr><td>Dosya boyutu</td><td>${inputNumberFormatter.format(source.fileSizeBytes)} bayt</td></tr>
           <tr><td>İçe aktarma</td><td>${formatDate(source.importedAtIso)}</td></tr>
           <tr><td>SHA-256</td><td><code>${escapeHtml(source.sha256)}</code></td></tr>
+          ${demRows}
         </tbody></table>
         ${source.warnings.length > 0 ? `<h3>Kaynak uyarıları</h3><ul class="warnings">${source.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')}</ul>` : ''}
-        <p class="muted">Bu kayıt dosyanın ham baytlarını içermez; doğrulanmış/normalize edilmiş geometrik skyline noktalarını ve kaynak bütünlük özetini taşır. Profilin yıldız hesabında uygulanıp uygulanmadığı ilgili Yıldız Gözlemi prediction anlık görüntüsünde ayrıca kaydedilir.</p>
+        <p class="muted">Bu kayıt ham kaynak dosya baytlarını içermez; doğrulanmış/normalize edilmiş geometrik skyline noktalarını ve kaynak bütünlük/türetim özetini taşır. DEM kaynakta geoit değişimi, atmosferik kırılma, bina/bitki örtüsü ve grid dışı arazi türetilmiş profile eklenmez. Profilin yıldız hesabında uygulanıp uygulanmadığı ilgili Yıldız Gözlemi prediction anlık görüntüsünde ayrıca kaydedilir.</p>
       </div>
     </section>`;
 }
