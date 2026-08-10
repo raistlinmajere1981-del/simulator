@@ -339,7 +339,9 @@ function stellarLocalHorizonSourceSection(experiment: SavedExperiment): string {
     ? 'İçe aktarımdan / üretimden sonra düzenlendi'
     : source.format === 'dem'
       ? 'Kaydedilen noktalar DEM türetim kaydıyla eşleşiyor'
-      : 'Kaydedilen noktalar içe aktarılan kaynakla eşleşiyor';
+      : source.format === 'panorama'
+        ? 'Kaydedilen noktalar panorama işaret/türetim kaydıyla eşleşiyor'
+        : 'Kaydedilen noktalar içe aktarılan kaynakla eşleşiyor';
   const dem = source.demDerivation;
   const demRows = source.format === 'dem' && dem ? `
           <tr><td>Kaynak türü</td><td>DEM’den türetilmiş geometrik 360° skyline</td></tr>
@@ -350,17 +352,35 @@ function stellarLocalHorizonSourceSection(experiment: SavedExperiment): string {
           <tr><td>Mesafe örnekleme</td><td>Δs ${inputNumberFormatter.format(dem.distanceStepM)} m · maksimum ${inputNumberFormatter.format(dem.maximumDistanceM / 1_000)} km</td></tr>
           <tr><td>DEM örnekleme</td><td>${dem.samplingMethod === 'bilinear' ? 'Bilinear' : 'En yakın hücre'}</td></tr>
           <tr><td>360° kapsama</td><td>${dem.completeCoverage ? 'Tam' : 'Eksik'} · tam ${dem.completeRayCount}/${source.pointCount} · kapsam-sınırlı ${dem.coverageLimitedRayCount} · NODATA-etkili ${dem.noDataAffectedRayCount} · kapsamasız ${dem.noCoverageRayCount}</td></tr>
-          <tr><td>Jeodezik yedek örnek</td><td>${dem.geodesicFallbackSampleCount}</td></tr>` : `
+          <tr><td>Jeodezik yedek örnek</td><td>${dem.geodesicFallbackSampleCount}</td></tr>` : '';
+  const panorama = source.panoramaDerivation;
+  const panoramaRows = source.format === 'panorama' && panorama ? `
+          <tr><td>Kaynak türü</td><td>Panoramadan türetilmiş geometrik 360° skyline</td></tr>
+          <tr><td>Türetim algoritması</td><td>${escapeHtml(panorama.algorithmId)}@${escapeHtml(panorama.algorithmVersion)}</td></tr>
+          <tr><td>Geometri kaynağı</td><td>${panorama.geometrySource === 'gpano-xmp' ? 'GPano XMP' : 'Manuel geometri'}</td></tr>
+          <tr><td>Metadata durumu</td><td>${escapeHtml(panorama.metadataStatusAtImport)} · standart XMP ${panorama.standardXmpPacketFound ? 'var' : 'yok'} · extended XMP ${panorama.extendedXmpPacketFound ? 'var' : 'yok'} · bitmap ölçekleme ${panorama.metadataScaledToImage ? 'uygulandı' : 'uygulanmadı'}</td></tr>
+          <tr><td>Bitmap</td><td>${panorama.geometry.imageWidthPx} × ${panorama.geometry.imageHeightPx} px</td></tr>
+          <tr><td>Tam panorama</td><td>${panorama.geometry.fullPanoWidthPx} × ${panorama.geometry.fullPanoHeightPx} px · crop sol ${panorama.geometry.croppedAreaLeftPx} px · üst ${panorama.geometry.croppedAreaTopPx} px</td></tr>
+          <tr><td>Pose</td><td>heading ${metricNumberFormatters.degree.format(panorama.geometry.poseHeadingDeg)}° · pitch ${metricNumberFormatters.degree.format(panorama.geometry.posePitchDeg)}° · roll ${metricNumberFormatters.degree.format(panorama.geometry.poseRollDeg)}°</td></tr>
+          <tr><td>Panorama kapsamı</td><td>yatay ${metricNumberFormatters.degree.format(panorama.horizontalCoverageDeg)}° · düşey ${metricNumberFormatters.degree.format(panorama.verticalCoverageDeg)}° · tam küre ${panorama.fullSphereCoverage ? 'evet' : 'hayır'}</td></tr>
+          <tr><td>Manuel skyline işaretleri</td><td>${panorama.marks.length} işaret · maksimum azimut boşluğu ${metricNumberFormatters.degree.format(source.maximumAzimuthGapDeg)}°</td></tr>` : '';
+  const sourceRows = demRows || panoramaRows || `
           <tr><td>Kaynak türü</td><td>Dış skyline dosyası</td></tr>`;
   const sourceKindLabel = source.format === 'dem'
     ? 'DEM skyline kaynak provenansı'
-    : 'Yıldız yerel skyline dosya kaynağı';
+    : source.format === 'panorama'
+      ? 'Panorama skyline kaynak provenansı'
+      : 'Yıldız yerel skyline dosya kaynağı';
   const subtitle = source.format === 'dem'
     ? 'ESRI ASCII DEM → WGS84/toposentrik geometrik azimut → ufuk yüksekliği profili'
-    : 'Geometrik azimut → ufuk yüksekliği profili';
+    : source.format === 'panorama'
+      ? 'Equirectangular panorama pikseli → gerçek azimut / geometrik ufuk yüksekliği'
+      : 'Geometrik azimut → ufuk yüksekliği profili';
   const formatLabel = source.format === 'dem'
     ? 'DEM · türetilmiş geometrik'
-    : source.format.toUpperCase();
+    : source.format === 'panorama'
+      ? 'PANORAMA · türetilmiş geometrik'
+      : source.format.toUpperCase();
   return `
     <section class="model-section vertical-section">
       <header class="model-heading">
@@ -376,10 +396,10 @@ function stellarLocalHorizonSourceSection(experiment: SavedExperiment): string {
           <tr><td>Dosya boyutu</td><td>${inputNumberFormatter.format(source.fileSizeBytes)} bayt</td></tr>
           <tr><td>İçe aktarma</td><td>${formatDate(source.importedAtIso)}</td></tr>
           <tr><td>SHA-256</td><td><code>${escapeHtml(source.sha256)}</code></td></tr>
-          ${demRows}
+          ${sourceRows}
         </tbody></table>
         ${source.warnings.length > 0 ? `<h3>Kaynak uyarıları</h3><ul class="warnings">${source.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join('')}</ul>` : ''}
-        <p class="muted">Bu kayıt ham kaynak dosya baytlarını içermez; doğrulanmış/normalize edilmiş geometrik skyline noktalarını ve kaynak bütünlük/türetim özetini taşır. DEM kaynakta geoit değişimi, atmosferik kırılma, bina/bitki örtüsü ve grid dışı arazi türetilmiş profile eklenmez. Profilin yıldız hesabında uygulanıp uygulanmadığı ilgili Yıldız Gözlemi prediction anlık görüntüsünde ayrıca kaydedilir.</p>
+        <p class="muted">Bu kayıt ham kaynak dosya veya panorama görüntü baytlarını içermez; doğrulanmış/normalize edilmiş geometrik skyline noktalarını ve kaynak bütünlük/türetim özetini taşır. DEM kaynakta geoit değişimi, atmosferik kırılma, bina/bitki örtüsü ve grid dışı arazi; panorama kaynakta otomatik görüntü segmentasyonu ve optik görünürlük sınıflaması profile eklenmez. Profilin yıldız hesabında uygulanıp uygulanmadığı ilgili Yıldız Gözlemi prediction anlık görüntüsünde ayrıca kaydedilir.</p>
       </div>
     </section>`;
 }
