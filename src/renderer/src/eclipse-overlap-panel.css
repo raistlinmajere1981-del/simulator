@@ -1,0 +1,182 @@
+.eclipse-overlap-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.eclipse-overlap-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.eclipse-overlap-heading h2 {
+  margin: 4px 0 6px;
+  font-size: 1.05rem;
+}
+
+.eclipse-overlap-heading p,
+.eclipse-overlap-limit,
+.eclipse-scale-note {
+  margin: 0;
+  color: var(--text-muted, #8da3ad);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.eclipse-overlap-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.eclipse-overlap-actions button {
+  border: 1px solid rgba(103, 154, 178, 0.45);
+  border-radius: 6px;
+  background: rgba(17, 39, 51, 0.78);
+  color: #d8e9ee;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.eclipse-overlap-state {
+  border: 1px solid rgba(99, 147, 165, 0.35);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.eclipse-overlap-state.clear {
+  background: rgba(30, 65, 76, 0.45);
+  color: #bcd5dd;
+}
+
+.eclipse-overlap-state.overlap {
+  border-color: rgba(214, 166, 69, 0.55);
+  background: rgba(102, 72, 18, 0.38);
+  color: #efd397;
+}
+
+.eclipse-overlap-body {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.2fr) minmax(280px, 0.8fr);
+  gap: 14px;
+}
+
+.eclipse-disk-stage {
+  min-width: 0;
+  border: 1px solid rgba(91, 133, 150, 0.28);
+  border-radius: 8px;
+  background: rgba(5, 15, 22, 0.52);
+  overflow: hidden;
+}
+
+.eclipse-disk-stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 210px;
+}
+
+.eclipse-disk-stage text {
+  fill: #8fa5ae;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.eclipse-sun-disk {
+  fill: rgba(222, 167, 54, 0.72);
+  stroke: rgba(255, 215, 126, 0.95);
+  stroke-width: 2;
+}
+
+.eclipse-moon-disk {
+  fill: rgba(9, 18, 24, 0.88);
+  stroke: rgba(191, 212, 220, 0.9);
+  stroke-width: 2;
+}
+
+.eclipse-center-line {
+  stroke: rgba(115, 150, 163, 0.55);
+  stroke-width: 1;
+  stroke-dasharray: 5 5;
+}
+
+.eclipse-center-mark {
+  fill: #dfeef2;
+}
+
+.eclipse-scale-note {
+  padding: 8px 10px 10px;
+  border-top: 1px solid rgba(91, 133, 150, 0.2);
+}
+
+.eclipse-overlap-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.eclipse-overlap-metrics > div {
+  display: grid;
+  align-content: center;
+  min-height: 58px;
+  padding: 9px 10px;
+  border: 1px solid rgba(87, 126, 143, 0.3);
+  border-radius: 7px;
+  background: rgba(15, 31, 40, 0.58);
+}
+
+.eclipse-overlap-metrics small {
+  color: #78909a;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+}
+
+.eclipse-overlap-metrics strong {
+  margin-top: 4px;
+  color: #e1edf0;
+  font-size: 0.9rem;
+}
+
+.eclipse-overlap-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 9px 11px;
+  border-left: 2px solid rgba(201, 154, 65, 0.75);
+  background: rgba(83, 58, 18, 0.18);
+  color: #9eabb0;
+  font-size: 0.72rem;
+}
+
+.eclipse-overlap-provenance strong {
+  color: #d9e5e8;
+}
+
+.eclipse-overlap-limit {
+  padding-top: 2px;
+}
+
+@media (max-width: 1100px) {
+  .eclipse-overlap-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .eclipse-overlap-heading {
+    flex-direction: column;
+  }
+  .eclipse-overlap-actions {
+    justify-content: flex-start;
+  }
+  .eclipse-overlap-metrics {
+    grid-template-columns: 1fr;
+  }
+}

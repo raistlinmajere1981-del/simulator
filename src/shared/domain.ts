@@ -10,6 +10,7 @@ export type ModelCapability =
   | 'water-surface-application'
   | 'solar-position'
   | 'lunar-position'
+  | 'solar-eclipse-overlap'
   | 'shadow-geometry'
   | 'dual-shadow-comparison'
   | 'stellar-position';
