@@ -24,6 +24,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.185.1",
     "@types/topojson-client": "^3.1.5",
+    "@vitejs/plugin-react": "^5.1.1",
     "electron": "^39.2.6",
     "electron-vite": "^5.0.0",
     "typescript": "^5.9.3",
