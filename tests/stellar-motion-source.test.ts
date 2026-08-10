@@ -89,7 +89,7 @@ function experimentWithMotionSource(): SavedExperiment {
     updatedAtIso: '2026-08-10T00:00:00.000Z',
     observedAtIso: '2026-08-10T00:00:00.000Z',
     observationUtcOffsetMinutes: 180,
-    scenarioId: 'star-observation',
+    scenarioId: 'stellar-observation',
     stellarMotionSource: validSource(),
     inputs: { ...DEFAULT_SIMULATOR_INPUTS },
     manualTerrainPoints: [],
