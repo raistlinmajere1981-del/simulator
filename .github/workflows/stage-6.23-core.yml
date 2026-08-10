@@ -1,0 +1,35 @@
+name: Stage 6.23 guarded core patch
+
+on:
+  push:
+    branches:
+      - agent/stellar-motion-source-ui
+    paths:
+      - .github/workflows/stage-6.23-core.yml
+      - .github/scripts/apply-stage-6.23-core.mjs
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/stellar-motion-source-ui
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply guarded core patch
+        run: node .github/scripts/apply-stage-6.23-core.mjs
+      - name: Validate and commit product files only
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json src/shared/simulator.ts src/shared/portable.ts src/preload/index.ts src/main/index.ts
+          git diff --cached --quiet && exit 1
+          git commit -m "Aşama 6.23 proper motion kaynak import ve portable v9 çekirdeğini bağla"
+          git push origin HEAD:agent/stellar-motion-source-ui
