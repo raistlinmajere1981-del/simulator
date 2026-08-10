@@ -10,7 +10,7 @@ export const solarEclipseOverlapMetadata: ModelMetadata = {
   name: 'Güneş Tutulması Anlık Geometrisi · Düşük Hassasiyetli Referans',
   version: SOLAR_ECLIPSE_OVERLAP_ALGORITHM_VERSION,
   description: 'Aynı gözlem anında Güneş ve Ay apparent disklerinin merkez ayrımı, açısal yarıçapları ve geometrik örtüşmesini hesaplar.',
-  capabilities: ['solar-eclipse-instant-overlap'],
+  capabilities: ['solar-eclipse-overlap'],
   assumptions: [
     'Mevcut NOAA Güneş ve düşük hassasiyetli topocentrik Ay referansları kullanılır.',
     'Sonuç yalnız verilen anın yerel disk geometrisidir.',
