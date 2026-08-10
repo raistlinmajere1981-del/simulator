@@ -82,6 +82,7 @@ export type StellarLocalHorizonSettingKey = typeof STELLAR_LOCAL_HORIZON_DIRECTI
 
 export interface StellarObservationLocalHorizonSourceSummary {
   mode: StellarLocalHorizonSourceMode;
+  sourceKind: StellarLocalHorizonMask['sourceKind'];
   label: string;
   pointCount: number;
   maximumAzimuthGapDeg: number;
@@ -204,6 +205,7 @@ function resolveLocalHorizon(input: {
       mask,
       summary: {
         mode: 'manual',
+        sourceKind: normalized.sourceKind,
         label: normalized.sourceLabel,
         pointCount: normalized.points.length,
         maximumAzimuthGapDeg: normalized.maximumAzimuthGapDeg,
@@ -221,6 +223,7 @@ function resolveLocalHorizon(input: {
     mask,
     summary: {
       mode: 'external',
+      sourceKind: normalized.sourceKind,
       label: source.fileName,
       pointCount: normalized.points.length,
       maximumAzimuthGapDeg: normalized.maximumAzimuthGapDeg,
