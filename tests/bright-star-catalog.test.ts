@@ -30,6 +30,10 @@ describe('bright star catalog', () => {
     }
   });
 
+  it('keeps the curated Polaris V magnitude aligned with the BSC5P source row', () => {
+    expect(getBrightStarById('hr-0424')?.visualMagnitude).toBe(2.02);
+  });
+
   it('supports lookup and human-friendly search', () => {
     expect(getBrightStarById('hr-2491')?.commonName).toBe('Sirius');
     expect(searchBrightStars('sirius').map((star) => star.commonName)).toEqual(['Sirius']);

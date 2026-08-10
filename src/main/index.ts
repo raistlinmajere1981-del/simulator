@@ -38,6 +38,9 @@ import {
 } from '../simulation/csv-terrain-profile';
 import { parseTerrainProfileGeoJson } from '../simulation/geojson-terrain-profile';
 import { parseStellarLocalHorizonFile } from '../simulation/stellar-local-horizon-import';
+import { buildVerifiedBrightStarMotionSubset } from '../simulation/bsc5p-motion-subset';
+import { savedStellarMotionSourceFromVerifiedSubset } from '../simulation/stellar-motion-source';
+import type { ImportStellarMotionResult } from '../shared/stellar-motion-source';
 import { buildTerrainProfileFromDem } from '../simulation/dem-route-profile';
 import { parseEsriAsciiGrid } from '../simulation/esri-ascii-grid';
 import {
@@ -48,6 +51,7 @@ import {
 const EXPERIMENTS_FILE_NAME = 'experiments.json';
 const MAX_TERRAIN_PROFILE_BYTES = 5 * 1024 * 1024;
 const MAX_STELLAR_HORIZON_BYTES = 2 * 1024 * 1024;
+const MAX_STELLAR_MOTION_BYTES = 4 * 1024 * 1024;
 const MAX_DEM_BYTES = 64 * 1024 * 1024;
 const MAX_OBSERVATION_PHOTO_BYTES = 25 * 1024 * 1024;
 const TERRAIN_MAPPING_TTL_MS = 10 * 60 * 1_000;
@@ -496,6 +500,44 @@ function registerExperimentHandlers(): void {
         message: '“' + profile.fileName + '” skyline profili okundu: ' + profile.pointCount + ' nokta doğrulandı.',
         filePath: selectedPath,
         profile
+      };
+    }
+  );
+
+  ipcMain.handle(
+    'stellar-motion:import',
+    async (event): Promise<ImportStellarMotionResult> => {
+      const selection = await showOpenDialog(event, {
+        title: 'BSC5P Proper Motion Kataloğunu İçe Aktar',
+        properties: ['openFile'],
+        filters: [{ name: 'BSC5P catalog / tüm dosyalar', extensions: ['*'] }]
+      });
+      const selectedPath = selection.filePaths[0];
+      if (selection.canceled || !selectedPath) {
+        return { status: 'cancelled', message: 'Proper-motion kaynak seçimi iptal edildi.' };
+      }
+
+      const statistics = await fs.stat(selectedPath);
+      if (!statistics.isFile()) throw new Error('Seçilen BSC5P yolu normal bir dosya değil.');
+      if (statistics.size <= 0 || statistics.size > MAX_STELLAR_MOTION_BYTES) {
+        throw new Error('BSC5P kaynak dosyası boş olamaz ve 4 MB sınırını aşamaz.');
+      }
+
+      const bytes = await fs.readFile(selectedPath);
+      const subset = buildVerifiedBrightStarMotionSubset(bytes.toString('utf-8'));
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      const source = savedStellarMotionSourceFromVerifiedSubset({
+        subset,
+        fileName: basename(selectedPath),
+        importedAtIso: new Date().toISOString(),
+        fileSizeBytes: bytes.byteLength,
+        sha256
+      });
+      return {
+        status: 'success',
+        message: '“' + source.fileName + '” doğrulandı: ' + source.entryCount + '/19 proper-motion kaydı hazır.',
+        filePath: selectedPath,
+        source
       };
     }
   );

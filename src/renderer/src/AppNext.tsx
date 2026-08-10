@@ -13,6 +13,7 @@ import type {
 } from '../../shared/domain';
 import type { SavedPhotoCalibration } from '../../shared/photo-calibration';
 import type { SavedStellarLocalHorizonSource } from '../../shared/stellar-local-horizon-import';
+import type { SavedStellarMotionSource } from '../../shared/stellar-motion-source';
 import { systemUtcOffsetMinutes } from '../../shared/celestial-time';
 import type { HelpPanelId } from '../../shared/help-content';
 import type {
@@ -120,6 +121,7 @@ import {
   stellarObservationMetadata,
   type StellarObservationSettings
 } from '../../simulation/stellar-observation';
+import { verifiedMotionSubsetFromSavedSource } from '../../simulation/stellar-motion-source';
 import {
   WATER_SURFACE_APPLICATION_MODEL_ID,
   type WaterSurfaceApplicationResult
@@ -1157,6 +1159,7 @@ export function AppNext(): React.JSX.Element {
   const [dualShadowSettings, setDualShadowSettings] = useState<DualShadowComparisonSettings>();
   const [stellarObservationSettings, setStellarObservationSettings] = useState<StellarObservationSettings>(() => ({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS }));
   const [stellarLocalHorizonSource, setStellarLocalHorizonSource] = useState<SavedStellarLocalHorizonSource>();
+  const [stellarMotionSource, setStellarMotionSource] = useState<SavedStellarMotionSource>();
   const [manualTerrainPoints, setManualTerrainPoints] = useState<ManualTerrainPoint[]>(
     defaultTerrainPoints()
   );
@@ -1364,6 +1367,9 @@ export function AppNext(): React.JSX.Element {
   const appliedExternalStellarLocalHorizonSource = stellarObservationSettings.localHorizonSourceMode === 'external'
     ? stellarLocalHorizonSource
     : undefined;
+  const stellarMotionSubset = useMemo(() => stellarMotionSource
+    ? verifiedMotionSubsetFromSavedSource(stellarMotionSource)
+    : undefined, [stellarMotionSource]);
   const stellarObservationResult = useMemo(() => activeScenarioId === 'stellar-observation'
     ? calculateStellarObservation({
         experimentId: activeExperimentId,
@@ -1373,9 +1379,10 @@ export function AppNext(): React.JSX.Element {
         settings: stellarObservationSettings,
         ...(appliedExternalStellarLocalHorizonSource
           ? { externalLocalHorizonSource: appliedExternalStellarLocalHorizonSource }
-          : {})
+          : {}),
+        ...(stellarMotionSubset ? { motionSubset: stellarMotionSubset } : {})
       })
-    : undefined, [activeExperimentId, activeScenarioId, appliedExternalStellarLocalHorizonSource, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg, stellarObservationSettings]);
+    : undefined, [activeExperimentId, activeScenarioId, appliedExternalStellarLocalHorizonSource, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg, stellarMotionSubset, stellarObservationSettings]);
   const stellarObservationPrediction = useMemo(() => stellarObservationResult
     ? createStellarObservationPrediction(stellarObservationResult)
     : undefined, [stellarObservationResult]);
@@ -1540,6 +1547,7 @@ export function AppNext(): React.JSX.Element {
       setDualShadowSettings(undefined);
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
       setStellarLocalHorizonSource(undefined);
+      setStellarMotionSource(undefined);
       setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
       setGeoidConversionRecord(undefined);
@@ -1748,6 +1756,24 @@ export function AppNext(): React.JSX.Element {
     }
   };
 
+  const importStellarMotionSource = async (): Promise<SavedStellarMotionSource | undefined> => {
+    try {
+      const result = await window.simulatorDesktop.importStellarMotionSource();
+      setStorageMessage(result.message);
+      if (result.status !== 'success' || !result.source) return undefined;
+      const source: SavedStellarMotionSource = {
+        ...result.source,
+        entries: result.source.entries.map((entry) => ({ ...entry }))
+      };
+      setStorageMessage(`“${source.fileName}” proper-motion kaynağı taslak olarak hazır: ${source.entryCount}/19 kayıt doğrulandı. Uygula ve hesapla ile etkinleştirilebilir.`);
+      return source;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'BSC5P proper-motion kaynağı içe aktarılamadı.';
+      setStorageMessage(message);
+      throw error;
+    }
+  };
+
   const loadExperiment = (saved: SavedExperiment): void => {
     const geoidPrediction = saved.predictions.find(
       (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
@@ -1781,6 +1807,9 @@ export function AppNext(): React.JSX.Element {
     setDualShadowSettings(readDualShadowComparisonSettings(dualShadowPrediction));
     setStellarObservationSettings(safeStellarSettings);
     setStellarLocalHorizonSource(storedStellarSource);
+    setStellarMotionSource(saved.stellarMotionSource
+      ? { ...saved.stellarMotionSource, entries: saved.stellarMotionSource.entries.map((entry) => ({ ...entry })) }
+      : undefined);
     setInputs(saved.inputs);
     setAtmosphereState(saved.atmosphere
       ? cloneAtmosphereExperimentState(saved.atmosphere)
@@ -1832,6 +1861,7 @@ export function AppNext(): React.JSX.Element {
       ...(modelInputUncertaintyDefined ? { photoModelUncertainty } : {}),
       ...(textSetupHistory.length > 0 ? { textSetupHistory } : {}),
       ...(stellarLocalHorizonSource ? { stellarLocalHorizonSource } : {}),
+      ...(stellarMotionSource ? { stellarMotionSource } : {}),
       inputs,
       manualTerrainPoints,
       terrainProfileSource,
@@ -1923,6 +1953,9 @@ export function AppNext(): React.JSX.Element {
             }
           : undefined;
         setStellarLocalHorizonSource(reopenedStellarSource);
+        setStellarMotionSource(saved.stellarMotionSource
+          ? { ...saved.stellarMotionSource, entries: saved.stellarMotionSource.entries.map((entry) => ({ ...entry })) }
+          : undefined);
         setStellarObservationSettings(reopenedStellarSettings.localHorizonSourceMode === 'external' && !reopenedStellarSource
           ? { ...reopenedStellarSettings, localHorizonEnabled: false, localHorizonSourceMode: 'manual' }
           : reopenedStellarSettings);
@@ -1972,6 +2005,7 @@ export function AppNext(): React.JSX.Element {
       setDualShadowSettings(undefined);
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
       setStellarLocalHorizonSource(undefined);
+      setStellarMotionSource(undefined);
         setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
         setAtmosphereState(createDefaultAtmosphereExperimentState('standard'));
@@ -2092,6 +2126,7 @@ export function AppNext(): React.JSX.Element {
       setDualShadowSettings(undefined);
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
       setStellarLocalHorizonSource(undefined);
+      setStellarMotionSource(undefined);
     setExperimentObservedAtIso(new Date().toISOString());
     setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
     setIsDirty(false);
@@ -2140,6 +2175,7 @@ export function AppNext(): React.JSX.Element {
       setDualShadowSettings(undefined);
       setStellarObservationSettings({ ...DEFAULT_STELLAR_OBSERVATION_SETTINGS });
       setStellarLocalHorizonSource(undefined);
+      setStellarMotionSource(undefined);
             setExperimentObservedAtIso(new Date().toISOString());
       setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
             setGeoidConversionRecord(undefined);
@@ -2226,8 +2262,14 @@ export function AppNext(): React.JSX.Element {
                   prediction={stellarObservationPrediction}
                   settings={stellarObservationSettings}
                   externalLocalHorizonSource={stellarLocalHorizonSource}
+                  stellarMotionSource={stellarMotionSource}
                   onChange={(settings) => { setStellarObservationSettings(settings); setIsDirty(true); }}
                   onImportLocalHorizon={importStellarLocalHorizon}
+                  onImportStellarMotion={importStellarMotionSource}
+                  onApplyStellarMotion={(source) => {
+                    setStellarMotionSource(source);
+                    setIsDirty(true);
+                  }}
                   onApplyLocalHorizon={(settings, source) => {
                     setStellarObservationSettings(settings);
                     setStellarLocalHorizonSource(source);

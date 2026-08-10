@@ -15,6 +15,8 @@ import {
   type TerrainProfileSource
 } from './simulator';
 import type { SavedStellarLocalHorizonSource } from './stellar-local-horizon-import';
+import type { SavedStellarMotionSource } from './stellar-motion-source';
+import { verifiedMotionSubsetFromSavedSource } from '../simulation/stellar-motion-source';
 import type { ModelInputUncertaintySettings, UncertaintyCombination } from './uncertainty';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 import type { CameraCalibrationUncertainty, PhotoCalibrationMarks, PhotoSourceMetadata, SavedPhotoCalibration } from './photo-calibration';
@@ -29,16 +31,16 @@ import {
 import { normalizeStellarLocalHorizonMask } from '../simulation/stellar-local-horizon';
 
 export const PORTABLE_EXPERIMENT_SCHEMA = 'geometric-observation-laboratory/portable-experiment';
-export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 8;
+export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 9;
 export const LOCAL_EXPERIMENT_STORE_SCHEMA = 'geometric-observation-laboratory/local-experiment-store';
-export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 8;
+export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 9;
 
 export interface PortableApplicationInfo {
   name: 'Geometrik Gözlem Laboratuvarı';
   version: string;
 }
 
-export interface PortableExperimentFileV8 {
+export interface PortableExperimentFileV9 {
   schema: typeof PORTABLE_EXPERIMENT_SCHEMA;
   schemaVersion: typeof PORTABLE_EXPERIMENT_SCHEMA_VERSION;
   exportedAtIso: string;
@@ -46,7 +48,7 @@ export interface PortableExperimentFileV8 {
   experiment: SavedExperiment;
 }
 
-export interface LocalExperimentStoreV8 {
+export interface LocalExperimentStoreV9 {
   schema: typeof LOCAL_EXPERIMENT_STORE_SCHEMA;
   schemaVersion: typeof LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION;
   updatedAtIso: string;
@@ -60,7 +62,7 @@ export interface ParsedPortableExperiment {
 }
 
 export interface ParsedLocalExperimentStore {
-  store: LocalExperimentStoreV8;
+  store: LocalExperimentStoreV9;
   migrated: boolean;
   ignoredRecordCount: number;
 }
@@ -652,6 +654,70 @@ function parseStellarLocalHorizonSource(value: unknown): SavedStellarLocalHorizo
   };
 }
 
+function parseStellarMotionSource(value: unknown): SavedStellarMotionSource | null {
+  if (!isRecord(value) || !isNonEmptyString(value.fileName) || value.fileName.length > 240 ||
+    !isIsoDate(value.importedAtIso) || !Number.isInteger(value.fileSizeBytes) ||
+    !inRange(value.fileSizeBytes, 1, 4 * 1024 * 1024) ||
+    typeof value.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(value.sha256) ||
+    !isNonEmptyString(value.subsetId) || !isNonEmptyString(value.subsetVersion) ||
+    !isNonEmptyString(value.sourceCatalog) || !isNonEmptyString(value.sourceFormatId) ||
+    !isNonEmptyString(value.sourceFormatVersion) || !isFiniteNumber(value.sourceEpochJulianYear) ||
+    value.sourceFrame !== 'fk5-j2000' || !Number.isInteger(value.entryCount) || value.entryCount !== 19 ||
+    !Array.isArray(value.entries) || value.entries.length !== value.entryCount ||
+    typeof value.modifiedAfterImport !== 'boolean') {
+    return null;
+  }
+  const entries: SavedStellarMotionSource['entries'] = [];
+  for (const item of value.entries) {
+    if (!isRecord(item) || !isNonEmptyString(item.starId) || !isNonEmptyString(item.commonName) ||
+      !Number.isInteger(item.hrNumber) || !inRange(item.hrNumber, 1, 9110) ||
+      !inRange(item.sourceRightAscensionJ2000Deg, 0, 360) || item.sourceRightAscensionJ2000Deg === 360 ||
+      !inRange(item.sourceDeclinationJ2000Deg, -90, 90) || !isFiniteNumber(item.visualMagnitude) ||
+      !isFiniteNumber(item.properMotionRaStarArcsecPerYear) ||
+      !isFiniteNumber(item.properMotionDecArcsecPerYear) ||
+      (item.parallaxArcsec !== null && !isFiniteNumber(item.parallaxArcsec)) ||
+      (item.radialVelocityKmPerSec !== null && !isFiniteNumber(item.radialVelocityKmPerSec)) ||
+      typeof item.sourceRecord !== 'string' || item.sourceRecord.length !== 197) {
+      return null;
+    }
+    entries.push({
+      starId: item.starId.trim(),
+      commonName: item.commonName.trim(),
+      hrNumber: item.hrNumber,
+      sourceRightAscensionJ2000Deg: item.sourceRightAscensionJ2000Deg,
+      sourceDeclinationJ2000Deg: item.sourceDeclinationJ2000Deg,
+      visualMagnitude: item.visualMagnitude,
+      properMotionRaStarArcsecPerYear: item.properMotionRaStarArcsecPerYear,
+      properMotionDecArcsecPerYear: item.properMotionDecArcsecPerYear,
+      parallaxArcsec: item.parallaxArcsec,
+      radialVelocityKmPerSec: item.radialVelocityKmPerSec,
+      sourceRecord: item.sourceRecord
+    });
+  }
+  const source: SavedStellarMotionSource = {
+    fileName: value.fileName.trim(),
+    importedAtIso: value.importedAtIso,
+    fileSizeBytes: value.fileSizeBytes,
+    sha256: value.sha256,
+    subsetId: value.subsetId.trim(),
+    subsetVersion: value.subsetVersion.trim(),
+    sourceCatalog: value.sourceCatalog.trim(),
+    sourceFormatId: value.sourceFormatId.trim(),
+    sourceFormatVersion: value.sourceFormatVersion.trim(),
+    sourceEpochJulianYear: value.sourceEpochJulianYear,
+    sourceFrame: 'fk5-j2000',
+    entryCount: value.entryCount,
+    entries,
+    modifiedAfterImport: value.modifiedAfterImport
+  };
+  try {
+    verifiedMotionSubsetFromSavedSource(source);
+  } catch {
+    return null;
+  }
+  return { ...source, entries: source.entries.map((entry) => ({ ...entry })) };
+}
+
 function parseTextSetupHistory(value: unknown): TextExperimentSetupProvenance[] | null {
   if (!Array.isArray(value) || value.length > 50) return null;
   const history: TextExperimentSetupProvenance[] = [];
@@ -735,6 +801,10 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     ? undefined
     : parseStellarLocalHorizonSource(value.stellarLocalHorizonSource);
   if (stellarLocalHorizonSource === null) return null;
+  const stellarMotionSource = value.stellarMotionSource === undefined
+    ? undefined
+    : parseStellarMotionSource(value.stellarMotionSource);
+  if (stellarMotionSource === null) return null;
 
   return {
     id: value.id,
@@ -753,6 +823,7 @@ function parseSavedExperiment(value: unknown, allowLegacyInputs: boolean): Saved
     ...(photoModelUncertainty === undefined ? {} : { photoModelUncertainty }),
     ...(textSetupHistory === undefined ? {} : { textSetupHistory }),
     ...(stellarLocalHorizonSource === undefined ? {} : { stellarLocalHorizonSource }),
+    ...(stellarMotionSource === undefined ? {} : { stellarMotionSource }),
     inputs,
     manualTerrainPoints,
     terrainProfileSource,
@@ -781,7 +852,7 @@ export function createPortableExperimentFile(
   experiment: SavedExperiment,
   applicationVersion: string,
   exportedAtIso = new Date().toISOString()
-): PortableExperimentFileV8 {
+): PortableExperimentFileV9 {
   return {
     schema: PORTABLE_EXPERIMENT_SCHEMA,
     schemaVersion: PORTABLE_EXPERIMENT_SCHEMA_VERSION,
@@ -803,7 +874,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
-    version !== 5 && version !== 6 && version !== 7 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
+    version !== 5 && version !== 6 && version !== 7 && version !== 8 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Deney dosyası şema sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
@@ -822,7 +893,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 export function createLocalExperimentStore(
   experiments: SavedExperiment[],
   updatedAtIso = new Date().toISOString()
-): LocalExperimentStoreV8 {
+): LocalExperimentStoreV9 {
   return {
     schema: LOCAL_EXPERIMENT_STORE_SCHEMA,
     schemaVersion: LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
@@ -848,7 +919,7 @@ export function parseLocalExperimentStore(value: unknown): ParsedLocalExperiment
   }
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
-    version !== 5 && version !== 6 && version !== 7 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
+    version !== 5 && version !== 6 && version !== 7 && version !== 8 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Yerel deney deposu sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );

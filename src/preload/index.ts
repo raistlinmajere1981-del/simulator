@@ -11,6 +11,7 @@ import type {
   TerrainProfileColumnMapping,
   TerrainProfileImportContext
 } from '../shared/simulator';
+import type { ImportStellarMotionResult } from '../shared/stellar-motion-source';
 
 const api: SimulatorDesktopApi = {
   version: '1.12.0',
@@ -31,6 +32,8 @@ const api: SimulatorDesktopApi = {
     ipcRenderer.invoke('photo:import') as Promise<ImportObservationPhotoResult>,
   importStellarLocalHorizon: () =>
     ipcRenderer.invoke('stellar-horizon:import') as Promise<ImportStellarLocalHorizonResult>,
+  importStellarMotionSource: () =>
+    ipcRenderer.invoke('stellar-motion:import') as Promise<ImportStellarMotionResult>,
   importTerrainProfile: (context: TerrainProfileImportContext) =>
     ipcRenderer.invoke('terrain:import-csv', context) as Promise<ImportTerrainProfileResult>,
   importTerrainProfileWithMapping: (

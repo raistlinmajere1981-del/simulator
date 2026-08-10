@@ -9,6 +9,7 @@ import type {
   ImportedStellarLocalHorizonProfile,
   SavedStellarLocalHorizonSource
 } from './stellar-local-horizon-import';
+import type { ImportStellarMotionResult, SavedStellarMotionSource } from './stellar-motion-source';
 
 export type DistanceSource = 'manual' | 'coordinates';
 export type TerrainMode = 'off' | 'manual-three-point' | 'manual-points';
@@ -184,6 +185,8 @@ export interface SavedExperiment {
   textSetupHistory?: TextExperimentSetupProvenance[];
   /** Optional high-resolution geometric skyline source used by the stellar observation scenario. */
   stellarLocalHorizonSource?: SavedStellarLocalHorizonSource;
+  /** Optional verified BSC5P proper-motion source used by the stellar observation scenario. */
+  stellarMotionSource?: SavedStellarMotionSource;
   inputs: SimulatorInputs;
   /**
    * Ordered interior terrain points. Endpoints are derived from the observer
@@ -322,6 +325,7 @@ export interface SimulatorDesktopApi {
   exportExperimentReport(id: string): Promise<FileOperationResult>;
   importObservationPhoto(): Promise<ImportObservationPhotoResult>;
   importStellarLocalHorizon(): Promise<ImportStellarLocalHorizonResult>;
+  importStellarMotionSource(): Promise<ImportStellarMotionResult>;
   importTerrainProfile(
     context: TerrainProfileImportContext
   ): Promise<ImportTerrainProfileResult>;

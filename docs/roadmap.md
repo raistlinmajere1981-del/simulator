@@ -743,7 +743,7 @@ Ayrıntı: [`roadmap-stage-6.20.md`](roadmap-stage-6.20.md)
 
 ### Aşama 6.21 — Çoklu yıldız polar gökyüzü görünümü
 
-Durum: tamamlanma adayı · `1.17.0`
+Durum: tamamlandı · `1.17.0`
 
 - zenit merkezli ve geometrik 0° ufuk çemberli polar üst-yarımküre görünümü
 - K/D/G/B yönleri ve 30°/60° yükseklik halkaları
@@ -755,11 +755,41 @@ Durum: tamamlanma adayı · `1.17.0`
 
 Ayrıntı: [`roadmap-stage-6.21.md`](roadmap-stage-6.21.md)
 
+### Aşama 6.22 — Doğrulanmış proper-motion kaynağını hesap zincirine uygulama
+
+Durum: tamamlandı · `1.17.1`
+
+- doğrulanmış BSC5P motion reference verilirse J2000 katalog yönünü önce proper motion ile gözlem epoch'una taşıma
+- proper motion sonrası mevcut IAU 2006 precession zincirini uygulama
+- seçili yıldız ve 19-yıldız snapshot için aynı motion subset sözleşmesi
+- partial/eksik 19-yıldız subset'i sessizce karıştırmak yerine fail-closed reddetme
+- prediction'a compact PM uygulanma/kayma/bileşen/kaynak-epok metrikleri
+- motion kaynağı verilmezse 1.17.0 geometrik sonucu birebir koruma
+- gerçek BSC5P sayılarını kaynak dosya olmadan tahmin edip ürün kataloğuna gömmeme
+
+Ayrıntı: [`roadmap-stage-6.22.md`](roadmap-stage-6.22.md)
+
+### Aşama 6.23 — BSC5P proper-motion kaynak importu ve provenans
+
+Durum: tamamlanma adayı · `1.18.0`
+
+- resmi BSC5P `V/50/catalog` dosyasını Electron dosya seçicisinden alma
+- 19/19 HR + J2000 yön + V-kadir doğrulaması ve PM alanlarını zorunlu tutma
+- tam kaynak dosyanın SHA-256 / boyut / import zamanı provenansı
+- kaynak seçimini taslakta tutup ağır hesabı yalnız `Uygula ve hesapla` ile tek seferde çalıştırma
+- seçili yıldız ve 19-yıldız polar snapshot için doğrulanmış PM kaynağını ortak uygulama
+- portable/local-store şemasını v9'a çıkarıp v1–v8 migration'ı koruma
+- tüm katalog yerine yalnız doğrulanmış 19 exact source row'u saklayıp reopen/import sırasında tekrar parser + referans doğrulaması yapma
+- HTML raporda BSC5P proper-motion kaynak provenansı
+- polar özetinde haritada çizilenler, 0° altında çizilmeyenler ve çizilen yıldızların skyline sınıflarını ayrı sayma
+
+Ayrıntı: [`roadmap-stage-6.23.md`](roadmap-stage-6.23.md)
+
 ### Sonraki astronomi dilimleri
 
-- resmi BSC5P kaynak dosyası erişildiğinde doğrulanmış 19-yıldız motion veri dosyasını üretip gözlem zincirine bağlama
 - DEM veya panorama gibi kaynaklardan açık provenanslı 360° skyline üretimi
 - daha geniş yıldız kataloğu gerekirse performans ve veri-provenans tasarımı
+- ihtiyaç doğrulanırsa paralaks/radyal hız/perspektif ivmelenmesini ayrı astrometrik katman olarak ele alma
 
 ## Aşama 7 — Büyük ölçekli olaylar
 

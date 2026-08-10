@@ -766,3 +766,27 @@
   .stellar-sky-heading { flex-direction: column; align-items: stretch; }
   .stellar-sky-chart-wrap svg { min-height: 250px; height: 46vh; }
 }
+
+
+/* Stage 6.23 · verified BSC5P proper-motion source */
+.stellar-motion-source { border: 1px solid var(--line, #29404f); border-radius: 8px; padding: 12px; background: rgba(11, 24, 34, .58); }
+.stellar-motion-source.active { border-color: rgba(99, 184, 151, .48); }
+.stellar-motion-heading, .stellar-motion-apply-row, .stellar-motion-source-card { display: flex; justify-content: space-between; gap: 14px; align-items: center; }
+.stellar-motion-heading > div, .stellar-motion-source-card > div { display: grid; gap: 4px; }
+.stellar-motion-heading span, .stellar-motion-source-card span, .stellar-motion-apply-row > span, .stellar-motion-empty, .stellar-motion-message { color: var(--muted, #8ea4b3); font-size: 11px; }
+.stellar-motion-import-button, .stellar-motion-remove, .stellar-motion-revert, .stellar-motion-apply { border: 1px solid #385367; border-radius: 6px; padding: 7px 10px; background: #152631; color: #dce8ef; cursor: pointer; }
+.stellar-motion-apply { border-color: #39735d; background: #183d31; color: #a9efd2; }
+.stellar-motion-remove { border-color: #76514b; color: #e8b5ab; }
+.stellar-motion-import-button:disabled, .stellar-motion-remove:disabled, .stellar-motion-revert:disabled, .stellar-motion-apply:disabled { opacity: .45; cursor: default; }
+.stellar-motion-source-card { margin-top: 10px; padding: 10px; border: 1px solid #35586c; border-radius: 6px; background: rgba(18, 35, 46, .75); }
+.stellar-motion-source-card.draft { border-color: #806b3d; }
+.stellar-motion-source-card small { color: #8fa7b7; letter-spacing: .07em; }
+.stellar-motion-source-card code { color: #afc5d2; }
+.stellar-motion-empty, .stellar-motion-message { margin: 10px 0 0; }
+.stellar-motion-message { color: #b8d9eb; }
+.stellar-motion-apply-row { margin-top: 10px; padding-top: 9px; border-top: 1px solid rgba(92, 121, 139, .28); }
+.stellar-motion-apply-row > div { display: flex; gap: 7px; }
+@media (max-width: 900px) { .stellar-motion-heading, .stellar-motion-apply-row, .stellar-motion-source-card { align-items: stretch; flex-direction: column; } .stellar-motion-apply-row > div { flex-wrap: wrap; } }
+
+.stellar-motion-result { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 9px; padding: 8px 10px; border-radius: 6px; background: rgba(50, 112, 88, .14); color: #9bb2c1; font-size: 11px; }
+.stellar-motion-result strong { margin-left: 4px; color: #b7efd8; }

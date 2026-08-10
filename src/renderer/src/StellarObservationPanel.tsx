@@ -7,6 +7,7 @@ import {
 } from '../../simulation/stellar-observation';
 import type { ModelPrediction } from '../../shared/domain';
 import type { SavedStellarLocalHorizonSource } from '../../shared/stellar-local-horizon-import';
+import type { SavedStellarMotionSource } from '../../shared/stellar-motion-source';
 import { DraftNumberInput } from './DraftNumberInput';
 import { projectStellarSkyPoint, stellarSkyMarkerRadius } from './stellar-sky-visualization';
 import './stellar-observation-panel.css';
@@ -150,13 +151,24 @@ function externalSourceSignature(source: SavedStellarLocalHorizonSource | undefi
   return source ? `${source.sha256}|${source.fileName}|${source.importedAtIso}` : '';
 }
 
+function cloneMotionSource(source: SavedStellarMotionSource | undefined): SavedStellarMotionSource | undefined {
+  return source ? { ...source, entries: source.entries.map((entry) => ({ ...entry })) } : undefined;
+}
+
+function motionSourceSignature(source: SavedStellarMotionSource | undefined): string {
+  return source ? `${source.sha256}|${source.fileName}|${source.importedAtIso}|${source.entryCount}` : '';
+}
+
 export function StellarObservationPanel({
   result,
   prediction,
   settings,
   externalLocalHorizonSource,
+  stellarMotionSource,
   onChange,
   onImportLocalHorizon,
+  onImportStellarMotion,
+  onApplyStellarMotion,
   onApplyLocalHorizon,
   onShowTrace
 }: {
@@ -164,8 +176,11 @@ export function StellarObservationPanel({
   prediction: ModelPrediction;
   settings: StellarObservationSettings;
   externalLocalHorizonSource?: SavedStellarLocalHorizonSource;
+  stellarMotionSource?: SavedStellarMotionSource;
   onChange(settings: StellarObservationSettings): void;
   onImportLocalHorizon(): Promise<SavedStellarLocalHorizonSource | undefined>;
+  onImportStellarMotion(): Promise<SavedStellarMotionSource | undefined>;
+  onApplyStellarMotion(source?: SavedStellarMotionSource): void;
   onApplyLocalHorizon(settings: StellarObservationSettings, source?: SavedStellarLocalHorizonSource): void;
   onShowTrace(): void;
 }): React.JSX.Element {
@@ -179,8 +194,12 @@ export function StellarObservationPanel({
   const [horizonImportMessage, setHorizonImportMessage] = useState('');
   const [showRefractionDiagnostic, setShowRefractionDiagnostic] = useState(false);
   const [showSkySnapshot, setShowSkySnapshot] = useState(false);
+  const [draftMotionSource, setDraftMotionSource] = useState<SavedStellarMotionSource | undefined>(() => cloneMotionSource(stellarMotionSource));
+  const [isImportingMotion, setIsImportingMotion] = useState(false);
+  const [motionImportMessage, setMotionImportMessage] = useState('');
   const appliedLocalHorizonSignature = localHorizonSignature(settings);
   const appliedExternalSourceSignature = externalSourceSignature(externalLocalHorizonSource);
+  const appliedMotionSourceSignature = motionSourceSignature(stellarMotionSource);
 
   useEffect(() => {
     setLocalHorizonDraft(localHorizonDraftFromSettings(settings));
@@ -189,6 +208,10 @@ export function StellarObservationPanel({
   useEffect(() => {
     setDraftExternalLocalHorizonSource(cloneExternalSource(externalLocalHorizonSource));
   }, [appliedExternalSourceSignature]);
+
+  useEffect(() => {
+    setDraftMotionSource(cloneMotionSource(stellarMotionSource));
+  }, [appliedMotionSourceSignature]);
 
   const position = result.position;
   const crossings = result.trail.horizonCrossings;
@@ -208,9 +231,36 @@ export function StellarObservationPanel({
   );
   brightestSkyStarIds.add(settings.starId);
   const selectedSkyStar = result.skySnapshot.stars.find((star) => star.starId === settings.starId);
+  const plottedLocalCounts = {
+    above: skyStars.filter((star) => star.localHorizonStatus === 'above').length,
+    onHorizon: skyStars.filter((star) => star.localHorizonStatus === 'on-horizon').length,
+    below: skyStars.filter((star) => star.localHorizonStatus === 'below').length
+  };
   const sourceDraftDirty = externalSourceSignature(draftExternalLocalHorizonSource) !== appliedExternalSourceSignature;
+  const motionSourceDirty = motionSourceSignature(draftMotionSource) !== appliedMotionSourceSignature;
+  const draftMotionEntry = draftMotionSource?.entries.find((entry) => entry.starId === settings.starId);
   const localHorizonDirty = !localHorizonDraftMatchesSettings(localHorizonDraft, settings) || sourceDraftDirty;
   const usesExternalDraft = localHorizonDraft.localHorizonSourceMode === 'external';
+
+  const importMotionSource = async (): Promise<void> => {
+    setIsImportingMotion(true);
+    setMotionImportMessage('');
+    try {
+      const imported = await onImportStellarMotion();
+      if (!imported) return;
+      setDraftMotionSource(cloneMotionSource(imported));
+      setMotionImportMessage(`“${imported.fileName}” doğrulandı. Uygula ve hesapla ile proper motion etkinleşecek.`);
+    } catch (error) {
+      setMotionImportMessage(error instanceof Error ? error.message : 'BSC5P proper-motion kaynağı içe aktarılamadı.');
+    } finally {
+      setIsImportingMotion(false);
+    }
+  };
+
+  const applyMotionSource = (): void => {
+    setMotionImportMessage('');
+    onApplyStellarMotion(cloneMotionSource(draftMotionSource));
+  };
 
   const updateLocalHorizonDirection = (key: LocalHorizonDirectionKey, value: number): void => {
     setLocalHorizonDraft((current) => ({ ...current, [key]: value }));
@@ -305,6 +355,61 @@ export function StellarObservationPanel({
             <option value={60}>60 dk</option>
           </select>
         </label>
+      </div>
+
+      <div className={stellarMotionSource ? 'stellar-motion-source active' : 'stellar-motion-source'}>
+        <div className="stellar-motion-heading">
+          <div>
+            <strong>Doğrulanmış proper motion · BSC5P</strong>
+            <span>Resmi V/50 catalog dosyası 19/19 HR + J2000 konum + V kadri üzerinden doğrulanır. Dosya seçimi hesap motorunu çalıştırmaz.</span>
+          </div>
+          <button className="stellar-motion-import-button" disabled={isImportingMotion} type="button" onClick={() => void importMotionSource()}>
+            {isImportingMotion ? 'Katalog okunuyor…' : 'BSC5P catalog dosyasından al'}
+          </button>
+        </div>
+        {draftMotionSource ? (
+          <div className={motionSourceDirty ? 'stellar-motion-source-card draft' : 'stellar-motion-source-card'}>
+            <div>
+              <small>PROPER MOTION KAYNAĞI</small>
+              <strong>{draftMotionSource.fileName}</strong>
+              <span>{draftMotionSource.entryCount}/19 kayıt · FK5/J2000 · kaynak epok J{angleFormatter.format(draftMotionSource.sourceEpochJulianYear)}</span>
+              {draftMotionEntry && (
+                <span>Seçili yıldız: μ_α* {angleFormatter.format(draftMotionEntry.properMotionRaStarArcsecPerYear)}″/yıl · μ_δ {angleFormatter.format(draftMotionEntry.properMotionDecArcsecPerYear)}″/yıl</span>
+              )}
+            </div>
+            <div>
+              <span>SHA-256 <code title={draftMotionSource.sha256}>{draftMotionSource.sha256.slice(0, 12)}…</code></span>
+              <span>{angleFormatter.format(draftMotionSource.fileSizeBytes / 1024)} KB · {formatImportedAt(draftMotionSource.importedAtIso)}</span>
+            </div>
+          </div>
+        ) : (
+          <p className="stellar-motion-empty">Kaynak uygulanmadı; yıldız sonuçları proper motion olmadan mevcut J2000 → precession zincirini kullanır.</p>
+        )}
+        {stellarMotionSource && result.properMotion && !motionSourceDirty && (
+          <div className="stellar-motion-result">
+            <span>Uygulanan toplam PM kayması <strong>{angleFormatter.format(result.properMotion.angularShiftArcsec)}″</strong></span>
+            <span>J{angleFormatter.format(result.properMotion.sourceEpochJulianYear)} → gözlem epoch'u <strong>{angleFormatter.format(result.properMotion.elapsedJulianYears)} Jülyen yıl</strong></span>
+          </div>
+        )}
+        {motionImportMessage && <p className="stellar-motion-message" role="status">{motionImportMessage}</p>}
+        <div className="stellar-motion-apply-row">
+          <span>{motionSourceDirty ? 'Proper-motion kaynak değişikliği henüz hesaplanmadı.' : stellarMotionSource ? 'Doğrulanmış proper-motion kaynağı hesapta uygulanıyor.' : 'Proper motion kapalı.'}</span>
+          <div>
+            <button
+              className="stellar-motion-remove"
+              disabled={!draftMotionSource}
+              type="button"
+              onClick={() => { setDraftMotionSource(undefined); setMotionImportMessage(''); }}
+            >Kaynağı kaldır</button>
+            <button
+              className="stellar-motion-revert"
+              disabled={!motionSourceDirty}
+              type="button"
+              onClick={() => { setDraftMotionSource(cloneMotionSource(stellarMotionSource)); setMotionImportMessage(''); }}
+            >Geri al</button>
+            <button className="stellar-motion-apply" disabled={!motionSourceDirty} type="button" onClick={applyMotionSource}>Uygula ve hesapla</button>
+          </div>
+        </div>
       </div>
 
       <div className={showRefractionDiagnostic ? 'stellar-refraction-diagnostic active' : 'stellar-refraction-diagnostic'}>
@@ -491,9 +596,10 @@ export function StellarObservationPanel({
         {showSkySnapshot && (
           <>
             <div className="stellar-sky-summary">
-              <span>Geometrik 0° üstü <strong>{result.skySnapshot.aboveGeometricHorizonCount}/{result.skySnapshot.starCount}</strong></span>
+              <span>Haritada çizilen <strong>{skyStars.length}/{result.skySnapshot.starCount}</strong></span>
+              <span>Geometrik 0° <strong>üstünde {result.skySnapshot.aboveGeometricHorizonCount} · altında ve çizilmeyen {result.skySnapshot.belowGeometricHorizonCount}</strong></span>
               {result.skySnapshot.localHorizonCounts && (
-                <span>Yerel skyline <strong>üstünde {result.skySnapshot.localHorizonCounts.above} · sınır {result.skySnapshot.localHorizonCounts.onHorizon} · altında {result.skySnapshot.localHorizonCounts.below}</strong></span>
+                <span>Çizilenlerde yerel skyline <strong>üstünde {plottedLocalCounts.above} · sınır {plottedLocalCounts.onHorizon} · altında {plottedLocalCounts.below}</strong></span>
               )}
               {selectedSkyStar && !selectedSkyStar.aboveGeometricHorizon && (
                 <span>Seçili yıldız <strong>0° geometrik ufkun altında · haritada çizilmez</strong></span>

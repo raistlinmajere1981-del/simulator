@@ -8,7 +8,7 @@ import {
 } from './stellar-proper-motion';
 
 export const BRIGHT_STAR_CATALOG_ID = 'bsc5p-curated-reference';
-export const BRIGHT_STAR_CATALOG_VERSION = '0.1.0';
+export const BRIGHT_STAR_CATALOG_VERSION = '0.1.1';
 export const BRIGHT_STAR_CATALOG_SOURCE = 'NASA HEASARC BSC5P · Bright Star Catalog, 5th Edition (preliminary)';
 
 export interface BrightStarCatalogEntry {
@@ -60,7 +60,7 @@ export const BRIGHT_STAR_CATALOG: readonly BrightStarCatalogEntry[] = [
   { id: 'hr-8728', commonName: 'Fomalhaut', bayerDesignation: 'α PsA', constellation: 'Piscis Austrinus', hrNumber: 8728, rightAscensionJ2000Deg: 344.41269300, declinationJ2000Deg: -29.62223600, visualMagnitude: 1.16, sourceFrame: 'mean-j2000' },
   { id: 'hr-7924', commonName: 'Deneb', bayerDesignation: 'α Cyg', constellation: 'Cygnus', hrNumber: 7924, rightAscensionJ2000Deg: 310.35797900, declinationJ2000Deg: 45.28033800, visualMagnitude: 1.25, sourceFrame: 'mean-j2000' },
   { id: 'hr-3982', commonName: 'Regulus', bayerDesignation: 'α Leo', constellation: 'Leo', hrNumber: 3982, rightAscensionJ2000Deg: 152.09296200, declinationJ2000Deg: 11.96720900, visualMagnitude: 1.35, sourceFrame: 'mean-j2000' },
-  { id: 'hr-0424', commonName: 'Polaris', bayerDesignation: 'α UMi', constellation: 'Ursa Minor', hrNumber: 424, rightAscensionJ2000Deg: 37.95456070, declinationJ2000Deg: 89.26410890, visualMagnitude: 1.97, sourceFrame: 'mean-j2000' }
+  { id: 'hr-0424', commonName: 'Polaris', bayerDesignation: 'α UMi', constellation: 'Ursa Minor', hrNumber: 424, rightAscensionJ2000Deg: 37.95456070, declinationJ2000Deg: 89.26410890, visualMagnitude: 2.02, sourceFrame: 'mean-j2000' }
 ] as const;
 
 const catalogById = new Map(BRIGHT_STAR_CATALOG.map((star) => [star.id, star] as const));

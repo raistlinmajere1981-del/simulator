@@ -1,6 +1,7 @@
 export const BSC5P_FIXED_WIDTH_RECORD_LENGTH = 197;
+export const BSC5P_FIXED_WIDTH_MIN_RECORD_LENGTH = 160;
 export const BSC5P_FIXED_WIDTH_FORMAT_ID = 'cds-v50-fixed-width';
-export const BSC5P_FIXED_WIDTH_FORMAT_VERSION = '0.1.0';
+export const BSC5P_FIXED_WIDTH_FORMAT_VERSION = '0.1.1';
 export const BSC5P_FIXED_WIDTH_SOURCE = 'CDS V/50 · Bright Star Catalogue, 5th Revised Edition';
 export const BSC5P_SOURCE_EPOCH_JULIAN_YEAR = 2000;
 
@@ -153,19 +154,28 @@ function parseJ2000Direction(line: string): {
 }
 
 /**
- * Parses one 197-byte/character ASCII record from CDS catalogue V/50.
+ * Parses one logical CDS catalogue V/50 fixed-width record.
+ *
+ * The catalogue defines byte columns through 197, but real distributed text may
+ * omit a trailing suffix that consists only of blank optional fields. We accept
+ * records that reach byte 160 (the end of pmDE) through byte 197, pad the missing
+ * trailing columns with blanks for field extraction, and preserve the original
+ * unpadded source line for provenance. Shorter records remain rejected as
+ * truncated input.
  *
  * Byte offsets follow the catalogue ReadMe. In particular, pmRA occupies
  * bytes 149-154 and is the projected component μ_α*=cos(δ)·dα/dt; pmDE
  * occupies bytes 155-160. Blank numeric fields are represented as null.
  */
 export function parseBsc5pFixedWidthRecord(rawLine: string): Bsc5pCatalogRecord {
-  const line = rawLine.replace(/[\r\n]+$/, '');
-  if (line.length !== BSC5P_FIXED_WIDTH_RECORD_LENGTH) {
+  const sourceLine = rawLine.replace(/[\r\n]+$/, '');
+  if (sourceLine.length < BSC5P_FIXED_WIDTH_MIN_RECORD_LENGTH ||
+    sourceLine.length > BSC5P_FIXED_WIDTH_RECORD_LENGTH) {
     throw new Bsc5pFixedWidthError(
-      `BSC5P kayıt satırı tam ${BSC5P_FIXED_WIDTH_RECORD_LENGTH} karakter olmalıdır; alınan=${line.length}.`
+      `BSC5P kayıt satırı ${BSC5P_FIXED_WIDTH_MIN_RECORD_LENGTH}..${BSC5P_FIXED_WIDTH_RECORD_LENGTH} karakter aralığında olmalıdır; alınan=${sourceLine.length}.`
     );
   }
+  const line = sourceLine.padEnd(BSC5P_FIXED_WIDTH_RECORD_LENGTH, ' ');
 
   const hrNumber = parseRequiredInteger(line, BYTES.hr, 'HR');
   requireIntegerRange(hrNumber, 1, 9110, 'HR');
@@ -185,7 +195,7 @@ export function parseBsc5pFixedWidthRecord(rawLine: string): Bsc5pCatalogRecord 
   }
 
   return {
-    rawLine: line,
+    rawLine: sourceLine,
     hrNumber,
     catalogName: nullableString(line, BYTES.name),
     hdNumber: parseOptionalInteger(line, BYTES.hd, 'HD'),
