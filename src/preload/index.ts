@@ -11,10 +11,15 @@ import type {
   TerrainProfileColumnMapping,
   TerrainProfileImportContext
 } from '../shared/simulator';
+import type {
+  GenerateStellarDemSkylineResult,
+  ImportStellarDemSkylineResult,
+  StellarDemSkylineGenerationSettings
+} from '../shared/stellar-local-horizon-import';
 import type { ImportStellarMotionResult } from '../shared/stellar-motion-source';
 
 const api: SimulatorDesktopApi = {
-  version: '1.12.0',
+  version: '1.18.1',
   platform: process.platform,
   listExperiments: () =>
     ipcRenderer.invoke('experiments:list') as Promise<SavedExperiment[]>,
@@ -34,6 +39,16 @@ const api: SimulatorDesktopApi = {
     ipcRenderer.invoke('stellar-horizon:import') as Promise<ImportStellarLocalHorizonResult>,
   importStellarMotionSource: () =>
     ipcRenderer.invoke('stellar-motion:import') as Promise<ImportStellarMotionResult>,
+  importStellarDemSkyline: () =>
+    ipcRenderer.invoke('stellar-skyline-dem:import') as Promise<ImportStellarDemSkylineResult>,
+  generateStellarDemSkyline: (
+    requestId: string,
+    settings: StellarDemSkylineGenerationSettings
+  ) => ipcRenderer.invoke(
+    'stellar-skyline-dem:generate',
+    requestId,
+    settings
+  ) as Promise<GenerateStellarDemSkylineResult>,
   importTerrainProfile: (context: TerrainProfileImportContext) =>
     ipcRenderer.invoke('terrain:import-csv', context) as Promise<ImportTerrainProfileResult>,
   importTerrainProfileWithMapping: (
