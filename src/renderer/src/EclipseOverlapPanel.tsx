@@ -23,7 +23,7 @@ export function EclipseOverlapPanel({
   onShowTrace
 }: {
   result: SolarEclipseOverlapResult;
-  onShowTrace(): void;
+  onShowTrace?: () => void;
 }): React.JSX.Element {
   const sunRadius = 78;
   const moonRadius = sunRadius * result.lunarAngularRadiusDeg / result.solarAngularRadiusDeg;
@@ -43,7 +43,7 @@ export function EclipseOverlapPanel({
           <p>Seçili gözlemci ve zaman için iki disk birlikte çözülür. Bu panel temas zamanı veya resmi tutulma yolu üretmez.</p>
         </div>
         <div className="eclipse-overlap-actions">
-          <button type="button" onClick={onShowTrace}>Hesap izi</button>
+          {onShowTrace && <button type="button" onClick={onShowTrace}>Hesap izi</button>}
           <strong className={`eclipse-overlap-state ${classTone(result)}`}>{classLabel(result)}</strong>
         </div>
       </div>
