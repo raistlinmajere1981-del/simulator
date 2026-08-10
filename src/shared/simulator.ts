@@ -6,8 +6,11 @@ import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
 import type { ModelInputUncertaintySettings } from './uncertainty';
 import type { TextExperimentSetupProvenance } from './text-experiment-setup';
 import type {
+  GenerateStellarDemSkylineResult,
   ImportedStellarLocalHorizonProfile,
-  SavedStellarLocalHorizonSource
+  ImportStellarDemSkylineResult,
+  SavedStellarLocalHorizonSource,
+  StellarDemSkylineGenerationSettings
 } from './stellar-local-horizon-import';
 import type { ImportStellarMotionResult, SavedStellarMotionSource } from './stellar-motion-source';
 
@@ -326,6 +329,11 @@ export interface SimulatorDesktopApi {
   importObservationPhoto(): Promise<ImportObservationPhotoResult>;
   importStellarLocalHorizon(): Promise<ImportStellarLocalHorizonResult>;
   importStellarMotionSource(): Promise<ImportStellarMotionResult>;
+  importStellarDemSkyline(): Promise<ImportStellarDemSkylineResult>;
+  generateStellarDemSkyline(
+    requestId: string,
+    settings: StellarDemSkylineGenerationSettings
+  ): Promise<GenerateStellarDemSkylineResult>;
   importTerrainProfile(
     context: TerrainProfileImportContext
   ): Promise<ImportTerrainProfileResult>;
