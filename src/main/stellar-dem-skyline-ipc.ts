@@ -5,16 +5,12 @@ import { basename } from 'node:path';
 import type {
   GenerateStellarDemSkylineResult,
   ImportStellarDemSkylineResult,
-  SavedStellarLocalHorizonSource,
   StellarDemSkylineDraft,
   StellarDemSkylineGenerationSettings
 } from '../shared/stellar-local-horizon-import';
-import {
-  DEM_SKYLINE_ALGORITHM_ID,
-  DEM_SKYLINE_ALGORITHM_VERSION,
-  generateDemSkyline
-} from '../simulation/dem-skyline';
+import { generateDemSkyline } from '../simulation/dem-skyline';
 import { parseEsriAsciiGrid, type EsriAsciiGrid } from '../simulation/esri-ascii-grid';
+import { savedStellarLocalHorizonSourceFromDemSkyline } from '../simulation/stellar-dem-skyline-source';
 
 const MAX_DEM_BYTES = 64 * 1024 * 1024;
 const PENDING_DEM_TTL_MS = 10 * 60 * 1_000;
@@ -178,35 +174,11 @@ export function registerStellarDemSkylineHandlers(): void {
         };
       }
 
-      const points = result.points.map((point) => {
-        if (point.elevationDeg === null) {
-          throw new Error('Tam kapsamalı DEM skyline sonucunda tanımsız azimut noktası bulundu.');
-        }
-        return { azimuthDeg: point.azimuthDeg, altitudeDeg: point.elevationDeg };
+      const source = savedStellarLocalHorizonSourceFromDemSkyline({
+        draft: pending.draft,
+        settings,
+        result
       });
-      const source: SavedStellarLocalHorizonSource = {
-        fileName: pending.draft.fileName,
-        importedAtIso: pending.draft.importedAtIso,
-        format: 'dem',
-        pointCount: points.length,
-        maximumAzimuthGapDeg: settings.azimuthStepDeg,
-        points,
-        warnings: [...result.warnings],
-        fileSizeBytes: pending.draft.fileSizeBytes,
-        sha256: pending.draft.sha256,
-        modifiedAfterImport: false,
-        demDerivation: {
-          ...settings,
-          algorithmId: DEM_SKYLINE_ALGORITHM_ID,
-          algorithmVersion: DEM_SKYLINE_ALGORITHM_VERSION,
-          completeCoverage: true,
-          completeRayCount: result.completeRayCount,
-          coverageLimitedRayCount: result.coverageLimitedRayCount,
-          noDataAffectedRayCount: result.noDataAffectedRayCount,
-          noCoverageRayCount: result.noCoverageRayCount,
-          geodesicFallbackSampleCount: result.geodesicFallbackSampleCount
-        }
-      };
 
       return {
         status: 'success',
