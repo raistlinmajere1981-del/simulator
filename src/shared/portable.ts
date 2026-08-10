@@ -29,18 +29,19 @@ import {
   validateManualTerrainPoints
 } from '../simulation/manual-terrain-profile';
 import { normalizeStellarLocalHorizonMask } from '../simulation/stellar-local-horizon';
+import { parseSavedStellarPanoramaLocalHorizonSource } from '../simulation/stellar-panorama-skyline-persistence';
 
 export const PORTABLE_EXPERIMENT_SCHEMA = 'geometric-observation-laboratory/portable-experiment';
-export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 10;
+export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 11;
 export const LOCAL_EXPERIMENT_STORE_SCHEMA = 'geometric-observation-laboratory/local-experiment-store';
-export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 10;
+export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 11;
 
 export interface PortableApplicationInfo {
   name: 'Geometrik Gözlem Laboratuvarı';
   version: string;
 }
 
-export interface PortableExperimentFileV10 {
+export interface PortableExperimentFileV11 {
   schema: typeof PORTABLE_EXPERIMENT_SCHEMA;
   schemaVersion: typeof PORTABLE_EXPERIMENT_SCHEMA_VERSION;
   exportedAtIso: string;
@@ -48,7 +49,7 @@ export interface PortableExperimentFileV10 {
   experiment: SavedExperiment;
 }
 
-export interface LocalExperimentStoreV10 {
+export interface LocalExperimentStoreV11 {
   schema: typeof LOCAL_EXPERIMENT_STORE_SCHEMA;
   schemaVersion: typeof LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION;
   updatedAtIso: string;
@@ -62,7 +63,7 @@ export interface ParsedPortableExperiment {
 }
 
 export interface ParsedLocalExperimentStore {
-  store: LocalExperimentStoreV10;
+  store: LocalExperimentStoreV11;
   migrated: boolean;
   ignoredRecordCount: number;
 }
@@ -661,6 +662,9 @@ function parseStellarDemSkylineDerivation(
 }
 
 function parseStellarLocalHorizonSource(value: unknown): SavedStellarLocalHorizonSource | null {
+  if (isRecord(value) && value.format === 'panorama') {
+    return parseSavedStellarPanoramaLocalHorizonSource(value);
+  }
   if (!isRecord(value) || !isNonEmptyString(value.fileName) || value.fileName.length > 240 ||
     !isIsoDate(value.importedAtIso) ||
     (value.format !== 'csv' && value.format !== 'json' && value.format !== 'dem') ||
@@ -921,7 +925,7 @@ export function createPortableExperimentFile(
   experiment: SavedExperiment,
   applicationVersion: string,
   exportedAtIso = new Date().toISOString()
-): PortableExperimentFileV10 {
+): PortableExperimentFileV11 {
   return {
     schema: PORTABLE_EXPERIMENT_SCHEMA,
     schemaVersion: PORTABLE_EXPERIMENT_SCHEMA_VERSION,
@@ -944,7 +948,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
     version !== 5 && version !== 6 && version !== 7 && version !== 8 && version !== 9 &&
-    version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
+    version !== 10 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Deney dosyası şema sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
@@ -963,7 +967,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
 export function createLocalExperimentStore(
   experiments: SavedExperiment[],
   updatedAtIso = new Date().toISOString()
-): LocalExperimentStoreV10 {
+): LocalExperimentStoreV11 {
   return {
     schema: LOCAL_EXPERIMENT_STORE_SCHEMA,
     schemaVersion: LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
@@ -990,7 +994,7 @@ export function parseLocalExperimentStore(value: unknown): ParsedLocalExperiment
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
     version !== 5 && version !== 6 && version !== 7 && version !== 8 && version !== 9 &&
-    version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
+    version !== 10 && version !== LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Yerel deney deposu sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
