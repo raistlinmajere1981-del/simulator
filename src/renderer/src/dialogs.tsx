@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ModelMetadata, ModelPrediction } from '../../shared/domain';
-import { createAiAnalysisPackage } from '../../shared/ai-analysis-package';
+import { createAiAnalysisPackage, createAiComparisonPackage } from '../../shared/ai-analysis-package';
 import type { SavedExperiment } from '../../shared/simulator';
 import { PanelHelpButton } from './HelpSystem';
 
@@ -188,6 +188,77 @@ function AiAnalysisPackageDialog({
   );
 }
 
+
+function AiComparisonPackageDialog({
+  experiments,
+  onClose
+}: {
+  experiments: SavedExperiment[];
+  onClose(): void;
+}): React.JSX.Element {
+  const text = useMemo(() => createAiComparisonPackage(experiments), [experiments]);
+  const [copyMessage, setCopyMessage] = useState('');
+  const resultCount = experiments.reduce((sum, experiment) => sum + experiment.predictions.length, 0);
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose} style={{ zIndex: 1200 }}>
+      <section
+        aria-label="AI karşılaştırma paketi"
+        className="dialog-card data-dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+        style={{ width: 'min(1180px, 95vw)', maxWidth: '1180px' }}
+      >
+        <header>
+          <div>
+            <span className="eyebrow">GGL-AI-COMPARISON v1</span>
+            <h2>AI Karşılaştırma Paketi</h2>
+          </div>
+          <button className="dialog-close" type="button" onClick={onClose}>×</button>
+        </header>
+
+        <div className="portable-info">
+          <strong>{experiments.length} bağımsız deney</strong>
+          <span>
+            Her deney ayrı EXPERIMENT bloğunda tutulur. AI yalnız anlamı ve birimi aynı metrikleri doğrudan karşılaştırmalı; farklı senaryoların sonuçları otomatik olarak eşdeğer sayılmaz.
+          </span>
+        </div>
+
+        <textarea
+          aria-label="AI karşılaştırma paketi metni"
+          readOnly
+          spellCheck={false}
+          value={text}
+          style={{
+            width: '100%',
+            minHeight: '58vh',
+            resize: 'vertical',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+            fontSize: '12px',
+            lineHeight: 1.45,
+            boxSizing: 'border-box'
+          }}
+        />
+
+        <footer>
+          <span style={{ marginRight: 'auto', opacity: 0.8 }}>
+            {copyMessage || `${text.length.toLocaleString('tr-TR')} karakter · ${experiments.length} deney · ${resultCount} hesap sonucu`}
+          </span>
+          <button className="secondary-button" type="button" onClick={onClose}>Kapat</button>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={() => void copyText(text).then((copied) => {
+              setCopyMessage(copied ? 'AI karşılaştırma paketi panoya kopyalandı.' : 'Otomatik kopyalama başarısız; metni seçip kopyalayabilirsin.');
+            })}
+          >
+            Panoya Kopyala
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 export function DataManagerDialog({
   experiments,
   open,
@@ -200,11 +271,15 @@ export function DataManagerDialog({
 }: DataManagerDialogProps): React.JSX.Element | null {
   const [busyAction, setBusyAction] = useState<string>();
   const [analysisExperiment, setAnalysisExperiment] = useState<SavedExperiment>();
+  const [selectedAnalysisIds, setSelectedAnalysisIds] = useState<string[]>([]);
+  const [comparisonExperiments, setComparisonExperiments] = useState<SavedExperiment[]>();
 
   useEffect(() => {
     if (!open) {
       setBusyAction(undefined);
       setAnalysisExperiment(undefined);
+      setSelectedAnalysisIds([]);
+      setComparisonExperiments(undefined);
     }
   }, [open]);
 
@@ -256,6 +331,24 @@ export function DataManagerDialog({
           </span>
         </div>
 
+
+        <div className="portable-info">
+          <strong>AI karşılaştırma seçimi</strong>
+          <span>
+            2-12 kayıt seç. Paket deney sınırlarını korur ve karşılaştırılabilir olmayan metriklerin eşdeğer sayılmamasını AI görevine açıkça yazar.
+          </span>
+          <button
+            className="primary-button"
+            disabled={selectedAnalysisIds.length < 2 || selectedAnalysisIds.length > 12}
+            type="button"
+            onClick={() => setComparisonExperiments(
+              experiments.filter((experiment) => selectedAnalysisIds.includes(experiment.id))
+            )}
+          >
+            AI Karşılaştırması ({selectedAnalysisIds.length})
+          </button>
+        </div>
+
         {experiments.length === 0 ? (
           <div className="empty-state">
             <strong>Henüz kayıt yok</strong>
@@ -297,6 +390,17 @@ export function DataManagerDialog({
                   >
                     {busyAction === `export:${experiment.id}` ? 'Kaydediliyor…' : 'JSON'}
                   </button>
+
+                  <button
+                    className={selectedAnalysisIds.includes(experiment.id) ? 'primary-button' : 'secondary-button'}
+                    disabled={Boolean(busyAction) || (!selectedAnalysisIds.includes(experiment.id) && selectedAnalysisIds.length >= 12)}
+                    type="button"
+                    onClick={() => setSelectedAnalysisIds((current) => current.includes(experiment.id)
+                      ? current.filter((id) => id !== experiment.id)
+                      : [...current, experiment.id])}
+                  >
+                    {selectedAnalysisIds.includes(experiment.id) ? 'Seçili' : 'Karşılaştır'}
+                  </button>
                   <button
                     className="secondary-button"
                     disabled={Boolean(busyAction)}
@@ -337,6 +441,13 @@ export function DataManagerDialog({
         <AiAnalysisPackageDialog
           experiment={analysisExperiment}
           onClose={() => setAnalysisExperiment(undefined)}
+        />
+      )}
+
+      {comparisonExperiments && (
+        <AiComparisonPackageDialog
+          experiments={comparisonExperiments}
+          onClose={() => setComparisonExperiments(undefined)}
         />
       )}
     </div>
