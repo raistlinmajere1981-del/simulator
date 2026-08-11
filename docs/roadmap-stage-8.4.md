@@ -35,6 +35,10 @@ Bu aşama AI'ye hesap yetkisi vermez. Karşılaştırma paketi yalnız GGL'de za
 7. 13 deney API seviyesinde reddedilir.
 8. TypeScript, test ve production build başarılıdır.
 
+## Kabul sonucu
+
+2026-08-11 yerel kabulünde aynı senaryo için `same_scenario: true`, farklı senaryo için `same_scenario: false`, panoya kopyalama ve production build doğrulandı. Aşama 8.4 tamamlandı.
+
 ## Sonraki dilim
 
 Aşama 8.5, aktif deneyi kaydetmeden AI paketine dönüştürme ve AI → `GGL-AI-TEST v1` → Metinden Hazırla geri-besleme akışını kısaltır.
