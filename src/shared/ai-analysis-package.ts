@@ -53,13 +53,13 @@ function sourceLines(experiment: SavedExperiment): string[] {
     lines.push(`source.terrain.modified_after_import: ${terrain.modifiedAfterImport ? 'true' : 'false'}`);
   }
   if (experiment.photoCalibration) {
-    lines.push(`source.photo.file_name: ${scalar(experiment.photoCalibration.fileName)}`);
+    lines.push(`source.photo.file_name: ${scalar(experiment.photoCalibration.source.fileName)}`);
     lines.push(`source.photo.reference_kind: ${experiment.photoCalibration.referenceKind ?? 'unknown'}`);
-    if (experiment.photoCalibration.sha256) lines.push(`source.photo.sha256: ${experiment.photoCalibration.sha256}`);
+    lines.push(`source.photo.sha256: ${experiment.photoCalibration.source.sha256}`);
   }
   if (experiment.stellarLocalHorizonSource) {
     lines.push(`source.stellar_horizon.file_name: ${scalar(experiment.stellarLocalHorizonSource.fileName)}`);
-    lines.push(`source.stellar_horizon.kind: ${experiment.stellarLocalHorizonSource.sourceKind ?? 'unknown'}`);
+    lines.push(`source.stellar_horizon.kind: ${experiment.stellarLocalHorizonSource.format}`);
     lines.push(`source.stellar_horizon.sha256: ${experiment.stellarLocalHorizonSource.sha256}`);
     lines.push(`source.stellar_horizon.modified_after_import: ${experiment.stellarLocalHorizonSource.modifiedAfterImport ? 'true' : 'false'}`);
   }
