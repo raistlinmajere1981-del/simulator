@@ -41,8 +41,42 @@ const KNOWN_KEYS = new Set([
   'uncertainty.observer_ground_elevation_m',
   'uncertainty.target_height_m',
   'uncertainty.target_ground_elevation_m',
-  'uncertainty.refraction_k'
+  'uncertainty.refraction_k',
+  'shadow.gnomon_height_m',
+  'shadow.observed_length_m',
+  'shadow.observed_length_uncertainty_m',
+  'shadow.observed_azimuth_deg',
+  'shadow.observed_azimuth_uncertainty_deg',
+  'shadow.station_b.coordinates',
+  'shadow.station_b.gnomon_height_m',
+  'shadow.station_b.observed_length_m',
+  'shadow.station_b.observed_length_uncertainty_m',
+  'shadow.station_b.observed_azimuth_deg',
+  'shadow.station_b.observed_azimuth_uncertainty_deg',
+  'stellar.star_id',
+  'stellar.trail_duration_minutes',
+  'stellar.sample_interval_minutes',
+  'stellar.local_horizon.enabled',
+  'stellar.local_horizon.n_deg',
+  'stellar.local_horizon.ne_deg',
+  'stellar.local_horizon.e_deg',
+  'stellar.local_horizon.se_deg',
+  'stellar.local_horizon.s_deg',
+  'stellar.local_horizon.sw_deg',
+  'stellar.local_horizon.w_deg',
+  'stellar.local_horizon.nw_deg',
+  'eclipse.search_half_window_hours'
 ]);
+
+
+const STELLAR_STAR_IDS = new Set([
+  'hr-2491', 'hr-2326', 'hr-5340', 'hr-7001', 'hr-1708', 'hr-1713', 'hr-2943',
+  'hr-0472', 'hr-2061', 'hr-5267', 'hr-7557', 'hr-1457', 'hr-6134', 'hr-5056',
+  'hr-2990', 'hr-8728', 'hr-7924', 'hr-3982', 'hr-0424'
+]);
+const STELLAR_TRAIL_DURATIONS = new Set([180, 360, 720, 1440, 2880]);
+const STELLAR_SAMPLE_INTERVALS = new Set([5, 10, 15, 30, 60]);
+const ECLIPSE_HALF_WINDOWS = new Set([6, 12, 24, 48]);
 
 export const AI_TEST_SPEC_SCENARIOS: readonly SimulationScenarioId[] = [
   'target-visibility',
@@ -270,6 +304,78 @@ export function parseAiTestSpec(sourceText: string): AiTestSpecParseResult {
       case 'uncertainty.target_height_m': candidates.push(numberCandidate('targetHeightUncertaintyM', 'Hedef yüksekliği belirsizliği', line, value, (v) => v >= 0 && v <= 100_000, (v) => `±${trNumber(v)} m`)); break;
       case 'uncertainty.target_ground_elevation_m': candidates.push(numberCandidate('targetGroundElevationUncertaintyM', 'Hedef taban kotu belirsizliği', line, value, (v) => v >= 0 && v <= 100_000, (v) => `±${trNumber(v)} m`)); break;
       case 'uncertainty.refraction_k': candidates.push(numberCandidate('refractionCoefficientUncertainty', 'k belirsizliği', line, value, (v) => v >= 0 && v <= 2, (v) => `±${trNumber(v, 4)}`)); break;
+      case 'shadow.gnomon_height_m': candidates.push(numberCandidate('shadowGnomonHeightM', 'Gnomon yüksekliği', line, value, (v) => v > 0 && v <= 10_000, (v) => `${trNumber(v)} m`)); break;
+      case 'shadow.observed_length_m': candidates.push(numberCandidate('shadowObservedLengthM', 'Gözlenen gölge uzunluğu', line, value, (v) => v >= 0 && v <= 10_000_000, (v) => `${trNumber(v)} m`)); break;
+      case 'shadow.observed_length_uncertainty_m': candidates.push(numberCandidate('shadowObservedLengthUncertaintyM', 'Gölge uzunluğu belirsizliği', line, value, (v) => v >= 0 && v <= 1_000_000, (v) => `±${trNumber(v)} m`)); break;
+      case 'shadow.observed_azimuth_deg': candidates.push(numberCandidate('shadowObservedAzimuthDeg', 'Gözlenen gölge azimutu', line, value, (v) => v >= 0 && v <= 360, (v) => `${trNumber(v)}°`)); break;
+      case 'shadow.observed_azimuth_uncertainty_deg': candidates.push(numberCandidate('shadowObservedAzimuthUncertaintyDeg', 'Gölge azimut belirsizliği', line, value, (v) => v >= 0 && v <= 180, (v) => `±${trNumber(v)}°`)); break;
+      case 'shadow.station_b.coordinates': {
+        const coordinate = parseCoordinate(value);
+        candidates.push(candidate('shadowStationBCoordinates', 'Gölge B istasyonu koordinatı', line, coordinate ? `${trNumber(coordinate.latitudeDeg, 6)}°, ${trNumber(coordinate.longitudeDeg, 6)}°` : value, {
+          status: coordinate ? 'found' : 'review',
+          ...(coordinate ?? {}),
+          ...(!coordinate ? { reason: 'B istasyonu koordinatı enlem,boylam biçiminde ve WGS84 aralığında olmalı.' } : {})
+        }));
+        break;
+      }
+      case 'shadow.station_b.gnomon_height_m': candidates.push(numberCandidate('shadowStationBGnomonHeightM', 'B gnomon yüksekliği', line, value, (v) => v > 0 && v <= 10_000, (v) => `${trNumber(v)} m`)); break;
+      case 'shadow.station_b.observed_length_m': candidates.push(numberCandidate('shadowStationBObservedLengthM', 'B gözlenen gölge uzunluğu', line, value, (v) => v >= 0 && v <= 10_000_000, (v) => `${trNumber(v)} m`)); break;
+      case 'shadow.station_b.observed_length_uncertainty_m': candidates.push(numberCandidate('shadowStationBObservedLengthUncertaintyM', 'B gölge uzunluğu belirsizliği', line, value, (v) => v >= 0 && v <= 1_000_000, (v) => `±${trNumber(v)} m`)); break;
+      case 'shadow.station_b.observed_azimuth_deg': candidates.push(numberCandidate('shadowStationBObservedAzimuthDeg', 'B gözlenen gölge azimutu', line, value, (v) => v >= 0 && v <= 360, (v) => `${trNumber(v)}°`)); break;
+      case 'shadow.station_b.observed_azimuth_uncertainty_deg': candidates.push(numberCandidate('shadowStationBObservedAzimuthUncertaintyDeg', 'B gölge azimut belirsizliği', line, value, (v) => v >= 0 && v <= 180, (v) => `±${trNumber(v)}°`)); break;
+      case 'stellar.star_id': {
+        const valid = STELLAR_STAR_IDS.has(value);
+        candidates.push(candidate('stellarStarId', 'Katalog yıldızı', line, value, {
+          status: valid ? 'found' : 'review',
+          ...(valid ? { stringValue: value } : {}),
+          ...(!valid ? { reason: 'stellar.star_id GGL v1 parlak yıldız katalog kimliklerinden biri olmalı.' } : {})
+        }));
+        break;
+      }
+      case 'stellar.trail_duration_minutes': {
+        const parsed = parseNumber(value);
+        const valid = Number.isFinite(parsed) && STELLAR_TRAIL_DURATIONS.has(parsed);
+        candidates.push(candidate('stellarTrailDurationMinutes', 'Yıldız izi süresi', line, valid ? `${trNumber(parsed)} dk` : value, {
+          status: valid ? 'found' : 'review', ...(valid ? { numericValue: parsed } : {}),
+          ...(!valid ? { reason: 'İz süresi 180, 360, 720, 1440 veya 2880 dakika olmalı.' } : {})
+        }));
+        break;
+      }
+      case 'stellar.sample_interval_minutes': {
+        const parsed = parseNumber(value);
+        const valid = Number.isFinite(parsed) && STELLAR_SAMPLE_INTERVALS.has(parsed);
+        candidates.push(candidate('stellarSampleIntervalMinutes', 'Yıldız örnekleme aralığı', line, valid ? `${trNumber(parsed)} dk` : value, {
+          status: valid ? 'found' : 'review', ...(valid ? { numericValue: parsed } : {}),
+          ...(!valid ? { reason: 'Örnekleme aralığı 5, 10, 15, 30 veya 60 dakika olmalı.' } : {})
+        }));
+        break;
+      }
+      case 'stellar.local_horizon.enabled': {
+        const normalized = value.toLocaleLowerCase('en-US');
+        const valid = normalized === 'true' || normalized === 'false';
+        candidates.push(candidate('stellarLocalHorizonEnabled', 'Manuel yerel skyline', line, valid ? (normalized === 'true' ? 'Etkin' : 'Kapalı') : value, {
+          status: valid ? 'found' : 'review', ...(valid ? { stringValue: normalized } : {}),
+          ...(!valid ? { reason: 'stellar.local_horizon.enabled true veya false olmalı.' } : {})
+        }));
+        break;
+      }
+      case 'stellar.local_horizon.n_deg': candidates.push(numberCandidate('stellarLocalHorizonNorthDeg', 'Skyline K', line, value, (v) => v >= -90 && v <= 90, (v) => `${trNumber(v)}°`)); break;
+      case 'stellar.local_horizon.ne_deg': candidates.push(numberCandidate('stellarLocalHorizonNorthEastDeg', 'Skyline KD', line, value, (v) => v >= -90 && v <= 90, (v) => `${trNumber(v)}°`)); break;
+      case 'stellar.local_horizon.e_deg': candidates.push(numberCandidate('stellarLocalHorizonEastDeg', 'Skyline D', line, value, (v) => v >= -90 && v <= 90, (v) => `${trNumber(v)}°`)); break;
+      case 'stellar.local_horizon.se_deg': candidates.push(numberCandidate('stellarLocalHorizonSouthEastDeg', 'Skyline GD', line, value, (v) => v >= -90 && v <= 90, (v) => `${trNumber(v)}°`)); break;
+      case 'stellar.local_horizon.s_deg': candidates.push(numberCandidate('stellarLocalHorizonSouthDeg', 'Skyline G', line, value, (v) => v >= -90 && v <= 90, (v) => `${trNumber(v)}°`)); break;
+      case 'stellar.local_horizon.sw_deg': candidates.push(numberCandidate('stellarLocalHorizonSouthWestDeg', 'Skyline GB', line, value, (v) => v >= -90 && v <= 90, (v) => `${trNumber(v)}°`)); break;
+      case 'stellar.local_horizon.w_deg': candidates.push(numberCandidate('stellarLocalHorizonWestDeg', 'Skyline B', line, value, (v) => v >= -90 && v <= 90, (v) => `${trNumber(v)}°`)); break;
+      case 'stellar.local_horizon.nw_deg': candidates.push(numberCandidate('stellarLocalHorizonNorthWestDeg', 'Skyline KB', line, value, (v) => v >= -90 && v <= 90, (v) => `${trNumber(v)}°`)); break;
+      case 'eclipse.search_half_window_hours': {
+        const parsed = parseNumber(value);
+        const valid = Number.isFinite(parsed) && ECLIPSE_HALF_WINDOWS.has(parsed);
+        candidates.push(candidate('eclipseSearchHalfWindowHours', 'Tutulma arama yarı penceresi', line, valid ? `±${trNumber(parsed)} saat` : value, {
+          status: valid ? 'found' : 'review', ...(valid ? { numericValue: parsed } : {}),
+          ...(!valid ? { reason: 'Tutulma arama yarı penceresi 6, 12, 24 veya 48 saat olmalı.' } : {})
+        }));
+        break;
+      }
       default: break;
     }
   }

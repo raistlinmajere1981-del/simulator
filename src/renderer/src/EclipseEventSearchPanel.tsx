@@ -44,6 +44,8 @@ export function EclipseEventSearchPanel({
   latitudeDeg,
   longitudeDeg,
   initialSnapshot,
+  halfWindowHours,
+  onHalfWindowHoursChange,
   onSnapshotChange,
   onShowTrace
 }: {
@@ -51,16 +53,17 @@ export function EclipseEventSearchPanel({
   latitudeDeg: number;
   longitudeDeg: number;
   initialSnapshot?: SolarEclipseEventSearchSnapshot;
+  halfWindowHours: number;
+  onHalfWindowHoursChange(hours: number): void;
   onSnapshotChange?: (snapshot: SolarEclipseEventSearchSnapshot | undefined) => void;
   onShowTrace?: () => void;
 }): React.JSX.Element {
-  const [halfWindowHours, setHalfWindowHours] = useState(initialSnapshot?.halfWindowHours ?? 12);
   const [snapshot, setSnapshot] = useState<SolarEclipseEventSearchSnapshot | undefined>(initialSnapshot);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
     setSnapshot(initialSnapshot);
-    if (initialSnapshot) setHalfWindowHours(initialSnapshot.halfWindowHours);
+    if (initialSnapshot) onHalfWindowHoursChange(initialSnapshot.halfWindowHours);
   }, [initialSnapshot]);
 
   const currentKey = searchKey(anchorObservedAtIso, latitudeDeg, longitudeDeg, halfWindowHours);
@@ -99,7 +102,7 @@ export function EclipseEventSearchPanel({
         <div className="eclipse-event-search-controls">
           <label>
             <span>Yarım pencere</span>
-            <select value={halfWindowHours} onChange={(event) => setHalfWindowHours(Number(event.target.value))}>
+            <select value={halfWindowHours} onChange={(event) => onHalfWindowHoursChange(Number(event.target.value))}>
               <option value={6}>±6 saat</option>
               <option value={12}>±12 saat</option>
               <option value={24}>±24 saat</option>

@@ -1202,6 +1202,7 @@ export function AppNext(): React.JSX.Element {
   const [stellarLocalHorizonSource, setStellarLocalHorizonSource] = useState<SavedStellarLocalHorizonSource>();
   const [stellarMotionSource, setStellarMotionSource] = useState<SavedStellarMotionSource>();
   const [eclipseEventSearchSnapshot, setEclipseEventSearchSnapshot] = useState<SolarEclipseEventSearchSnapshot>();
+  const [eclipseSearchHalfWindowHours, setEclipseSearchHalfWindowHours] = useState(12);
   const [manualTerrainPoints, setManualTerrainPoints] = useState<ManualTerrainPoint[]>(
     defaultTerrainPoints()
   );
@@ -1685,6 +1686,39 @@ export function AppNext(): React.JSX.Element {
     if (application.experimentName !== undefined) setActiveExperimentName(application.experimentName);
     if (application.observedAtIso !== undefined) setExperimentObservedAtIso(application.observedAtIso);
     if (application.utcOffsetMinutes !== undefined) setObservationUtcOffsetMinutes(application.utcOffsetMinutes);
+    if (application.shadowSettingsChanges) {
+      setShadowObservationSettings((current) => ({ ...current, ...application.shadowSettingsChanges }));
+    }
+    if (application.dualShadowStationBChanges) {
+      const baseLatitudeDeg = application.inputChanges.observerLatitudeDeg ?? inputs.observerLatitudeDeg;
+      const baseLongitudeDeg = application.inputChanges.observerLongitudeDeg ?? inputs.observerLongitudeDeg;
+      setDualShadowSettings((current) => ({
+        stationB: {
+          ...(current?.stationB ?? createDefaultDualShadowComparisonSettings(baseLatitudeDeg, baseLongitudeDeg).stationB),
+          ...application.dualShadowStationBChanges
+        }
+      }));
+    }
+    if (application.stellarSettingsChanges) {
+      const manualHorizonChanged = application.stellarSettingsChanges.localHorizonEnabled !== undefined ||
+        application.stellarSettingsChanges.localHorizonNorthDeg !== undefined ||
+        application.stellarSettingsChanges.localHorizonNorthEastDeg !== undefined ||
+        application.stellarSettingsChanges.localHorizonEastDeg !== undefined ||
+        application.stellarSettingsChanges.localHorizonSouthEastDeg !== undefined ||
+        application.stellarSettingsChanges.localHorizonSouthDeg !== undefined ||
+        application.stellarSettingsChanges.localHorizonSouthWestDeg !== undefined ||
+        application.stellarSettingsChanges.localHorizonWestDeg !== undefined ||
+        application.stellarSettingsChanges.localHorizonNorthWestDeg !== undefined;
+      setStellarObservationSettings((current) => ({
+        ...current,
+        ...application.stellarSettingsChanges,
+        ...(manualHorizonChanged ? { localHorizonSourceMode: 'manual' as const } : {})
+      }));
+      if (manualHorizonChanged) setStellarLocalHorizonSource(undefined);
+    }
+    if (application.eclipseSearchHalfWindowHours !== undefined) {
+      setEclipseSearchHalfWindowHours(application.eclipseSearchHalfWindowHours);
+    }
     setIsDirty(true);
     const count = application.provenance.appliedFields.length;
     setStorageMessage(`Metinden hazırlanan taslaktan ${count} alan uygulandı.`);
@@ -2457,6 +2491,8 @@ export function AppNext(): React.JSX.Element {
                   solarPosition={solarPosition}
                   lunarPosition={lunarPosition}
                   eventSearchSnapshot={eclipseEventSearchSnapshot}
+                  eventSearchHalfWindowHours={eclipseSearchHalfWindowHours}
+                  onEventSearchHalfWindowHoursChange={setEclipseSearchHalfWindowHours}
                   onEventSearchSnapshotChange={(snapshot) => {
                     setEclipseEventSearchSnapshot(snapshot);
                     setIsDirty(true);

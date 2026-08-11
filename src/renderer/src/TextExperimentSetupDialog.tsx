@@ -78,6 +78,30 @@ function currentValue(
     case 'targetHeightUncertaintyM': return modelUncertainty.targetHeightM === undefined ? 'tanımsız' : `±${trNumber.format(modelUncertainty.targetHeightM)} m`;
     case 'targetGroundElevationUncertaintyM': return modelUncertainty.targetGroundElevationM === undefined ? 'tanımsız' : `±${trNumber.format(modelUncertainty.targetGroundElevationM)} m`;
     case 'refractionCoefficientUncertainty': return modelUncertainty.refractionCoefficient === undefined ? 'tanımsız' : `±${trNumber.format(modelUncertainty.refractionCoefficient)}`;
+    case 'shadowGnomonHeightM':
+    case 'shadowObservedLengthM':
+    case 'shadowObservedLengthUncertaintyM':
+    case 'shadowObservedAzimuthDeg':
+    case 'shadowObservedAzimuthUncertaintyDeg':
+    case 'shadowStationBCoordinates':
+    case 'shadowStationBGnomonHeightM':
+    case 'shadowStationBObservedLengthM':
+    case 'shadowStationBObservedLengthUncertaintyM':
+    case 'shadowStationBObservedAzimuthDeg':
+    case 'shadowStationBObservedAzimuthUncertaintyDeg':
+    case 'stellarStarId':
+    case 'stellarTrailDurationMinutes':
+    case 'stellarSampleIntervalMinutes':
+    case 'stellarLocalHorizonEnabled':
+    case 'stellarLocalHorizonNorthDeg':
+    case 'stellarLocalHorizonNorthEastDeg':
+    case 'stellarLocalHorizonEastDeg':
+    case 'stellarLocalHorizonSouthEastDeg':
+    case 'stellarLocalHorizonSouthDeg':
+    case 'stellarLocalHorizonSouthWestDeg':
+    case 'stellarLocalHorizonWestDeg':
+    case 'stellarLocalHorizonNorthWestDeg':
+    case 'eclipseSearchHalfWindowHours': return 'Senaryo özel ayarı';
     case 'cameraCalibration': return 'Fotoğraf panelinden yönetilir';
     case 'waterSurface': return 'Su yüzeyi panelinden yönetilir';
   }

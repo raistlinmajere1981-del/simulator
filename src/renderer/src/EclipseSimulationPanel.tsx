@@ -9,6 +9,8 @@ export function EclipseSimulationPanel({
   solarPosition,
   lunarPosition,
   eventSearchSnapshot,
+  eventSearchHalfWindowHours,
+  onEventSearchHalfWindowHoursChange,
   onEventSearchSnapshotChange,
   onShowOverlapTrace,
   onShowEventSearchTrace
@@ -16,6 +18,8 @@ export function EclipseSimulationPanel({
   solarPosition: SolarPositionResult;
   lunarPosition: LunarPositionResult;
   eventSearchSnapshot?: SolarEclipseEventSearchSnapshot;
+  eventSearchHalfWindowHours: number;
+  onEventSearchHalfWindowHoursChange(hours: number): void;
   onEventSearchSnapshotChange(snapshot: SolarEclipseEventSearchSnapshot | undefined): void;
   onShowOverlapTrace(): void;
   onShowEventSearchTrace(): void;
@@ -30,6 +34,8 @@ export function EclipseSimulationPanel({
         latitudeDeg={solarPosition.latitudeDeg}
         longitudeDeg={solarPosition.longitudeDeg}
         initialSnapshot={eventSearchSnapshot}
+        halfWindowHours={eventSearchHalfWindowHours}
+        onHalfWindowHoursChange={onEventSearchHalfWindowHoursChange}
         onSnapshotChange={onEventSearchSnapshotChange}
         onShowTrace={eventSearchSnapshot ? onShowEventSearchTrace : undefined}
       />

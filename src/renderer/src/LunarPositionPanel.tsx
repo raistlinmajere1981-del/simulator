@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { LunarPositionResult } from '../../simulation/lunar-position';
 import { calculateSolarEclipseOverlap } from '../../simulation/solar-eclipse-overlap';
 import { calculateSolarPosition } from '../../simulation/solar-position';
@@ -26,6 +27,7 @@ export function LunarPositionPanel({
   const altitudePercent = Math.max(4, Math.min(96, 50 - result.elevationDeg / 1.8));
   const azimuthPercent = Math.max(4, Math.min(96, result.azimuthDeg / 360 * 100));
   const illuminationPercent = result.illuminatedFraction * 100;
+  const [halfWindowHours, setHalfWindowHours] = useState(12);
   const solarForOverlap = calculateSolarPosition({
     observedAtIso: result.observedAtIso,
     latitudeDeg: result.latitudeDeg,
@@ -86,6 +88,8 @@ export function LunarPositionPanel({
         anchorObservedAtIso={result.observedAtIso}
         latitudeDeg={result.latitudeDeg}
         longitudeDeg={result.longitudeDeg}
+        halfWindowHours={halfWindowHours}
+        onHalfWindowHoursChange={setHalfWindowHours}
       />
     </>
   );

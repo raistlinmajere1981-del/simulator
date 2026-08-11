@@ -5,7 +5,7 @@ import type { SimulatorInputs } from './simulator';
 import type { VerticalDatumKind } from './terrain';
 import type { ModelInputUncertaintySettings } from './uncertainty';
 
-export const TEXT_EXPERIMENT_SETUP_PARSER_VERSION = '0.2.0';
+export const TEXT_EXPERIMENT_SETUP_PARSER_VERSION = '0.3.0';
 
 export type ExperimentSetupFieldId =
   | 'scenarioId'
@@ -31,6 +31,30 @@ export type ExperimentSetupFieldId =
   | 'targetHeightUncertaintyM'
   | 'targetGroundElevationUncertaintyM'
   | 'refractionCoefficientUncertainty'
+  | 'shadowGnomonHeightM'
+  | 'shadowObservedLengthM'
+  | 'shadowObservedLengthUncertaintyM'
+  | 'shadowObservedAzimuthDeg'
+  | 'shadowObservedAzimuthUncertaintyDeg'
+  | 'shadowStationBCoordinates'
+  | 'shadowStationBGnomonHeightM'
+  | 'shadowStationBObservedLengthM'
+  | 'shadowStationBObservedLengthUncertaintyM'
+  | 'shadowStationBObservedAzimuthDeg'
+  | 'shadowStationBObservedAzimuthUncertaintyDeg'
+  | 'stellarStarId'
+  | 'stellarTrailDurationMinutes'
+  | 'stellarSampleIntervalMinutes'
+  | 'stellarLocalHorizonEnabled'
+  | 'stellarLocalHorizonNorthDeg'
+  | 'stellarLocalHorizonNorthEastDeg'
+  | 'stellarLocalHorizonEastDeg'
+  | 'stellarLocalHorizonSouthEastDeg'
+  | 'stellarLocalHorizonSouthDeg'
+  | 'stellarLocalHorizonSouthWestDeg'
+  | 'stellarLocalHorizonWestDeg'
+  | 'stellarLocalHorizonNorthWestDeg'
+  | 'eclipseSearchHalfWindowHours'
   | 'cameraCalibration'
   | 'waterSurface';
 
@@ -70,6 +94,35 @@ export interface TextExperimentSetupProvenance {
   appliedFields: TextSetupAppliedField[];
 }
 
+
+export interface ShadowTextSetupChanges {
+  gnomonHeightM?: number;
+  observedShadowLengthM?: number;
+  observedShadowLengthUncertaintyM?: number;
+  observedShadowAzimuthDeg?: number;
+  observedShadowAzimuthUncertaintyDeg?: number;
+}
+
+export interface ShadowStationBTextSetupChanges extends ShadowTextSetupChanges {
+  latitudeDeg?: number;
+  longitudeDeg?: number;
+}
+
+export interface StellarTextSetupChanges {
+  starId?: string;
+  trailDurationMinutes?: number;
+  trailSampleIntervalMinutes?: number;
+  localHorizonEnabled?: boolean;
+  localHorizonNorthDeg?: number;
+  localHorizonNorthEastDeg?: number;
+  localHorizonEastDeg?: number;
+  localHorizonSouthEastDeg?: number;
+  localHorizonSouthDeg?: number;
+  localHorizonSouthWestDeg?: number;
+  localHorizonWestDeg?: number;
+  localHorizonNorthWestDeg?: number;
+}
+
 export interface ExperimentSetupApplication {
   scenarioId?: SimulationScenarioId;
   experimentName?: string;
@@ -78,6 +131,10 @@ export interface ExperimentSetupApplication {
   inputChanges: Partial<SimulatorInputs>;
   atmosphereMode?: AtmosphereMode;
   modelUncertaintyChanges: Partial<ModelInputUncertaintySettings>;
+  shadowSettingsChanges?: ShadowTextSetupChanges;
+  dualShadowStationBChanges?: ShadowStationBTextSetupChanges;
+  stellarSettingsChanges?: StellarTextSetupChanges;
+  eclipseSearchHalfWindowHours?: number;
   provenance: TextExperimentSetupProvenance;
 }
 
@@ -494,6 +551,10 @@ export function buildExperimentSetupApplication(
   );
   const inputChanges: Partial<SimulatorInputs> = {};
   const modelUncertaintyChanges: Partial<ModelInputUncertaintySettings> = {};
+  const shadowSettingsChanges: ShadowTextSetupChanges = {};
+  const dualShadowStationBChanges: ShadowStationBTextSetupChanges = {};
+  const stellarSettingsChanges: StellarTextSetupChanges = {};
+  let eclipseSearchHalfWindowHours: number | undefined;
   let scenarioId: SimulationScenarioId | undefined;
   let experimentName: string | undefined;
   let observedAtIso: string | undefined;
@@ -545,6 +606,35 @@ export function buildExperimentSetupApplication(
       case 'targetHeightUncertaintyM': if (value !== undefined) modelUncertaintyChanges.targetHeightM = value; break;
       case 'targetGroundElevationUncertaintyM': if (value !== undefined) modelUncertaintyChanges.targetGroundElevationM = value; break;
       case 'refractionCoefficientUncertainty': if (value !== undefined) modelUncertaintyChanges.refractionCoefficient = value; break;
+      case 'shadowGnomonHeightM': if (value !== undefined) shadowSettingsChanges.gnomonHeightM = value; break;
+      case 'shadowObservedLengthM': if (value !== undefined) shadowSettingsChanges.observedShadowLengthM = value; break;
+      case 'shadowObservedLengthUncertaintyM': if (value !== undefined) shadowSettingsChanges.observedShadowLengthUncertaintyM = value; break;
+      case 'shadowObservedAzimuthDeg': if (value !== undefined) shadowSettingsChanges.observedShadowAzimuthDeg = value; break;
+      case 'shadowObservedAzimuthUncertaintyDeg': if (value !== undefined) shadowSettingsChanges.observedShadowAzimuthUncertaintyDeg = value; break;
+      case 'shadowStationBCoordinates':
+        if (candidate.latitudeDeg !== undefined && candidate.longitudeDeg !== undefined) {
+          dualShadowStationBChanges.latitudeDeg = candidate.latitudeDeg;
+          dualShadowStationBChanges.longitudeDeg = candidate.longitudeDeg;
+        }
+        break;
+      case 'shadowStationBGnomonHeightM': if (value !== undefined) dualShadowStationBChanges.gnomonHeightM = value; break;
+      case 'shadowStationBObservedLengthM': if (value !== undefined) dualShadowStationBChanges.observedShadowLengthM = value; break;
+      case 'shadowStationBObservedLengthUncertaintyM': if (value !== undefined) dualShadowStationBChanges.observedShadowLengthUncertaintyM = value; break;
+      case 'shadowStationBObservedAzimuthDeg': if (value !== undefined) dualShadowStationBChanges.observedShadowAzimuthDeg = value; break;
+      case 'shadowStationBObservedAzimuthUncertaintyDeg': if (value !== undefined) dualShadowStationBChanges.observedShadowAzimuthUncertaintyDeg = value; break;
+      case 'stellarStarId': if (candidate.stringValue) stellarSettingsChanges.starId = candidate.stringValue; break;
+      case 'stellarTrailDurationMinutes': if (value !== undefined) stellarSettingsChanges.trailDurationMinutes = value; break;
+      case 'stellarSampleIntervalMinutes': if (value !== undefined) stellarSettingsChanges.trailSampleIntervalMinutes = value; break;
+      case 'stellarLocalHorizonEnabled': if (candidate.stringValue === 'true' || candidate.stringValue === 'false') stellarSettingsChanges.localHorizonEnabled = candidate.stringValue === 'true'; break;
+      case 'stellarLocalHorizonNorthDeg': if (value !== undefined) stellarSettingsChanges.localHorizonNorthDeg = value; break;
+      case 'stellarLocalHorizonNorthEastDeg': if (value !== undefined) stellarSettingsChanges.localHorizonNorthEastDeg = value; break;
+      case 'stellarLocalHorizonEastDeg': if (value !== undefined) stellarSettingsChanges.localHorizonEastDeg = value; break;
+      case 'stellarLocalHorizonSouthEastDeg': if (value !== undefined) stellarSettingsChanges.localHorizonSouthEastDeg = value; break;
+      case 'stellarLocalHorizonSouthDeg': if (value !== undefined) stellarSettingsChanges.localHorizonSouthDeg = value; break;
+      case 'stellarLocalHorizonSouthWestDeg': if (value !== undefined) stellarSettingsChanges.localHorizonSouthWestDeg = value; break;
+      case 'stellarLocalHorizonWestDeg': if (value !== undefined) stellarSettingsChanges.localHorizonWestDeg = value; break;
+      case 'stellarLocalHorizonNorthWestDeg': if (value !== undefined) stellarSettingsChanges.localHorizonNorthWestDeg = value; break;
+      case 'eclipseSearchHalfWindowHours': if (value !== undefined) eclipseSearchHalfWindowHours = value; break;
       default: break;
     }
   }
@@ -560,6 +650,10 @@ export function buildExperimentSetupApplication(
     inputChanges,
     ...(atmosphereMode ? { atmosphereMode } : {}),
     modelUncertaintyChanges,
+    ...(Object.keys(shadowSettingsChanges).length > 0 ? { shadowSettingsChanges } : {}),
+    ...(Object.keys(dualShadowStationBChanges).length > 0 ? { dualShadowStationBChanges } : {}),
+    ...(Object.keys(stellarSettingsChanges).length > 0 ? { stellarSettingsChanges } : {}),
+    ...(eclipseSearchHalfWindowHours !== undefined ? { eclipseSearchHalfWindowHours } : {}),
     provenance: {
       parserVersion: draft.parserVersion,
       sourceText: draft.sourceText,
