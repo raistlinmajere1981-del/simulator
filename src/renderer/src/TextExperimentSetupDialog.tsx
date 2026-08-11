@@ -148,6 +148,7 @@ function CandidateRow({
 
 export function TextExperimentSetupDialog({
   open,
+  initialText,
   scenarioId,
   experimentName,
   observedAtIso,
@@ -159,6 +160,7 @@ export function TextExperimentSetupDialog({
   onApply
 }: {
   open: boolean;
+  initialText?: string;
   scenarioId: SimulationScenarioId;
   experimentName: string;
   observedAtIso: string;
@@ -173,6 +175,22 @@ export function TextExperimentSetupDialog({
   const [draftText, setDraftText] = useState<string>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const draft = useMemo(() => draftText === undefined ? undefined : parseExperimentSetupText(draftText), [draftText]);
+
+  useEffect(() => {
+    if (!open) return;
+    const nextText = initialText ?? '';
+    setText(nextText);
+    if (nextText.trim().length === 0) {
+      setDraftText(undefined);
+      setSelected(new Set());
+      return;
+    }
+    const next = parseExperimentSetupText(nextText);
+    setDraftText(nextText);
+    setSelected(new Set(next.candidates
+      .filter((candidate) => candidate.status === 'found')
+      .map((candidate) => candidate.id)));
+  }, [initialText, open]);
 
   useEffect(() => {
     if (!open) return;
