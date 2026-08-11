@@ -1,11 +1,11 @@
-import { useMemo } from 'react';
 import { formatUtcOffset, localDateTimeValueFromInstant } from '../../shared/celestial-time';
 import type {
   SolarDayEventsResult,
   SolarThresholdEvents
 } from '../../simulation/solar-day-events';
-import { calculateSolarSeasonEvents } from '../../simulation/solar-season-events';
-import { calculateSolarTimeOffset } from '../../simulation/solar-time-offset';
+import type { SolarSeasonEventsResult } from '../../simulation/solar-season-events';
+import type { SolarTimeOffsetResult } from '../../simulation/solar-time-offset';
+import type { SolarRouteComparisonResult } from '../../simulation/solar-route-comparison';
 import { PanelHelpButton } from './HelpSystem';
 import { SolarSeasonEventsPanel } from './SolarSeasonEventsPanel';
 import { SolarTimeOffsetPanel } from './SolarTimeOffsetPanel';
@@ -63,9 +63,23 @@ function markerStyle(minute: number | null): React.CSSProperties | undefined {
 
 export function SolarDayEventsPanel({
   result,
+  solarTimeResult,
+  seasonResult,
+  routeResult,
+  routeError,
+  routeEndLatitudeDeg,
+  routeEndLongitudeDeg,
+  onRouteEndCoordinateChange,
   onShowTrace
 }: {
   result: SolarDayEventsResult;
+  solarTimeResult: SolarTimeOffsetResult;
+  seasonResult?: SolarSeasonEventsResult;
+  routeResult?: SolarRouteComparisonResult;
+  routeError?: string;
+  routeEndLatitudeDeg: number;
+  routeEndLongitudeDeg: number;
+  onRouteEndCoordinateChange(key: 'latitude' | 'longitude', value: number): void;
   onShowTrace(): void;
 }): React.JSX.Element {
   const geometricRiseMinute = localMinuteOfDay(result.geometric.riseIso, result.utcOffsetMinutes);
@@ -76,34 +90,6 @@ export function SolarDayEventsPanel({
   const seasonalYear = Number(result.localDate.slice(0, 4));
   const seasonalYearSupported = Number.isInteger(seasonalYear) &&
     seasonalYear >= MIN_SEASON_YEAR && seasonalYear <= MAX_SEASON_YEAR;
-  const solarTimeResult = useMemo(() => calculateSolarTimeOffset({
-    experimentId: result.experimentId,
-    observedAtIso: result.observedAtIso,
-    utcOffsetMinutes: result.utcOffsetMinutes,
-    longitudeDeg: result.longitudeDeg
-  }), [
-    result.experimentId,
-    result.longitudeDeg,
-    result.observedAtIso,
-    result.utcOffsetMinutes
-  ]);
-  const seasonResult = useMemo(() => {
-    if (!seasonalYearSupported) return undefined;
-    return calculateSolarSeasonEvents({
-      experimentId: result.experimentId,
-      year: seasonalYear,
-      latitudeDeg: result.latitudeDeg,
-      longitudeDeg: result.longitudeDeg,
-      utcOffsetMinutes: result.utcOffsetMinutes
-    });
-  }, [
-    result.experimentId,
-    result.latitudeDeg,
-    result.longitudeDeg,
-    result.utcOffsetMinutes,
-    seasonalYear,
-    seasonalYearSupported
-  ]);
 
   return (
     <>
@@ -196,11 +182,15 @@ export function SolarDayEventsPanel({
       )}
 
       <SolarRouteComparisonPanel
-        experimentId={result.experimentId}
-        observedAtIso={result.observedAtIso}
+        result={routeResult}
+        error={routeError}
         utcOffsetMinutes={result.utcOffsetMinutes}
         startLatitudeDeg={result.latitudeDeg}
         startLongitudeDeg={result.longitudeDeg}
+        endLatitudeDeg={routeEndLatitudeDeg}
+        endLongitudeDeg={routeEndLongitudeDeg}
+        onEndLatitudeChange={(value) => onRouteEndCoordinateChange('latitude', value)}
+        onEndLongitudeChange={(value) => onRouteEndCoordinateChange('longitude', value)}
       />
     </>
   );

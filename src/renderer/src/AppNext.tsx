@@ -93,6 +93,21 @@ import {
   createSolarDayEventsPrediction,
   solarDayEventsMetadata
 } from '../../simulation/solar-day-events';
+import {
+  calculateSolarSeasonEvents,
+  createSolarSeasonEventsPrediction,
+  solarSeasonEventsMetadata
+} from '../../simulation/solar-season-events';
+import {
+  calculateSolarTimeOffset,
+  createSolarTimeOffsetPrediction,
+  solarTimeOffsetMetadata
+} from '../../simulation/solar-time-offset';
+import {
+  calculateSolarRouteComparison,
+  createSolarRouteComparisonPrediction,
+  solarRouteComparisonMetadata
+} from '../../simulation/solar-route-comparison';
 import { calculateLunarPosition } from '../../simulation/lunar-position';
 import { createLunarPositionPrediction, lunarPositionMetadata } from '../../simulation/lunar-position-prediction';
 import { calculateSolarEclipseOverlap } from '../../simulation/solar-eclipse-overlap';
@@ -1356,6 +1371,55 @@ export function AppNext(): React.JSX.Element {
   const solarDayEventsPrediction = useMemo(() => solarDayEventsResult
     ? createSolarDayEventsPrediction(solarDayEventsResult)
     : undefined, [solarDayEventsResult]);
+  const solarTimeOffsetResult = useMemo(() => activeScenarioId === 'sun-moon-observation'
+    ? calculateSolarTimeOffset({
+        experimentId: activeExperimentId,
+        observedAtIso: experimentObservedAtIso,
+        utcOffsetMinutes: observationUtcOffsetMinutes,
+        longitudeDeg: inputs.observerLongitudeDeg
+      })
+    : undefined, [activeExperimentId, activeScenarioId, experimentObservedAtIso, inputs.observerLongitudeDeg, observationUtcOffsetMinutes]);
+  const solarTimeOffsetPrediction = useMemo(() => solarTimeOffsetResult
+    ? createSolarTimeOffsetPrediction(solarTimeOffsetResult)
+    : undefined, [solarTimeOffsetResult]);
+  const solarSeasonEventsResult = useMemo(() => {
+    if (activeScenarioId !== 'sun-moon-observation' || !solarDayEventsResult) return undefined;
+    const year = Number(solarDayEventsResult.localDate.slice(0, 4));
+    if (!Number.isInteger(year) || year < 1900 || year > 2100) return undefined;
+    return calculateSolarSeasonEvents({
+      experimentId: activeExperimentId,
+      year,
+      latitudeDeg: inputs.observerLatitudeDeg,
+      longitudeDeg: inputs.observerLongitudeDeg,
+      utcOffsetMinutes: observationUtcOffsetMinutes
+    });
+  }, [activeExperimentId, activeScenarioId, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg, observationUtcOffsetMinutes, solarDayEventsResult]);
+  const solarSeasonEventsPrediction = useMemo(() => solarSeasonEventsResult
+    ? createSolarSeasonEventsPrediction(solarSeasonEventsResult)
+    : undefined, [solarSeasonEventsResult]);
+  const solarRouteComparisonCalculation = useMemo(() => {
+    if (activeScenarioId !== 'sun-moon-observation') return {} as { result?: ReturnType<typeof calculateSolarRouteComparison>; error?: string };
+    try {
+      return {
+        result: calculateSolarRouteComparison({
+          experimentId: activeExperimentId,
+          observedAtIso: experimentObservedAtIso,
+          utcOffsetMinutes: observationUtcOffsetMinutes,
+          startLatitudeDeg: inputs.observerLatitudeDeg,
+          startLongitudeDeg: inputs.observerLongitudeDeg,
+          endLatitudeDeg: inputs.targetLatitudeDeg,
+          endLongitudeDeg: inputs.targetLongitudeDeg,
+          sampleCount: 5
+        })
+      };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Rota karşılaştırması hesaplanamadı.' };
+    }
+  }, [activeExperimentId, activeScenarioId, experimentObservedAtIso, inputs.observerLatitudeDeg, inputs.observerLongitudeDeg, inputs.targetLatitudeDeg, inputs.targetLongitudeDeg, observationUtcOffsetMinutes]);
+  const solarRouteComparisonResult = solarRouteComparisonCalculation.result;
+  const solarRouteComparisonPrediction = useMemo(() => solarRouteComparisonResult
+    ? createSolarRouteComparisonPrediction(solarRouteComparisonResult)
+    : undefined, [solarRouteComparisonResult]);
   const lunarPosition = useMemo(() => (activeScenarioId === 'sun-moon-observation' || activeScenarioId === 'eclipse-simulation') && solarPosition
     ? calculateLunarPosition({
         observedAtIso: experimentObservedAtIso,
@@ -1937,6 +2001,15 @@ export function AppNext(): React.JSX.Element {
         ...(solarDayEventsPrediction
           ? [[solarDayEventsMetadata.id, solarDayEventsMetadata.version] as const]
           : []),
+        ...(solarTimeOffsetPrediction
+          ? [[solarTimeOffsetMetadata.id, solarTimeOffsetMetadata.version] as const]
+          : []),
+        ...(solarSeasonEventsPrediction
+          ? [[solarSeasonEventsMetadata.id, solarSeasonEventsMetadata.version] as const]
+          : []),
+        ...(solarRouteComparisonPrediction
+          ? [[solarRouteComparisonMetadata.id, solarRouteComparisonMetadata.version] as const]
+          : []),
         ...(lunarPositionPrediction
           ? [[lunarPositionMetadata.id, lunarPositionMetadata.version] as const]
           : []),
@@ -1975,6 +2048,9 @@ export function AppNext(): React.JSX.Element {
       predictions: [
         ...(solarPositionPrediction ? [solarPositionPrediction] : []),
         ...(solarDayEventsPrediction ? [solarDayEventsPrediction] : []),
+        ...(solarTimeOffsetPrediction ? [solarTimeOffsetPrediction] : []),
+        ...(solarSeasonEventsPrediction ? [solarSeasonEventsPrediction] : []),
+        ...(solarRouteComparisonPrediction ? [solarRouteComparisonPrediction] : []),
         ...(lunarPositionPrediction ? [lunarPositionPrediction] : []),
         ...(eclipseOverlapPrediction ? [eclipseOverlapPrediction] : []),
         ...(eclipseEventSearchPrediction ? [eclipseEventSearchPrediction] : []),
@@ -2358,7 +2434,20 @@ export function AppNext(): React.JSX.Element {
                     <SolarPositionPanel result={solarPosition} onShowTrace={() => setTraceModelId(solarPositionMetadata.id)} />
                     <LunarPositionPanel result={lunarPosition} onShowTrace={() => setTraceModelId(lunarPositionMetadata.id)} />
                   </div>
-                  <SolarDayEventsPanel result={solarDayEventsResult} onShowTrace={() => setTraceModelId(solarDayEventsMetadata.id)} />
+                  <SolarDayEventsPanel
+                    result={solarDayEventsResult}
+                    solarTimeResult={solarTimeOffsetResult!}
+                    seasonResult={solarSeasonEventsResult}
+                    routeResult={solarRouteComparisonResult}
+                    routeError={solarRouteComparisonCalculation.error}
+                    routeEndLatitudeDeg={inputs.targetLatitudeDeg}
+                    routeEndLongitudeDeg={inputs.targetLongitudeDeg}
+                    onRouteEndCoordinateChange={(key, value) => handleNumberChange(
+                      key === 'latitude' ? 'targetLatitudeDeg' : 'targetLongitudeDeg',
+                      value
+                    )}
+                    onShowTrace={() => setTraceModelId(solarDayEventsMetadata.id)}
+                  />
                 </>
               : activeScenarioId === 'eclipse-simulation' && solarPosition && lunarPosition && eclipseOverlapPrediction
               ? <EclipseSimulationPanel

@@ -31,11 +31,30 @@ const modelNames: Record<string, string> = {
   'photo-calibration': 'Fotoğraf / Kamera Kalibrasyonu',
   'solar-position-noaa': 'Güneş Konumu · Astronomik Referans',
   'solar-day-events': 'Gün Doğumu / Batımı · Astronomik Referans',
+  'solar-time-offset': 'Sivil Saat / Güneş Zamanı · Astronomik Referans',
+  'solar-season-events': 'Ekinoks / Gündönümü · Yıllık Güneş Referansı',
+  'solar-route-comparison': 'Güneş Rota Karşılaştırması · Astronomik Referans',
   'lunar-position-low-precision': 'Ay Konumu ve Fazı · Astronomik Referans',
+  'solar-eclipse-overlap-low-precision': 'Güneş Tutulması Anlık Geometrisi · Düşük Hassasiyetli Referans',
+  'solar-eclipse-event-search-low-precision': 'Güneş Tutulması Yerel Olay Araması · Düşük Hassasiyetli Referans',
   'solar-shadow-observation': 'Gölge Geometrisi · Astronomik Referans',
   'dual-shadow-comparison': 'İki Konumlu Gölge Karşılaştırması · Astronomik Referans',
   'stellar-observation-reference': 'Yıldız Gözlemi · Astronomik Referans'
 };
+
+const astronomyModelIds = new Set([
+  'solar-position-noaa',
+  'solar-day-events',
+  'solar-time-offset',
+  'solar-season-events',
+  'solar-route-comparison',
+  'lunar-position-low-precision',
+  'solar-eclipse-overlap-low-precision',
+  'solar-eclipse-event-search-low-precision',
+  'solar-shadow-observation',
+  'dual-shadow-comparison',
+  'stellar-observation-reference'
+]);
 
 const datumLabels: Record<VerticalDatumKind, string> = {
   'orthometric-msl': 'Ortalama deniz seviyesi',
@@ -102,6 +121,12 @@ function formatMetric(metric: PredictionMetric): string {
   if (metric.unit === 'deg') {
     return `${metricNumberFormatters.degree.format(metric.value)}°`;
   }
+  if (metric.unit === 'unix-ms') {
+    return formatDate(new Date(metric.value).toISOString());
+  }
+  if (metric.unit === 'boolean') {
+    return metric.value >= 0.5 ? 'Evet' : 'Hayır';
+  }
   if (metric.unit === 'count') {
     return metricNumberFormatters.default.format(metric.value);
   }
@@ -166,6 +191,24 @@ function predictionSection(
       <div class="trace-list">${traceSteps(prediction.trace)}</div>
       <p class="trace-id">İz kimliği: ${escapeHtml(prediction.traceId)}</p>
     </section>`;
+}
+
+function astronomyResultsSection(experiment: SavedExperiment): string {
+  const predictions = experiment.predictions.filter((prediction) => astronomyModelIds.has(prediction.modelId));
+  if (predictions.length === 0) return '';
+  const observedAtIso = experiment.observedAtIso ?? experiment.createdAtIso;
+  return `
+    <div class="astronomy-group">
+      <div class="astronomy-group-heading">
+        <div><span class="eyebrow">Aşama 7 · kaydedilmiş astronomi anlık görüntüleri</span><h2>Astronomi sonuçları</h2></div>
+        <strong>${predictions.length} hesap kaydı</strong>
+      </div>
+      <p>Bu bölüm kaydedilen gözlem anı (${formatDate(observedAtIso)}), açık UTC ofseti ve model sürümleriyle birlikte saklanan Güneş, Ay, tutulma, mevsim, Güneş zamanı ve rota karşılaştırması sonuçlarını gösterir.</p>
+      ${predictions.map((prediction) => predictionSection(
+        prediction,
+        experiment.modelVersions[prediction.modelId]
+      )).join('')}
+    </div>`;
 }
 
 function geodesicSection(experiment: SavedExperiment): string {
@@ -554,7 +597,8 @@ export function createExperimentHtmlReport(
   const isCelestial = experiment.scenarioId === 'sun-moon-observation';
   const isShadowObservation = experiment.scenarioId === 'shadow-observation';
   const isStellarObservation = experiment.scenarioId === 'stellar-observation';
-  const isAstronomyObservation = isCelestial || isShadowObservation || isStellarObservation;
+  const isEclipseObservation = experiment.scenarioId === 'eclipse-simulation';
+  const isAstronomyObservation = isCelestial || isShadowObservation || isStellarObservation || isEclipseObservation;
   const coordinateCards = inputs.distanceSource === 'coordinates' ? `
     <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
     <div class="input-card"><small>Hedef koordinatı</small><strong>${coordinateFormatter.format(inputs.targetLatitudeDeg)}°, ${coordinateFormatter.format(inputs.targetLongitudeDeg)}°</strong></div>
@@ -564,7 +608,8 @@ export function createExperimentHtmlReport(
     <div class="input-card"><small>Gözlem zamanı · UTC</small><strong>${formatDate(experiment.observedAtIso ?? experiment.createdAtIso)}</strong></div>
     <div class="input-card"><small>UTC ofset provenansı</small><strong>${experiment.observationUtcOffsetMinutes === undefined ? 'Tanımlanmadı' : `${experiment.observationUtcOffsetMinutes >= 0 ? '+' : ''}${inputNumberFormatter.format(experiment.observationUtcOffsetMinutes / 60)} saat`}</strong></div>
     <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
-    <div class="input-card"><small>${isShadowObservation ? '6.3 hesap türü' : isStellarObservation ? 'Yıldız gözlemi' : '6.1–6.2 hesap türü'}</small><strong>${isShadowObservation ? 'Dikey gnomon gölge geometrisi' : isStellarObservation ? 'Katalog yıldızı, precession ve geometrik skyline izi' : 'Geometrik Güneş konumu ve topocentrik Ay referansı'}</strong></div>` : `
+    ${isCelestial ? `<div class="input-card"><small>Rota karşılaştırması B</small><strong>${coordinateFormatter.format(inputs.targetLatitudeDeg)}°, ${coordinateFormatter.format(inputs.targetLongitudeDeg)}°</strong></div>` : ''}
+    <div class="input-card"><small>${isShadowObservation ? '6.3 hesap türü' : isStellarObservation ? 'Yıldız gözlemi' : isEclipseObservation ? 'Tutulma hesabı' : 'Aşama 7 astronomi'}</small><strong>${isShadowObservation ? 'Dikey gnomon gölge geometrisi' : isStellarObservation ? 'Katalog yıldızı, precession ve geometrik skyline izi' : isEclipseObservation ? 'Anlık Güneş–Ay disk geometrisi ve kontrollü olay araması' : 'Güneş/Ay, günlük/yıllık olaylar, Güneş zamanı ve WGS84 rota karşılaştırması'}</strong></div>` : `
     <div class="input-card"><small>Göz yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
     <div class="input-card"><small>Hedef yüksekliği</small><strong>${inputNumberFormatter.format(inputs.targetHeightM)} m</strong></div>
     <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(effectiveDistanceKm)} km</strong></div>
@@ -598,6 +643,10 @@ export function createExperimentHtmlReport(
     .input-card small { display: block; color: #687d8d; margin-bottom: 5px; }
     .input-card strong { font-size: 17px; }
     .model-section { margin: 18px 0; padding: 24px; page-break-inside: avoid; }
+    .astronomy-group { margin: 18px 0; padding: 18px; border: 1px solid #d5c58a; border-top: 4px solid #d39a28; border-radius: 10px; background: #fffdf6; }
+    .astronomy-group > .model-section { background: #fff; }
+    .astronomy-group-heading { display: flex; justify-content: space-between; gap: 16px; align-items: end; padding: 4px 6px 14px; border-bottom: 1px solid #eadfb8; }
+    .astronomy-group-heading strong { color: #7a5a18; }
     .geodesic-section { border-top: 4px solid #2b79ad; }
     .vertical-section { border-top: 4px solid #4b8a58; }
     .model-heading { display: flex; justify-content: space-between; gap: 16px; align-items: start; border-bottom: 1px solid #e0e7ec; padding-bottom: 14px; }
@@ -653,10 +702,13 @@ export function createExperimentHtmlReport(
     ${textSetupHistorySection(experiment)}
     ${stellarLocalHorizonSourceSection(experiment)}
     ${stellarMotionSourceSection(experiment)}
-    ${experiment.predictions.map((prediction) => predictionSection(
-      prediction,
-      experiment.modelVersions[prediction.modelId]
-    )).join('')}
+    ${astronomyResultsSection(experiment)}
+    ${experiment.predictions
+      .filter((prediction) => !astronomyModelIds.has(prediction.modelId))
+      .map((prediction) => predictionSection(
+        prediction,
+        experiment.modelVersions[prediction.modelId]
+      )).join('')}
 
     <footer>Bu dosya çevrimdışı okunabilen, kendine yeterli bir HTML raporudur. Geometrik Gözlem Laboratuvarı tarafından üretilmiştir.</footer>
   </main>
