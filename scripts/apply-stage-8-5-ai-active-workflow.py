@@ -78,6 +78,10 @@ new_actions = """        <div className=\"top-actions\">
             setTextSetupOpen(true);
           }}>✦ Metinden Hazırla</button>
           <button type=\"button\" onClick={() => {
+            if (isCalculating) {
+              setStorageMessage('Hesaplama tamamlanmadan AI paketi hazırlanmadı.');
+              return;
+            }
             if (!modelUncertaintyReady) {
               setStorageMessage('Model girdi belirsizliği hesabı tamamlanmadan AI paketi hazırlanmadı.');
               return;
