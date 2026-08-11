@@ -14,6 +14,12 @@ import './text-experiment-setup.css';
 
 const trNumber = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 6 });
 
+function utcOffsetLabel(totalMinutes: number): string {
+  const sign = totalMinutes < 0 ? '-' : '+';
+  const absolute = Math.abs(totalMinutes);
+  return `${sign}${String(Math.floor(absolute / 60)).padStart(2, '0')}:${String(absolute % 60).padStart(2, '0')}`;
+}
+
 const scenarioLabels: Record<SimulationScenarioId, string> = {
   'target-visibility': 'Hedef Görünürlüğü',
   horizon: 'Ufuk Analizi',
@@ -34,6 +40,9 @@ function currentValue(
   fieldId: ExperimentSetupFieldId,
   current: {
     scenarioId: SimulationScenarioId;
+    experimentName: string;
+    observedAtIso: string;
+    utcOffsetMinutes: number;
     inputs: SimulatorInputs;
     atmosphereMode: AtmosphereMode;
     modelUncertainty: ModelInputUncertaintySettings;
@@ -42,6 +51,9 @@ function currentValue(
   const { inputs, modelUncertainty } = current;
   switch (fieldId) {
     case 'scenarioId': return scenarioLabels[current.scenarioId];
+    case 'experimentName': return current.experimentName || 'Adsız / yeni deney';
+    case 'observedAtUtc': return new Date(current.observedAtIso).toISOString();
+    case 'utcOffsetMinutes': return utcOffsetLabel(current.utcOffsetMinutes);
     case 'surfaceDistanceKm': return `${trNumber.format(inputs.surfaceDistanceKm)} km · ${inputs.distanceSource === 'coordinates' ? 'koordinat modu' : 'manuel'}`;
     case 'observerHeightM': return `${trNumber.format(inputs.observerHeightM)} m`;
     case 'targetHeightM': return `${trNumber.format(inputs.targetHeightM)} m`;
@@ -113,6 +125,9 @@ function CandidateRow({
 export function TextExperimentSetupDialog({
   open,
   scenarioId,
+  experimentName,
+  observedAtIso,
+  utcOffsetMinutes,
   inputs,
   atmosphereMode,
   modelUncertainty,
@@ -121,6 +136,9 @@ export function TextExperimentSetupDialog({
 }: {
   open: boolean;
   scenarioId: SimulationScenarioId;
+  experimentName: string;
+  observedAtIso: string;
+  utcOffsetMinutes: number;
   inputs: SimulatorInputs;
   atmosphereMode: AtmosphereMode;
   modelUncertainty: ModelInputUncertaintySettings;
@@ -143,7 +161,7 @@ export function TextExperimentSetupDialog({
 
   if (!open) return null;
 
-  const current = { scenarioId, inputs, atmosphereMode, modelUncertainty };
+  const current = { scenarioId, experimentName, observedAtIso, utcOffsetMinutes, inputs, atmosphereMode, modelUncertainty };
   const foundCount = draft?.candidates.filter((candidate) => candidate.status === 'found').length ?? 0;
   const reviewCount = draft?.candidates.filter((candidate) => candidate.status === 'review').length ?? 0;
   const unavailableCount = draft?.candidates.filter((candidate) => candidate.status === 'unavailable').length ?? 0;
@@ -169,7 +187,7 @@ export function TextExperimentSetupDialog({
 
         <div className="text-setup-body">
           <p className="text-setup-intro">
-            Gözlem notunu normal cümlelerle yaz. Sistem yalnız güvenle eşleyebildiği değerleri taslağa çıkarır;
+            Gözlem notunu normal cümlelerle yaz veya başka bir AI'nin ürettiği <code>GGL-AI-TEST v1</code> bloğunu doğrudan yapıştır. Sistem yalnız güvenle eşleyebildiği değerleri taslağa çıkarır;
             <b> hiçbir alan önizleme ve onay olmadan değişmez.</b>
           </p>
           <textarea

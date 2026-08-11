@@ -1,13 +1,17 @@
 import type { AtmosphereMode } from './atmosphere';
+import { AI_TEST_SPEC_SCENARIOS, parseAiTestSpec } from './ai-test-spec';
 import type { SimulationScenarioId } from './scenario';
 import type { SimulatorInputs } from './simulator';
 import type { VerticalDatumKind } from './terrain';
 import type { ModelInputUncertaintySettings } from './uncertainty';
 
-export const TEXT_EXPERIMENT_SETUP_PARSER_VERSION = '0.1.0';
+export const TEXT_EXPERIMENT_SETUP_PARSER_VERSION = '0.2.0';
 
 export type ExperimentSetupFieldId =
   | 'scenarioId'
+  | 'experimentName'
+  | 'observedAtUtc'
+  | 'utcOffsetMinutes'
   | 'surfaceDistanceKm'
   | 'observerHeightM'
   | 'targetHeightM'
@@ -68,6 +72,9 @@ export interface TextExperimentSetupProvenance {
 
 export interface ExperimentSetupApplication {
   scenarioId?: SimulationScenarioId;
+  experimentName?: string;
+  observedAtIso?: string;
+  utcOffsetMinutes?: number;
   inputChanges: Partial<SimulatorInputs>;
   atmosphereMode?: AtmosphereMode;
   modelUncertaintyChanges: Partial<ModelInputUncertaintySettings>;
@@ -282,11 +289,18 @@ export function parseExperimentSetupText(sourceText: string): ExperimentSetupDra
   const lower = text.toLocaleLowerCase('tr-TR');
   const raw: RawCandidate[] = [];
   const notes: string[] = [];
+  const aiSpec = parseAiTestSpec(text);
+  raw.push(...aiSpec.candidates);
+  notes.push(...aiSpec.notes);
 
   const scenarioKeywords: Array<[string, SimulationScenarioId, string]> = [
     ['ufuk analizi', 'horizon', 'Ufuk Analizi'],
     ['uzun mesafe görüş', 'long-distance-visibility', 'Uzun Mesafe Görüş'],
-    ['hedef görünürlüğü', 'target-visibility', 'Hedef Görünürlüğü']
+    ['hedef görünürlüğü', 'target-visibility', 'Hedef Görünürlüğü'],
+    ['güneş ve ay gözlemleri', 'sun-moon-observation', 'Güneş ve Ay Gözlemleri'],
+    ['gölge deneyi', 'shadow-observation', 'Gölge Deneyi'],
+    ['yıldız gözlemleri', 'stellar-observation', 'Yıldız Gözlemleri'],
+    ['tutulma simülasyonları', 'eclipse-simulation', 'Tutulma Simülasyonları']
   ];
   for (const [keyword, value, label] of scenarioKeywords) {
     if (lower.includes(keyword)) addKeywordCandidate(raw, 'scenarioId', 'Senaryo', keyword, label, value);
@@ -481,6 +495,9 @@ export function buildExperimentSetupApplication(
   const inputChanges: Partial<SimulatorInputs> = {};
   const modelUncertaintyChanges: Partial<ModelInputUncertaintySettings> = {};
   let scenarioId: SimulationScenarioId | undefined;
+  let experimentName: string | undefined;
+  let observedAtIso: string | undefined;
+  let utcOffsetMinutes: number | undefined;
   let atmosphereMode: AtmosphereMode | undefined;
   let coordinateApplied = false;
 
@@ -488,8 +505,11 @@ export function buildExperimentSetupApplication(
     const value = numeric(candidate);
     switch (candidate.fieldId) {
       case 'scenarioId':
-        if (candidate.stringValue === 'target-visibility' || candidate.stringValue === 'horizon' || candidate.stringValue === 'long-distance-visibility') scenarioId = candidate.stringValue;
+        if (candidate.stringValue && AI_TEST_SPEC_SCENARIOS.includes(candidate.stringValue as SimulationScenarioId)) scenarioId = candidate.stringValue as SimulationScenarioId;
         break;
+      case 'experimentName': if (candidate.stringValue) experimentName = candidate.stringValue; break;
+      case 'observedAtUtc': if (candidate.stringValue) observedAtIso = candidate.stringValue; break;
+      case 'utcOffsetMinutes': if (value !== undefined) utcOffsetMinutes = value; break;
       case 'surfaceDistanceKm': if (value !== undefined) { inputChanges.surfaceDistanceKm = value; inputChanges.distanceSource = 'manual'; } break;
       case 'observerHeightM': if (value !== undefined) inputChanges.observerHeightM = value; break;
       case 'targetHeightM': if (value !== undefined) inputChanges.targetHeightM = value; break;
@@ -534,6 +554,9 @@ export function buildExperimentSetupApplication(
 
   return {
     ...(scenarioId ? { scenarioId } : {}),
+    ...(experimentName ? { experimentName } : {}),
+    ...(observedAtIso ? { observedAtIso } : {}),
+    ...(utcOffsetMinutes !== undefined ? { utcOffsetMinutes } : {}),
     inputChanges,
     ...(atmosphereMode ? { atmosphereMode } : {}),
     modelUncertaintyChanges,

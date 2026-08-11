@@ -1682,6 +1682,9 @@ export function AppNext(): React.JSX.Element {
     if (application.atmosphereMode) {
       setAtmosphereState((current) => ({ ...current, mode: application.atmosphereMode! }));
     }
+    if (application.experimentName !== undefined) setActiveExperimentName(application.experimentName);
+    if (application.observedAtIso !== undefined) setExperimentObservedAtIso(application.observedAtIso);
+    if (application.utcOffsetMinutes !== undefined) setObservationUtcOffsetMinutes(application.utcOffsetMinutes);
     setIsDirty(true);
     const count = application.provenance.appliedFields.length;
     setStorageMessage(`Metinden hazırlanan taslaktan ${count} alan uygulandı.`);
@@ -2643,6 +2646,9 @@ export function AppNext(): React.JSX.Element {
       <TextExperimentSetupDialog
         open={textSetupOpen}
         scenarioId={activeScenarioId}
+        experimentName={activeExperimentName}
+        observedAtIso={experimentObservedAtIso}
+        utcOffsetMinutes={observationUtcOffsetMinutes}
         inputs={inputs}
         atmosphereMode={atmosphereState.mode}
         modelUncertainty={photoModelUncertainty}
