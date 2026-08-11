@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ModelMetadata, ModelPrediction } from '../../shared/domain';
+import { createAiAnalysisPackage } from '../../shared/ai-analysis-package';
 import type { SavedExperiment } from '../../shared/simulator';
 import { PanelHelpButton } from './HelpSystem';
 
@@ -95,6 +96,98 @@ function formatDate(iso: string): string {
   }).format(date);
 }
 
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Electron/file contexts may not expose the async Clipboard API; use the
+    // synchronous selection fallback below.
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', 'true');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand('copy');
+  textarea.remove();
+  return copied;
+}
+
+function AiAnalysisPackageDialog({
+  experiment,
+  onClose
+}: {
+  experiment: SavedExperiment;
+  onClose(): void;
+}): React.JSX.Element {
+  const text = useMemo(() => createAiAnalysisPackage(experiment), [experiment]);
+  const [copyMessage, setCopyMessage] = useState('');
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose} style={{ zIndex: 1200 }}>
+      <section
+        aria-label="AI analiz paketi"
+        className="dialog-card data-dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+        style={{ width: 'min(1120px, 94vw)', maxWidth: '1120px' }}
+      >
+        <header>
+          <div>
+            <span className="eyebrow">GGL-AI-ANALYSIS v1</span>
+            <h2>AI Analiz Paketi</h2>
+          </div>
+          <button className="dialog-close" type="button" onClick={onClose}>×</button>
+        </header>
+
+        <div className="portable-info">
+          <strong>{experiment.name}</strong>
+          <span>
+            Bu metin deney girdilerini, kayıtlı model sonuçlarını, uyarıları, varsayımları ve kaynak provenansını başka bir AI'ye vermek için kompakt biçimde hazırlar. Hesap izi adımlarının tamamı pakete eklenmez; özet ve iz kimliği korunur.
+          </span>
+        </div>
+
+        <textarea
+          aria-label="AI analiz paketi metni"
+          readOnly
+          spellCheck={false}
+          value={text}
+          style={{
+            width: '100%',
+            minHeight: '56vh',
+            resize: 'vertical',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+            fontSize: '12px',
+            lineHeight: 1.45,
+            boxSizing: 'border-box'
+          }}
+        />
+
+        <footer>
+          <span style={{ marginRight: 'auto', opacity: 0.8 }}>
+            {copyMessage || `${text.length.toLocaleString('tr-TR')} karakter · ${experiment.predictions.length} hesap sonucu`}
+          </span>
+          <button className="secondary-button" type="button" onClick={onClose}>Kapat</button>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={() => void copyText(text).then((copied) => {
+              setCopyMessage(copied ? 'AI analiz paketi panoya kopyalandı.' : 'Otomatik kopyalama başarısız; metni seçip kopyalayabilirsin.');
+            })}
+          >
+            Panoya Kopyala
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 export function DataManagerDialog({
   experiments,
   open,
@@ -106,9 +199,13 @@ export function DataManagerDialog({
   onReport
 }: DataManagerDialogProps): React.JSX.Element | null {
   const [busyAction, setBusyAction] = useState<string>();
+  const [analysisExperiment, setAnalysisExperiment] = useState<SavedExperiment>();
 
   useEffect(() => {
-    if (!open) setBusyAction(undefined);
+    if (!open) {
+      setBusyAction(undefined);
+      setAnalysisExperiment(undefined);
+    }
   }, [open]);
 
   if (!open) return null;
@@ -155,7 +252,7 @@ export function DataManagerDialog({
         <div className="portable-info">
           <strong>Sürümlemeli deney dosyaları</strong>
           <span>
-            JSON dosyaları girdileri, model sürümlerini, sonuç anlık görüntülerini ve hesap izlerini birlikte taşır. HTML raporları çevrimdışı açılabilir ve yazdırılabilir.
+            JSON dosyaları girdileri, model sürümlerini, sonuç anlık görüntülerini ve hesap izlerini birlikte taşır. HTML raporları çevrimdışı açılabilir; AI Paketi ise aynı kaydın başka bir AI tarafından analiz edilmesi için kompakt metin üretir.
           </span>
         </div>
 
@@ -201,6 +298,14 @@ export function DataManagerDialog({
                     {busyAction === `export:${experiment.id}` ? 'Kaydediliyor…' : 'JSON'}
                   </button>
                   <button
+                    className="secondary-button"
+                    disabled={Boolean(busyAction)}
+                    type="button"
+                    onClick={() => setAnalysisExperiment(experiment)}
+                  >
+                    AI Paketi
+                  </button>
+                  <button
                     className="report-button"
                     disabled={Boolean(busyAction)}
                     type="button"
@@ -228,6 +333,12 @@ export function DataManagerDialog({
           </div>
         )}
       </section>
+      {analysisExperiment && (
+        <AiAnalysisPackageDialog
+          experiment={analysisExperiment}
+          onClose={() => setAnalysisExperiment(undefined)}
+        />
+      )}
     </div>
   );
 }
