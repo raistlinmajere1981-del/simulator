@@ -66,6 +66,7 @@ CORE_IMPORT = """import {
   parseSimulatorInputs,
   parseTerrainProfileSource
 } from './portable-core';
+export { isModelPrediction, isSimulatorInputs } from './portable-core';
 """
 
 
