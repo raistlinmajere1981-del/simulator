@@ -178,6 +178,7 @@ import { WorldModelViewport } from './WorldModelViewport';
 import { HelpOverlay, HelpProvider, PanelHelpButton } from './HelpSystem';
 import { TextExperimentSetupDialog } from './TextExperimentSetupDialog';
 import { AiWorkflowDialog } from './AiWorkflowDialog';
+import { AiGuideDialog } from './AiGuideDialog';
 import { CelestialTimeCard } from './CelestialTimeCard';
 import { SolarPositionPanel } from './SolarPositionPanel';
 import { SolarDayEventsPanel } from './SolarDayEventsPanel';
@@ -1236,6 +1237,7 @@ export function AppNext(): React.JSX.Element {
   const [textSetupOpen, setTextSetupOpen] = useState(false);
   const [textSetupInitialText, setTextSetupInitialText] = useState('');
   const [aiWorkflowExperiment, setAiWorkflowExperiment] = useState<SavedExperiment>();
+  const [aiGuideOpen, setAiGuideOpen] = useState(false);
   const [textSetupHistory, setTextSetupHistory] = useState<TextExperimentSetupProvenance[]>([]);
   const [visualLayers, setVisualLayers] = useState<VisualLayerState>({
     geographicBoundaries: true,
@@ -2376,6 +2378,7 @@ export function AppNext(): React.JSX.Element {
               activeExperimentName || defaultExperimentName(activeScenarioId)
             ));
           }}>◇ AI ile Analiz</button>
+          <button type="button" onClick={() => setAiGuideOpen(true)}>▧ AI Kılavuzu</button>
           <button type="button" onClick={() => setDataManagerOpen(true)}>▤ Veri Yöneticisi</button>
           <button disabled title="Ayarlar modülü sonraki aşamada" type="button">⚙ Ayarlar</button>
           <button type="button" onClick={openHelpCatalog}>ⓘ Yardım</button>
@@ -2701,6 +2704,7 @@ export function AppNext(): React.JSX.Element {
         </main>
       </div>
 
+      {aiGuideOpen && <AiGuideDialog onClose={() => setAiGuideOpen(false)} />}
       <TextExperimentSetupDialog
         open={textSetupOpen}
         initialText={textSetupInitialText}
