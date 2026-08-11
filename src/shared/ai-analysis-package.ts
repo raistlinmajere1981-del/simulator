@@ -3,6 +3,7 @@ import type { ModelPrediction, PredictionMetric } from './domain';
 import type { SavedExperiment } from './simulator';
 
 export const GGL_AI_ANALYSIS_PACKAGE_VERSION = 'v1';
+export const GGL_AI_COMPARISON_PACKAGE_VERSION = 'v1';
 
 function finite(value: number | undefined): string {
   return value === undefined || !Number.isFinite(value) ? 'unknown' : String(value);
@@ -71,21 +72,23 @@ function sourceLines(experiment: SavedExperiment): string[] {
   return lines;
 }
 
-export function createAiAnalysisPackage(experiment: SavedExperiment, generatedAtIso = new Date().toISOString()): string {
+function experimentLines(experiment: SavedExperiment): string[] {
   const scenarioId = normalizeSimulationScenarioId(experiment.scenarioId);
   const scenario = getSimulationScenario(scenarioId);
   const atmosphereMode = experiment.atmosphere?.mode ?? (experiment.inputs.useStandardRefraction ? 'standard' : 'off');
   const uncertainty = experiment.photoModelUncertainty;
   const observedAt = experiment.observedAtIso ?? experiment.createdAtIso;
   const lines = [
-    `GGL-AI-ANALYSIS ${GGL_AI_ANALYSIS_PACKAGE_VERSION}`,
-    `generated_at_utc: ${generatedAtIso}`,
     `experiment.id: ${experiment.id}`,
     `experiment.name: ${scalar(experiment.name)}`,
     `experiment.scenario_id: ${scenarioId}`,
     `experiment.scenario_label: ${scalar(scenario.label)}`,
     `experiment.observed_at_utc: ${observedAt}`,
     `experiment.utc_offset: ${utcOffset(experiment.observationUtcOffsetMinutes)}`,
+    `scope.uses_target: ${scenario.usesTarget ? 'true' : 'false'}`,
+    `scope.uses_route: ${scenario.usesRoute ? 'true' : 'false'}`,
+    `scope.uses_observation: ${scenario.usesObservation ? 'true' : 'false'}`,
+    `scope.uses_terrain: ${scenario.usesTerrain ? 'true' : 'false'}`,
     `observer.coordinates: ${experiment.inputs.observerLatitudeDeg},${experiment.inputs.observerLongitudeDeg}`,
     `observer.eye_height_m: ${experiment.inputs.observerHeightM}`,
     `observer.ground_elevation_m: ${experiment.inputs.observerGroundElevationM}`,
@@ -116,21 +119,72 @@ export function createAiAnalysisPackage(experiment: SavedExperiment, generatedAt
   experiment.predictions.forEach((prediction, index) => {
     lines.push(...resultBlock(prediction, experiment.modelVersions[prediction.modelId], index));
   });
+  lines.push('RESULTS END');
+  return lines;
+}
 
-  lines.push(
-    'RESULTS END',
+const SINGLE_AI_TASK = [
+  'AI_TASK BEGIN',
+  '1. Girdileri, gerçek gözlemleri ve model tahminlerini birbirinden ayrı ele al.',
+  '2. scope.* alanı false olan genel UI girdilerini bu senaryonun aktif ölçümüymüş gibi yorumlama.',
+  '3. compatible/incompatible/indeterminate/unsupported durumlarını aynen koru; unsupported veya indeterminate sonucu kesin kanıt gibi yorumlama.',
+  '4. Modelleri ortak metrikler üzerinden karşılaştır; farkları sayı ve birimleriyle belirt.',
+  '5. Belirsizlikleri, uyarıları, varsayımları ve kaynak/provenans durumunu sonucun güvenilirliğine dahil et.',
+  '6. Eksik veri varsa uydurma. Sonucu değiştirebilecek eksik ölçüm veya kaynakları ayrıca listele.',
+  '7. Bir Dünya şekli veya fiziksel açıklama hakkında hüküm verirken yalnız bu paketteki ölçüm ve hesapların ayırt edebildiği kapsamı kullan; kapsam dışı genelleme yapma.',
+  '8. Yanıtı: Kısa sonuç / Sayısal karşılaştırma / Belirsizlik ve sınırlamalar / Önerilen sonraki testler sırasıyla yaz.',
+  'AI_TASK END'
+] as const;
+
+const COMPARISON_AI_TASK = [
+  'AI_TASK BEGIN',
+  '1. Her EXPERIMENT bloğunu bağımsız deney olarak koru; girdileri ve model sonuçlarını deneyler arasında karıştırma.',
+  '2. Önce deneylerin aynı senaryoyu ve karşılaştırılabilir metrikleri kullanıp kullanmadığını belirle.',
+  '3. Yalnız anlamı ve birimi aynı olan metrikleri doğrudan sayısal karşılaştır. Farklı senaryolardaki benzer adlı metrikleri eşdeğer varsayma.',
+  '4. compatible/incompatible/indeterminate/unsupported durumlarını aynen koru; oy çokluğu veya tek bir sonuçla genel fiziksel hüküm üretme.',
+  '5. scope.* false olan genel UI girdilerini o deneyin aktif ölçümüymüş gibi yorumlama.',
+  '6. Belirsizlik, uyarı, varsayım, model sürümü ve kaynak/provenans farklarının karşılaştırmayı etkileyip etkilemediğini açıkça belirt.',
+  '7. Deneyler arasında gerçek bir gerilim varsa hangi girdi veya ölçümün ayrımı ürettiğini sayılarla göster; açıklanamıyorsa bunu açık bırak.',
+  '8. Eksik veri uydurma ve paketin ayırt edemediği Dünya şekli/fizik açıklamalarına genelleme yapma.',
+  '9. Yanıtı: Ortak sonuç / Deney bazında karşılaştırma / Çelişkiler ve belirsizlikler / En ayırt edici sonraki testler sırasıyla yaz.',
+  '10. Önerilen sonraki testler için mümkünse GGL-AI-TEST v1 ile doldurulabilecek somut alanları belirt.',
+  'AI_TASK END'
+] as const;
+
+export function createAiAnalysisPackage(experiment: SavedExperiment, generatedAtIso = new Date().toISOString()): string {
+  return [
+    `GGL-AI-ANALYSIS ${GGL_AI_ANALYSIS_PACKAGE_VERSION}`,
+    `generated_at_utc: ${generatedAtIso}`,
+    ...experimentLines(experiment),
     '',
-    'AI_TASK BEGIN',
-    '1. Girdileri, gerçek gözlemleri ve model tahminlerini birbirinden ayrı ele al.',
-    '2. compatible/incompatible/indeterminate/unsupported durumlarını aynen koru; unsupported veya indeterminate sonucu kesin kanıt gibi yorumlama.',
-    '3. Modelleri ortak metrikler üzerinden karşılaştır; farkları sayı ve birimleriyle belirt.',
-    '4. Belirsizlikleri, uyarıları, varsayımları ve kaynak/provenans durumunu sonucun güvenilirliğine dahil et.',
-    '5. Eksik veri varsa uydurma. Sonucu değiştirebilecek eksik ölçüm veya kaynakları ayrıca listele.',
-    '6. Bir Dünya şekli veya fiziksel açıklama hakkında hüküm verirken yalnız bu paketteki ölçüm ve hesapların ayırt edebildiği kapsamı kullan; kapsam dışı genelleme yapma.',
-    '7. Yanıtı: Kısa sonuç / Sayısal karşılaştırma / Belirsizlik ve sınırlamalar / Önerilen sonraki testler sırasıyla yaz.',
-    'AI_TASK END',
+    ...SINGLE_AI_TASK,
     'END GGL-AI-ANALYSIS'
-  );
+  ].join('\n');
+}
 
+export function createAiComparisonPackage(
+  experiments: readonly SavedExperiment[],
+  generatedAtIso = new Date().toISOString()
+): string {
+  if (experiments.length < 2 || experiments.length > 12) {
+    throw new RangeError('AI karşılaştırma paketi 2 ile 12 deney içermeli.');
+  }
+
+  const scenarioIds = new Set(experiments.map((experiment) => normalizeSimulationScenarioId(experiment.scenarioId)));
+  const lines = [
+    `GGL-AI-COMPARISON ${GGL_AI_COMPARISON_PACKAGE_VERSION}`,
+    `generated_at_utc: ${generatedAtIso}`,
+    `experiment_count: ${experiments.length}`,
+    `same_scenario: ${scenarioIds.size === 1 ? 'true' : 'false'}`,
+    ''
+  ];
+
+  experiments.forEach((experiment, index) => {
+    lines.push(`EXPERIMENT ${index + 1} BEGIN`);
+    lines.push(...experimentLines(experiment));
+    lines.push(`EXPERIMENT ${index + 1} END`, '');
+  });
+
+  lines.push(...COMPARISON_AI_TASK, 'END GGL-AI-COMPARISON');
   return lines.join('\n');
 }
