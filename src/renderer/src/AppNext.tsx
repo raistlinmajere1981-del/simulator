@@ -34,7 +34,6 @@ import {
 import type { ManualTerrainPoint } from '../../shared/terrain';
 import {
   getSimulationScenario,
-  normalizeSimulationScenarioId,
   type SimulationScenarioId
 } from '../../shared/scenario';
 import type { GeodesicResult } from '../../simulation/geodesy';
@@ -42,19 +41,12 @@ import {
   GEOID_CONVERSION_MODEL_ID,
   type GeoidConversionApplication
 } from '../../simulation/geoid-conversion-provenance';
-import { migrateLegacyManualTerrainPoint } from '../../simulation/manual-terrain-profile';
 import { applyImportedTerrainInputs } from '../../simulation/terrain-import-application';
 import {
-  atmosphereStateFromLegacyStandardFlag,
-  cloneAtmosphereExperimentState
-} from '../../simulation/atmosphere-persistence';
-import {
   PHOTO_CALIBRATION_MODEL_ID,
-  PHOTO_CALIBRATION_MODEL_VERSION,
   type PhotoCalibrationRecord
 } from '../../simulation/photo-calibration';
 import {
-  PHOTO_ANGULAR_COMPARISON_MODEL_VERSION,
   comparePhotoAngularObservation,
   normalizePhotoReferenceKind
 } from '../../simulation/photo-angular-comparison';
@@ -64,20 +56,15 @@ import {
 } from '../../simulation/photo-model-uncertainty';
 import { solarPositionMetadata } from '../../simulation/solar-position-prediction';
 import { solarDayEventsMetadata } from '../../simulation/solar-day-events';
-import { solarSeasonEventsMetadata } from '../../simulation/solar-season-events';
-import { solarTimeOffsetMetadata } from '../../simulation/solar-time-offset';
-import { solarRouteComparisonMetadata } from '../../simulation/solar-route-comparison';
 import { lunarPositionMetadata } from '../../simulation/lunar-position-prediction';
 import { solarEclipseOverlapMetadata } from '../../simulation/solar-eclipse-overlap-prediction';
 import {
-  readSolarEclipseEventSearchSnapshot,
   solarEclipseEventSearchMetadata,
   type SolarEclipseEventSearchSnapshot
 } from '../../simulation/solar-eclipse-event-search-prediction';
 import {
   DEFAULT_SHADOW_OBSERVATION_SETTINGS,
   SHADOW_OBSERVATION_MODEL_ID,
-  readShadowObservationSettings,
   shadowObservationMetadata,
   type ShadowObservationSettings
 } from '../../simulation/shadow-observation';
@@ -85,13 +72,11 @@ import {
   DUAL_SHADOW_COMPARISON_MODEL_ID,
   createDefaultDualShadowComparisonSettings,
   dualShadowComparisonMetadata,
-  readDualShadowComparisonSettings,
   type DualShadowComparisonSettings
 } from '../../simulation/dual-shadow-comparison';
 import {
   DEFAULT_STELLAR_OBSERVATION_SETTINGS,
   STELLAR_OBSERVATION_MODEL_ID,
-  readStellarObservationSettings,
   stellarObservationMetadata,
   type StellarObservationSettings
 } from '../../simulation/stellar-observation';
@@ -105,7 +90,6 @@ import {
 } from '../../simulation/water-surface-observation';
 import {
   markWaterSurfaceApplicationHistorical,
-  readStoredWaterSurfaceState,
   type StoredWaterSurfaceRecord
 } from '../../simulation/water-surface-ui-state';
 import {
@@ -130,6 +114,12 @@ import { ModelCard, ResultsTable } from './app/ModelResults';
 import { TerrainPanel } from './app/TerrainPanel';
 import { useAstronomyCalculations } from './app/useAstronomyCalculations';
 import { useExperimentModelState } from './app/useExperimentModelState';
+import {
+  buildSavedExperimentRecord,
+  defaultTerrainPoints,
+  restoreSavedExperiment,
+  type RestoredExperimentState
+} from './app/experiment-persistence';
 import {
   datumLabels,
   defaultExperimentName,
@@ -192,13 +182,6 @@ const waterApplicationMetadata: ModelMetadata = {
   capabilities: ['water-surface-application'],
   assumptions: ['Uygulama yalnız seçilen uç zemin kotlarını değiştirir.']
 };
-
-function defaultTerrainPoints(inputs = DEFAULT_SIMULATOR_INPUTS): ManualTerrainPoint[] {
-  return migrateLegacyManualTerrainPoint(
-    inputs.terrainIntermediateDistancePercent,
-    inputs.terrainIntermediateElevationM
-  );
-}
 
 function geodesicPrediction(result: GeodesicResult | undefined): ModelPrediction | undefined {
   if (!result) return undefined;
@@ -762,181 +745,83 @@ export function AppNext(): React.JSX.Element {
     }
   };
 
-  const loadExperiment = (saved: SavedExperiment): void => {
-    const geoidPrediction = saved.predictions.find(
-      (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
-    );
-    const storedWater = readStoredWaterSurfaceState(saved.predictions, saved.modelVersions);
-    const photoPrediction = saved.predictions.find(
-      (prediction) => prediction.modelId === PHOTO_CALIBRATION_MODEL_ID
-    );
-    const shadowPrediction = saved.predictions.find(
-      (prediction) => prediction.modelId === SHADOW_OBSERVATION_MODEL_ID
-    );
-    const dualShadowPrediction = saved.predictions.find(
-      (prediction) => prediction.modelId === DUAL_SHADOW_COMPARISON_MODEL_ID
-    );
-    const stellarPrediction = saved.predictions.find(
-      (prediction) => prediction.modelId === STELLAR_OBSERVATION_MODEL_ID
-    );
-    const eclipseEventPrediction = saved.predictions.find(
-      (prediction) => prediction.modelId === solarEclipseEventSearchMetadata.id
-    );
-    const storedStellarSettings = readStellarObservationSettings(stellarPrediction);
-    const storedStellarSource = saved.stellarLocalHorizonSource
-      ? {
-          ...saved.stellarLocalHorizonSource,
-          points: saved.stellarLocalHorizonSource.points.map((point) => ({ ...point })),
-          warnings: [...saved.stellarLocalHorizonSource.warnings],
-          ...(saved.stellarLocalHorizonSource.demDerivation
-            ? { demDerivation: { ...saved.stellarLocalHorizonSource.demDerivation } }
-            : {}),
-          ...(saved.stellarLocalHorizonSource.panoramaDerivation
-            ? { panoramaDerivation: {
-                ...saved.stellarLocalHorizonSource.panoramaDerivation,
-                geometry: { ...saved.stellarLocalHorizonSource.panoramaDerivation.geometry },
-                marks: saved.stellarLocalHorizonSource.panoramaDerivation.marks.map((mark) => ({ ...mark }))
-              } }
-            : {})
-        }
-      : undefined;
-    const safeStellarSettings = storedStellarSettings.localHorizonSourceMode === 'external' && !storedStellarSource
-      ? { ...storedStellarSettings, localHorizonEnabled: false, localHorizonSourceMode: 'manual' as const }
-      : storedStellarSettings;
-    setActiveScenarioId(normalizeSimulationScenarioId(saved.scenarioId));
-    setShadowObservationSettings(readShadowObservationSettings(shadowPrediction));
-    setDualShadowSettings(readDualShadowComparisonSettings(dualShadowPrediction));
-    setStellarObservationSettings(safeStellarSettings);
-    setStellarLocalHorizonSource(storedStellarSource);
-    setStellarMotionSource(saved.stellarMotionSource
-      ? { ...saved.stellarMotionSource, entries: saved.stellarMotionSource.entries.map((entry) => ({ ...entry })) }
-      : undefined);
-    setEclipseEventSearchSnapshot(readSolarEclipseEventSearchSnapshot(eclipseEventPrediction));
-    setInputs(saved.inputs);
-    setAtmosphereState(saved.atmosphere
-      ? cloneAtmosphereExperimentState(saved.atmosphere)
-      : atmosphereStateFromLegacyStandardFlag(saved.inputs.useStandardRefraction));
-    setManualTerrainPoints(saved.manualTerrainPoints ?? defaultTerrainPoints(saved.inputs));
-    setTerrainProfileSource(saved.terrainProfileSource);
-    setGeoidConversionRecord(geoidPrediction
-      ? {
-          prediction: geoidPrediction,
-          modelVersion: saved.modelVersions[GEOID_CONVERSION_MODEL_ID] ?? 'bilinmiyor'
-        }
-      : undefined);
-    setWaterObservationRecord(storedWater.observation);
-    setWaterApplicationRecord(storedWater.application);
-    setPhotoCalibration(saved.photoCalibration);
-    setPhotoModelUncertainty(saved.photoModelUncertainty ?? { ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
-    setTextSetupHistory(saved.textSetupHistory ?? []);
-    setPhotoCalibrationRecord(photoPrediction
-      ? {
-          prediction: photoPrediction,
-          modelVersion: saved.modelVersions[PHOTO_CALIBRATION_MODEL_ID] ?? PHOTO_CALIBRATION_MODEL_VERSION
-        }
-      : undefined);
-    setActiveExperimentId(saved.id);
-    setActiveExperimentName(saved.name);
-    setExperimentObservedAtIso(saved.observedAtIso ?? saved.createdAtIso);
-    setObservationUtcOffsetMinutes(saved.observationUtcOffsetMinutes ?? systemUtcOffsetMinutes(new Date(saved.observedAtIso ?? saved.createdAtIso)));
+  const applyRestoredExperimentState = (
+    restored: RestoredExperimentState,
+    message: string
+  ): void => {
+    setActiveScenarioId(restored.activeScenarioId);
+    setShadowObservationSettings(restored.shadowObservationSettings);
+    setDualShadowSettings(restored.dualShadowSettings);
+    setStellarObservationSettings(restored.stellarObservationSettings);
+    setStellarLocalHorizonSource(restored.stellarLocalHorizonSource);
+    setStellarMotionSource(restored.stellarMotionSource);
+    setEclipseEventSearchSnapshot(restored.eclipseEventSearchSnapshot);
+    setInputs(restored.inputs);
+    setAtmosphereState(restored.atmosphereState);
+    setManualTerrainPoints(restored.manualTerrainPoints);
+    setTerrainProfileSource(restored.terrainProfileSource);
+    setGeoidConversionRecord(restored.geoidConversionRecord);
+    setWaterObservationRecord(restored.waterObservationRecord);
+    setWaterApplicationRecord(restored.waterApplicationRecord);
+    setPhotoCalibration(restored.photoCalibration);
+    setPhotoModelUncertainty(restored.photoModelUncertainty);
+    setTextSetupHistory(restored.textSetupHistory);
+    setPhotoCalibrationRecord(restored.photoCalibrationRecord);
+    setActiveExperimentId(restored.activeExperimentId);
+    setActiveExperimentName(restored.activeExperimentName);
+    setExperimentObservedAtIso(restored.experimentObservedAtIso);
+    setObservationUtcOffsetMinutes(restored.observationUtcOffsetMinutes);
     setIsDirty(false);
-    setStorageMessage(`“${saved.name}” açıldı.`);
+    setStorageMessage(message);
   };
 
-  const buildActiveExperimentRecord = (name: string, now = new Date().toISOString()): SavedExperiment => {
-    const existing = savedExperiments.find((item) => item.id === activeExperimentId);
-    return {
-      id: activeExperimentId,
-      name,
-      createdAtIso: existing?.createdAtIso ?? now,
-      updatedAtIso: now,
-      observedAtIso: experimentObservedAtIso,
-      observationUtcOffsetMinutes,
-      scenarioId: activeScenarioId,
-      atmosphere: cloneAtmosphereExperimentState(atmosphereState),
-      ...(photoCalibration ? { photoCalibration } : {}),
-      ...(modelInputUncertaintyDefined ? { photoModelUncertainty } : {}),
-      ...(textSetupHistory.length > 0 ? { textSetupHistory } : {}),
-      ...(stellarLocalHorizonSource ? { stellarLocalHorizonSource } : {}),
-      ...(stellarMotionSource ? { stellarMotionSource } : {}),
-      inputs,
-      manualTerrainPoints,
-      terrainProfileSource,
-      geodesic,
-      modelVersions: Object.fromEntries([
-        ...simulationModels.map((model) => [model.metadata.id, model.metadata.version] as const),
-        [geodesicMetadata.id, geodesicMetadata.version],
-        ...(solarPositionPrediction
-          ? [[solarPositionMetadata.id, solarPositionMetadata.version] as const]
-          : []),
-        ...(solarDayEventsPrediction
-          ? [[solarDayEventsMetadata.id, solarDayEventsMetadata.version] as const]
-          : []),
-        ...(solarTimeOffsetPrediction
-          ? [[solarTimeOffsetMetadata.id, solarTimeOffsetMetadata.version] as const]
-          : []),
-        ...(solarSeasonEventsPrediction
-          ? [[solarSeasonEventsMetadata.id, solarSeasonEventsMetadata.version] as const]
-          : []),
-        ...(solarRouteComparisonPrediction
-          ? [[solarRouteComparisonMetadata.id, solarRouteComparisonMetadata.version] as const]
-          : []),
-        ...(lunarPositionPrediction
-          ? [[lunarPositionMetadata.id, lunarPositionMetadata.version] as const]
-          : []),
-        ...(eclipseOverlapPrediction
-          ? [[solarEclipseOverlapMetadata.id, solarEclipseOverlapMetadata.version] as const]
-          : []),
-        ...(eclipseEventSearchPrediction
-          ? [[solarEclipseEventSearchMetadata.id, solarEclipseEventSearchMetadata.version] as const]
-          : []),
-        ...(shadowObservationPrediction
-          ? [[shadowObservationMetadata.id, shadowObservationMetadata.version] as const]
-          : []),
-        ...(dualShadowComparisonPrediction
-          ? [[dualShadowComparisonMetadata.id, dualShadowComparisonMetadata.version] as const]
-          : []),
-        ...(stellarObservationPrediction
-          ? [[stellarObservationMetadata.id, stellarObservationMetadata.version] as const]
-          : []),
-        ...(geoidConversionRecord
-          ? [[GEOID_CONVERSION_MODEL_ID, geoidConversionRecord.modelVersion] as const]
-          : []),
-        ...(waterObservationRecord
-          ? [[WATER_SURFACE_OBSERVATION_MODEL_ID, waterObservationRecord.modelVersion] as const]
-          : []),
-        ...(waterApplicationRecord
-          ? [[WATER_SURFACE_APPLICATION_MODEL_ID, waterApplicationRecord.modelVersion] as const]
-          : []),
-        ...(photoCalibrationRecord
-          ? [[PHOTO_CALIBRATION_MODEL_ID, photoCalibrationRecord.modelVersion] as const]
-          : []),
-        ...photoAngularComparisons.map((comparison) => [
-          comparison.prediction.modelId,
-          PHOTO_ANGULAR_COMPARISON_MODEL_VERSION
-        ] as const)
-      ]),
-      predictions: [
-        ...(solarPositionPrediction ? [solarPositionPrediction] : []),
-        ...(solarDayEventsPrediction ? [solarDayEventsPrediction] : []),
-        ...(solarTimeOffsetPrediction ? [solarTimeOffsetPrediction] : []),
-        ...(solarSeasonEventsPrediction ? [solarSeasonEventsPrediction] : []),
-        ...(solarRouteComparisonPrediction ? [solarRouteComparisonPrediction] : []),
-        ...(lunarPositionPrediction ? [lunarPositionPrediction] : []),
-        ...(eclipseOverlapPrediction ? [eclipseOverlapPrediction] : []),
-        ...(eclipseEventSearchPrediction ? [eclipseEventSearchPrediction] : []),
-        ...(shadowObservationPrediction ? [shadowObservationPrediction] : []),
-        ...(dualShadowComparisonPrediction ? [dualShadowComparisonPrediction] : []),
-        ...(stellarObservationPrediction ? [stellarObservationPrediction] : []),
-        ...runs.map((run) => run.prediction),
-        ...(geoidConversionRecord ? [geoidConversionRecord.prediction] : []),
-        ...(waterObservationRecord ? [waterObservationRecord.prediction] : []),
-        ...(waterApplicationRecord ? [waterApplicationRecord.prediction] : []),
-        ...(photoCalibrationRecord ? [photoCalibrationRecord.prediction] : []),
-        ...photoAngularComparisons.map((comparison) => comparison.prediction)
-      ]
-    };
+  const loadExperiment = (saved: SavedExperiment): void => {
+    applyRestoredExperimentState(restoreSavedExperiment(saved), `“${saved.name}” açıldı.`);
   };
+
+  const buildActiveExperimentRecord = (
+    name: string,
+    now = new Date().toISOString()
+  ): SavedExperiment => buildSavedExperimentRecord({
+    name,
+    now,
+    activeExperimentId,
+    savedExperiments,
+    experimentObservedAtIso,
+    observationUtcOffsetMinutes,
+    activeScenarioId,
+    atmosphereState,
+    photoCalibration,
+    modelInputUncertaintyDefined,
+    photoModelUncertainty,
+    textSetupHistory,
+    stellarLocalHorizonSource,
+    stellarMotionSource,
+    inputs,
+    manualTerrainPoints,
+    terrainProfileSource,
+    geodesic,
+    geodesicModelMetadata: geodesicMetadata,
+    astronomyPredictions: {
+      solarPosition: solarPositionPrediction,
+      solarDayEvents: solarDayEventsPrediction,
+      solarTimeOffset: solarTimeOffsetPrediction,
+      solarSeasonEvents: solarSeasonEventsPrediction,
+      solarRouteComparison: solarRouteComparisonPrediction,
+      lunarPosition: lunarPositionPrediction,
+      eclipseOverlap: eclipseOverlapPrediction,
+      eclipseEventSearch: eclipseEventSearchPrediction,
+      shadowObservation: shadowObservationPrediction,
+      dualShadowComparison: dualShadowComparisonPrediction,
+      stellarObservation: stellarObservationPrediction
+    },
+    runs,
+    geoidConversionRecord,
+    waterObservationRecord,
+    waterApplicationRecord,
+    photoCalibrationRecord,
+    photoAngularComparisons
+  });
 
   const saveExperiment = async (name: string): Promise<void> => {
     if (!modelUncertaintyReady) {
@@ -947,86 +832,12 @@ export function AppNext(): React.JSX.Element {
 
     try {
       const saved = await window.simulatorDesktop.saveExperiment(record);
-      const savedGeoidPrediction = saved.predictions.find(
-        (prediction) => prediction.modelId === GEOID_CONVERSION_MODEL_ID
-      );
-      const savedWater = readStoredWaterSurfaceState(saved.predictions, saved.modelVersions);
-      const savedPhotoPrediction = saved.predictions.find(
-        (prediction) => prediction.modelId === PHOTO_CALIBRATION_MODEL_ID
-      );
-      const savedShadowPrediction = saved.predictions.find(
-        (prediction) => prediction.modelId === SHADOW_OBSERVATION_MODEL_ID
-      );
-      const savedDualShadowPrediction = saved.predictions.find(
-        (prediction) => prediction.modelId === DUAL_SHADOW_COMPARISON_MODEL_ID
-      );
-      const savedStellarPrediction = saved.predictions.find(
-        (prediction) => prediction.modelId === STELLAR_OBSERVATION_MODEL_ID
-      );
-      const savedEclipseEventPrediction = saved.predictions.find(
-        (prediction) => prediction.modelId === solarEclipseEventSearchMetadata.id
-      );
       setSavedExperiments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
-      setActiveExperimentId(saved.id);
-      setActiveExperimentName(saved.name);
-      setShadowObservationSettings(readShadowObservationSettings(savedShadowPrediction));
-      setDualShadowSettings(readDualShadowComparisonSettings(savedDualShadowPrediction));
-      {
-        const reopenedStellarSettings = readStellarObservationSettings(savedStellarPrediction);
-        const reopenedStellarSource = saved.stellarLocalHorizonSource
-          ? {
-              ...saved.stellarLocalHorizonSource,
-              points: saved.stellarLocalHorizonSource.points.map((point) => ({ ...point })),
-              warnings: [...saved.stellarLocalHorizonSource.warnings],
-              ...(saved.stellarLocalHorizonSource.demDerivation
-                ? { demDerivation: { ...saved.stellarLocalHorizonSource.demDerivation } }
-                : {}),
-              ...(saved.stellarLocalHorizonSource.panoramaDerivation
-                ? { panoramaDerivation: {
-                    ...saved.stellarLocalHorizonSource.panoramaDerivation,
-                    geometry: { ...saved.stellarLocalHorizonSource.panoramaDerivation.geometry },
-                    marks: saved.stellarLocalHorizonSource.panoramaDerivation.marks.map((mark) => ({ ...mark }))
-                  } }
-                : {})
-            }
-          : undefined;
-        setStellarLocalHorizonSource(reopenedStellarSource);
-        setStellarMotionSource(saved.stellarMotionSource
-          ? { ...saved.stellarMotionSource, entries: saved.stellarMotionSource.entries.map((entry) => ({ ...entry })) }
-          : undefined);
-        setStellarObservationSettings(reopenedStellarSettings.localHorizonSourceMode === 'external' && !reopenedStellarSource
-          ? { ...reopenedStellarSettings, localHorizonEnabled: false, localHorizonSourceMode: 'manual' }
-          : reopenedStellarSettings);
-      }
-      setEclipseEventSearchSnapshot(readSolarEclipseEventSearchSnapshot(savedEclipseEventPrediction));
-      setExperimentObservedAtIso(saved.observedAtIso ?? saved.createdAtIso);
-    setObservationUtcOffsetMinutes(saved.observationUtcOffsetMinutes ?? systemUtcOffsetMinutes(new Date(saved.observedAtIso ?? saved.createdAtIso)));
-      setAtmosphereState(saved.atmosphere
-        ? cloneAtmosphereExperimentState(saved.atmosphere)
-        : atmosphereStateFromLegacyStandardFlag(saved.inputs.useStandardRefraction));
-      setManualTerrainPoints(saved.manualTerrainPoints ?? manualTerrainPoints);
-      setTerrainProfileSource(saved.terrainProfileSource);
-      setGeoidConversionRecord(savedGeoidPrediction
-        ? {
-            prediction: savedGeoidPrediction,
-            modelVersion: saved.modelVersions[GEOID_CONVERSION_MODEL_ID] ??
-              geoidConversionRecord?.modelVersion ?? 'bilinmiyor'
-          }
-        : undefined);
-      setWaterObservationRecord(savedWater.observation);
-      setWaterApplicationRecord(savedWater.application);
-      setPhotoCalibration(saved.photoCalibration);
-      setPhotoModelUncertainty(saved.photoModelUncertainty ?? { ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS });
-      setTextSetupHistory(saved.textSetupHistory ?? []);
-      setPhotoCalibrationRecord(savedPhotoPrediction
-        ? {
-            prediction: savedPhotoPrediction,
-            modelVersion: saved.modelVersions[PHOTO_CALIBRATION_MODEL_ID] ?? PHOTO_CALIBRATION_MODEL_VERSION
-          }
-        : undefined);
-      setIsDirty(false);
+      applyRestoredExperimentState(
+        restoreSavedExperiment(saved),
+        `“${saved.name}” cihazda kaydedildi.`
+      );
       setSaveDialogOpen(false);
-      setStorageMessage(`“${saved.name}” cihazda kaydedildi.`);
     } catch (error) {
       setStorageMessage(error instanceof Error ? error.message : 'Deney kaydedilemedi.');
     }
