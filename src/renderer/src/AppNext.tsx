@@ -30,13 +30,11 @@ import {
   type TerrainProfileImport,
   type SavedExperiment,
   type SimulatorInputs,
-  type TerrainMode,
   type TerrainProfileSource
 } from '../../shared/simulator';
 import type {
   ManualTerrainPoint,
-  TerrainProfile,
-  VerticalDatumKind
+  TerrainProfile
 } from '../../shared/terrain';
 import {
   getSimulationScenario,
@@ -156,44 +154,32 @@ import {
   SaveExperimentDialog,
   TraceDialog
 } from './dialogs';
-import {
-  MultiPointTerrainEditor,
-  type TerrainProfileImportOptions
-} from './MultiPointTerrainEditor';
-import { GeoidConversionControl } from './GeoidConversionControl';
+import type { TerrainProfileImportOptions } from './MultiPointTerrainEditor';
 import { AtmosphereProfileControl } from './AtmosphereProfileControl';
 import { WaterSurfaceControl } from './WaterSurfaceControl';
 import { PhotoCalibrationControl } from './PhotoCalibrationControl';
 import { PhotoAngularComparisonPanel } from './PhotoAngularComparisonPanel';
 import { PhotoModelUncertaintyControl } from './PhotoModelUncertaintyControl';
-import { WorldModelViewport } from './WorldModelViewport';
 import { HelpOverlay, HelpProvider, PanelHelpButton } from './HelpSystem';
 import { TextExperimentSetupDialog } from './TextExperimentSetupDialog';
 import { AiWorkflowDialog } from './AiWorkflowDialog';
 import { AiGuideDialog } from './AiGuideDialog';
 import { AppSidebar as Sidebar } from './app/AppSidebar';
-import { NumericField } from './app/NumericField';
 import { HorizonReferencePanel, ObservationPanel } from './app/ObservationReferencePanels';
 import { ScenarioSummary } from './app/ScenarioSummary';
+import { ModelCard, ResultsTable } from './app/ModelResults';
+import { TerrainPanel } from './app/TerrainPanel';
 import {
   datumLabels,
   defaultExperimentName,
-  getPresentation,
   isAstronomyScenario
 } from './app/app-config';
 import {
   clampInputValue,
-  formatAngle,
-  formatDifference,
-  formatDistance,
-  formatMetres,
-  formatPercent,
   getMetric,
-  numberFormatter,
-  statusLabels
+  numberFormatter
 } from './app/app-formatters';
 import type { NumericInputKey, VisualLayerState } from './app/app-types';
-import { CelestialTimeCard } from './CelestialTimeCard';
 import { SolarPositionPanel } from './SolarPositionPanel';
 import { SolarDayEventsPanel } from './SolarDayEventsPanel';
 import { LunarPositionPanel } from './LunarPositionPanel';
@@ -205,7 +191,6 @@ import { ShadowObservationPanel } from './ShadowObservationPanel';
 import { DualShadowComparisonPanel } from './DualShadowComparisonPanel';
 import { StellarScenarioSummary } from './StellarScenarioSummary';
 import { StellarObservationPanel } from './StellarObservationPanel';
-import { DraftNumberInput } from './DraftNumberInput';
 
 interface GeoidConversionRecordState {
   prediction: ModelPrediction;
@@ -317,318 +302,6 @@ function terrainVisualizationSourceLabel(source: TerrainProfileSource | undefine
   if (source.kind === 'dem') return `DEM · ${source.fileName}`;
   if (source.kind === 'geojson') return `GeoJSON · ${source.fileName}`;
   return `CSV · ${source.fileName}`;
-}
-
-function TerrainPanel({
-  experimentId,
-  inputs,
-  points,
-  source,
-  effectiveDistanceKm,
-  criticalDistanceM,
-  allowRouteDistanceImport,
-  allowDemImport,
-  onDatumChange,
-  onModeChange,
-  onNumberChange,
-  onPointsChange,
-  onApplyGeoidConversion,
-  onApplyImport
-}: {
-  experimentId: string;
-  inputs: SimulatorInputs;
-  points: ManualTerrainPoint[];
-  source: TerrainProfileSource | undefined;
-  effectiveDistanceKm: number;
-  criticalDistanceM: number | null;
-  allowRouteDistanceImport: boolean;
-  allowDemImport: boolean;
-  onDatumChange(kind: VerticalDatumKind): void;
-  onModeChange(mode: TerrainMode): void;
-  onNumberChange(key: NumericInputKey, value: number): void;
-  onPointsChange(points: ManualTerrainPoint[]): void;
-  onApplyGeoidConversion(application: GeoidConversionApplication): void;
-  onApplyImport(
-    profile: TerrainProfileImport,
-    options: TerrainProfileImportOptions
-  ): void;
-}): React.JSX.Element {
-  const terrainEnabled = inputs.terrainMode !== 'off';
-  return (
-    <section className={`terrain-panel panel ${terrainEnabled ? 'enabled' : ''}`}>
-      <div className="terrain-heading">
-        <div>
-          <span className="eyebrow">Düşey referans ve arazi</span>
-          <strong>{terrainEnabled ? `${points.length} ara noktalı manuel profil` : 'Yalnız uç zemin kotları'}</strong>
-        </div>
-        <div className="terrain-mode-buttons">
-          <PanelHelpButton panelId="terrain-datum" />
-          <button className={!terrainEnabled ? 'selected' : ''} type="button" onClick={() => onModeChange('off')}>Profil kapalı</button>
-          <button className={terrainEnabled ? 'selected' : ''} type="button" onClick={() => onModeChange('manual-points')}>Manuel profil</button>
-        </div>
-      </div>
-
-      <div className="terrain-control-grid terrain-control-grid-compact">
-        <label className="input-field terrain-select">
-          <span>Düşey datum</span>
-          <select
-            value={inputs.verticalDatumKind}
-            onChange={(event) => onDatumChange(event.currentTarget.value as VerticalDatumKind)}
-          >
-            {Object.entries(datumLabels).map(([kind, label]) => (
-              <option key={kind} value={kind}>{label}</option>
-            ))}
-          </select>
-        </label>
-        <NumericField inputKey="observerGroundElevationM" label="Gözlemci zemin kotu" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
-        <NumericField inputKey="targetGroundElevationM" label="Hedef taban kotu" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
-        <NumericField inputKey="verticalDatumOffsetM" label="Datum / gelgit ofseti" unit="m" step={0.01} inputs={inputs} onNumberChange={onNumberChange} />
-      </div>
-
-      <p className="terrain-summary">
-        {datumLabels[inputs.verticalDatumKind]} · ofset {numberFormatter.format(inputs.verticalDatumOffsetM)} m · gözlemci mutlak göz kotu {numberFormatter.format(inputs.observerGroundElevationM + inputs.verticalDatumOffsetM + inputs.observerHeightM)} m · hedef tepe kotu {numberFormatter.format(inputs.targetGroundElevationM + inputs.verticalDatumOffsetM + inputs.targetHeightM)} m
-        {terrainEnabled && ` · ${points.length} ara nokta · ${numberFormatter.format(effectiveDistanceKm)} km rota`}
-      </p>
-
-      <GeoidConversionControl
-        experimentId={experimentId}
-        currentDatum={inputs.verticalDatumKind}
-        observerGroundElevationM={inputs.observerGroundElevationM}
-        targetGroundElevationM={inputs.targetGroundElevationM}
-        points={points}
-        onApply={onApplyGeoidConversion}
-      />
-
-      {source && (
-        <div className={`terrain-source-strip ${source.modifiedAfterImport ? 'modified' : ''}`}>
-          <div>
-            <strong>{source.kind === 'csv' ? 'CSV kaynağı' : source.kind === 'geojson' ? 'GeoJSON kaynağı' : 'DEM kaynağı'}: {source.fileName}</strong>
-            {source.kind === 'csv' ? (
-              <span>{source.distanceColumnHeader} → mesafe · {source.elevationColumnHeader} → yükseklik · {source.rowCount} satır</span>
-            ) : source.kind === 'geojson' ? (
-              <span>
-                {source.coordinateCount} koordinat · WGS84 LineString · Z → yükseklik
-                {source.appliedRouteCoordinates === true ? ' · deney koordinatlarına uygulandı' : ''}
-              </span>
-            ) : (
-              <span>
-                {source.sampleCount} rota örneği ({source.sampleCountMode === 'manual' ? 'manuel' : 'otomatik'}) · {source.columnCount} × {source.rowCount} grid · {source.samplingMethod === 'bilinear' ? 'iki doğrusal' : 'en yakın hücre'}
-                {source.diagnosticStatus ? ` · tanı: ${source.diagnosticStatus === 'good' ? 'iyi' : source.diagnosticStatus === 'caution' ? 'dikkat' : 'sınırlı'}` : ''}
-              </span>
-            )}
-          </div>
-          <span>
-            {source.sha256 ? `SHA-256 ${source.sha256.slice(0, 12)}… · ` : ''}
-            {source.modifiedAfterImport ? 'İÇE AKTARIMDAN SONRA DÜZENLENDİ' : 'KAYNAKLA EŞLEŞİYOR'}
-          </span>
-        </div>
-      )}
-
-      {terrainEnabled && (
-        <MultiPointTerrainEditor
-          points={points}
-          routeDistanceKm={effectiveDistanceKm}
-          allowRouteDistanceImport={allowRouteDistanceImport}
-          allowDemImport={allowDemImport}
-          observerLatitudeDeg={inputs.observerLatitudeDeg}
-          observerLongitudeDeg={inputs.observerLongitudeDeg}
-          targetLatitudeDeg={inputs.targetLatitudeDeg}
-          targetLongitudeDeg={inputs.targetLongitudeDeg}
-          observerGroundElevationM={inputs.observerGroundElevationM}
-          targetGroundElevationM={inputs.targetGroundElevationM}
-          observerHeightM={inputs.observerHeightM}
-          targetHeightM={inputs.targetHeightM}
-          verticalDatumOffsetM={inputs.verticalDatumOffsetM}
-          useStandardRefraction={inputs.useStandardRefraction}
-          refractionCoefficient={inputs.refractionCoefficient}
-          criticalDistanceM={criticalDistanceM}
-          onChange={onPointsChange}
-          onApplyImport={onApplyImport}
-        />
-      )}
-    </section>
-  );
-}
-
-function ModelCard({
-  scenarioId,
-  metadata,
-  run,
-  inputs,
-  atmosphereState,
-  terrainProfile,
-  terrainSourceLabel,
-  visualLayers,
-  onShowTrace
-}: {
-  scenarioId: SimulationScenarioId;
-  metadata: ModelMetadata;
-  run: ModelRun | undefined;
-  inputs: SimulatorInputs;
-  atmosphereState: AtmosphereExperimentState;
-  terrainProfile: TerrainProfile | undefined;
-  terrainSourceLabel: string;
-  visualLayers: VisualLayerState;
-  onShowTrace(): void;
-}): React.JSX.Element {
-  const presentation = getPresentation(metadata.id);
-  const prediction = run?.prediction;
-  const status = prediction?.status ?? 'indeterminate';
-  const visibleFraction = getMetric(prediction, 'visibleFraction');
-  const hiddenFraction = getMetric(prediction, 'hiddenFraction');
-  const horizonDistanceM = getMetric(prediction, 'horizonSurfaceDistanceM');
-  const targetAngleDeg = getMetric(prediction, 'targetTopElevationDeg');
-  const terrainClearanceM = getMetric(prediction, 'terrainMinimumClearanceM');
-  const observerTotalElevationM = getMetric(prediction, 'observerTotalElevationM');
-  const effectiveRadiusM = getMetric(prediction, 'effectiveRadiusM');
-  const warning = prediction?.warnings[0];
-  const isProjection = metadata.id === 'azimuthal-projection';
-  const isHorizon = scenarioId === 'horizon';
-  const statusLabel = isHorizon && status !== 'unsupported' ? 'Hesaplandı' : statusLabels[status];
-
-  return (
-    <article className={`model-card ${presentation.tone} ${isProjection ? 'projection-card' : ''}`}>
-      <header>
-        <h3>{metadata.name}</h3>
-        <div className="model-header-actions">
-          <PanelHelpButton panelId="model-visualization" />
-          <button className="trace-button" disabled={!prediction} type="button" onClick={onShowTrace}>Hesap izi</button>
-          <span className={`status-pill status-${status}`}>{statusLabel}</span>
-        </div>
-      </header>
-      <WorldModelViewport
-  kind={presentation.shape === 'disk' ? 'plane' : presentation.shape}
-  observerLatitudeDeg={inputs.observerLatitudeDeg}
-  observerLongitudeDeg={inputs.observerLongitudeDeg}
-  targetLatitudeDeg={inputs.targetLatitudeDeg}
-  targetLongitudeDeg={inputs.targetLongitudeDeg}
-  showGeographicBoundaries={visualLayers.geographicBoundaries}
-  showTarget={!isHorizon}
-  showTerrain={!isHorizon && visualLayers.terrain}
-  showAtmosphere={visualLayers.atmosphere && atmosphereState.mode === 'profile' && metadata.id === 'ideal-sphere'}
-  showGrid={visualLayers.grid}
-  atmosphereState={atmosphereState}
-  atmospherePrediction={prediction}
-  observerAltitudeM={inputs.observerGroundElevationM + inputs.verticalDatumOffsetM + inputs.observerHeightM}
-  targetTopAltitudeM={inputs.targetGroundElevationM + inputs.verticalDatumOffsetM + inputs.targetHeightM}
-  targetSurfaceDistanceM={inputs.surfaceDistanceKm * 1_000}
-  terrainProfile={isHorizon ? undefined : terrainProfile}
-  terrainSourceLabel={terrainSourceLabel}
-/>
-      {isProjection ? (
-        <div className="projection-explanation">
-          <strong>Hesaplama yapılmadı</strong>
-          <p>Yüzey geometrisi, yerel dikey yön ve ışık ilerleme kuralları tanımlanmadan sayısal sonuç üretilemez.</p>
-        </div>
-      ) : isHorizon ? (
-        <div className="horizon-analysis-view">
-          <span className="horizon-analysis-observer" />
-          <span className={`horizon-analysis-surface ${presentation.shape}`} />
-          <span className="horizon-analysis-tangent" />
-          <p>Hedef ve rota kullanılmadan geometrik ufuk tanımı değerlendirilir.</p>
-        </div>
-      ) : (
-        <div className="profile-view">
-          <div className="profile-label left">Gözlemci<br /><b>{numberFormatter.format(inputs.observerGroundElevationM + inputs.observerHeightM)} m</b></div>
-          <div className="profile-label right">Hedef tepesi<br /><b>{numberFormatter.format(inputs.targetGroundElevationM + inputs.targetHeightM)} m</b></div>
-          <span className="line-of-sight" /><span className={`surface ${presentation.shape}`} />
-          {inputs.terrainMode !== 'off' && <span className="terrain-obstacle" title="Manuel arazi profili" />}
-        </div>
-      )}
-      <div className={`metric-grid ${isProjection ? 'unsupported-metrics' : ''} ${isHorizon ? 'horizon-metrics' : ''}`}>
-        {isHorizon ? (
-          <>
-            <div><small>Geometrik ufuk</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane')}</strong></div>
-            <div><small>Gözlemci toplam kotu</small><strong>{formatMetres(observerTotalElevationM)}</strong></div>
-            <div><small>Etkin yarıçap</small><strong>{effectiveRadiusM === null ? (metadata.id === 'defined-plane' ? 'Düzlem' : '—') : formatDistance(effectiveRadiusM)}</strong></div>
-            <div><small>Senaryo</small><strong>{statusLabel}</strong></div>
-          </>
-        ) : (
-          <>
-            <div><small>Beklenen görünürlük</small><strong>{formatPercent(visibleFraction)}</strong></div>
-            <div><small>Gizlenen kısım</small><strong>{formatPercent(hiddenFraction)}</strong></div>
-            <div><small>Ufuk mesafesi</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane')}</strong></div>
-            <div><small>{terrainClearanceM === null ? 'Hedef tepe açısı' : 'Arazi açıklığı'}</small><strong>{terrainClearanceM === null ? formatAngle(targetAngleDeg) : formatMetres(terrainClearanceM)}</strong></div>
-          </>
-        )}
-      </div>
-      <div className="model-warning">{warning ?? metadata.assumptions[0]}</div>
-    </article>
-  );
-}
-
-function ResultsTable({
-  runs,
-  scenarioId,
-  onShowTrace
-}: {
-  runs: ModelRun[];
-  scenarioId: SimulationScenarioId;
-  onShowTrace(modelId: string): void;
-}): React.JSX.Element {
-  if (scenarioId === 'horizon') {
-    return (
-      <section className="results panel">
-        <div className="results-help-heading"><span className="eyebrow">Ufuk sonucu karşılaştırma</span><PanelHelpButton panelId="results" /></div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Model / gösterim</th><th>Geometrik ufuk</th><th>Gözlemci toplam kotu</th><th>Etkin yarıçap</th><th>Durum</th><th>İz</th></tr></thead>
-            <tbody>
-              {simulationModels.map((model) => {
-                const run = runs.find((candidate) => candidate.metadata.id === model.metadata.id);
-                const prediction = run?.prediction;
-                const presentation = getPresentation(model.metadata.id);
-                const status = prediction?.status ?? 'indeterminate';
-                const isProjection = model.metadata.id === 'azimuthal-projection';
-                return (
-                  <tr className={isProjection ? 'projection-row' : ''} key={model.metadata.id}>
-                    <td><span className={`model-dot ${presentation.tone}`} />{model.metadata.name}<small>{isProjection ? 'Kartografik referans' : 'Fiziksel model'}</small></td>
-                    <td>{formatDistance(getMetric(prediction, 'horizonSurfaceDistanceM'), model.metadata.id === 'defined-plane')}</td>
-                    <td>{formatMetres(getMetric(prediction, 'observerTotalElevationM'))}</td>
-                    <td>{getMetric(prediction, 'effectiveRadiusM') === null ? (model.metadata.id === 'defined-plane' ? 'Düzlem' : '—') : formatDistance(getMetric(prediction, 'effectiveRadiusM'))}</td>
-                    <td>{status === 'unsupported' ? statusLabels[status] : 'Hesaplandı'}</td>
-                    <td><button className="table-trace-button" disabled={!prediction} type="button" onClick={() => onShowTrace(model.metadata.id)}>Aç</button></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="results panel">
-      <div className="results-help-heading"><span className="eyebrow">Sonuç karşılaştırma</span><PanelHelpButton panelId="results" /></div>
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th>Model / gösterim</th><th>Beklenen görünürlük</th><th>Gizlenen</th><th>Görüş açısı</th><th>Ufuk</th><th>Arazi açıklığı</th><th>Gözlem farkı</th><th>İz</th></tr></thead>
-          <tbody>
-            {simulationModels.map((model) => {
-              const run = runs.find((candidate) => candidate.metadata.id === model.metadata.id);
-              const prediction = run?.prediction;
-              const presentation = getPresentation(model.metadata.id);
-              const status = prediction?.status ?? 'indeterminate';
-              const isProjection = model.metadata.id === 'azimuthal-projection';
-              return (
-                <tr className={isProjection ? 'projection-row' : ''} key={model.metadata.id}>
-                  <td><span className={`model-dot ${presentation.tone}`} />{model.metadata.name}<small>{isProjection ? 'Kartografik referans · ' : 'Fiziksel model · '}{statusLabels[status]}</small></td>
-                  <td>{formatPercent(getMetric(prediction, 'visibleFraction'))}</td>
-                  <td>{formatPercent(getMetric(prediction, 'hiddenFraction'))}</td>
-                  <td>{formatAngle(getMetric(prediction, 'targetTopElevationDeg'))}</td>
-                  <td>{formatDistance(getMetric(prediction, 'horizonSurfaceDistanceM'), model.metadata.id === 'defined-plane')}</td>
-                  <td>{formatMetres(getMetric(prediction, 'terrainMinimumClearanceM'))}</td>
-                  <td>{formatDifference(getMetric(prediction, 'observationDifferencePp'))}</td>
-                  <td><button className="table-trace-button" disabled={!prediction} type="button" onClick={() => onShowTrace(model.metadata.id)}>Aç</button></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
 }
 
 export function AppNext(): React.JSX.Element {
