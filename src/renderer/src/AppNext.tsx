@@ -2,14 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { simulationModels } from '../../models';
 import {
   createDefaultAtmosphereExperimentState,
-  type AtmosphereExperimentState,
-  type AtmosphereMode
+  type AtmosphereExperimentState
 } from '../../shared/atmosphere';
 import type {
   ExperimentDefinition,
   ModelMetadata,
-  ModelPrediction,
-  ResultStatus
+  ModelPrediction
 } from '../../shared/domain';
 import type { SavedPhotoCalibration } from '../../shared/photo-calibration';
 import type { SavedStellarLocalHorizonSource } from '../../shared/stellar-local-horizon-import';
@@ -27,7 +25,6 @@ import {
 } from '../../shared/uncertainty';
 import {
   DEFAULT_SIMULATOR_INPUTS,
-  type DistanceSource,
   type ImportedDemTerrainProfile,
   type ImportedGeoJsonTerrainProfile,
   type TerrainProfileImport,
@@ -42,11 +39,6 @@ import type {
   VerticalDatumKind
 } from '../../shared/terrain';
 import {
-  VISIBILITY_SCENARIOS,
-  SUN_MOON_SCENARIO,
-  SHADOW_SCENARIO,
-  STELLAR_SCENARIO,
-  ECLIPSE_SCENARIO,
   getSimulationScenario,
   normalizeSimulationScenarioId,
   type SimulationScenarioId
@@ -179,6 +171,28 @@ import { HelpOverlay, HelpProvider, PanelHelpButton } from './HelpSystem';
 import { TextExperimentSetupDialog } from './TextExperimentSetupDialog';
 import { AiWorkflowDialog } from './AiWorkflowDialog';
 import { AiGuideDialog } from './AiGuideDialog';
+import { AppSidebar as Sidebar } from './app/AppSidebar';
+import { NumericField } from './app/NumericField';
+import { HorizonReferencePanel, ObservationPanel } from './app/ObservationReferencePanels';
+import { ScenarioSummary } from './app/ScenarioSummary';
+import {
+  datumLabels,
+  defaultExperimentName,
+  getPresentation,
+  isAstronomyScenario
+} from './app/app-config';
+import {
+  clampInputValue,
+  formatAngle,
+  formatDifference,
+  formatDistance,
+  formatMetres,
+  formatPercent,
+  getMetric,
+  numberFormatter,
+  statusLabels
+} from './app/app-formatters';
+import type { NumericInputKey, VisualLayerState } from './app/app-types';
 import { CelestialTimeCard } from './CelestialTimeCard';
 import { SolarPositionPanel } from './SolarPositionPanel';
 import { SolarDayEventsPanel } from './SolarDayEventsPanel';
@@ -193,28 +207,6 @@ import { StellarScenarioSummary } from './StellarScenarioSummary';
 import { StellarObservationPanel } from './StellarObservationPanel';
 import { DraftNumberInput } from './DraftNumberInput';
 
-type ModelTone = 'green' | 'amber' | 'violet';
-type ModelShape = 'globe' | 'disk' | 'gleason';
-type NumericInputKey = Exclude<
-  keyof SimulatorInputs,
-  | 'useStandardRefraction'
-  | 'distanceSource'
-  | 'terrainMode'
-  | 'verticalDatumKind'
->;
-
-interface ModelPresentation {
-  tone: ModelTone;
-  shape: ModelShape;
-}
-
-interface ScenarioDefinition {
-  id?: SimulationScenarioId;
-  label: string;
-  icon: string;
-  enabled: boolean;
-}
-
 interface GeoidConversionRecordState {
   prediction: ModelPrediction;
   modelVersion: string;
@@ -224,38 +216,6 @@ interface PhotoCalibrationRecordState {
   prediction: ModelPrediction;
   modelVersion: string;
 }
-
-interface VisualLayerState {
-  geographicBoundaries: boolean;
-  terrain: boolean;
-  atmosphere: boolean;
-  grid: boolean;
-}
-
-const scenarios: ScenarioDefinition[] = [
-  ...VISIBILITY_SCENARIOS.map((scenario) => ({
-    id: scenario.id,
-    label: scenario.label,
-    icon: scenario.icon,
-    enabled: true
-  })),
-  { ...SUN_MOON_SCENARIO, enabled: true },
-  { ...SHADOW_SCENARIO, enabled: true },
-  { ...STELLAR_SCENARIO, enabled: true },
-  { ...ECLIPSE_SCENARIO, enabled: true }
-];
-
-const presentationByModelId: Record<string, ModelPresentation> = {
-  'ideal-sphere': { tone: 'green', shape: 'globe' },
-  'defined-plane': { tone: 'amber', shape: 'disk' },
-  'azimuthal-projection': { tone: 'violet', shape: 'gleason' }
-};
-
-const datumLabels: Record<VerticalDatumKind, string> = {
-  'orthometric-msl': 'Ortalama deniz seviyesi',
-  'ellipsoidal-wgs84': 'WGS84 elipsoidal yükseklik',
-  local: 'Yerel düşey referans'
-};
 
 const geodesicMetadata: ModelMetadata = {
   id: 'wgs84-geodesic',
@@ -286,92 +246,6 @@ const waterApplicationMetadata: ModelMetadata = {
   capabilities: ['water-surface-application'],
   assumptions: ['Uygulama yalnız seçilen uç zemin kotlarını değiştirir.']
 };
-
-const statusLabels: Record<ResultStatus, string> = {
-  compatible: 'Gözlem aralığıyla uyumlu',
-  incompatible: 'Gözlem aralığıyla uyumsuz',
-  indeterminate: 'Belirsizlik içinde karar verilemedi',
-  unsupported: 'Fiziksel model kuralları tanımsız'
-};
-
-const inputRanges: Record<NumericInputKey, { min: number; max: number }> = {
-  observerHeightM: { min: 0, max: 100_000 },
-  targetHeightM: { min: 0.1, max: 100_000 },
-  observerGroundElevationM: { min: -12_000, max: 100_000 },
-  targetGroundElevationM: { min: -12_000, max: 100_000 },
-  verticalDatumOffsetM: { min: -1_000, max: 1_000 },
-  terrainIntermediateDistancePercent: { min: 0.001, max: 99.999 },
-  terrainIntermediateElevationM: { min: -12_000, max: 100_000 },
-  surfaceDistanceKm: { min: 0, max: 20_000 },
-  observerLatitudeDeg: { min: -90, max: 90 },
-  observerLongitudeDeg: { min: -180, max: 180 },
-  targetLatitudeDeg: { min: -90, max: 90 },
-  targetLongitudeDeg: { min: -180, max: 180 },
-  observedVisiblePercent: { min: 0, max: 100 },
-  observationUncertaintyPercent: { min: 0, max: 100 },
-  refractionCoefficient: { min: -1, max: 0.99 }
-};
-
-const numberFormatter = new Intl.NumberFormat('tr-TR', {
-  maximumFractionDigits: 2
-});
-const coordinateFormatter = new Intl.NumberFormat('tr-TR', {
-  minimumFractionDigits: 4,
-  maximumFractionDigits: 6
-});
-const bearingFormatter = new Intl.NumberFormat('tr-TR', {
-  maximumFractionDigits: 3
-});
-
-function getPresentation(modelId: string): ModelPresentation {
-  return presentationByModelId[modelId] ?? { tone: 'violet', shape: 'gleason' };
-}
-
-function isAstronomyScenario(scenarioId: SimulationScenarioId): boolean {
-  return scenarioId === 'sun-moon-observation' || scenarioId === 'shadow-observation' || scenarioId === 'stellar-observation' || scenarioId === 'eclipse-simulation';
-}
-
-function getMetric(
-  prediction: ModelPrediction | undefined,
-  key: string
-): number | null {
-  return prediction?.metrics.find((metric) => metric.key === key)?.value ?? null;
-}
-
-function formatPercent(fraction: number | null): string {
-  return fraction === null ? '—' : `%${numberFormatter.format(fraction * 100)}`;
-}
-
-function formatDistance(distanceM: number | null, infinite = false): string {
-  if (distanceM === null) return infinite ? '∞' : '—';
-  return `${numberFormatter.format(distanceM / 1_000)} km`;
-}
-
-function formatMetres(valueM: number | null): string {
-  return valueM === null ? '—' : `${numberFormatter.format(valueM)} m`;
-}
-
-function formatAngle(angleDeg: number | null): string {
-  return angleDeg === null ? '—' : `${numberFormatter.format(angleDeg)}°`;
-}
-
-function formatDifference(differencePp: number | null): string {
-  return differencePp === null
-    ? '—'
-    : `${numberFormatter.format(differencePp)} puan`;
-}
-
-function clampInputValue(key: NumericInputKey, value: number): number {
-  const range = inputRanges[key];
-  return Math.min(range.max, Math.max(range.min, value));
-}
-
-function defaultExperimentName(scenarioId: SimulationScenarioId): string {
-  return `${getSimulationScenario(scenarioId).label} ${new Intl.DateTimeFormat('tr-TR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(new Date())}`;
-}
 
 function defaultTerrainPoints(inputs = DEFAULT_SIMULATOR_INPUTS): ManualTerrainPoint[] {
   return migrateLegacyManualTerrainPoint(
@@ -418,441 +292,6 @@ function geodesicPrediction(result: GeodesicResult | undefined): ModelPrediction
     traceId: result.traceId,
     trace: result.trace
   };
-}
-
-function Sidebar({
-  experiments,
-  activeScenarioId,
-  atmosphereMode,
-  visualLayers,
-  observedAtIso,
-  observationUtcOffsetMinutes,
-  onScenarioChange,
-  onLoadExperiment,
-  onVisualLayerChange,
-  onObservationTimeChange
-}: {
-  experiments: SavedExperiment[];
-  activeScenarioId: SimulationScenarioId;
-  atmosphereMode: AtmosphereMode;
-  visualLayers: VisualLayerState;
-  observedAtIso: string;
-  observationUtcOffsetMinutes: number;
-  onScenarioChange(scenarioId: SimulationScenarioId): void;
-  onObservationTimeChange(observedAtIso: string, utcOffsetMinutes: number): void;
-  onLoadExperiment(experiment: SavedExperiment): void;
-  onVisualLayerChange(key: keyof VisualLayerState, enabled: boolean): void;
-}): React.JSX.Element {
-  return (
-    <aside className="sidebar">
-      <section className="side-section">
-        <div className="section-heading">
-          <span>Test senaryoları</span>
-          <span className="section-state">{scenarios.filter((scenario) => scenario.enabled).length} / {scenarios.length} hazır</span>
-        </div>
-        <nav className="scenario-list">
-          {scenarios.map((scenario) => {
-            const isActive = scenario.id === activeScenarioId;
-            return (
-              <button
-                className={!scenario.enabled ? 'unavailable' : isActive ? 'active' : 'available'}
-                disabled={!scenario.enabled}
-                key={scenario.label}
-                title={!scenario.enabled
-                  ? 'Bu deney henüz uygulanmadı'
-                  : getSimulationScenario(scenario.id!).description}
-                type="button"
-                onClick={() => scenario.id && onScenarioChange(scenario.id)}
-              >
-                <span className="nav-icon">{scenario.icon}</span>
-                <span className="nav-label">{scenario.label}</span>
-                <span className="nav-state">{!scenario.enabled ? 'YAKINDA' : isActive ? 'AKTİF' : 'HAZIR'}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </section>
-
-      <section className="side-section compact">
-        <div className="section-heading">
-          <span>Kaydedilen deneyler</span>
-          <span className="section-state">{experiments.length} kayıt</span>
-        </div>
-        {experiments.length === 0 ? (
-          <div className="saved-empty">Henüz yerel kayıt yok.</div>
-        ) : (
-          experiments.slice(0, 3).map((experiment) => (
-            <button
-              className="saved-experiment-button"
-              key={experiment.id}
-              type="button"
-              title={experiment.name}
-              onClick={() => onLoadExperiment(experiment)}
-            >
-              <span>{experiment.name}</span>
-              <b>↗</b>
-            </button>
-          ))
-        )}
-      </section>
-
-      <section className="side-section compact">
-        <div className="section-heading">
-          <span>Modeller</span>
-          <span className="section-state">{activeScenarioId === 'sun-moon-observation' ? '3 astronomik referans' : activeScenarioId === 'eclipse-simulation' ? '2 tutulma referansı' : activeScenarioId === 'shadow-observation' || activeScenarioId === 'stellar-observation' ? '1 astronomik referans' : '2 fiziksel'}</span>
-        </div>
-        {activeScenarioId === 'sun-moon-observation' ? (
-          <>
-            <div className="model-toggle reference-model">
-              <span className="model-dot amber" />
-              <span>Güneş Konumu · Astronomik Referans</span>
-              <span className="reference-badge">REFERANS</span>
-            </div>
-            <div className="model-toggle reference-model">
-              <span className="model-dot violet" />
-              <span>Ay Konumu ve Fazı · Astronomik Referans</span>
-              <span className="reference-badge">REFERANS</span>
-            </div>
-            <div className="model-toggle reference-model">
-              <span className="model-dot green" />
-              <span>Gün Doğumu / Batımı · Astronomik Referans</span>
-              <span className="reference-badge">REFERANS</span>
-            </div>
-          </>
-        ) : activeScenarioId === 'eclipse-simulation' ? (
-          <>
-            <div className="model-toggle reference-model">
-              <span className="model-dot amber" />
-              <span>Anlık Güneş–Ay Disk Geometrisi</span>
-              <span className="reference-badge">REFERANS</span>
-            </div>
-            <div className="model-toggle reference-model">
-              <span className="model-dot violet" />
-              <span>Yerel Tutulma Zaman Araması</span>
-              <span className="reference-badge">REFERANS</span>
-            </div>
-          </>
-        ) : activeScenarioId === 'shadow-observation' ? (
-          <div className="model-toggle reference-model">
-            <span className="model-dot amber" />
-            <span>Gölge Geometrisi · Astronomik Referans</span>
-            <span className="reference-badge">REFERANS</span>
-          </div>
-        ) : activeScenarioId === 'stellar-observation' ? (
-          <div className="model-toggle reference-model">
-            <span className="model-dot violet" />
-            <span>Yıldız Gözlemi · Astronomik Referans</span>
-            <span className="reference-badge">REFERANS</span>
-          </div>
-        ) : (<>
-          {simulationModels.map((model) => {
-            const presentation = getPresentation(model.metadata.id);
-            const isProjection = model.metadata.id === 'azimuthal-projection';
-            return (
-              <div className={`model-toggle ${isProjection ? 'reference-model' : ''}`} key={model.metadata.id}>
-                <span className={`model-dot ${presentation.tone}`} />
-                <span>{model.metadata.name}</span>
-                {isProjection ? <span className="reference-badge">REFERANS</span> : <span className="enabled-dot" title="Hesaplamaya dahil" />}
-              </div>
-            );
-          })}
-          <div className="model-toggle future-model"><span className="model-dot coral" /><span>Toroidal Model</span><span className="future-badge">YAKINDA</span></div>
-          <div className="model-toggle future-model"><span className="model-dot blue" /><span>İçbükey Dünya</span><span className="future-badge">YAKINDA</span></div>
-        </>)}
-      </section>
-
-      {isAstronomyScenario(activeScenarioId) ? (
-        <section className="side-section compact grow celestial-visual-placeholder">
-          <div className="section-heading">
-            <span>Görsel katmanlar</span>
-            <span className="section-state">astronomi · sonraki dilim</span>
-          </div>
-          <div className="saved-empty">
-            {activeScenarioId === 'eclipse-simulation'
-              ? 'Anlık Güneş–Ay disk geometrisi ve kullanıcı kontrollü yerel tutulma zaman penceresi ana deney alanında gösterilir.'
-              : activeScenarioId === 'shadow-observation'
-                ? 'Gölge yön diyagramı ana deney panelinde gösterilir. Dünya modellerine fiziksel Güneş davranışı atanmaz.'
-                : activeScenarioId === 'stellar-observation'
-                  ? 'Katalog yıldızı, J2000→gözlem tarihi dönüşümü, geometrik yıldız izi ve isteğe bağlı yerel skyline ana deney alanında gösterilir.'
-                  : 'Güneş/Ay konumu ile günlük doğuş-batış zaman çizgisi ana deney alanında gösterilir; ek gökyüzü katmanları sonraki dilimlerde genişletilecektir.'}
-          </div>
-        </section>
-      ) : (
-      <section className="side-section compact grow">
-        <div className="section-heading">
-          <span>Görsel katmanlar</span>
-          <span className="section-state">4 / 5 hazır</span>
-        </div>
-        <label className="switch-row">
-          <span>Kıta / Ülke Sınırları</span>
-          <input
-            type="checkbox"
-            checked={visualLayers.geographicBoundaries}
-            onChange={(event) => onVisualLayerChange('geographicBoundaries', event.currentTarget.checked)}
-          />
-          <span className="switch" />
-        </label>
-        <label
-          className={`switch-row ${activeScenarioId === 'horizon' ? 'unavailable-layer' : ''}`}
-          title={activeScenarioId === 'horizon'
-            ? 'Ufuk Analizi yerel arazi profilini kullanmaz'
-            : 'Arazi profili etkin olduğunda rota boyunca göreli yükselti şeridini gösterir'}
-        >
-          <span>Topografya Görselleştirme</span>
-          <input
-            type="checkbox"
-            disabled={activeScenarioId === 'horizon'}
-            checked={activeScenarioId !== 'horizon' && visualLayers.terrain}
-            onChange={(event) => onVisualLayerChange('terrain', event.currentTarget.checked)}
-          />
-          <span className="switch" />
-        </label>
-        <label className="switch-row unavailable-layer">
-          <span>Gece Işıkları</span><input type="checkbox" disabled /><span className="switch" />
-        </label>
-        <label
-          className={`switch-row ${atmosphereMode !== 'profile' ? 'unavailable-layer' : ''}`}
-          title={atmosphereMode === 'profile'
-            ? 'Ölçülmüş atmosfer katmanlarını ve İdeal Küre optik ışın yolunu görselleştirir'
-            : 'Atmosfer Profili görsel katmanı için Katmanlı profil modunu seçin'}
-        >
-          <span>Atmosfer Profili</span>
-          <input
-            type="checkbox"
-            disabled={atmosphereMode !== 'profile'}
-            checked={atmosphereMode === 'profile' && visualLayers.atmosphere}
-            onChange={(event) => onVisualLayerChange('atmosphere', event.currentTarget.checked)}
-          />
-          <span className="switch" />
-        </label>
-        <label className="switch-row">
-          <span>Izgara</span>
-          <input
-            type="checkbox"
-            checked={visualLayers.grid}
-            onChange={(event) => onVisualLayerChange('grid', event.currentTarget.checked)}
-          />
-          <span className="switch" />
-        </label>
-      </section>
-      )}
-
-      <CelestialTimeCard
-        active={isAstronomyScenario(activeScenarioId)}
-        observedAtIso={observedAtIso}
-        utcOffsetMinutes={observationUtcOffsetMinutes}
-        onChange={onObservationTimeChange}
-      />
-    </aside>
-  );
-}
-
-function NumericField({
-  inputKey,
-  label,
-  unit,
-  step,
-  inputs,
-  disabled,
-  onNumberChange
-}: {
-  inputKey: NumericInputKey;
-  label: string;
-  unit: string;
-  step: number;
-  inputs: SimulatorInputs;
-  disabled?: boolean;
-  onNumberChange(key: NumericInputKey, value: number): void;
-}): React.JSX.Element {
-  return (
-    <label className="input-field">
-      <span>{label}</span>
-      <div>
-        <DraftNumberInput
-          disabled={disabled}
-          min={inputRanges[inputKey].min}
-          max={inputRanges[inputKey].max}
-          step={step}
-          value={inputs[inputKey]}
-          onCommit={(value) => onNumberChange(inputKey, value)}
-        />
-        <b>{unit}</b>
-      </div>
-    </label>
-  );
-}
-
-function ScenarioSummary({
-  scenarioId,
-  activeName,
-  inputs,
-  atmosphereMode,
-  effectiveDistanceKm,
-  geodesic,
-  isDirty,
-  onDistanceSourceChange,
-  onDatumChange,
-  onNumberChange,
-  onReset,
-  onSave,
-  onShowGeodesicTrace
-}: {
-  scenarioId: SimulationScenarioId;
-  activeName: string;
-  inputs: SimulatorInputs;
-  atmosphereMode: AtmosphereMode;
-  effectiveDistanceKm: number;
-  geodesic: GeodesicResult | undefined;
-  isDirty: boolean;
-  onDistanceSourceChange(source: DistanceSource): void;
-  onDatumChange(kind: VerticalDatumKind): void;
-  onNumberChange(key: NumericInputKey, value: number): void;
-  onReset(): void;
-  onSave(): void;
-  onShowGeodesicTrace(): void;
-}): React.JSX.Element {
-  const scenario = getSimulationScenario(scenarioId);
-  const isHorizon = scenarioId === 'horizon';
-  return (
-    <section className="scenario-summary panel coordinate-summary">
-      <div className="panel-title-row">
-        <div>
-          <span className="eyebrow">Aktif senaryo</span>
-          <h2>{activeName || scenario.label}</h2>
-        </div>
-        <div className="title-actions">
-          <PanelHelpButton panelId="scenario-summary" />
-          {isDirty && <span className="dirty-badge">KAYDEDİLMEDİ</span>}
-          <button className="save-button" onClick={onSave} type="button">Deneyi Kaydet</button>
-          <button className="reset-button" onClick={onReset} type="button">Yeni / Varsayılan</button>
-          <span className="calculation-badge">CANLI HESAPLAMA</span>
-        </div>
-      </div>
-
-      <div className={`input-grid base-input-grid ${isHorizon ? 'horizon-input-grid' : ''}`}>
-        <NumericField inputKey="observerHeightM" label="Göz yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
-        {isHorizon ? (
-          <>
-            <NumericField inputKey="observerGroundElevationM" label="Gözlemci zemin kotu" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
-            <NumericField inputKey="verticalDatumOffsetM" label="Datum / yerel ofset" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
-            <label className="input-field horizon-datum-field">
-              <span>Düşey datum</span>
-              <select value={inputs.verticalDatumKind} onChange={(event) => onDatumChange(event.currentTarget.value as VerticalDatumKind)}>
-                <option value="orthometric-msl">Ortalama deniz seviyesi</option>
-                <option value="ellipsoidal-wgs84">WGS84 elipsoidal</option>
-                <option value="local">Yerel düşey datum</option>
-              </select>
-            </label>
-          </>
-        ) : (
-          <>
-            <NumericField inputKey="targetHeightM" label="Hedef yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
-            <NumericField inputKey="observedVisiblePercent" label="Gözlenen görünürlük" unit="%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
-            <NumericField inputKey="observationUncertaintyPercent" label="Gözlem belirsizliği" unit="±%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
-          </>
-        )}
-        <NumericField inputKey="refractionCoefficient" label="Kırılma katsayısı" unit="k" step={0.01} inputs={inputs} disabled={atmosphereMode !== 'standard'} onNumberChange={onNumberChange} />
-      </div>
-
-      {!isHorizon && <div className="distance-source-panel">
-        <div className="distance-source-heading">
-          <div>
-            <span className="eyebrow">Mesafe kaynağı</span>
-            <strong>{inputs.distanceSource === 'manual' ? 'Elle girilen yüzey mesafesi' : 'WGS84 koordinat çözümü'}</strong>
-          </div>
-          <div className="distance-mode-buttons">
-            <button className={inputs.distanceSource === 'manual' ? 'selected' : ''} type="button" onClick={() => onDistanceSourceChange('manual')}>Manuel</button>
-            <button className={inputs.distanceSource === 'coordinates' ? 'selected' : ''} type="button" onClick={() => onDistanceSourceChange('coordinates')}>Koordinat</button>
-          </div>
-        </div>
-
-        {inputs.distanceSource === 'manual' ? (
-          <div className="manual-distance-row">
-            <NumericField inputKey="surfaceDistanceKm" label="Yüzey mesafesi" unit="km" step={0.01} inputs={inputs} onNumberChange={onNumberChange} />
-            <p>Bu değer bütün modellerin ortak deney mesafesi olarak kullanılır.</p>
-          </div>
-        ) : (
-          <>
-            <div className="coordinate-grid">
-              <NumericField inputKey="observerLatitudeDeg" label="Gözlemci enlemi" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
-              <NumericField inputKey="observerLongitudeDeg" label="Gözlemci boylamı" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
-              <NumericField inputKey="targetLatitudeDeg" label="Hedef enlemi" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
-              <NumericField inputKey="targetLongitudeDeg" label="Hedef boylamı" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
-            </div>
-            <div className={`geodesic-summary ${geodesic?.method === 'spherical-fallback' ? 'fallback' : ''}`}>
-              <div><small>WGS84 mesafesi</small><strong>{numberFormatter.format(effectiveDistanceKm)} km</strong></div>
-              <div><small>Başlangıç azimutu</small><strong>{geodesic ? `${bearingFormatter.format(geodesic.initialBearingDeg)}°` : '—'}</strong></div>
-              <div><small>Varış azimutu</small><strong>{geodesic ? `${bearingFormatter.format(geodesic.finalBearingDeg)}°` : '—'}</strong></div>
-              <div><small>Çözüm</small><strong>{geodesic?.method === 'vincenty' ? `Vincenty · ${geodesic.iterations} iterasyon` : 'Küresel yedek'}</strong></div>
-              <button type="button" onClick={onShowGeodesicTrace}>Jeodezik hesap izi</button>
-            </div>
-            <p className="coordinate-note">
-              Gözlemci {coordinateFormatter.format(inputs.observerLatitudeDeg)}°, {coordinateFormatter.format(inputs.observerLongitudeDeg)}° · Hedef {coordinateFormatter.format(inputs.targetLatitudeDeg)}°, {coordinateFormatter.format(inputs.targetLongitudeDeg)}°
-            </p>
-          </>
-        )}
-      </div>}
-
-      {isHorizon && (
-        <p className="scenario-scope-note">
-          Ufuk Analizi hedef, rota ve arazi profilini kullanmaz. Sonuç yalnız gözlemci toplam kotu,
-          seçilen yüzey geometrisi ve desteklenen atmosfer varsayımından üretilir.
-        </p>
-      )}
-
-      <div className="refraction-control">
-        <span>Atmosfer modu: {atmosphereMode === 'off' ? 'Kapalı' : atmosphereMode === 'standard' ? 'Standart k' : 'Katmanlı profil'} · ayrıntılar aşağıdaki Atmosfer panelinden yönetilir.</span>
-      </div>
-    </section>
-  );
-}
-
-function ObservationPanel({ inputs }: { inputs: SimulatorInputs }): React.JSX.Element {
-  return (
-    <section className="observation panel">
-      <div className="observation-heading">
-        <span className="eyebrow">Gözlem referansı</span>
-        <span className="reference-mode">SAYISAL GİRDİ</span>
-      </div>
-      <div className="observation-image">
-        <div className="reticle">＋</div>
-        <div className="ship"><span /><i /><b /></div>
-        <div className="scale">5°<br />2,5°<br />0°<br />−2,5°</div>
-      </div>
-      <div className="observation-meta">
-        <span>Gözlenen: %{numberFormatter.format(inputs.observedVisiblePercent)}</span>
-        <span>Belirsizlik: ±%{numberFormatter.format(inputs.observationUncertaintyPercent)}</span>
-        <span>Fotoğraf ölçümü aşağıdaki kalibrasyon panelinden eklenebilir.</span>
-      </div>
-      <p className="engine-note">
-        Görsel açıklayıcıdır. Karşılaştırma, sayısal görünürlük ve belirsizlik girdileriyle yapılır.
-      </p>
-    </section>
-  );
-}
-
-function HorizonReferencePanel({ inputs, atmosphereMode }: { inputs: SimulatorInputs; atmosphereMode: AtmosphereMode }): React.JSX.Element {
-  const observerTotalElevationM = inputs.observerGroundElevationM +
-    inputs.verticalDatumOffsetM + inputs.observerHeightM;
-  return (
-    <section className="observation panel horizon-reference-panel">
-      <div className="observation-heading">
-        <span className="eyebrow">Ufuk deney özeti</span>
-        <span className="reference-mode">GEOMETRİK HESAP</span>
-      </div>
-      <div className="horizon-reference-visual">
-        <span className="horizon-reference-observer" />
-        <span className="horizon-reference-tangent" />
-        <span className="horizon-reference-arc" />
-      </div>
-      <div className="horizon-reference-metrics">
-        <div><small>Toplam gözlemci kotu</small><strong>{formatMetres(observerTotalElevationM)}</strong></div>
-        <div><small>Düşey datum</small><strong>{datumLabels[inputs.verticalDatumKind]}</strong></div>
-        <div><small>Atmosfer</small><strong>{atmosphereMode === 'standard' ? `Standart k=${numberFormatter.format(inputs.refractionCoefficient)}` : atmosphereMode === 'profile' ? 'Katmanlı profil' : 'Kapalı'}</strong></div>
-      </div>
-      <p className="engine-note">Bu senaryoda hedef görünürlük yüzdesi ölçümü yapılmaz; modellerin geometrik ufuk tanımları karşılaştırılır.</p>
-    </section>
-  );
 }
 
 function isImportedDemTerrainProfile(
