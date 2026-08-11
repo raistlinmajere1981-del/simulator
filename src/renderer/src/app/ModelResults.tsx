@@ -5,7 +5,7 @@ import type { SimulationScenarioId } from '../../../shared/scenario';
 import type { SimulatorInputs } from '../../../shared/simulator';
 import type { TerrainProfile } from '../../../shared/terrain';
 import type { ModelRun } from '../../../simulation/runner';
-import { HelpOverlay, PanelHelpButton } from '../HelpSystem';
+import { PanelHelpButton } from '../HelpSystem';
 import { WorldModelViewport } from '../WorldModelViewport';
 import { getPresentation } from './app-config';
 import {
