@@ -177,6 +177,7 @@ import { PhotoModelUncertaintyControl } from './PhotoModelUncertaintyControl';
 import { WorldModelViewport } from './WorldModelViewport';
 import { HelpOverlay, HelpProvider, PanelHelpButton } from './HelpSystem';
 import { TextExperimentSetupDialog } from './TextExperimentSetupDialog';
+import { AiWorkflowDialog } from './AiWorkflowDialog';
 import { CelestialTimeCard } from './CelestialTimeCard';
 import { SolarPositionPanel } from './SolarPositionPanel';
 import { SolarDayEventsPanel } from './SolarDayEventsPanel';
@@ -1233,6 +1234,8 @@ export function AppNext(): React.JSX.Element {
   const [helpPanelId, setHelpPanelId] = useState<HelpPanelId>();
   const [helpCatalogOpen, setHelpCatalogOpen] = useState(false);
   const [textSetupOpen, setTextSetupOpen] = useState(false);
+  const [textSetupInitialText, setTextSetupInitialText] = useState('');
+  const [aiWorkflowExperiment, setAiWorkflowExperiment] = useState<SavedExperiment>();
   const [textSetupHistory, setTextSetupHistory] = useState<TextExperimentSetupProvenance[]>([]);
   const [visualLayers, setVisualLayers] = useState<VisualLayerState>({
     geographicBoundaries: true,
@@ -2004,14 +2007,9 @@ export function AppNext(): React.JSX.Element {
     setStorageMessage(`“${saved.name}” açıldı.`);
   };
 
-  const saveExperiment = async (name: string): Promise<void> => {
-    if (!modelUncertaintyReady) {
-      setStorageMessage('Model girdi belirsizliği hesabı tamamlanmadan deney kaydedilmedi.');
-      return;
-    }
-    const now = new Date().toISOString();
+  const buildActiveExperimentRecord = (name: string, now = new Date().toISOString()): SavedExperiment => {
     const existing = savedExperiments.find((item) => item.id === activeExperimentId);
-    const record: SavedExperiment = {
+    return {
       id: activeExperimentId,
       name,
       createdAtIso: existing?.createdAtIso ?? now,
@@ -2102,6 +2100,14 @@ export function AppNext(): React.JSX.Element {
         ...photoAngularComparisons.map((comparison) => comparison.prediction)
       ]
     };
+  };
+
+  const saveExperiment = async (name: string): Promise<void> => {
+    if (!modelUncertaintyReady) {
+      setStorageMessage('Model girdi belirsizliği hesabı tamamlanmadan deney kaydedilmedi.');
+      return;
+    }
+    const record = buildActiveExperimentRecord(name);
 
     try {
       const saved = await window.simulatorDesktop.saveExperiment(record);
@@ -2353,7 +2359,23 @@ export function AppNext(): React.JSX.Element {
           {storageMessage && <span className="storage-message" title={storageMessage}>{storageMessage}</span>}
         </div>
         <div className="top-actions">
-          <button type="button" onClick={() => setTextSetupOpen(true)}>✦ Metinden Hazırla</button>
+          <button type="button" onClick={() => {
+            setTextSetupInitialText('');
+            setTextSetupOpen(true);
+          }}>✦ Metinden Hazırla</button>
+          <button type="button" onClick={() => {
+            if (isCalculating) {
+              setStorageMessage('Hesaplama tamamlanmadan AI paketi hazırlanmadı.');
+              return;
+            }
+            if (!modelUncertaintyReady) {
+              setStorageMessage('Model girdi belirsizliği hesabı tamamlanmadan AI paketi hazırlanmadı.');
+              return;
+            }
+            setAiWorkflowExperiment(buildActiveExperimentRecord(
+              activeExperimentName || defaultExperimentName(activeScenarioId)
+            ));
+          }}>◇ AI ile Analiz</button>
           <button type="button" onClick={() => setDataManagerOpen(true)}>▤ Veri Yöneticisi</button>
           <button disabled title="Ayarlar modülü sonraki aşamada" type="button">⚙ Ayarlar</button>
           <button type="button" onClick={openHelpCatalog}>ⓘ Yardım</button>
@@ -2681,6 +2703,7 @@ export function AppNext(): React.JSX.Element {
 
       <TextExperimentSetupDialog
         open={textSetupOpen}
+        initialText={textSetupInitialText}
         scenarioId={activeScenarioId}
         experimentName={activeExperimentName}
         observedAtIso={experimentObservedAtIso}
@@ -2688,9 +2711,23 @@ export function AppNext(): React.JSX.Element {
         inputs={inputs}
         atmosphereMode={atmosphereState.mode}
         modelUncertainty={photoModelUncertainty}
-        onClose={() => setTextSetupOpen(false)}
+        onClose={() => {
+          setTextSetupOpen(false);
+          setTextSetupInitialText('');
+        }}
         onApply={applyTextExperimentSetup}
       />
+      {aiWorkflowExperiment && (
+        <AiWorkflowDialog
+          experiment={aiWorkflowExperiment}
+          onClose={() => setAiWorkflowExperiment(undefined)}
+          onUseTest={(testBlock) => {
+            setAiWorkflowExperiment(undefined);
+            setTextSetupInitialText(testBlock);
+            setTextSetupOpen(true);
+          }}
+        />
+      )}
       <SaveExperimentDialog
         initialName={activeExperimentName || defaultExperimentName(activeScenarioId)}
         open={saveDialogOpen}
