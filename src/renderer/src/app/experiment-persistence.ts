@@ -1,6 +1,6 @@
 import { simulationModels } from '../../../models';
 import type { AtmosphereExperimentState } from '../../../shared/atmosphere';
-import type { ModelPrediction } from '../../../shared/domain';
+import type { ModelMetadata, ModelPrediction } from '../../../shared/domain';
 import type { SavedPhotoCalibration } from '../../../shared/photo-calibration';
 import { normalizeSimulationScenarioId, type SimulationScenarioId } from '../../../shared/scenario';
 import {
@@ -24,6 +24,7 @@ import {
 } from '../../../simulation/atmosphere-persistence';
 import {
   DUAL_SHADOW_COMPARISON_MODEL_ID,
+  DUAL_SHADOW_COMPARISON_MODEL_VERSION,
   readDualShadowComparisonSettings,
   type DualShadowComparisonSettings
 } from '../../../simulation/dual-shadow-comparison';
@@ -39,14 +40,12 @@ import {
 } from '../../../simulation/photo-calibration';
 import type { ModelRun } from '../../../simulation/runner';
 import {
-  DEFAULT_SHADOW_OBSERVATION_SETTINGS,
   SHADOW_OBSERVATION_MODEL_ID,
   readShadowObservationSettings,
   shadowObservationMetadata,
   type ShadowObservationSettings
 } from '../../../simulation/shadow-observation';
 import {
-  DEFAULT_STELLAR_OBSERVATION_SETTINGS,
   STELLAR_OBSERVATION_MODEL_ID,
   readStellarObservationSettings,
   stellarObservationMetadata,
@@ -64,12 +63,8 @@ import {
   solarEclipseEventSearchMetadata,
   type SolarEclipseEventSearchSnapshot
 } from '../../../simulation/solar-eclipse-event-search-prediction';
-import {
-  WATER_SURFACE_APPLICATION_MODEL_ID
-} from '../../../simulation/water-surface-application';
-import {
-  WATER_SURFACE_OBSERVATION_MODEL_ID
-} from '../../../simulation/water-surface-observation';
+import { WATER_SURFACE_APPLICATION_MODEL_ID } from '../../../simulation/water-surface-application';
+import { WATER_SURFACE_OBSERVATION_MODEL_ID } from '../../../simulation/water-surface-observation';
 import {
   readStoredWaterSurfaceState,
   type StoredWaterSurfaceRecord
@@ -235,6 +230,7 @@ export interface BuildSavedExperimentRecordArgs {
   manualTerrainPoints: ManualTerrainPoint[];
   terrainProfileSource: TerrainProfileSource | undefined;
   geodesic: SavedExperiment['geodesic'];
+  geodesicModelMetadata: ModelMetadata;
   astronomyPredictions: AstronomyPredictions;
   runs: ModelRun[];
   geoidConversionRecord: StoredPredictionRecord | undefined;
@@ -263,6 +259,7 @@ export function buildSavedExperimentRecord({
   manualTerrainPoints,
   terrainProfileSource,
   geodesic,
+  geodesicModelMetadata,
   astronomyPredictions,
   runs,
   geoidConversionRecord,
@@ -282,7 +279,7 @@ export function buildSavedExperimentRecord({
     ...(astronomyPredictions.eclipseOverlap ? [[solarEclipseOverlapMetadata.id, solarEclipseOverlapMetadata.version] as const] : []),
     ...(astronomyPredictions.eclipseEventSearch ? [[solarEclipseEventSearchMetadata.id, solarEclipseEventSearchMetadata.version] as const] : []),
     ...(astronomyPredictions.shadowObservation ? [[shadowObservationMetadata.id, shadowObservationMetadata.version] as const] : []),
-    ...(astronomyPredictions.dualShadowComparison ? [[DUAL_SHADOW_COMPARISON_MODEL_ID, '0.1.0'] as const] : []),
+    ...(astronomyPredictions.dualShadowComparison ? [[DUAL_SHADOW_COMPARISON_MODEL_ID, DUAL_SHADOW_COMPARISON_MODEL_VERSION] as const] : []),
     ...(astronomyPredictions.stellarObservation ? [[stellarObservationMetadata.id, stellarObservationMetadata.version] as const] : [])
   ];
 
@@ -306,7 +303,7 @@ export function buildSavedExperimentRecord({
     geodesic,
     modelVersions: Object.fromEntries([
       ...simulationModels.map((model) => [model.metadata.id, model.metadata.version] as const),
-      ['wgs84-geodesic', '0.1.0'] as const,
+      [geodesicModelMetadata.id, geodesicModelMetadata.version] as const,
       ...astronomyVersions,
       ...(geoidConversionRecord ? [[GEOID_CONVERSION_MODEL_ID, geoidConversionRecord.modelVersion] as const] : []),
       ...(waterObservationRecord ? [[WATER_SURFACE_OBSERVATION_MODEL_ID, waterObservationRecord.modelVersion] as const] : []),
