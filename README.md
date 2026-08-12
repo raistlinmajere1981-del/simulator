@@ -142,7 +142,7 @@ Gereksinim: **Node.js 22+**.
 ```bash
 git clone <repository-url>
 cd simulator
-npm install
+npm ci
 npm run dev
 ```
 
@@ -158,9 +158,7 @@ Tüm katkıcı doğrulaması:
 npm run verify
 ```
 
-`verify`; TypeScript typecheck, tüm Vitest testleri ve Electron-Vite üretim derlemesini çalıştırır.
-
-> Repository şu anda lockfile taşımıyor; bağımlılıklar `package.json` semver aralıklarından `npm install` ile çözülür. Public release hazırlığında reproducible dependency politikası ayrıca sabitlenecektir.
+`verify`; TypeScript typecheck, tüm Vitest testleri ve Electron-Vite üretim derlemesini çalıştırır. `package-lock.json` repository'de tutulur; temiz kurulum ve CI için `npm ci` kullanılır.
 
 ## Kod yapısı
 
@@ -237,4 +235,4 @@ Hassas güvenlik konuları için [`SECURITY.md`](SECURITY.md) dosyasını kullan
 
 ## Lisans
 
-Repository public release öncesinde açık bir lisansla yayınlanacaktır. Lisans seçilmeden kaynak kodun public görünür olması tek başına yeniden kullanım izni vermez; nihai koşullar kökteki `LICENSE` dosyasında belirtilecektir.
+Bu proje [MIT License](LICENSE) ile yayınlanır. Kaynak kodu kullanabilir, değiştirebilir, birleştirebilir, yayınlayabilir, dağıtabilir, alt lisanslayabilir ve satabilirsiniz; lisans metnindeki telif ve izin bildiriminin korunması gerekir.
