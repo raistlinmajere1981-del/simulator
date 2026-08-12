@@ -60,22 +60,20 @@ export async function verifyAiFollowUpProvenance(
       sourceExperimentId: lineage.sourceExperimentId,
       sourceExperimentUpdatedAtIso: lineage.sourceExperimentUpdatedAtIso
     };
-  } else if (sourceExperiment.updatedAtIso !== lineage.sourceExperimentUpdatedAtIso) {
-    analysis = {
-      status: 'source-changed',
-      expectedSha256: lineage.analysisSha256,
-      sourceExperimentId: lineage.sourceExperimentId,
-      sourceExperimentUpdatedAtIso: lineage.sourceExperimentUpdatedAtIso,
-      availableSourceUpdatedAtIso: sourceExperiment.updatedAtIso
-    };
   } else {
     const reconstructed = createAiAnalysisPackage(
       sourceExperiment,
       lineage.analysisGeneratedAtIso
     );
     const actualAnalysisSha256 = await sha256Utf8(reconstructed);
+    const hashMatches = actualAnalysisSha256 === lineage.analysisSha256;
+    const snapshotTimeMatches = sourceExperiment.updatedAtIso === lineage.sourceExperimentUpdatedAtIso;
     analysis = {
-      status: actualAnalysisSha256 === lineage.analysisSha256 ? 'verified' : 'mismatch',
+      status: hashMatches
+        ? 'verified'
+        : snapshotTimeMatches
+          ? 'mismatch'
+          : 'source-changed',
       expectedSha256: lineage.analysisSha256,
       actualSha256: actualAnalysisSha256,
       sourceExperimentId: lineage.sourceExperimentId,
