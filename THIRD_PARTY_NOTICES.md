@@ -11,7 +11,7 @@ Bu liste proje lisansının üçüncü taraf bileşenleri yeniden lisansladığ�
 - Proje: React
 - Kaynak: https://github.com/facebook/react
 - Lisans: MIT
-- Copyright: Meta Platforms, Inc. and affiliates.
+- Copyright (c) Meta Platforms, Inc. and affiliates.
 
 MIT lisans bildirimi:
 
@@ -22,7 +22,7 @@ MIT lisans bildirimi:
 - Proje: three.js
 - Kaynak: https://github.com/mrdoob/three.js
 - Lisans: MIT
-- Copyright: three.js authors
+- Copyright © 2010-2026 three.js authors
 
 MIT lisans bildirimi:
 
@@ -59,6 +59,7 @@ GGL geliştirme/runtime kabuğu Electron kullanır.
 - Proje: Electron
 - Kaynak: https://github.com/electron/electron
 - Lisans: MIT
+- Copyright (c) Electron contributors; Copyright (c) 2013-2020 GitHub Inc.
 
 Kaynak repository tek başına Electron binary'sini yeniden dağıtmaz. İleride Windows/Linux/macOS kurulum paketi yayımlanırsa Electron/Chromium dağıtımında bulunan upstream lisans dosyaları ve üçüncü taraf bildirimleri (`LICENSE`, `LICENSES.chromium.html` ve kullanılan packager'ın ürettiği eşdeğer notice dosyaları) paketle birlikte korunmalıdır.
 
