@@ -1,82 +1,68 @@
-# God-file analizi ve parçalama planı
+# God-file analizi ve bakım planı
 
-Bu çalışma yeni özellik eklemekten önce kaynak dosyaların sorumluluk sınırlarını netleştirmek için yapılır. Hedef yalnız satır sayısını azaltmak değildir; değişikliklerin daha küçük dosyalarda yapılabilmesi, test kapsamının sorumluluk bazında ayrılabilmesi ve büyük exact-match patch ihtiyacının azalmasıdır.
+Bu belge ilk büyük refactor çalışmasının güncel sonucunu ve public repository için kalan bakım adaylarını gösterir. Hedef satır sayısını mekanik olarak azaltmak değil; katkıcıların küçük, test edilebilir ve düşük çatışmalı değişiklikler yapabilmesidir.
 
-## Öncelik ölçütleri
+## Tamamlanan kritik refactorlar
 
-Bir dosya aşağıdaki sinyallerden birden fazlasını taşıyorsa refactor adayı sayılır:
+| Dosya | İlk durum | Güncel yaklaşık boyut | Sonuç |
+|---|---:|---:|---|
+| `src/renderer/src/AppNext.tsx` | 130 KB | 64 KB | Büyük sunum blokları, terrain/model sonuçları, astronomi hesapları, ortak model-state ve persistence ayrıldı. Hâlâ orchestrator; blokaj değil. |
+| `src/report/html-report.ts` | 48 KB | 12 KB | `report-core`, `report-terrain`, `report-provenance` ayrıldı. Ana dosya belge assembly seviyesinde. |
+| `src/shared/portable.ts` | 46 KB | 12 KB | `portable-core`, `portable-sources`, `portable-photo-asset` ayrıldı. Ana dosya schema/normalization/facade seviyesinde. |
 
-- yaklaşık 30 KB üzeri aktif kaynak kodu,
-- birden fazla bağımsız UI/iş mantığı sorumluluğu,
-- çok sayıda farklı domain modülüne doğrudan bağımlılık,
-- aynı dosyada state orchestration + hesaplama + persistence + görünüm üretimi,
-- küçük özellik değişikliklerinde dosyanın uzak bölümlerine dokunma gereksinimi,
-- test veya merge çatışması riskinin dosya büyüklüğüyle artması.
+Bu üç dosyanın başlangıçtaki P0/P1 riski giderildi. Daha fazla parçalama yalnız açık bir sorumluluk sınırı ve katkı kolaylığı sağlıyorsa yapılmalıdır.
 
-Salt veri/katalog dosyaları yalnız büyük oldukları için parçalanmaz.
+## Güncel bakım adayları
 
-## Mevcut başlıca adaylar
+| Öncelik | Dosya | Yaklaşık boyut | Neden | Hedef |
+|---|---|---:|---|---|
+| P1 | `src/shared/text-experiment-setup.ts` | 32 KB | Serbest metin parserı, ortak alan tanımları ve senaryo-özel aday üretimi aynı modülde; AI test sözleşmesine yakın kritik kod | Facade korunarak parser/types + ortak alanlar + senaryo alanları ayrımı |
+| P1 | `src/renderer/src/PhotoCalibrationControl.tsx` | 33 KB | Fotoğraf session state, işaret UI, kamera parametreleri ve commit/validasyon aynı bileşende | session/view-model + marker/calibration alt kontrolleri |
+| P1 | `src/renderer/src/StellarObservationPanel.tsx` | 41 KB | Yıldız seçimi, kaynak/proper-motion/skyline ve sonuç görünümü aynı panelde | kaynak kontrolleri + gözlem ayarları + sonuç/visualization bölümleri |
+| P1 | `src/renderer/src/MultiPointTerrainEditor.tsx` | 38 KB | Manuel editör, CSV/GeoJSON/DEM import akışları ve review UI aynı bileşende | editor + importer aksiyonları + review alt bileşenleri |
+| P2 | `src/main/index.ts` | 29 KB | Genel Electron başlangıcı ve birden fazla IPC grubu aynı dosyada | deney/portable/report/terrain IPC kayıt modülleri; index yalnız wiring |
+| P2 | `src/renderer/src/AppNext.tsx` | 64 KB | Hâlâ çok state bağlar fakat kritik hesap/persistence çıkarıldı | Yalnız açık workspace/state kümeleri oluşursa ek extraction; sırf boyut için parçalama yok |
+| P2 | `src/renderer/src/WorldModelViewport.tsx` | 29 KB | Three.js yaşam döngüsü ve çoklu görsel katmanlar | ancak sık değişiklik/çatışma görülürse scene helper extraction |
+| P3 | `src/report/report-provenance.ts` | 19 KB | Çok sayıda bağımsız provenans bölümü | yalnız yeni provenans türleri eklenirken doğal section split gerekirse |
+| P3 | `src/shared/portable-sources.ts` | 21 KB | Kaynak metadata parserları | source ailesi büyürse foto/stellar/text parser modülleri |
 
-| Öncelik | Dosya | Yaklaşık boyut | Değerlendirme |
-|---|---|---:|---|
-| P0 | `src/renderer/src/AppNext.tsx` | 130 KB | Ana god file. UI shell, scenario state, persistence, model çalıştırma, astronomi, arazi, sonuç kartları ve dialog orchestration aynı dosyada. |
-| P1 | `src/report/html-report.ts` | 48 KB | HTML biçimleme, prediction render, astronomi/jeodezi/arazi ve tam belge assembly aynı dosyada. |
-| P1 | `src/shared/portable.ts` | 46 KB | Şema, doğrulama, migration ve parse/serialize akışları tek modülde. |
-| P2 | `src/renderer/src/StellarObservationPanel.tsx` | 41 KB | Tek domaine ait olsa da panel alt bölümleri ayrı bileşenlere ayrılabilir. |
-| P2 | `src/renderer/src/MultiPointTerrainEditor.tsx` | 38 KB | Editör, import akışı ve görsel düzenleme sorumlulukları büyümüş durumda. |
-| P2 | `src/shared/text-experiment-setup.ts` | 31 KB | Ortak parser ile senaryo-özel aday üretimi aynı dosyada. |
-| P2 | `src/renderer/src/PhotoCalibrationControl.tsx` | 32 KB | Kalibrasyon state, UI ve doğrulama aynı bileşende yoğunlaşmış durumda. |
-| P3 | `src/main/index.ts` | 28 KB | Electron başlangıç + IPC kayıtları zamanla ayrı IPC modüllerine çıkarılabilir. |
+`src/shared/help-content.ts` büyük olsa da ağırlıklı statik içeriktir ve boyut tek başına refactor gerekçesi değildir. Matematiksel simulation modülleri de domain bütünlüğü bozulacaksa yalnız dosya boyutu için parçalanmamalıdır.
 
-`src/shared/help-content.ts` büyük olsa da ağırlıklı olarak statik içeriktir; şu aşamada god-file önceliği değildir. Matematiksel simulation modülleri de sırf boyut nedeniyle parçalanmayacaktır; önce domain bütünlüğü kontrol edilir.
+## Legacy/dead-code kontrolü
 
-## AppNext parçalama stratejisi
+`src/renderer/src/main.tsx` yalnız `AppNext` render eder. `src/renderer/src/App.tsx` eski renderer adayıdır; ancak silmeden önce yerelde kullanım kesin olarak doğrulanmalıdır:
 
-### Dilim 1 — düşük riskli görünüm ve ortak yardımcılar
+```bash
+rg -n "from ['\"]\\./App['\"]|from ['\"].*/App['\"]|<App\\b" src tests
+```
 
-Davranış değiştirmeden aşağıdakiler dışarı alınır:
+Sonuç yoksa `App.tsx` ayrı ve küçük bir dead-code cleanup PR'ında kaldırılabilir. Bu kontrol yapılmadan dosya yalnız isim benzerliğine bakılarak silinmemelidir.
 
-- `app/AppSidebar.tsx`
-- `app/ScenarioSummary.tsx`
-- `app/ObservationReferencePanels.tsx`
-- `app/NumericField.tsx`
-- `app/app-config.ts`
-- `app/app-formatters.ts`
-- `app/app-types.ts`
+## Refactor sırası
 
-Bu dilim state sahipliğini değiştirmez. `AppNext` hâlâ orchestration sahibidir; yalnız gömülü sunum bileşenleri ve saf yardımcılar ayrılır.
+Public katkıcı deneyimi için önerilen sıra:
 
-### Dilim 2 — terrain ve sonuç görünümü
+1. `text-experiment-setup.ts` — AI/public sözleşme kodunun okunabilirliği.
+2. `PhotoCalibrationControl.tsx` — session/provenance davranışının daha anlaşılır hale gelmesi.
+3. `StellarObservationPanel.tsx`.
+4. `MultiPointTerrainEditor.tsx`.
+5. `src/main/index.ts` IPC ayrımı.
+6. Gerekirse AppNext'in kalan açık state/workspace sınırları.
 
-Sonraki güvenli taşıma adayları:
-
-- gömülü `TerrainPanel` ve terrain UI yardımcıları,
-- `ModelCard`, `ResultsTable` ve model sunum bileşenleri,
-- geodesic prediction/metadata yardımcıları.
-
-### Dilim 3 — state ve persistence orchestration
-
-Move-only refactorlar stabilize olduktan sonra daha davranışsal parçalama yapılır:
-
-- deney kayıt/yükleme/snapshot üretimi,
-- observation clock state,
-- scenario-özel restore/apply state,
-- prediction bundle/model-run türetimi.
-
-Bunlar custom hook veya saf builder modülleri olarak çıkarılır. Bu dilim önceki ikisinden daha yüksek risklidir ve ayrı PR olmalıdır.
-
-## Diğer god-file planı
-
-`html-report.ts` için hedef: biçimleyiciler + ortak prediction bölümü + domain section modülleri + ince belge assembler.
-
-`portable.ts` için hedef: schema/types + validators + migrations + public parse/serialize facade. Geçiş sırasında mevcut `portable.ts` ince bir re-export/facade olarak korunabilir; böylece import churn azaltılır.
-
-`text-experiment-setup.ts` için hedef: kanonik blok parser + ortak alanlar + shadow/stellar/eclipse senaryo alanları. `GGL-AI-TEST v1` sözleşmesi değişmeden kalmalıdır.
+Her dilim ayrı PR olmalıdır. Aynı PR'da refactor + yeni hesap/özellik karıştırılmamalıdır.
 
 ## Güvenlik kuralları
 
-- Refactor PR'larında hesap sonucu veya UI davranışı bilinçli olarak değiştirilmez.
-- Her dilimde `npm run typecheck`, `npm test`, `npm run build` çalıştırılır.
-- Büyük taşımalarda mevcut test isimleri korunur; test davranışı değiştirilmez.
-- Önce move-only / extraction, sonra architecture/state refactor yapılır.
-- Yeni özellik çalışması, en azından AppNext düşük riskli extraction ve P1 dosyaların ilk ayrımı tamamlanana kadar bekletilir.
+- Hesap sonucu, birim, belirsizlik, status veya provenans semantiği refactor sırasında değiştirilmez.
+- Public export/facade mümkün olduğunca korunur; import churn azaltılır.
+- AI canonical sözleşmeleri refactor nedeniyle değişmez.
+- Portable schema version refactor nedeniyle artırılmaz.
+- Move-only extraction sonrasında `npm run verify` zorunludur.
+- Renderer/Electron bileşeni taşındıysa ilgili manuel smoke testi yapılır.
+- Geçici exact-match/helper scripti kullanıldıysa merge öncesinde kaldırılır.
+
+## Tamamlanma ölçütü
+
+Bu bakım listesinin tamamı ürünün kullanılabilmesi için zorunlu değildir. Public-ready kapanış hedefi; yeni katkıcının kritik AI/veri sözleşmelerini tek bir dev dosyada çözmek zorunda kalmaması ve en riskli aktif god-file'ların bağımsız sorumluluklara ayrılmış olmasıdır.
+
+Yeni fonksiyonlar, bu liste bittikten sonra gerçek kullanım sırasında ortaya çıkan ihtiyaçlara göre planlanmalıdır.
