@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { createAiAnalysisPackage } from '../../shared/ai-analysis-package';
+import { createAiAnalysisPackage, GGL_AI_ANALYSIS_PACKAGE_VERSION } from '../../shared/ai-analysis-package';
+import { createAiFollowUpLineage, type AiFollowUpLineage } from '../../shared/ai-lineage';
 import { extractCanonicalAiTestBlock } from '../../shared/ai-workflow';
 import type { SavedExperiment } from '../../shared/simulator';
 
@@ -32,10 +33,15 @@ export function AiWorkflowDialog({
 }: {
   experiment: SavedExperiment;
   onClose(): void;
-  onUseTest(testBlock: string): void;
+  onUseTest(testBlock: string, lineage: AiFollowUpLineage): void;
 }): React.JSX.Element {
-  const packageText = useMemo(() => createAiAnalysisPackage(experiment), [experiment]);
+  const [analysisGeneratedAtIso] = useState(() => new Date().toISOString());
+  const packageText = useMemo(
+    () => createAiAnalysisPackage(experiment, analysisGeneratedAtIso),
+    [analysisGeneratedAtIso, experiment]
+  );
   const [copyMessage, setCopyMessage] = useState('');
+  const [lineageMessage, setLineageMessage] = useState('');
   const [aiReply, setAiReply] = useState('');
   const extraction = useMemo(() => extractCanonicalAiTestBlock(aiReply), [aiReply]);
 
@@ -49,7 +55,7 @@ export function AiWorkflowDialog({
       >
         <header>
           <div>
-            <span className="eyebrow">AŞAMA 8.5 · KAYITSIZ AKTİF DENEY</span>
+            <span className="eyebrow">AŞAMA 8.7 · AI TAKİP SOY AĞACI</span>
             <h2>AI Çalışma Döngüsü</h2>
           </div>
           <button className="dialog-close" type="button" onClick={onClose}>×</button>
@@ -123,12 +129,13 @@ export function AiWorkflowDialog({
           <div className="portable-info" style={{ margin: 0 }}>
             <strong>{extraction.status === 'found' ? 'TEST BLOĞU HAZIR' : 'KONTROLLÜ AKTARIM'}</strong>
             <span>{extraction.message}</span>
+            {lineageMessage && <small>{lineageMessage}</small>}
           </div>
         </section>
 
         <footer>
           <span style={{ marginRight: 'auto', opacity: 0.76 }}>
-            AI hiçbir alanı doğrudan değiştirmez; sonraki adım mevcut Metinden Hazırla önizlemesidir.
+            AI hiçbir alanı doğrudan değiştirmez. Serbest AI yanıtı kaydedilmez; yalnız kanonik test bloğu ve SHA-256 soy ağacı kontrollü önizlemeye taşınır.
           </span>
           <button className="secondary-button" type="button" onClick={onClose}>Kapat</button>
           <button
@@ -137,7 +144,21 @@ export function AiWorkflowDialog({
             type="button"
             onClick={() => {
               if (extraction.status !== 'found') return;
-              onUseTest(extraction.block);
+              const testBlock = extraction.block;
+              setLineageMessage('Kaynak analiz ve kanonik test için SHA-256 hesaplanıyor…');
+              void createAiFollowUpLineage({
+                sourceExperiment: experiment,
+                analysisPackageVersion: GGL_AI_ANALYSIS_PACKAGE_VERSION,
+                analysisGeneratedAtIso,
+                analysisPackageText: packageText,
+                canonicalTestBlock: testBlock
+              }).then((lineage) => {
+                onUseTest(testBlock, lineage);
+              }).catch((caught) => {
+                setLineageMessage(caught instanceof Error
+                  ? caught.message
+                  : 'AI soy ağacı hashleri oluşturulamadı; test aktarılmadı.');
+              });
             }}
           >
             Testi Metinden Hazırla’ya Aktar

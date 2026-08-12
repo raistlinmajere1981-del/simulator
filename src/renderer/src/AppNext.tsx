@@ -15,7 +15,8 @@ import { systemUtcOffsetMinutes } from '../../shared/celestial-time';
 import type { HelpPanelId } from '../../shared/help-content';
 import type {
   ExperimentSetupApplication,
-  TextExperimentSetupProvenance
+  TextExperimentSetupProvenance,
+  TextSetupProvenanceContext
 } from '../../shared/text-experiment-setup';
 import {
   DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS,
@@ -272,6 +273,7 @@ export function AppNext(): React.JSX.Element {
   const [helpCatalogOpen, setHelpCatalogOpen] = useState(false);
   const [textSetupOpen, setTextSetupOpen] = useState(false);
   const [textSetupInitialText, setTextSetupInitialText] = useState('');
+  const [textSetupProvenanceContext, setTextSetupProvenanceContext] = useState<TextSetupProvenanceContext>();
   const [aiWorkflowExperiment, setAiWorkflowExperiment] = useState<SavedExperiment>();
   const [aiGuideOpen, setAiGuideOpen] = useState(false);
   const [textSetupHistory, setTextSetupHistory] = useState<TextExperimentSetupProvenance[]>([]);
@@ -1012,6 +1014,7 @@ export function AppNext(): React.JSX.Element {
         <div className="top-actions">
           <button type="button" onClick={() => {
             setTextSetupInitialText('');
+            setTextSetupProvenanceContext(undefined);
             setTextSetupOpen(true);
           }}>✦ Metinden Hazırla</button>
           <button type="button" onClick={() => {
@@ -1365,9 +1368,11 @@ export function AppNext(): React.JSX.Element {
         inputs={inputs}
         atmosphereMode={atmosphereState.mode}
         modelUncertainty={photoModelUncertainty}
+        provenanceContext={textSetupProvenanceContext}
         onClose={() => {
           setTextSetupOpen(false);
           setTextSetupInitialText('');
+          setTextSetupProvenanceContext(undefined);
         }}
         onApply={applyTextExperimentSetup}
       />
@@ -1375,9 +1380,10 @@ export function AppNext(): React.JSX.Element {
         <AiWorkflowDialog
           experiment={aiWorkflowExperiment}
           onClose={() => setAiWorkflowExperiment(undefined)}
-          onUseTest={(testBlock) => {
+          onUseTest={(testBlock, lineage) => {
             setAiWorkflowExperiment(undefined);
             setTextSetupInitialText(testBlock);
+            setTextSetupProvenanceContext({ sourceKind: 'ai-follow-up', aiLineage: lineage });
             setTextSetupOpen(true);
           }}
         />

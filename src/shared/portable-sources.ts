@@ -4,6 +4,7 @@ import { verifiedMotionSubsetFromSavedSource } from '../simulation/stellar-motio
 import type { ModelInputUncertaintySettings, UncertaintyCombination } from './uncertainty';
 import type { CameraCalibrationUncertainty, PhotoCalibrationMarks, PhotoSourceMetadata, SavedPhotoCalibration } from './photo-calibration';
 import type { TextExperimentSetupProvenance } from './text-experiment-setup';
+import { AI_FOLLOW_UP_LINEAGE_VERSION, isSha256Hex } from './ai-lineage';
 import { normalizeStellarLocalHorizonMask } from '../simulation/stellar-local-horizon';
 import { parseSavedStellarPanoramaLocalHorizonSource } from '../simulation/stellar-panorama-skyline-persistence';
 import {
@@ -366,7 +367,31 @@ export function parseTextSetupHistory(value: unknown): TextExperimentSetupProven
     if (!isRecord(item) || !isNonEmptyString(item.parserVersion) ||
       typeof item.sourceText !== 'string' || item.sourceText.length > 10_000 ||
       !isIsoDate(item.appliedAtIso) || !Array.isArray(item.appliedFields) ||
-      item.appliedFields.length > 64) return null;
+      item.appliedFields.length > 64 ||
+      (item.sourceKind !== undefined && item.sourceKind !== 'manual-text' && item.sourceKind !== 'ai-follow-up')) return null;
+
+    const sourceKind = item.sourceKind as TextExperimentSetupProvenance['sourceKind'];
+    let aiLineage: NonNullable<TextExperimentSetupProvenance['aiLineage']> | undefined;
+    if (item.aiLineage !== undefined) {
+      const lineage = item.aiLineage;
+      if (!isRecord(lineage) || lineage.version !== AI_FOLLOW_UP_LINEAGE_VERSION ||
+        !isNonEmptyString(lineage.analysisPackageVersion) || lineage.analysisPackageVersion.length > 40 ||
+        !isIsoDate(lineage.analysisGeneratedAtIso) ||
+        !isNonEmptyString(lineage.sourceExperimentId) || lineage.sourceExperimentId.length > 200 ||
+        !isIsoDate(lineage.sourceExperimentUpdatedAtIso) ||
+        !isSha256Hex(lineage.analysisSha256) || !isSha256Hex(lineage.canonicalTestSha256)) return null;
+      aiLineage = {
+        version: AI_FOLLOW_UP_LINEAGE_VERSION,
+        analysisPackageVersion: lineage.analysisPackageVersion.trim(),
+        analysisGeneratedAtIso: lineage.analysisGeneratedAtIso,
+        sourceExperimentId: lineage.sourceExperimentId.trim(),
+        sourceExperimentUpdatedAtIso: lineage.sourceExperimentUpdatedAtIso,
+        analysisSha256: lineage.analysisSha256,
+        canonicalTestSha256: lineage.canonicalTestSha256
+      };
+    }
+    if ((sourceKind === 'ai-follow-up') !== (aiLineage !== undefined)) return null;
+
     const appliedFields: TextExperimentSetupProvenance['appliedFields'] = [];
     for (const field of item.appliedFields) {
       if (!isRecord(field) || !isNonEmptyString(field.fieldId) || field.fieldId.length > 80 ||
@@ -382,6 +407,8 @@ export function parseTextSetupHistory(value: unknown): TextExperimentSetupProven
       parserVersion: item.parserVersion.trim(),
       sourceText: item.sourceText,
       appliedAtIso: item.appliedAtIso,
+      ...(sourceKind === undefined ? {} : { sourceKind }),
+      ...(aiLineage ? { aiLineage } : {}),
       appliedFields
     });
   }

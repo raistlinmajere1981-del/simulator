@@ -4,6 +4,7 @@ import type { SimulationScenarioId } from './scenario';
 import type { SimulatorInputs } from './simulator';
 import type { VerticalDatumKind } from './terrain';
 import type { ModelInputUncertaintySettings } from './uncertainty';
+import type { AiFollowUpLineage } from './ai-lineage';
 
 export const TEXT_EXPERIMENT_SETUP_PARSER_VERSION = '0.3.0';
 
@@ -87,11 +88,20 @@ export interface TextSetupAppliedField {
   sourceExcerpt: string;
 }
 
+export type TextExperimentSetupSourceKind = 'manual-text' | 'ai-follow-up';
+
 export interface TextExperimentSetupProvenance {
   parserVersion: string;
   sourceText: string;
   appliedAtIso: string;
+  sourceKind?: TextExperimentSetupSourceKind;
+  aiLineage?: AiFollowUpLineage;
   appliedFields: TextSetupAppliedField[];
+}
+
+export interface TextSetupProvenanceContext {
+  sourceKind: TextExperimentSetupSourceKind;
+  aiLineage?: AiFollowUpLineage;
 }
 
 
@@ -544,7 +554,8 @@ function numeric(candidate: ExperimentSetupCandidate): number | undefined {
 export function buildExperimentSetupApplication(
   draft: ExperimentSetupDraft,
   selectedCandidateIds: readonly string[],
-  appliedAtIso = new Date().toISOString()
+  appliedAtIso = new Date().toISOString(),
+  provenanceContext?: TextSetupProvenanceContext
 ): ExperimentSetupApplication {
   const selected = draft.candidates.filter((candidate) =>
     candidate.status === 'found' && selectedCandidateIds.includes(candidate.id)
@@ -642,6 +653,12 @@ export function buildExperimentSetupApplication(
   if (coordinateApplied) inputChanges.distanceSource = 'coordinates';
   if (atmosphereMode !== undefined) inputChanges.useStandardRefraction = atmosphereMode === 'standard';
 
+  const sourceKind = provenanceContext?.sourceKind ?? 'manual-text';
+  const aiLineage = provenanceContext?.aiLineage;
+  if ((sourceKind === 'ai-follow-up') !== (aiLineage !== undefined)) {
+    throw new Error('AI takip provenansı için kaynak türü ve lineage kaydı birlikte bulunmalı.');
+  }
+
   return {
     ...(scenarioId ? { scenarioId } : {}),
     ...(experimentName ? { experimentName } : {}),
@@ -658,6 +675,8 @@ export function buildExperimentSetupApplication(
       parserVersion: draft.parserVersion,
       sourceText: draft.sourceText,
       appliedAtIso,
+      sourceKind,
+      ...(aiLineage ? { aiLineage: { ...aiLineage } } : {}),
       appliedFields: selected.map((candidate) => ({
         fieldId: candidate.fieldId,
         displayValue: candidate.displayValue,

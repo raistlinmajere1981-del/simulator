@@ -8,7 +8,8 @@ import {
   parseExperimentSetupText,
   type ExperimentSetupApplication,
   type ExperimentSetupCandidate,
-  type ExperimentSetupFieldId
+  type ExperimentSetupFieldId,
+  type TextSetupProvenanceContext
 } from '../../shared/text-experiment-setup';
 import './text-experiment-setup.css';
 
@@ -156,6 +157,7 @@ export function TextExperimentSetupDialog({
   inputs,
   atmosphereMode,
   modelUncertainty,
+  provenanceContext,
   onClose,
   onApply
 }: {
@@ -168,6 +170,7 @@ export function TextExperimentSetupDialog({
   inputs: SimulatorInputs;
   atmosphereMode: AtmosphereMode;
   modelUncertainty: ModelInputUncertaintySettings;
+  provenanceContext?: TextSetupProvenanceContext;
   onClose(): void;
   onApply(application: ExperimentSetupApplication): void;
 }): React.JSX.Element | null {
@@ -232,8 +235,14 @@ export function TextExperimentSetupDialog({
             Gözlem notunu normal cümlelerle yaz veya başka bir AI'nin ürettiği <code>GGL-AI-TEST v1</code> bloğunu doğrudan yapıştır. Sistem yalnız güvenle eşleyebildiği değerleri taslağa çıkarır;
             <b> hiçbir alan önizleme ve onay olmadan değişmez.</b>
           </p>
+          {provenanceContext?.sourceKind === 'ai-follow-up' && (
+            <p className="text-setup-note">
+              Bu blok AI çalışma döngüsünden SHA-256 soy ağacıyla geldi. Hash eşleşmesini korumak için kaynak blok bu adımda salt okunurdur; uygulanacak alanları yine sen seçersin.
+            </p>
+          )}
           <textarea
             autoFocus
+            readOnly={provenanceContext?.sourceKind === 'ai-follow-up'}
             maxLength={10_000}
             value={text}
             placeholder="Örnek: Gözlemci deniz seviyesinden 12 m yüksekte, kamera yerden 1,7 m. Hedef 34,2 km uzakta ve 42 m yüksekliğinde. Standart kırılma k=0,13 kullan. Mesafe belirsizliği yaklaşık ±20 m."
@@ -285,7 +294,7 @@ export function TextExperimentSetupDialog({
             disabled={!draft || selected.size === 0}
             onClick={() => {
               if (!draft) return;
-              onApply(buildExperimentSetupApplication(draft, [...selected]));
+              onApply(buildExperimentSetupApplication(draft, [...selected], undefined, provenanceContext));
               onClose();
             }}
           >

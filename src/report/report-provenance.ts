@@ -203,18 +203,32 @@ export function photoModelUncertaintySection(experiment: SavedExperiment): strin
 export function textSetupHistorySection(experiment: SavedExperiment): string {
   const history = experiment.textSetupHistory;
   if (!history || history.length === 0) return '';
-  const entries = history.map((item, index) => `
+  const entries = history.map((item, index) => {
+    const lineage = item.sourceKind === 'ai-follow-up' ? item.aiLineage : undefined;
+    const sourceLabel = lineage ? 'AI takip testi' : 'Manuel metin';
+    const lineageRows = lineage ? `
+      <h3>AI soy ağacı</h3>
+      <table><tbody>
+        <tr><td>Lineage sürümü</td><td>${escapeHtml(lineage.version)}</td></tr>
+        <tr><td>Kaynak analiz paketi</td><td>GGL-AI-ANALYSIS ${escapeHtml(lineage.analysisPackageVersion)} · ${formatDate(lineage.analysisGeneratedAtIso)}</td></tr>
+        <tr><td>Kaynak deney</td><td><code>${escapeHtml(lineage.sourceExperimentId)}</code> · snapshot ${formatDate(lineage.sourceExperimentUpdatedAtIso)}</td></tr>
+        <tr><td>Analiz SHA-256</td><td><code>${escapeHtml(lineage.analysisSha256)}</code></td></tr>
+        <tr><td>Kanonik test SHA-256</td><td><code>${escapeHtml(lineage.canonicalTestSha256)}</code></td></tr>
+      </tbody></table>` : '';
+    return `
     <div class="source-card">
-      <div class="source-card-heading"><strong>Metinden uygulama ${index + 1}</strong><span>${formatDate(item.appliedAtIso)} · parser ${escapeHtml(item.parserVersion)}</span></div>
+      <div class="source-card-heading"><strong>Metinden uygulama ${index + 1}</strong><span>${formatDate(item.appliedAtIso)} · parser ${escapeHtml(item.parserVersion)} · ${sourceLabel}</span></div>
       <p>${escapeHtml(item.sourceText)}</p>
+      ${lineageRows}
       <table><thead><tr><th>Alan</th><th>Uygulanan değer</th><th>Kaynak ifade</th></tr></thead><tbody>
         ${item.appliedFields.map((field) => `<tr><td>${escapeHtml(field.fieldId)}</td><td>${escapeHtml(field.displayValue)}</td><td>${escapeHtml(field.sourceExcerpt)}</td></tr>`).join('')}
       </tbody></table>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   return `
     <section class="model-section vertical-section">
-      <header class="model-heading"><div><h2>Metinden deney hazırlama provenansı</h2><span>Kullanıcı onayıyla forma uygulanan serbest metin alanları</span></div><strong class="status status-compatible">${history.length} uygulama</strong></header>
-      <p>Bu metin parser girdisidir; fiziksel ölçüm kaynağının kendisi değildir. Yalnız hangi UI değerlerinin hangi ifadelerden çıkarılıp kullanıcı onayıyla uygulandığını izler.</p>
+      <header class="model-heading"><div><h2>Metinden deney hazırlama provenansı</h2><span>Kullanıcı onayıyla forma uygulanan alanlar ve varsa AI takip soy ağacı</span></div><strong class="status status-compatible">${history.length} uygulama</strong></header>
+      <p>Bu metin parser girdisidir; fiziksel ölçüm kaynağının kendisi değildir. AI takip akışında dış AI'nin serbest açıklaması saklanmaz; yalnız kanonik test bloğu, hash zinciri ve kullanıcı tarafından uygulanan alanlar korunur.</p>
       <div class="trace-list">${entries}</div>
     </section>`;
 }
