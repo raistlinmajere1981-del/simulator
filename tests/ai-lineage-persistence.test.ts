@@ -77,6 +77,7 @@ describe('AI lineage persistence', () => {
     expect(packageText).toContain(`provenance.ai_follow_up.1.analysis_sha256: ${analysisSha256}`);
     expect(packageText).toContain(`provenance.ai_follow_up.1.canonical_test_sha256: ${canonicalTestSha256}`);
     expect(packageText).toContain('provenance.ai_follow_up.1.source_experiment_id: ai-lineage-source');
-    expect(packageText).not.toContain('distance.surface_km: 42');
+    expect(packageText).not.toContain('GGL-AI-TEST v1');
+    expect(packageText).not.toContain('END GGL-AI-TEST');
   });
 });
