@@ -9,9 +9,8 @@
     "node": ">=22"
   },
   "allowScripts": {
-    "electron@39.8.10": true,
-    "esbuild@0.25.12": true,
-    "esbuild@0.28.1": true
+    "electron": true,
+    "esbuild": true
   },
   "scripts": {
     "dev": "electron-vite dev",
