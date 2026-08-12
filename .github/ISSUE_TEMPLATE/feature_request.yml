@@ -1,0 +1,55 @@
+name: Özellik / geliştirme önerisi
+description: Yeni senaryo, hesap, veri kaynağı, UI veya geliştirme altyapısı önerin.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Çözülmek istenen ihtiyaç
+      description: Özelliği değil önce gerçek kullanım problemini açıklayın.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Alan
+      options:
+        - Fiziksel model / hesap
+        - Yeni gözlem senaryosu
+        - Veri kaynağı / importer
+        - Belirsizlik / provenans
+        - Fotoğraf / görsel ölçüm
+        - Astronomi
+        - Persistence / portable / rapor
+        - AI çalışma sistemi
+        - UI / kullanılabilirlik
+        - Geliştirici deneyimi / refactor
+        - Diğer
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Önerilen çözüm
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: Bilimsel/veri yöntemi
+      description: Hesap veya ölçüm özelliğiyse formül, birim, varsayım, veri kaynağı, belirsizlik ve desteklenmeyen kapsamı açıklayın.
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Sözleşme / geriye uyumluluk etkisi
+      description: Portable format, model metrikleri, AI protokolü veya kayıt yapısı etkileniyor mu?
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Proje sınırları
+      options:
+        - label: Öneri harici AI'yi fiziksel hesap otoritesi yapmıyor.
+          required: true
+        - label: Tanımsız bir model davranışını sonuç üretmek için uydurmuyor.
+          required: true

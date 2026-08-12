@@ -3,13 +3,25 @@
   "version": "1.34.1",
   "private": true,
   "description": "Farklı geometrik ve fiziksel modelleri ölçülebilir gözlemler üzerinden sayısal olarak karşılaştıran masaüstü simülasyon laboratuvarı.",
+  "license": "MIT",
   "main": "./out/main/index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "allowScripts": {
+    "electron": true,
+    "esbuild": true
+  },
+  "overrides": {
+    "yauzl": "^3.3.1"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify": "npm run typecheck && npm test && electron-vite build"
   },
   "dependencies": {
     "react": "^19.2.1",
