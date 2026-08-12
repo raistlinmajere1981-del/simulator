@@ -13,9 +13,9 @@ const statusLabel: Record<AiFollowUpVerification['status'], string> = {
 
 const analysisLabel: Record<AiFollowUpVerification['analysis']['status'], string> = {
   verified: 'Kaynak analiz yeniden üretildi ve hash eşleşti.',
-  'source-missing': 'Kaynak deney anlık görüntüsü kayıt listesinde yok; analiz hash’i yeniden üretilemedi.',
-  'source-changed': 'Aynı deney kimliği bulundu ancak updatedAt snapshot zamanı farklı; tarihsel analiz yeniden üretilmedi.',
-  mismatch: 'Kaynak snapshot yeniden üretildi ancak analiz SHA-256 eşleşmedi.'
+  'source-missing': 'Kaynak deney kayıt listesinde yok; analiz hash’i yeniden üretilemedi.',
+  'source-changed': 'Aynı deney kimliği bulundu ancak mevcut içerik tarihsel analiz hash’ini üretmiyor; kaynak kayıt sonradan değişmiş olabilir.',
+  mismatch: 'Aynı snapshot zamanı bulundu ancak yeniden üretilen analiz SHA-256 eşleşmedi.'
 };
 
 function shortHash(hash: string): string {
@@ -69,7 +69,7 @@ export function AiLineageDialog({
         <div className="portable-info">
           <strong>{experiment.name}</strong>
           <span>
-            Kanonik GGL-AI-TEST bloğunun SHA-256 özeti her zaman yeniden hesaplanır. Kaynak deney snapshot’ı hâlâ kayıt listesinde aynı kimlik ve güncelleme zamanı ile bulunuyorsa GGL-AI-ANALYSIS paketi de deterministik olarak yeniden üretilip doğrulanır.
+            Kanonik GGL-AI-TEST bloğunun SHA-256 özeti her zaman yeniden hesaplanır. Kaynak deney aynı kimlikle hâlâ kayıt listesinde bulunuyorsa GGL-AI-ANALYSIS paketi kayıtlı üretim zamanı ile yeniden oluşturulur ve hash doğrudan karşılaştırılır. updatedAt farkı tek başına uyuşmazlık sayılmaz.
           </span>
         </div>
 
@@ -95,7 +95,8 @@ export function AiLineageDialog({
               </div>
               <table><tbody>
                 <tr><td>Kaynak deney</td><td><code>{lineage.sourceExperimentId}</code></td></tr>
-                <tr><td>Kaynak snapshot</td><td>{lineage.sourceExperimentUpdatedAtIso}</td></tr>
+                <tr><td>Kaynak snapshot zamanı</td><td>{lineage.sourceExperimentUpdatedAtIso}</td></tr>
+                {result.analysis.availableSourceUpdatedAtIso && <tr><td>Mevcut kaynak güncellemesi</td><td>{result.analysis.availableSourceUpdatedAtIso}</td></tr>}
                 <tr><td>Kanonik test</td><td>{result.canonicalTest.status === 'verified' ? 'SHA-256 eşleşti' : 'SHA-256 UYUŞMADI'}</td></tr>
                 <tr><td>Beklenen test hash</td><td><code title={result.canonicalTest.expectedSha256}>{shortHash(result.canonicalTest.expectedSha256)}</code></td></tr>
                 <tr><td>Hesaplanan test hash</td><td><code title={result.canonicalTest.actualSha256}>{shortHash(result.canonicalTest.actualSha256)}</code></td></tr>
@@ -105,7 +106,7 @@ export function AiLineageDialog({
               </tbody></table>
               {result.status === 'partial' && (
                 <p className="muted">
-                  Kısmi doğrulama bir hata değildir: tarihsel kaynak snapshot artık kayıt listesinde tutulmuyorsa analiz paketi yeniden üretilemez. Kanonik test bloğunun bütünlüğü yine bağımsız olarak doğrulanır.
+                  Kısmi doğrulama bir hata değildir: tarihsel kaynak kayıt artık yoksa veya aynı kimlikteki kayıt sonradan değişmişse özgün analiz paketi tam olarak yeniden üretilemeyebilir. Kanonik test bloğunun bütünlüğü yine bağımsız olarak doğrulanır.
                 </p>
               )}
             </article>
