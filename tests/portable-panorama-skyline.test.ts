@@ -81,15 +81,15 @@ function experiment(): SavedExperiment {
   };
 }
 
-describe('portable panorama skyline v11', () => {
+describe('portable panorama skyline v12', () => {
   it('round-trips panorama geometry, marks and source provenance without image bytes', () => {
     const portable = createPortableExperimentFile(experiment(), '1.20.0', '2026-08-10T10:20:00.000Z');
-    expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(11);
-    expect(portable.schemaVersion).toBe(11);
+    expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(12);
+    expect(portable.schemaVersion).toBe(12);
     expect(JSON.stringify(portable)).not.toContain('NEVER_PERSIST');
 
     const parsed = parsePortableExperimentFile(JSON.parse(JSON.stringify(portable)));
-    expect(parsed.sourceVersion).toBe(11);
+    expect(parsed.sourceVersion).toBe(12);
     expect(parsed.migrated).toBe(false);
     const source = parsed.experiment.stellarLocalHorizonSource;
     expect(source?.format).toBe('panorama');

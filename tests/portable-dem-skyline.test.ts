@@ -44,7 +44,7 @@ const demSkylineSource: SavedStellarLocalHorizonSource = {
   }
 };
 
-describe('portable v11 DEM skyline provenance', () => {
+describe('portable v12 DEM skyline provenance', () => {
   it('round-trips a complete DEM-derived stellar skyline source', () => {
     const file = createPortableExperimentFile({
       ...savedExperimentFixture,
@@ -53,8 +53,8 @@ describe('portable v11 DEM skyline provenance', () => {
     }, '1.19.0', '2026-08-10T02:10:00.000Z');
     const parsed = parsePortableExperimentFile(JSON.parse(JSON.stringify(file)));
 
-    expect(file.schemaVersion).toBe(11);
-    expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(11);
+    expect(file.schemaVersion).toBe(12);
+    expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(12);
     expect(parsed.migrated).toBe(false);
     expect(parsed.experiment.stellarLocalHorizonSource).toEqual(demSkylineSource);
   });

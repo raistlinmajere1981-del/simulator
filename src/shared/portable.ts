@@ -26,9 +26,14 @@ import {
   parseStellarMotionSource,
   parseTextSetupHistory
 } from './portable-sources';
+import {
+  parsePortableExperimentAssets,
+  samePhotoSourceMetadata,
+  type PortableExperimentAssets
+} from './portable-photo-asset';
 
 export const PORTABLE_EXPERIMENT_SCHEMA = 'geometric-observation-laboratory/portable-experiment';
-export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 11;
+export const PORTABLE_EXPERIMENT_SCHEMA_VERSION = 12;
 export const LOCAL_EXPERIMENT_STORE_SCHEMA = 'geometric-observation-laboratory/local-experiment-store';
 export const LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION = 11;
 
@@ -37,12 +42,13 @@ export interface PortableApplicationInfo {
   version: string;
 }
 
-export interface PortableExperimentFileV11 {
+export interface PortableExperimentFileV12 {
   schema: typeof PORTABLE_EXPERIMENT_SCHEMA;
   schemaVersion: typeof PORTABLE_EXPERIMENT_SCHEMA_VERSION;
   exportedAtIso: string;
   application: PortableApplicationInfo;
   experiment: SavedExperiment;
+  assets?: PortableExperimentAssets;
 }
 
 export interface LocalExperimentStoreV11 {
@@ -56,6 +62,7 @@ export interface ParsedPortableExperiment {
   experiment: SavedExperiment;
   sourceVersion: number;
   migrated: boolean;
+  assets?: PortableExperimentAssets;
 }
 
 export interface ParsedLocalExperimentStore {
@@ -175,14 +182,16 @@ function normalizeExperiment(experiment: SavedExperiment): SavedExperiment {
 export function createPortableExperimentFile(
   experiment: SavedExperiment,
   applicationVersion: string,
-  exportedAtIso = new Date().toISOString()
-): PortableExperimentFileV11 {
+  exportedAtIso = new Date().toISOString(),
+  assets?: PortableExperimentAssets
+): PortableExperimentFileV12 {
   return {
     schema: PORTABLE_EXPERIMENT_SCHEMA,
     schemaVersion: PORTABLE_EXPERIMENT_SCHEMA_VERSION,
     exportedAtIso,
     application: { name: 'Geometrik Gözlem Laboratuvarı', version: applicationVersion },
-    experiment: normalizeExperiment(experiment)
+    experiment: normalizeExperiment(experiment),
+    ...(assets?.observationPhoto ? { assets } : {})
   };
 }
 
@@ -199,7 +208,7 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
   const version = value.schemaVersion;
   if (version !== 1 && version !== 2 && version !== 3 && version !== 4 &&
     version !== 5 && version !== 6 && version !== 7 && version !== 8 && version !== 9 &&
-    version !== 10 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
+    version !== 10 && version !== 11 && version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION) {
     throw new PortableFormatError(
       `Deney dosyası şema sürümü desteklenmiyor: ${typeof version === 'number' ? version : 'bilinmeyen'}.`
     );
@@ -208,10 +217,23 @@ export function parsePortableExperimentFile(value: unknown): ParsedPortableExper
   if (!experiment) {
     throw new PortableFormatError('Dosyadaki deney verisi eksik, bozuk veya beklenen aralıkların dışında.');
   }
+  const assets = value.assets === undefined
+    ? undefined
+    : parsePortableExperimentAssets(value.assets);
+  if (assets === null) {
+    throw new PortableFormatError('Dosyadaki taşınabilir fotoğraf varlığı bozuk veya desteklenen sınırların dışında.');
+  }
+  if (assets?.observationPhoto) {
+    const expectedSource = experiment.photoCalibration?.source;
+    if (!expectedSource || !samePhotoSourceMetadata(assets.observationPhoto.source, expectedSource)) {
+      throw new PortableFormatError('Taşınabilir fotoğraf varlığı deneydeki fotoğraf provenansı ile eşleşmiyor.');
+    }
+  }
   return {
     experiment,
     sourceVersion: version,
-    migrated: version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION
+    migrated: version !== PORTABLE_EXPERIMENT_SCHEMA_VERSION,
+    ...(assets?.observationPhoto ? { assets } : {})
   };
 }
 

@@ -248,6 +248,10 @@ export function AppNext(): React.JSX.Element {
   const [waterApplicationRecord, setWaterApplicationRecord] = useState<StoredWaterSurfaceRecord>();
   const [photoCalibration, setPhotoCalibration] = useState<SavedPhotoCalibration>();
   const [photoCalibrationRecord, setPhotoCalibrationRecord] = useState<PhotoCalibrationRecordState>();
+  const [photoSessionStatus, setPhotoSessionStatus] = useState({ photoLoaded: false, calibrationCommitted: false });
+  const handlePhotoSessionChange = useCallback((status: { photoLoaded: boolean; calibrationCommitted: boolean }) => {
+    setPhotoSessionStatus(status);
+  }, []);
   const [photoModelUncertainty, setPhotoModelUncertainty] = useState<ModelInputUncertaintySettings>(() => ({
     ...DEFAULT_MODEL_INPUT_UNCERTAINTY_SETTINGS
   }));
@@ -1244,6 +1248,7 @@ export function AppNext(): React.JSX.Element {
                 setModelUncertaintyError(undefined);
                 setIsDirty(true);
               }}
+              onPhotoSessionChange={handlePhotoSessionChange}
             />
           )}
 
@@ -1382,6 +1387,9 @@ export function AppNext(): React.JSX.Element {
         open={saveDialogOpen}
         onCancel={() => setSaveDialogOpen(false)}
         onSave={saveExperiment}
+        photoWarning={photoSessionStatus.photoLoaded && !photoSessionStatus.calibrationCommitted
+          ? 'Fotoğraf yüklendi ancak kalibrasyon kaydı henüz oluşturulmadı; kayıtta fotoğraf bilgisi saklanmayacak.'
+          : undefined}
       />
       <DataManagerDialog
         experiments={savedExperiments}

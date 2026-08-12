@@ -9,13 +9,15 @@ interface SaveExperimentDialogProps {
   open: boolean;
   onCancel(): void;
   onSave(name: string): Promise<void>;
+  photoWarning?: string;
 }
 
 export function SaveExperimentDialog({
   initialName,
   open,
   onCancel,
-  onSave
+  onSave,
+  photoWarning
 }: SaveExperimentDialogProps): React.JSX.Element | null {
   const [name, setName] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
@@ -65,6 +67,7 @@ export function SaveExperimentDialog({
         <p className="dialog-help">
           Girdiler, model sürümleri, sonuç anlık görüntüsü ve hesap izleri cihazdaki uygulama veri klasörüne kaydedilir.
         </p>
+        {photoWarning && <p className="dialog-warning" role="status">{photoWarning}</p>}
         <footer>
           <button className="secondary-button" type="button" onClick={onCancel}>İptal</button>
           <button className="primary-button" disabled={name.trim().length === 0 || isSaving} type="submit">
@@ -365,6 +368,9 @@ export function DataManagerDialog({
                     {experiment.inputs.surfaceDistanceKm.toLocaleString('tr-TR')} km ·
                     {' '}gözlem %{experiment.inputs.observedVisiblePercent.toLocaleString('tr-TR')} ·
                     {' '}{experiment.predictions.length} çıktı
+                    {experiment.photoCalibration
+                      ? ' · fotoğraf provenansı kayıtlı'
+                      : ' · fotoğraf kaydı yok'}
                   </small>
                 </div>
                 <div className="record-actions portable-actions">

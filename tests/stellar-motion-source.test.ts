@@ -125,16 +125,16 @@ describe('stellar proper-motion source persistence', () => {
     expect(() => verifiedMotionSubsetFromSavedSource(source)).toThrow();
   });
 
-  it('round-trips the verified source through current portable schema v11', () => {
+  it('round-trips the verified source through current portable schema v12', () => {
     const portable = createPortableExperimentFile(
       experimentWithMotionSource(),
       '1.19.0',
       '2026-08-10T00:01:00.000Z'
     );
-    expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(11);
-    expect(portable.schemaVersion).toBe(11);
+    expect(PORTABLE_EXPERIMENT_SCHEMA_VERSION).toBe(12);
+    expect(portable.schemaVersion).toBe(12);
     const parsed = parsePortableExperimentFile(JSON.parse(JSON.stringify(portable)));
-    expect(parsed.sourceVersion).toBe(11);
+    expect(parsed.sourceVersion).toBe(12);
     expect(parsed.migrated).toBe(false);
     expect(parsed.experiment.stellarMotionSource?.entryCount).toBe(19);
     expect(parsed.experiment.stellarMotionSource?.sha256).toBe('a'.repeat(64));

@@ -26,6 +26,7 @@ import type {
   ImportExperimentResult,
   ImportObservationPhotoResult,
   ImportStellarLocalHorizonResult,
+  LoadObservationPhotoResult,
   ImportTerrainProfileResult,
   SavedExperiment,
   TerrainProfileColumnMapping,
@@ -49,13 +50,22 @@ import {
 } from './terrain-source-integrity';
 import { registerStellarDemSkylineHandlers } from './stellar-dem-skyline-ipc';
 import { registerStellarPanoramaSkylineHandlers } from './stellar-panorama-skyline-ipc';
+import {
+  MAX_PORTABLE_OBSERVATION_PHOTO_BYTES,
+  parsePhotoSourceMetadata
+} from '../shared/portable-photo-asset';
+import {
+  createPortableObservationPhotoAsset,
+  loadObservationPhotoAsset,
+  persistObservationPhotoBytes,
+  persistPortableObservationPhotoAsset
+} from './observation-photo-assets';
 
 const EXPERIMENTS_FILE_NAME = 'experiments.json';
 const MAX_TERRAIN_PROFILE_BYTES = 5 * 1024 * 1024;
 const MAX_STELLAR_HORIZON_BYTES = 2 * 1024 * 1024;
 const MAX_STELLAR_MOTION_BYTES = 4 * 1024 * 1024;
 const MAX_DEM_BYTES = 64 * 1024 * 1024;
-const MAX_OBSERVATION_PHOTO_BYTES = 25 * 1024 * 1024;
 const TERRAIN_MAPPING_TTL_MS = 10 * 60 * 1_000;
 
 interface PendingTerrainImport {
@@ -339,9 +349,14 @@ function registerExperimentHandlers(): void {
         return { status: 'cancelled', message: 'Dışa aktarma iptal edildi.' };
       }
 
+      const observationPhoto = experiment.photoCalibration
+        ? await createPortableObservationPhotoAsset(experiment.photoCalibration.source)
+        : undefined;
       const portable = createPortableExperimentFile(
         experiment,
-        app.getVersion()
+        app.getVersion(),
+        undefined,
+        observationPhoto ? { observationPhoto } : undefined
       );
       await fs.writeFile(
         selection.filePath,
@@ -349,9 +364,12 @@ function registerExperimentHandlers(): void {
         'utf-8'
       );
 
+      const missingPhotoAsset = Boolean(experiment.photoCalibration && !observationPhoto);
       return {
         status: 'success',
-        message: `“${experiment.name}” taşınabilir deney dosyası olarak kaydedildi.`,
+        message: missingPhotoAsset
+          ? `“${experiment.name}” dışa aktarıldı; kayıtlı kaynak fotoğraf bu makinede bulunamadığı için dosyada yalnız fotoğraf provenansı ve işaretler var.`
+          : `“${experiment.name}” taşınabilir deney dosyası olarak kaydedildi.`,
         filePath: selection.filePath
       };
     }
@@ -382,6 +400,12 @@ function registerExperimentHandlers(): void {
       }
 
       const parsed = parsePortableExperimentFile(json);
+      if (parsed.assets?.observationPhoto) {
+        await persistPortableObservationPhotoAsset(
+          parsed.assets.observationPhoto,
+          parsed.experiment.photoCalibration?.source
+        );
+      }
       const experiments = await readExperiments();
       const hasIdCollision = experiments.some(
         (item) => item.id === parsed.experiment.id
@@ -438,7 +462,7 @@ function registerExperimentHandlers(): void {
 
       const statistics = await fs.stat(selectedPath);
       if (!statistics.isFile()) throw new Error('Seçilen yol normal bir dosya değil.');
-      if (statistics.size <= 0 || statistics.size > MAX_OBSERVATION_PHOTO_BYTES) {
+      if (statistics.size <= 0 || statistics.size > MAX_PORTABLE_OBSERVATION_PHOTO_BYTES) {
         throw new Error('Gözlem fotoğrafı boş olamaz ve 25 MB sınırını aşamaz.');
       }
 
@@ -452,20 +476,43 @@ function registerExperimentHandlers(): void {
       }
 
       const sha256 = createHash('sha256').update(bytes).digest('hex');
+      const source = {
+        fileName: basename(selectedPath),
+        fileSizeBytes: bytes.byteLength,
+        sha256,
+        mimeType,
+        imageWidthPx: size.width,
+        imageHeightPx: size.height,
+        importedAtIso: new Date().toISOString()
+      };
+      await persistObservationPhotoBytes(bytes, source);
       return {
         status: 'success',
-        message: `“${basename(selectedPath)}” fotoğraf kalibrasyonu için açıldı.`,
+        message: `“${basename(selectedPath)}” fotoğraf kalibrasyonu için açıldı ve yerel varlık deposuna alındı.`,
         photo: {
-          fileName: basename(selectedPath),
-          fileSizeBytes: bytes.byteLength,
-          sha256,
-          mimeType,
-          imageWidthPx: size.width,
-          imageHeightPx: size.height,
-          importedAtIso: new Date().toISOString(),
+          ...source,
           dataUrl: `data:${mimeType};base64,${bytes.toString('base64')}`
         }
       };
+    }
+  );
+
+  ipcMain.handle(
+    'photo:load-saved',
+    async (_event, rawSource: unknown): Promise<LoadObservationPhotoResult> => {
+      const source = parsePhotoSourceMetadata(rawSource);
+      if (!source) throw new TypeError('Kayıtlı gözlem fotoğrafı provenansı geçersiz.');
+      const photo = await loadObservationPhotoAsset(source);
+      return photo
+        ? {
+            status: 'success',
+            message: `“${source.fileName}” SHA-256 doğrulanarak yerel varlık deposundan yüklendi.`,
+            photo
+          }
+        : {
+            status: 'missing',
+            message: 'Kayıtlı fotoğraf provenansı ve işaretler mevcut, ancak kaynak görüntü varlığı bu makinede bulunamadı.'
+          };
     }
   );
 
