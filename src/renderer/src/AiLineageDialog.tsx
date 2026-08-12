@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   verifyExperimentAiLineage,
   type AiFollowUpVerification
@@ -31,12 +31,6 @@ export function AiLineageDialog({
   experiments: SavedExperiment[];
   onClose(): void;
 }): React.JSX.Element {
-  const entries = useMemo(
-    () => (experiment.textSetupHistory ?? []).filter(
-      (item) => item.sourceKind === 'ai-follow-up' && item.aiLineage
-    ),
-    [experiment]
-  );
   const [results, setResults] = useState<AiFollowUpVerification[]>();
   const [error, setError] = useState('');
 
