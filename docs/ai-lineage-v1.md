@@ -44,8 +44,9 @@ Dış AI hesap otoritesi değildir. GGL yalnız kendi deterministik hesapların�
 Veri Yöneticisi, kayıtlı bir `ai-follow-up` zincirini ağ veya dış AI çağrısı olmadan yeniden denetleyebilir.
 
 - Kanonik test bütünlüğü her zaman `sourceText.trim()` üzerinden tekrar SHA-256 hesaplanarak `canonicalTestSha256` ile karşılaştırılır.
-- Kaynak deney aynı `sourceExperimentId` ve aynı `sourceExperimentUpdatedAtIso` ile hâlâ kayıt listesinde bulunuyorsa `GGL-AI-ANALYSIS` paketi kayıtlı `analysisGeneratedAtIso` ile yeniden üretilir ve `analysisSha256` tekrar doğrulanır.
-- Kaynak deney silinmişse veya aynı kimlik daha yeni bir snapshot ile üzerine yazılmışsa analiz paketi tarihsel olarak yeniden üretilemez. Bu durum `KISMİ DOĞRULAMA` olarak gösterilir; tek başına hata sayılmaz.
-- Kanonik test hash'i veya yeniden üretilebilen analiz hash'i eşleşmiyorsa durum `UYUŞMAZLIK` olur.
+- Kaynak deney aynı `sourceExperimentId` ile hâlâ kayıt listesinde bulunuyorsa `GGL-AI-ANALYSIS` paketi kayıtlı `analysisGeneratedAtIso` ile yeniden üretilir ve `analysisSha256` doğrudan karşılaştırılır. Analiz paketi `updatedAtIso` değerini içermediği için zaman farkı tek başına doğrulamayı bozmaz.
+- Yeniden üretilen analiz hash'i eşleşirse, mevcut kaydın `updatedAtIso` değeri farklı olsa bile analiz `TAM DOĞRULANDI` olabilir.
+- Kaynak deney silinmişse veya aynı kimlikteki mevcut kaydın içeriği sonradan değiştiği için analiz hash'i artık üretilemiyorsa durum `KISMİ DOĞRULAMA` olur; tek başına veri bozulması sayılmaz.
+- Aynı snapshot zamanı korunmasına rağmen yeniden üretilen analiz hash'i eşleşmiyorsa veya kanonik test hash'i farklıysa durum `UYUŞMAZLIK` olur.
 
 Bu denetim AI yorumunun bilimsel olarak doğru olup olmadığını kanıtlamaz. Yalnız kayıtlı provenance zincirinin ve yeniden üretilebilen deterministik GGL paketinin kriptografik olarak tutarlı olup olmadığını kontrol eder.
