@@ -72,6 +72,27 @@ function sourceLines(experiment: SavedExperiment): string[] {
   return lines;
 }
 
+function textSetupLineageLines(experiment: SavedExperiment): string[] {
+  const history = experiment.textSetupHistory ?? [];
+  const aiEntries = history.filter((item) => item.sourceKind === 'ai-follow-up' && item.aiLineage !== undefined);
+  const lines = [
+    `provenance.text_setup_count: ${history.length}`,
+    `provenance.ai_follow_up_count: ${aiEntries.length}`
+  ];
+  aiEntries.forEach((item, index) => {
+    const lineage = item.aiLineage!;
+    const prefix = `provenance.ai_follow_up.${index + 1}`;
+    lines.push(`${prefix}.lineage_version: ${lineage.version}`);
+    lines.push(`${prefix}.analysis_package_version: ${lineage.analysisPackageVersion}`);
+    lines.push(`${prefix}.analysis_generated_at_utc: ${lineage.analysisGeneratedAtIso}`);
+    lines.push(`${prefix}.source_experiment_id: ${scalar(lineage.sourceExperimentId)}`);
+    lines.push(`${prefix}.source_experiment_updated_at_utc: ${lineage.sourceExperimentUpdatedAtIso}`);
+    lines.push(`${prefix}.analysis_sha256: ${lineage.analysisSha256}`);
+    lines.push(`${prefix}.canonical_test_sha256: ${lineage.canonicalTestSha256}`);
+  });
+  return lines;
+}
+
 function experimentLines(experiment: SavedExperiment): string[] {
   const scenarioId = normalizeSimulationScenarioId(experiment.scenarioId);
   const scenario = getSimulationScenario(scenarioId);
@@ -110,7 +131,7 @@ function experimentLines(experiment: SavedExperiment): string[] {
     `uncertainty.target_height_m: ${finite(uncertainty?.targetHeightM)}`,
     `uncertainty.target_ground_elevation_m: ${finite(uncertainty?.targetGroundElevationM)}`,
     `uncertainty.refraction_k: ${finite(uncertainty?.refractionCoefficient)}`,
-    `provenance.text_setup_count: ${experiment.textSetupHistory?.length ?? 0}`,
+    ...textSetupLineageLines(experiment),
     ...sourceLines(experiment),
     '',
     'RESULTS BEGIN'
