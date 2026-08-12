@@ -3,6 +3,7 @@ import type { ModelMetadata, ModelPrediction } from '../../shared/domain';
 import { createAiAnalysisPackage, createAiComparisonPackage } from '../../shared/ai-analysis-package';
 import type { SavedExperiment } from '../../shared/simulator';
 import { PanelHelpButton } from './HelpSystem';
+import { AiLineageDialog } from './AiLineageDialog';
 
 interface SaveExperimentDialogProps {
   initialName: string;
@@ -97,6 +98,12 @@ function formatDate(iso: string): string {
     dateStyle: 'short',
     timeStyle: 'short'
   }).format(date);
+}
+
+function aiFollowUpCount(experiment: SavedExperiment): number {
+  return experiment.textSetupHistory?.filter(
+    (item) => item.sourceKind === 'ai-follow-up' && item.aiLineage !== undefined
+  ).length ?? 0;
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -274,6 +281,7 @@ export function DataManagerDialog({
 }: DataManagerDialogProps): React.JSX.Element | null {
   const [busyAction, setBusyAction] = useState<string>();
   const [analysisExperiment, setAnalysisExperiment] = useState<SavedExperiment>();
+  const [lineageExperiment, setLineageExperiment] = useState<SavedExperiment>();
   const [selectedAnalysisIds, setSelectedAnalysisIds] = useState<string[]>([]);
   const [comparisonExperiments, setComparisonExperiments] = useState<SavedExperiment[]>();
 
@@ -281,6 +289,7 @@ export function DataManagerDialog({
     if (!open) {
       setBusyAction(undefined);
       setAnalysisExperiment(undefined);
+      setLineageExperiment(undefined);
       setSelectedAnalysisIds([]);
       setComparisonExperiments(undefined);
     }
@@ -371,6 +380,9 @@ export function DataManagerDialog({
                     {experiment.photoCalibration
                       ? ' · fotoğraf provenansı kayıtlı'
                       : ' · fotoğraf kaydı yok'}
+                    {aiFollowUpCount(experiment) > 0
+                      ? ` · AI takip ${aiFollowUpCount(experiment)}`
+                      : ''}
                   </small>
                 </div>
                 <div className="record-actions portable-actions">
@@ -415,6 +427,16 @@ export function DataManagerDialog({
                   >
                     AI Paketi
                   </button>
+                  {aiFollowUpCount(experiment) > 0 && (
+                    <button
+                      className="secondary-button"
+                      disabled={Boolean(busyAction)}
+                      type="button"
+                      onClick={() => setLineageExperiment(experiment)}
+                    >
+                      AI Soy Ağacı
+                    </button>
+                  )}
                   <button
                     className="report-button"
                     disabled={Boolean(busyAction)}
@@ -454,6 +476,14 @@ export function DataManagerDialog({
         <AiComparisonPackageDialog
           experiments={comparisonExperiments}
           onClose={() => setComparisonExperiments(undefined)}
+        />
+      )}
+
+      {lineageExperiment && (
+        <AiLineageDialog
+          experiment={lineageExperiment}
+          experiments={experiments}
+          onClose={() => setLineageExperiment(undefined)}
         />
       )}
     </div>
