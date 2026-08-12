@@ -1,295 +1,240 @@
-# Simulator
+# Geometrik Gözlem Laboratuvarı
 
-Farklı Dünya geometrisi ve fiziksel model iddialarını aynı ölçülebilir deneyler üzerinden sayısal olarak karşılaştırmayı amaçlayan Electron masaüstü simülasyon laboratuvarı.
+**Geometrik Gözlem Laboratuvarı (GGL)**, farklı Dünya geometrisi ve fiziksel model iddialarını aynı ölçülebilir gözlem girdileri üzerinden sayısal olarak karşılaştırmak için geliştirilmiş Electron masaüstü laboratuvarıdır.
 
-## Hedef
+GGL bir görüşü kanıtlamak için sonuç seçmez. Kullanıcı gözlemi tanımlar; desteklenen modeller aynı girdilerle kendi tahminlerini üretir; sonuçlar belirsizlik, varsayım, veri kaynağı ve yeniden üretilebilir hesap izleriyle birlikte gösterilir.
 
-Kullanıcı bir gözlem veya deney tanımlar; seçilen modeller aynı girdilerle ayrı tahminler üretir ve sonuçlar ölçüm belirsizlikleri, varsayımlar ve yeniden üretilebilir hesap izleriyle karşılaştırılır.
+> Güncel geliştirme sürümü: **1.34.1**  
+> Durum özeti: [`docs/current-status.md`](docs/current-status.md)
 
 ## Temel ilkeler
 
-- Aynı deney girdileri bütün modellere uygulanır.
-- Geometri, atmosfer, arazi verisi ve görsel canlandırma birbirinden ayrılır.
-- Harita projeksiyonları fiziksel model olarak değerlendirilmez.
-- Her sonuç kullanılan varsayımlar, formüller ve veri kaynağıyla izlenebilir olur.
-- Tanımsız model davranışlarında uydurma sonuç yerine `unsupported` durumu döndürülür.
+- Aynı deney girdileri karşılaştırılan modellere tutarlı biçimde uygulanır.
+- Girdi, saha gözlemi, model tahmini ve görselleştirme birbirinden ayrıdır.
+- Harita projeksiyonları fiziksel model olarak puanlanmaz.
+- Sonuçlar birim, varsayım, belirsizlik ve provenansla birlikte tutulur.
+- Tanımlı olmayan model davranışında uydurma sayı yerine `unsupported` / uygun belirsizlik durumu kullanılır.
 - Tek bir deneydeki uyum bir modelin genel doğruluğu olarak sunulmaz.
+- Harici AI fiziksel hesap motoru değildir; deterministik GGL hesapları sonuç otoritesidir.
 
-## Çalışan gözlem senaryoları
+## Çalışan senaryolar
 
-### Senaryo akışları
+- **Hedef Görünürlüğü** — hedefin görünür/gizli kısmı, gözlem ve belirsizlik karşılaştırması.
+- **Ufuk Analizi** — modelin ufuk tanımı ve atmosfer bağlamı.
+- **Uzun Mesafe Görüş** — rota, terrain, uzak hedef ve fotoğraf gözlemiyle genişletilmiş görünürlük akışı.
+- **Güneş ve Ay Gözlemleri** — konum, günlük olaylar, Güneş zamanı, mevsimler ve rota karşılaştırması.
+- **Gölge Deneyi** — dikey gnomon ve isteğe bağlı çift istasyon karşılaştırması.
+- **Yıldız Gözlemleri** — katalog yıldızı, precession/proper-motion, yerel skyline ve trail hesapları.
+- **Tutulma Simülasyonu** — anlık Güneş–Ay disk geometrisi ve kontrollü olay araması.
 
-`1.2.0` ile üç ayrı görünürlük senaryosu etkin durumdadır:
+## Başlıca yetenekler
 
-- **Hedef Görünürlüğü:** hedefin görünür/gizli bölümünü ölçüm ve belirsizlikle karşılaştırır.
-- **Ufuk Analizi:** hedef, rota ve arazi gerektirmeden modelin ufuk tanımını hesaplar. İdeal kürede atmosfer moduna göre geometrik/standart-k/katmanlı optik ufuk, tanımlı sonsuz düzlemde `∞`, azimutal kartografik referansta `unsupported` sonucu üretilir.
-- **Uzun Mesafe Görüş:** rota, arazi ve uzak hedef bağlamını ayrı bir deney kimliği altında yönetir; fiziksel hesapları mevcut hedef görünürlüğü çekirdeğini kopyalamadan yeniden kullanır.
+### Geometri ve jeodezi
 
-Senaryo kimliği yerel ve taşınabilir deney kayıtlarında korunur. Eski kayıtlarda senaryo alanı yoksa kayıt `Hedef Görünürlüğü` olarak açılır.
+- İdeal Küre ve Tanımlı Düzlem model sözleşmeleri.
+- Azimutal gösterim fiziksel model değil kartografik referanstır.
+- WGS84 Vincenty ters jeodezik çözümü, mesafe ve uç azimutları.
+- Yakın-antipodal durumda açıkça işaretlenen fallback davranışı.
+- Model ve jeodezik hesaplar için hesap izi.
 
-### Fiziksel modeller ve gözlem
+### Terrain ve düşey referans
 
-- İdeal küre modeli
-- Tanımlı düzlem modeli
-- Azimutal projeksiyon için fiziksel model değildir / `unsupported` sonucu
-- Gözlemci göz yüksekliği ve hedef yüksekliği
-- Gözlenen görünürlük ve ölçüm belirsizliği
-- Atmosfer kapalı, standart `k` veya katmanlı meteorolojik profil
-- Düzenlenebilir standart kırılma katsayısı
-- Katmanlı profilde Ciddor görünür ışık kırılma indisi ve küresel RK4 ışın izi
-- Görünür ve gizlenen hedef oranı
-- Ufuk mesafesi
-- Hedef tepe görüş açısı
-- Gözlem ile tahmin arasındaki fark
-- Model ve jeodezik çözüm için yeniden üretilebilir hesap izleri
+- Manuel çok noktalı terrain profili.
+- CSV/TSV, 3B WGS84 GeoJSON `LineString` ve ESRI ASCII Grid DEM içe aktarma.
+- DEM nearest/bilinear örnekleme, çözünürlük/kapsam tanıları ve LOS önizlemesi.
+- Ortalama deniz seviyesi, WGS84 elipsoidal ve yerel düşey datum.
+- Jeoit ondülasyonu ile kontrollü elipsoidal ↔ ortometrik dönüşüm.
+- Kaynak dosya metadata'sı ve SHA-256 bütünlük kaydı.
 
-### Etkileşimli model görselleştirmesi
+### Atmosfer
 
-`1.1.2` ile model kartları Three.js tabanlı etkileşimli WebGL sahneleri, çevrimdışı coğrafi yardımcı katmanlar ve rota tabanlı arazi görselleştirmesi kullanır:
+- Kapalı atmosfer.
+- Düzenlenebilir standart kırılma katsayısı `k`.
+- Ölçülmüş katmanlı meteorolojik profil.
+- Ciddor görünür ışık kırılma indisi yardımcıları.
+- İdeal Küre için küresel/radyal RK4 optik ışın izi.
+- Profil kapsamı yetersizken uydurma ekstrapolasyon yerine açık belirsizlik durumu.
 
-- ideal küre için gerçek 3B küre,
-- WGS84 gözlemci ve hedef konumları,
-- mevcut jeodezik çözümden örneklenen rota çizgisi,
-- açılıp kapatılabilen enlem/boylam yardımcı ızgarası,
-- Natural Earth 110m tabanlı çevrimdışı ülke/kıyı sınırları,
-- aynı sınır verisinin küre ve kuzey kutup merkezli azimutal kartografik referansta gösterimi,
-- fare/pointer ile döndürme ve tekerlekle yakınlaştırma,
-- tek tıklamayla başlangıç kamera görünümüne dönme,
-- manuel/CSV/GeoJSON/DEM profilinden rota boyunca göreli arazi yükselti şeridi,
-- topografya katmanını bağımsız açma/kapatma ve kaynak türünü sahnede belirtme,
-- tanımlı düzlem için küresel harita projeksiyonu uydurmayan yerel düzlem şeması,
-- WebGL kullanılamadığında açık hata görünümü,
-- sahne kapandığında GPU kaynaklarının temizlenmesi.
+Tanımlı Düzlem modeline sözleşmede bulunmayan atmosfer kuralı otomatik eklenmez.
 
-Görselleştirme fiziksel hesap motorunun kaynağı değildir. Coğrafi sınırlar, ızgara ve topografya şeridi deney girdilerini veya model tahminlerini değiştirmez. Arazi kotları hesap motorunda metre olarak korunur; 3B sahnedeki yükseklik yalnız göreli biçimi görünür kılmak için sınırlı olarak ölçeklenir. Özellikle tanımlı düzlem modeline, model sözleşmesinde bulunmayan küresel konum haritası uydurulmaz. Azimutal görünüm de fiziksel tahmin üretmeyen kartografik referans olarak kalır. Natural Earth 110m sınırları dünya ölçeğinde görsel yönlendirme içindir; hassas mesafe, kıyı veya idari sınır analizi verisi değildir.
+### Su yüzeyi, gelgit ve dalga
 
-### Konum ve jeodezi
+- Manuel gözlem, gelgit ölçer/tahmini veya ölçme kaynağı.
+- Zaman, datum ve belirsizlik provenansı.
+- Koruyucu doğrusal veya bağımsız RSS belirsizlik birleşimi.
+- Gözlemci/hedef uç kotlarına kullanıcı kontrollü uygulama.
+- Tarihsel uygulama durumunun korunması.
 
-- Manuel yüzey mesafesi
-- Gözlemci ve hedef enlem-boylamı
-- WGS84 Vincenty ters jeodezik çözümü
-- Yüzey mesafesi ve uç azimutları
-- Yakın-antipodal durumda açıkça işaretlenen küresel yedek çözüm
+### Fotoğraf ölçümü
 
-### Düşey datum ve arazi
+- Yerel PNG/JPEG yükleme ve SHA-256 kaynak provenansı.
+- U1/U2 referans işaretleri, hedef tabanı ve hedef tepesi işaretleri.
+- Kamera FOV / asal nokta seçenekleri ve işaret belirsizliği.
+- Piksel → açı kalibrasyonu ve model açısal karşılaştırması.
+- Input + kamera belirsizlik propagasyonu.
+- Fotoğraf asset'leri için SHA-256 tabanlı yerel depo.
+- Portable JSON v12 ile fotoğraf + işaret round-trip.
 
-- Ortalama deniz seviyesi / ortometrik yükseklik
-- WGS84 elipsoidal yükseklik
-- Yerel düşey datum
-- Datum, gelgit veya yerel benchmark ofseti
-- Gözlemci zemin kotu ve hedef taban kotu
-- Sıralı ve düzenlenebilir çok noktalı manuel profil
-- Profil noktalarını grafik üzerinde sürükleme
-- CSV / TSV arazi profili içe aktarma
-- Standart dışı CSV sütun eşleme
-- GeoJSON 3B WGS84 LineString profili
-- ESRI ASCII Grid DEM içe aktarma
-- En yakın hücre veya iki doğrusal DEM örnekleme
-- Otomatik veya manuel DEM örnek sayısı
-- DEM çözünürlük, kapsam ve örnekleme tanıları
-- Profil uygulanmadan önce DEM görüş hattı önizlemesi
-- Kritik arazi noktası, minimum açıklık ve hedef kotu çözümü
-- Kaynak dosya boyutu ve SHA-256 bütünlük kaydı
-- İçe aktarımdan sonra değişiklik durumunun korunması
+Fotoğrafın yalnız seçilmesi kalibrasyon kaydı değildir. Kalibrasyon commit edilmeden deney kaydedilecekse uygulama kullanıcıyı açıkça uyarır.
 
-### Jeoit dönüşümü
+### Astronomi
 
-- `N = h - H` işaret sözleşmesi
-- Elipsoidal ↔ ortometrik yükseklik dönüşümü
-- Kullanıcı tarafından verilen jeoit ondülasyonu ve belirsizliği
-- Kaynak/model etiketi, sürüm veya çözünürlük ve epok
-- Gözlemci, hedef ve bütün arazi noktalarının kontrollü dönüşümü
-- Dönüşüm hesap izi ve kalıcı provenans
-- Sonradan datum veya kot değişikliğinde tarihsel işlem uyarısı
+Güneş/Ay, gölge, tutulma ve yıldız hesapları deterministik simulation modüllerinde tutulur. Katalog/proper-motion/skyline kaynakları fiziksel hesap ve provenans açısından ayrı izlenir.
 
-### Su seviyesi, gelgit ve dalga
+## Deney kayıtları ve rapor
 
-- manuel gözlem, gelgit ölçer, gelgit tahmini veya ölçme/nivelman kaynağı
-- saat dilimli gözlem zamanı
-- kaynak ve isteğe bağlı istasyon etiketi
-- su seviyesi ölçüm/tahmin belirsizliği
-- dalga kaynaklı doğrudan düşey belirsizlik
-- anlamlı dalga yüksekliğinin ayrı provenans olarak tutulması
-- gelgit evresi
-- koruyucu doğrusal veya bağımsız RSS belirsizlik birleşimi
-- alt ve üst su yüzeyi sınırları
-- gözlemci zemini, hedef tabanı veya iki uç için kontrollü uygulama
-- anlık/ortalama, alt sınır ve üst sınır senaryoları
-- deney kimliği, düşey datum ve zaman farkı güvenlik kontrolleri
-- kayıt ve uygulama hesap izleri
-- deney yeniden açıldığında su yüzeyi kayıtlarının geri yüklenmesi
-- uç kotu, datum veya ofset sonradan değişirse önceki uygulamanın tarihsel olarak işaretlenmesi
+Deneyler Electron kullanıcı veri klasöründe sürümlemeli olarak saklanır. Kayıt; girdiler, senaryo, model sürümleri, prediction snapshot'ları, hesap izleri ve mevcut provenans metadata'sını birlikte taşır.
 
-Anlamlı dalga yüksekliği otomatik geometri düzeltmesine dönüştürülmez. Su yüzeyi bu aşamada rota boyunca dinamik bir dalga yüzeyi olarak modellenmez; yalnız kullanıcının açıkça seçtiği uç zemin kotlarına uygulanır.
+Veri Yöneticisi:
 
-### Gelişmiş katmanlı atmosfer
+- kayıt açma/silme,
+- portable JSON dışa/içe aktarma,
+- çevrimdışı HTML raporu,
+- tek deney AI analiz paketi,
+- 2–12 deney AI karşılaştırma paketi,
+- AI lineage yerel doğrulaması
 
-`1.3.1` ile katmanlı atmosfer veri, arayüz ve İdeal Küre fiziksel hesap yolu birlikte çalışır:
+sağlar.
 
-- yükseklik, sıcaklık, basınç ve bağıl nemden oluşan sıralı profil örnekleri,
-- kaynak etiketi ve açık saat dilimli isteğe bağlı gözlem zamanı,
-- fiziksel aralık ve örnek sırası doğrulaması,
-- profil kapsamı içinde doğrusal enterpolasyon,
-- katman sıcaklık/basınç/nem gradyanları,
-- doygun su buharı basıncı, su buharı kısmi basıncı ve nemli hava yoğunluğu yardımcıları,
-- Ciddor görünür/yakın KIZÖ faz kırılma indisi,
-- optik `n`, `N`, `dn/dh`, `dN/dh` ve yerel `k` tanıları,
-- vakum dalga boyu ve CO₂ ayarları,
-- küresel/radyal atmosferde RK4 ışın izleme,
-- İdeal Küre hedef görünürlüğünde minimum açık optik ışın ve hedef-tepe atış çözümü,
-- arazi örneklerini aynı optik ışın üzerinde açıklık açısından sınama,
-- İdeal Küre için katmanlı optik ufuk,
-- profil modunun standart `k` katsayısından ayrı tutulması,
-- ölçülmeyen yüksekliklere otomatik meteorolojik ekstrapolasyon yapmama,
-- profil kapsamı yetersizse sonlu/uydurma sonuç yerine açık `indeterminate` sonucu,
-- atmosfer state'inin yerel ve taşınabilir deney kayıtlarında korunması,
-- İdeal Küre 3B sahnesinde ölçülmüş profil yüksekliği kabukları, katmanlı optik ışın ve geometrik LOS karşılaştırması,
-- uzun RK4 yollarında yalnız çizim için uçları koruyan örnek azaltma.
+Portable/local parserlar güvenilmeyen dosyada fail-closed davranır; geriye uyumluluk ve migration testlerle korunur.
 
-Tanımlı Düzlem modeline, model sözleşmesinde bulunmayan bir atmosfer kırılma kuralı eklenmez. Atmosfer görsel katmanı yalnız İdeal Küre sahnesinde etkinleşir ve hesap motoruna geri besleme yapmaz. Profil yüksekliği dünya yarıçapına göre okunamayacak kadar küçük olduğundan yalnız 3B sahnede abartılı ölçeklenir; fizik hesabındaki metre değerleri değişmez. Görsel ışın yeniden üretilemezse sahte bir fallback ışını çizilmez.
+## Harici AI ile kontrollü çalışma
 
-## Arazi veri biçimleri
-
-### CSV / TSV
-
-Otomatik tanınan örnek başlıklar:
+GGL'nin AI sistemi **API entegrasyonu değildir** ve otomatik ağ çağrısı yapmaz. Kullanıcı kendi tercih ettiği AI aracıyla copy/paste üzerinden çalışır.
 
 ```text
-distance_m,elevation_m
-distance_km,elevation_m
-distance_percent,elevation_m
+Deterministik aktif/kayıtlı deney
+        ↓
+GGL-AI-ANALYSIS v1
+        ↓ kullanıcı kopyalar
+Harici AI
+        ↓
+tek GGL-AI-TEST v1 önerisi
+        ↓ fail-closed extractor
+Metinden Hazırla önizlemesi
+        ↓ checkbox + kullanıcı onayı
+Yeni deney
+        ↓
+SHA-256 lineage
+        ↓
+Yerel lineage doğrulama
 ```
 
-Türkçe eşler (`mesafe_m`, `mesafe_km`, `rota_yuzdesi`, `kot_m`), virgül / noktalı virgül / sekme ayırıcıları ve ondalık virgül desteklenir. Standart dışı başlıklarda kullanıcı güvenli eşleme ekranından mesafe sütununu, birimini ve kot sütununu seçer.
+Kurallar:
 
-### GeoJSON
+- AI hiçbir input alanını doğrudan değiştirmez.
+- Eksik/birden fazla/ambiguous canonical test bloğu reddedilir.
+- AI takip testinde canonical kaynak blok hash bütünlüğünü korumak için salt okunurdur; uygulanacak alanları kullanıcı seçer.
+- Dış AI'nin serbest açıklaması otoritatif deney verisi olarak saklanmaz.
+- Sonraki AI paketine önceki serbest cevap tekrar gömülmez; hash tabanlı lineage özeti taşınır.
+- Lineage doğrulaması AI yorumunun bilimsel doğruluğunu değil, kayıt zincirinin kriptografik tutarlılığını doğrular.
 
-Tek bir 3B WGS84 `LineString`, `Feature` veya tek hatlı `FeatureCollection` desteklenir. `[boylam, enlem, yükseklik]` koordinatları gerçek jeodezik parça mesafeleriyle rota profiline dönüştürülür.
+İlgili belgeler:
 
-Örnek: `examples/terrain-profile-wgs84.geojson`
+- [`docs/ai-test-spec-v1.md`](docs/ai-test-spec-v1.md)
+- [`docs/ai-analysis-guide-v1.md`](docs/ai-analysis-guide-v1.md)
+- [`docs/ai-lineage-v1.md`](docs/ai-lineage-v1.md)
 
-### ESRI ASCII Grid DEM
+## Kurulum
 
-Koordinat modunda DEM dosyası gözlemci-hedef rotası boyunca WGS84 ara koordinatlarında örneklenir. Grid çözünürlüğü, rota örnek aralığı, kapsam kenarı, yükseklik aralığı ve kaynak bütünlüğü deney provenansında korunur.
-
-Örnek: `examples/dem-route-wgs84.asc`
-
-## Metinden deney hazırlama
-
-`1.7.0` ile üst araç çubuğundaki **Metinden Hazırla** akışı serbest Türkçe gözlem notunu doğrudan forma yazmak yerine önce güvenli bir taslağa dönüştürür:
-
-- güvenle eşlenen alanlar `Bulundu`,
-- birimi eksik veya çelişkili ifadeler `Kontrol gerekli`,
-- ek provenans gerektiren/otomatik uygulanamayan ifadeler `Kullanılamadı`
-
-olarak ayrılır. Her bulunan satırda mevcut değer ile önerilen değer yan yana gösterilir ve kullanıcı alan bazında `uygula / atla` seçer. Bu sürüm çevrimdışı deterministik parser kullanır; harici AI servisi yoktur. Kaynak metin ve yalnız kullanıcı tarafından uygulanan alanlar deney provenansında korunur.
-
-## Deney kayıtları
-
-Deneyler Electron kullanıcı veri klasöründe saklanır. Uygulama:
-
-- deney oluşturma ve güncelleme,
-- yeniden açma ve silme,
-- koordinat ve jeodezik hesap anlık görüntüsü,
-- düşey datum ve bütün arazi noktaları,
-- CSV / GeoJSON / DEM kaynak provenansı,
-- jeoit dönüşüm provenansı,
-- su yüzeyi gözlem ve uygulama provenansı,
-- atmosfer modu, meteorolojik profil ve optik ayarlar,
-- fotoğraf kaynak bütünlüğü, kamera kalibrasyonu, piksel işaretleri ve U1–U2 referans anlamı,
-- fotoğraf açısal gözlem–model karşılaştırma snapshot ve hesap izleri,
-- metinden deney hazırlama kaynak metni, parser sürümü ve kullanıcı onaylı alan provenansını,
-- model sürümleri ve sonuç anlık görüntülerini
-
-korur.
-
-## Taşınabilir dosyalar ve raporlar
-
-- Sürümlemeli `.ggl.json` dışa/içe aktarma
-- Eski şemaların güvenli taşınması
-- Bozuk veya tutarsız verinin reddi
-- Kimlik çakışmalarının güvenli çözümü
-- Yazdırılabilir çevrimdışı HTML raporu
-- Model, jeodezi, arazi, jeoit, su yüzeyi, fotoğraf kalibrasyonu ve açısal karşılaştırma hesap izlerinin raporda korunması
-
-HTML raporu okunabilir çıktıdır. Yeniden içe aktarılabilir veri kaynağı `.ggl.json` dosyasıdır.
-
-## Henüz tamamlanmayan ana ürün işleri
-
-- Gece ışıkları görsel katmanı
-- Yıldız ve tutulma deneyleri
-- Toroidal ve içbükey gibi ek geometrik model sözleşmeleri
-
-Son kullanıcı kurulum paketi ve dağıtım işlemleri ürün işlevleri tamamlandıktan sonraki aşamadır.
-
-## Teknoloji
-
-- Electron
-- React
-- TypeScript
-- Three.js
-- TopoJSON / çevrimdışı Natural Earth dünya sınırları
-- electron-vite
-- Vitest
-
-## Geliştirme
+Gereksinim: **Node.js 22+**.
 
 ```bash
+git clone <repository-url>
+cd simulator
 npm install
 npm run dev
 ```
 
-## Doğrulama
+Üretim derlemesi:
 
 ```bash
-npm run typecheck
-npm test
 npm run build
 ```
 
-Aynı kontroller pull request ve `main` güncellemelerinde GitHub Actions üzerinde otomatik çalışır.
+Tüm katkıcı doğrulaması:
+
+```bash
+npm run verify
+```
+
+`verify`; TypeScript typecheck, tüm Vitest testleri ve Electron-Vite üretim derlemesini çalıştırır.
+
+> Repository şu anda lockfile taşımıyor; bağımlılıklar `package.json` semver aralıklarından `npm install` ile çözülür. Public release hazırlığında reproducible dependency politikası ayrıca sabitlenecektir.
+
+## Kod yapısı
+
+```text
+src/
+├── main/          Electron I/O, IPC, yerel dosya ve asset işlemleri
+├── preload/       dar renderer ↔ main köprüsü
+├── renderer/      React UI ve kullanıcı kontrollü workflow
+├── models/        model eklentileri
+├── simulation/    deterministik fizik/matematik/domain çekirdeği
+├── shared/        veri, portable ve AI sözleşmeleri
+└── report/        çevrimdışı HTML rapor üretimi
+
+tests/             unit/integration/persistence/portable/report/AI testleri
+docs/              yöntem, format, mimari ve roadmap belgeleri
+examples/          örnek terrain/veri dosyaları
+```
+
+Güncel ayrıntılı mimari: [`docs/architecture.md`](docs/architecture.md)
+
+## Katkıda bulunma
+
+Katkı yapmadan önce:
+
+1. [`AGENTS.md`](AGENTS.md) — proje için bağlayıcı teknik/bilimsel sınırlar.
+2. [`CONTRIBUTING.md`](CONTRIBUTING.md) — kurulum, test ve PR yöntemi.
+3. [`docs/current-status.md`](docs/current-status.md) — güncel sistem durumu.
+4. [`docs/architecture.md`](docs/architecture.md) — kaynak-of-truth mimari harita.
+
+AI destekli kodlama kullanıyorsanız ayrıca [`docs/ai-development.md`](docs/ai-development.md) dosyasını okuyun. Bu playbook yeni AI oturumuna verilecek başlangıç promptunu, kaynak-of-truth matrisini ve sözleşme değişikliklerinde izlenecek kontrol listesini içerir.
+
+PR açmadan önce:
+
+```bash
+npm run verify
+```
+
+çalıştırılması beklenir. UI/Electron değişikliğinde ilgili manuel smoke test de yapılmalıdır.
+
+## Bakım / refactor durumu
+
+İlk god-file çalışmasında:
+
+- `AppNext.tsx` yaklaşık 130 KB → 64 KB,
+- `html-report.ts` yaklaşık 48 KB → 12 KB,
+- `portable.ts` yaklaşık 46 KB → 12 KB
+
+seviyesine indirildi ve kritik sorumluluklar ayrı modüllere taşındı.
+
+Public katkıcı deneyimi için kalan davranış-korumalı bakım adayları [`docs/refactor-god-files.md`](docs/refactor-god-files.md) içinde güncel tutulur. Yeni fonksiyonel geliştirme bundan sonra gerçek kullanım sırasında ortaya çıkan ihtiyaçlara göre yapılacaktır.
 
 ## Belgeler
 
-- [`docs/product-vision.md`](docs/product-vision.md)
+Başlangıç için önerilen sıra:
+
+- [`docs/current-status.md`](docs/current-status.md)
 - [`docs/architecture.md`](docs/architecture.md)
-- [`docs/experiment-system.md`](docs/experiment-system.md)
+- [`docs/product-vision.md`](docs/product-vision.md)
 - [`docs/model-contract.md`](docs/model-contract.md)
-- [`docs/ui-design.md`](docs/ui-design.md)
-- [`docs/geodesy.md`](docs/geodesy.md)
+- [`docs/portable-format.md`](docs/portable-format.md)
 - [`docs/terrain-profile.md`](docs/terrain-profile.md)
-- [`docs/csv-terrain-profile.md`](docs/csv-terrain-profile.md)
-- [`docs/csv-profile-provenance.md`](docs/csv-profile-provenance.md)
-- [`docs/geojson-terrain-profile.md`](docs/geojson-terrain-profile.md)
-- [`docs/esri-ascii-dem.md`](docs/esri-ascii-dem.md)
-- [`docs/terrain-source-integrity.md`](docs/terrain-source-integrity.md)
+- [`docs/geodesy.md`](docs/geodesy.md)
 - [`docs/geoid-height-conversion.md`](docs/geoid-height-conversion.md)
 - [`docs/water-surface-observation.md`](docs/water-surface-observation.md)
 - [`docs/water-surface-application.md`](docs/water-surface-application.md)
-- [`docs/portable-format.md`](docs/portable-format.md)
-- [`docs/roadmap.md`](docs/roadmap.md)
-- [`docs/roadmap-stage-3.23.md`](docs/roadmap-stage-3.23.md)
-- [`docs/roadmap-stage-3.24.md`](docs/roadmap-stage-3.24.md)
-- [`docs/roadmap-stage-3.25.md`](docs/roadmap-stage-3.25.md)
-- [`docs/roadmap-stage-3.26.md`](docs/roadmap-stage-3.26.md)
-- [`docs/roadmap-stage-3.27.md`](docs/roadmap-stage-3.27.md)
-- [`docs/roadmap-stage-4.1.md`](docs/roadmap-stage-4.1.md)
-- [`docs/roadmap-stage-4.2.md`](docs/roadmap-stage-4.2.md)
-- [`docs/roadmap-stage-4.3.md`](docs/roadmap-stage-4.3.md)
-- [`docs/roadmap-stage-4.4.md`](docs/roadmap-stage-4.4.md)
-- [`docs/roadmap-stage-4.5.md`](docs/roadmap-stage-4.5.md)
-- [`docs/roadmap-stage-5.1.md`](docs/roadmap-stage-5.1.md)
-- [`docs/roadmap-stage-5.2.md`](docs/roadmap-stage-5.2.md)
-- [`docs/roadmap-stage-5.3.md`](docs/roadmap-stage-5.3.md)
-- [`docs/roadmap-stage-5.4.md`](docs/roadmap-stage-5.4.md)
-- [`docs/roadmap-stage-5.5.md`](docs/roadmap-stage-5.5.md)
-- [`docs/roadmap-stage-5.6.md`](docs/roadmap-stage-5.6.md)
-- [`docs/roadmap-stage-6.1.md`](docs/roadmap-stage-6.1.md)
-- [`docs/roadmap-stage-6.2.md`](docs/roadmap-stage-6.2.md)
-- [`docs/roadmap-stage-6.3.md`](docs/roadmap-stage-6.3.md)
-- [`docs/roadmap-stage-6.4.md`](docs/roadmap-stage-6.4.md)
-- [`docs/roadmap-stage-6.5.md`](docs/roadmap-stage-6.5.md)
+- [`docs/ai-test-spec-v1.md`](docs/ai-test-spec-v1.md)
+- [`docs/ai-analysis-guide-v1.md`](docs/ai-analysis-guide-v1.md)
+- [`docs/ai-lineage-v1.md`](docs/ai-lineage-v1.md)
+- [`docs/roadmap.md`](docs/roadmap.md) — tarihsel ayrıntılı gelişim kaydı
 
-## Durum
+## Güvenlik
 
-Aktif geliştirme sürümü `1.12.0`dir. Güneş/Ay senaryosu artık geometrik 0° merkez geçişi ile ayrı -0,833° standart görünür referansı kullanarak günlük doğuş/batış, azimut, eşik-üstü süre ve güneş öğlesini de üretir; kutup günü/gecesinde sahte olay saati oluşturmaz. Güneş/Ay astronomik referanslarına ek olarak dikey gnomon gölge deneyi; beklenen gölge uzunluğu/yönü, isteğe bağlı saha ölçümü, açık ± belirsizlikler ve yeniden üretilebilir hesap iziyle çalışır. Gölge referansı Dünya modellerine tanımsız bir Güneş geometrisi uydurmaz. Fotoğraf işaretleri artık overlay üzerinde `TABAN` / `TEPE` olarak açıkça adlandırılır; tepe tabanın üstünde değilse kayıt ve model karşılaştırması engellenir. Fotoğraf/kamera kalibrasyonu yerel PNG/JPEG yükleme, SHA-256 provenansı, etkileşimli işaretler ve piksel→açı hesabına ek olarak model sonuçlarıyla **bağımsız açısal gözlem kanalı** üzerinden karşılaştırılır. U1–U2 çizgisi varsayılan olarak yalnız görsel referanstır; fiziksel yerel yatay olduğu kullanıcı tarafından açıkça belirtilmedikçe mutlak taban/tepe açıları puanlanmaz. Görüntüdeki deniz ufku otomatik yerel yatay sayılmaz. Fotoğraf baytları deney JSON’una gömülmez. `1.5.0` ile fotoğraf işaret zarfına isteğe bağlı kamera iç-parametre belirsizlikleri eklenebilir; mesafe, göz/zemin/hedef kotu ve Standart k belirsizlikleri ise modeli nominal girdiden bağımsız alt/üst uçlarda yeniden çözerek fotoğraf karşılaştırmasının birleşik zarfına katılır. Boş belirsizlik alanlarına varsayımsal ± değer atanmaz.
+Hassas güvenlik konuları için [`SECURITY.md`](SECURITY.md) dosyasını kullanın. Public issue'lara özel fotoğraf, kişisel koordinat veya hassas deney JSON'u yüklemeyin.
+
+## Lisans
+
+Repository public release öncesinde açık bir lisansla yayınlanacaktır. Lisans seçilmeden kaynak kodun public görünür olması tek başına yeniden kullanım izni vermez; nihai koşullar kökteki `LICENSE` dosyasında belirtilecektir.
