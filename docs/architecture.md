@@ -1,99 +1,215 @@
 # Mimari
 
+Bu belge GGL `1.34.x` mimarisinin güncel özetidir. Tarihsel geliştirme aşamaları için `docs/roadmap.md`, kısa mevcut durum için `docs/current-status.md` kullanılmalıdır.
+
+## Temel ilke
+
+Sayısal ve fiziksel sonuçların kaynağı deterministik GGL hesap motorudur. React görünümü, 3B görselleştirme, rapor ve harici AI bu hesapların tüketicisidir; hiçbiri hesap motoruna gizli veri veya tahmin geri beslemez.
+
+```text
+Kullanıcı / gözlem / kaynak dosyası
+            │
+            ▼
+      doğrulanan girdiler
+            │
+            ▼
+ ExperimentDefinition + domain state
+            │
+            ├─────────────► WGS84 / terrain / atmosphere / astronomy yardımcı hesapları
+            │
+            ▼
+       SimulationContext
+            │
+            ▼
+     runSimulationModels
+            │
+            ▼
+      ModelPrediction[]
+            │
+      ┌─────┼─────────────┬──────────────┐
+      ▼     ▼             ▼              ▼
+     UI   SavedExperiment HTML report   AI package
+```
+
 ## Katmanlar
 
-### Electron ana süreç
+### 1. Electron ana süreç — `src/main/`
 
-- Masaüstü pencere yaşam döngüsü
-- Güvenli dosya ve işletim sistemi işlemleri
-- İleride deney kaydetme ve rapor dışa aktarma
+Ana süreç yalnız masaüstüne özgü güvenilir işlemleri sahiplenir:
 
-### React arayüzü
+- pencere yaşam döngüsü,
+- yerel deney deposunu okuma/yazma,
+- portable JSON açma/kaydetme,
+- HTML rapor dışa aktarma,
+- CSV/GeoJSON/DEM ve yıldız skyline kaynak dosyası işlemleri,
+- SHA-256 kaynak bütünlüğü,
+- fotoğraf asset deposu,
+- dosya seçici ve IPC sınırı.
 
-- Deney girdileri
-- Model karşılaştırma kartları
-- Sonuç tablosu
-- Görsel canlandırma
+Bazı domain-özel IPC akışları zaten ayrı modüllerdedir (`stellar-*`, `observation-photo-assets.ts`). `src/main/index.ts` kalan genel IPC wiring katmanıdır ve public-readiness refactorlarında daha küçük IPC modüllerine ayrılabilir.
 
-### Ortak alan tipleri
+### 2. Preload — `src/preload/`
 
-- Deney tanımı
-- Model metadata bilgisi
-- Tahmin metrikleri
-- Belirsizlik değerleri
-- Sonuç durumları
+Renderer doğrudan Node/Electron API'lerine erişmez. İzin verilen masaüstü işlemleri `contextBridge` üzerinden dar bir `window.simulatorDesktop` yüzeyi olarak açılır.
 
-### Simülasyon çekirdeği
+Yeni IPC eklerken main handler, preload sözleşmesi ve renderer kullanımı birlikte gözden geçirilmelidir.
 
-- Geometri yardımcıları
-- Gözlem değerlendirmesi
-- Model çalıştırıcı
-- Hata yalıtımı
-- Atmosfer bağlamı
+### 3. React renderer — `src/renderer/src/`
 
-### Model eklentileri
+`main.tsx` yalnız `AppNext` uygulama kökünü render eder.
 
-İlk uygulamalar:
+`AppNext.tsx` uygulama koordinatörüdür. Büyük sorumlulukların önemli kısmı `src/renderer/src/app/` altına çıkarılmıştır:
+
+- sidebar ve senaryo özeti,
+- gözlem/ufuk referans panelleri,
+- terrain görünümü,
+- model kartları ve sonuç tablosu,
+- genel input/config/formatter yardımcıları,
+- `useExperimentModelState` — ortak deney/model türetimi ve runner yaşam döngüsü,
+- `useAstronomyCalculations` — Güneş/Ay/gölge/yıldız/tutulma hesap zinciri,
+- `experiment-persistence` — SavedExperiment oluşturma ve restore mantığı.
+
+Domain-özel karmaşık kontroller (`PhotoCalibrationControl`, `StellarObservationPanel`, `MultiPointTerrainEditor` vb.) renderer altında bağımsız bileşenlerdir.
+
+### 4. Paylaşılan sözleşmeler — `src/shared/`
+
+Main ve renderer arasında kullanılan veri sözleşmeleri burada bulunur:
+
+- deney/model/prediction tipleri,
+- senaryo kimlikleri,
+- saved experiment yapısı,
+- atmosfer/terrain/photo/stellar metadata tipleri,
+- portable/local-store parser facade'ı,
+- AI test, analiz, comparison ve lineage sözleşmeleri.
+
+`portable.ts` üst seviye schema/facade'dır; doğrulama sorumluluğu `portable-core.ts`, `portable-sources.ts` ve `portable-photo-asset.ts` modüllerine ayrılmıştır.
+
+Portable parserlar güvenilmeyen JSON'u fail-closed doğrular. `SavedExperiment` TypeScript tipi tek başına dış dosyanın güvenilir olduğu anlamına gelmez.
+
+### 5. Simülasyon çekirdeği — `src/simulation/`
+
+Bu katman saf/deterministik matematik ve domain uygulamalarını taşır. Başlıca alanlar:
+
+- geometri ve model değerlendirme,
+- WGS84 jeodezi ve topocentric dönüşümler,
+- manuel/CSV/GeoJSON/DEM terrain,
+- jeoit/düşey datum,
+- atmosfer profili, optik kırılma ve RK4 ışın izi,
+- fotoğraf kalibrasyonu/açısal karşılaştırma/belirsizlik,
+- su yüzeyi gözlem ve uygulama,
+- Güneş/Ay/gölge/tutulma hesapları,
+- yıldız katalog, precession, proper-motion, trail ve skyline hesapları.
+
+Bu modüller mümkün olduğunca UI veya Electron bağımlılığı taşımaz. Yeni fiziksel davranış önce bu katmanda ve unit testlerde kurulmalıdır.
+
+### 6. Model eklentileri — `src/models/`
+
+Model eklentileri ortak model sözleşmesine uyar:
 
 - `IdealSphereModel`
 - `DefinedPlaneModel`
 - `AzimuthalProjectionReference`
 
-## Veri akışı
+Azimutal gösterim fiziksel model değildir; kartografik referans olarak `unsupported` fiziksel sonuç üretir. Model davranışı tanımlı değilse diğer modelin formülü kopyalanmaz veya uydurma sayı üretilmez.
+
+### 7. Rapor — `src/report/`
+
+Çevrimdışı HTML raporu kaydedilmiş deney snapshot'ından üretilir:
+
+- `html-report.ts` — belge assembly ve stil,
+- `report-core.ts` — ortak prediction/formatter yardımcıları,
+- `report-terrain.ts` — jeodezik, datum ve terrain bölümleri,
+- `report-provenance.ts` — fotoğraf, stellar, belirsizlik, metin/AI lineage provenansı.
+
+Rapor yeni hesap yapmamalı; kaydedilen veriyi ve hesap izlerini açıklamalıdır.
+
+## Persistence ve portable veri
+
+### Yerel deney deposu
+
+Electron kullanıcı veri klasöründe sürümlemeli local store bulunur. Kayıtlar `SavedExperiment` snapshot'larıdır. Uygulama eski formatları normalize eder ve geçersiz kayıtları güvenli biçimde reddeder/atlar.
+
+### Portable JSON
+
+Portable format deneyin başka kuruluma taşınabilen sürümlemeli halidir. Güncel format fotoğraf asset'ini metadata'dan ayrı `assets` bölümünde taşıyabilir.
+
+Fotoğraf byte'ları normal local `SavedExperiment` JSON'una gömülmez. Seçilen fotoğraf SHA-256 anahtarlı yerel asset deposuna yazılır; kaydedilmiş kalibrasyon metadata'sı asset ile eşleştirilir. Portable içe aktarımda byte boyutu, MIME/piksel metadata'sı ve SHA-256 bütünlüğü doğrulanır.
+
+## Provenans yaklaşımı
+
+GGL mümkün olduğunda yalnız son sayıyı değil sayının bağlamını da saklar:
+
+- kaynak adı/dosya,
+- SHA-256,
+- zaman/UTC ofseti,
+- birim ve datum,
+- model/algoritma sürümü,
+- kullanıcı tarafından uygulanan alanlar,
+- belirsizlik yöntemi,
+- hesap izi.
+
+Tarihsel provenans, kullanıcı daha sonra güncel input değiştirince sessizce yeniden yazılmaz.
+
+## AI çalışma mimarisi
+
+Harici AI ile otomatik API/network entegrasyonu yoktur. Güven sınırı bilinçli olarak copy/paste tabanlıdır.
 
 ```text
-Kullanıcı girdileri
-  → ExperimentDefinition
-  → SimulationContext
-  → runSimulationModels
-  → her modelin predict işlemi
-  → ModelPrediction listesi
-  → React karşılaştırma görünümü
+Saved/active deterministic snapshot
+        │
+        ▼
+GGL-AI-ANALYSIS v1
+        │ kullanıcı kopyalar
+        ▼
+      dış AI
+        │ tam olarak bir canonical öneri
+        ▼
+GGL-AI-TEST v1
+        │ fail-closed extractor
+        ▼
+Metinden Hazırla preview
+        │ checkbox + kullanıcı onayı
+        ▼
+uygulanan input alanları
+        │
+        ▼
+SavedExperiment + AiFollowUpLineage
+        │
+        ▼
+SHA-256 yerel doğrulama
 ```
 
-## Hesaplama ayrımı
+AI sonuçları fiziksel model prediction'ı değildir. Serbest AI açıklaması otoritatif deney verisine dönüştürülmez. Lineage yalnız kaynak analiz/test hash'lerini ve kullanıcı-onaylı uygulama provenansını bağlar.
 
-### Geometri
+2–12 kayıt için `GGL-AI-COMPARISON v1` bağımsız deney blokları üretir; farklı anlam/birimde metrikler otomatik eşdeğer sayılmaz.
 
-Küre ve düzlem üzerindeki görüş ilişkilerini hesaplar.
+## Görselleştirme sınırı
 
-### Atmosfer
-
-İlk sürümde yalnızca:
-
-- Kapalı
-- Standart kırılma için etkin yarıçap
-
-Katmanlı atmosfer profili sözleşmede ayrılmış ancak henüz uygulanmamıştır.
-
-### Değerlendirme
-
-Model tahminini gözlenen değer ve belirsizlikle karşılaştırır. Bu katman model formülünden ayrıdır.
-
-### Canlandırma
-
-2B/3B şekiller açıklama amaçlıdır. Sayısal değerlerin kaynağı değildir.
+Three.js dünya/model sahneleri, terrain şeritleri, atmosfer kabukları ve diğer görseller açıklama amaçlıdır. Görsel ölçeklendirme veya kamera durumu fiziksel input ya da prediction üretmez.
 
 ## Hata yalıtımı
 
-Model çalıştırıcı her modeli ayrı çalıştırır. Tek bir modeldeki hata diğer sonuçları engellemez. Hatalı veya eksik model `unsupported` sonucu ve uyarı üretir.
+Model runner her modeli ayrı çalıştırır. Tek modeldeki hata diğer modelleri engellemez. Tanımsız/başarısız davranış sonlu sahte değer yerine açık durum ve uyarı üretir.
+
+Importer ve portable parserlarda da aynı yaklaşım uygulanır: ambiguous veya doğrulanamayan veri otomatik tahminle uygulanmaz.
 
 ## Test ve CI
 
-GitHub Actions şu adımları çalıştırır:
+Testler `tests/` altında domain bazında tutulur ve hesap, persistence, portable, rapor ve AI sözleşmelerini kapsar.
 
-1. Bağımlılık kurulumu
-2. TypeScript typecheck
-3. Vitest testleri
-4. Electron-Vite üretim derlemesi
+Katkıcı için tek yerel kapı:
 
-Özellik dallarında yalnızca pull request koşusu çalışır. Aynı PR için eski koşular otomatik iptal edilir.
+```bash
+npm run verify
+```
 
-## Sonraki mimari genişletmeler
+GitHub Actions pull request ve `main` pushlarında typecheck, Vitest ve üretim derlemesi çalıştırır. UI/Electron davranışı değişirse otomatik testlere ek manuel smoke testi gerekir.
 
-- Deney deposu ve JSON şeması
-- WGS84/elipsoid paketi
-- Arazi profili sağlayıcısı
-- Atmosferik ışın izleme
-- Kamera kalibrasyonu
-- Rapor üretimi
+## Geliştirme sınırı
+
+Güncel mimari artık temel özellikleri taşımaktadır. Public-readiness döneminde öncelik yeni fonksiyon eklemek değil:
+
+- kalan büyük UI/IPC dosyalarını sorumluluk bazında parçalamak,
+- contributor ve AI-kodlama sözleşmelerini açık tutmak,
+- mevcut format/protokolleri geriye uyumlu korumak,
+- kullanım sırasında görülen gerçek eksiklere göre yeni fonksiyon eklemektir.
