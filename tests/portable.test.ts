@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   LOCAL_EXPERIMENT_STORE_SCHEMA,
+  LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION,
   PORTABLE_EXPERIMENT_SCHEMA,
   PORTABLE_EXPERIMENT_SCHEMA_VERSION,
   PortableFormatError,
@@ -374,7 +375,7 @@ it('migrates a version 4 experiment without inventing CSV provenance', () => {
     expect(parsed.migrated).toBe(true);
     expect(parsed.ignoredRecordCount).toBe(1);
     expect(parsed.store.schema).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA);
-    expect(parsed.store.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
+    expect(parsed.store.schemaVersion).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION);
     expect(parsed.store.experiments[0]?.inputs.distanceSource).toBe('manual');
     expect(parsed.store.experiments[0]?.manualTerrainPoints).toHaveLength(1);
   });
@@ -388,7 +389,7 @@ it('migrates a version 4 experiment without inventing CSV provenance', () => {
 
     expect(parsed.migrated).toBe(false);
     expect(parsed.ignoredRecordCount).toBe(0);
-    expect(parsed.store.schemaVersion).toBe(PORTABLE_EXPERIMENT_SCHEMA_VERSION);
+    expect(parsed.store.schemaVersion).toBe(LOCAL_EXPERIMENT_STORE_SCHEMA_VERSION);
     expect(parsed.store.experiments[0]?.geodesic?.method).toBe('vincenty');
     expect(parsed.store.experiments[0]?.manualTerrainPoints).toHaveLength(3);
     expect(parsed.store.experiments[0]?.terrainProfileSource)

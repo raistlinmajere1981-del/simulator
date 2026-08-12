@@ -214,18 +214,25 @@ function markSummary(mark: PhotoCalibrationMarks[MarkKey]): string {
   return `${mark.xPx.toFixed(1)}, ${mark.yPx.toFixed(1)} px`;
 }
 
+interface PhotoSessionStatus {
+  photoLoaded: boolean;
+  calibrationCommitted: boolean;
+}
+
 export function PhotoCalibrationControl({
   experimentId,
   savedCalibration,
   savedPrediction,
   onSave,
-  onClear
+  onClear,
+  onPhotoSessionChange
 }: {
   experimentId: string;
   savedCalibration?: SavedPhotoCalibration;
   savedPrediction?: ModelPrediction;
   onSave(calibration: SavedPhotoCalibration, record: PhotoCalibrationRecord): void;
   onClear(): void;
+  onPhotoSessionChange(status: PhotoSessionStatus): void;
 }): React.JSX.Element {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [preview, setPreview] = useState<ImportedObservationPhoto>();
@@ -238,14 +245,44 @@ export function PhotoCalibrationControl({
   const [message, setMessage] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
     setPreview(undefined);
     setDraft(draftFromSaved(savedCalibration));
     setSelectedMark('horizonStart');
     setTouchedMarks(new Set(savedCalibration ? markOrder : []));
     setIsDirty(false);
     setMessage('');
+
+    if (savedCalibration) {
+      void window.simulatorDesktop.loadObservationPhoto(savedCalibration.source)
+        .then((result) => {
+          if (cancelled) return;
+          if (result.status === 'success' && result.photo) {
+            setPreview(result.photo);
+            setMessage(result.message);
+          } else {
+            setMessage(result.message);
+          }
+        })
+        .catch((caught) => {
+          if (!cancelled) {
+            setMessage(caught instanceof Error ? caught.message : 'Kayıtlı fotoğraf varlığı yüklenemedi.');
+          }
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
   // Parent calibration updates in the same experiment must not discard the session photo preview.
   }, [experimentId]);
+
+  useEffect(() => {
+    onPhotoSessionChange({
+      photoLoaded: draft.source !== undefined,
+      calibrationCommitted: savedCalibration !== undefined
+    });
+  }, [draft.source, savedCalibration, onPhotoSessionChange]);
 
   const candidate = useMemo(() => {
     if (!draft.source || !draft.marks || touchedMarks.size < markOrder.length) {
@@ -468,8 +505,9 @@ export function PhotoCalibrationControl({
       </div>
 
       <p className="photo-calibration-note">
-        Fotoğraf dosyası deney JSON’una gömülmez. Kayıtta dosya adı, boyut, SHA-256,
-        görüntü ölçüsü, kamera parametreleri, işaretler ve hesap sonucu tutulur.
+        Fotoğraf, deney kaydından ayrı ve SHA-256 anahtarlı yerel varlık olarak tutulur.
+        Taşınabilir deney JSON’u oluşturulurken mevcut kaynak görüntü de pakete eklenir;
+        provenans, kamera parametreleri ve işaretler ayrıca doğrulanır.
       </p>
 
       {source && (
@@ -527,8 +565,8 @@ export function PhotoCalibrationControl({
         </div>
       ) : source ? (
         <div className="photo-preview-missing">
-          Bu kayıt fotoğrafın kendisini saklamaz. İşaretleri görüntü üzerinde görmek için
-          aynı dosyayı yeniden seç; SHA-256 eşleşirse mevcut kalibrasyon korunur.
+          Fotoğraf provenansı ve işaretler kayıtlı, ancak kaynak görüntü varlığı bu makinede yok.
+          Aynı dosyayı yeniden seç; SHA-256 eşleşirse mevcut kalibrasyon ve işaretler korunur.
         </div>
       ) : null}
 

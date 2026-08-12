@@ -1,5 +1,5 @@
 import type { AtmosphereExperimentState } from './atmosphere';
-import type { ImportedObservationPhoto, SavedPhotoCalibration } from './photo-calibration';
+import type { ImportedObservationPhoto, PhotoSourceMetadata, SavedPhotoCalibration } from './photo-calibration';
 import type { CalculationTrace, ModelPrediction } from './domain';
 import type { SimulationScenarioId } from './scenario';
 import type { ManualTerrainPoint, VerticalDatumKind } from './terrain';
@@ -220,6 +220,12 @@ export interface ImportObservationPhotoResult extends FileOperationResult {
   photo?: ImportedObservationPhoto;
 }
 
+export interface LoadObservationPhotoResult {
+  status: 'success' | 'missing';
+  message: string;
+  photo?: ImportedObservationPhoto;
+}
+
 export interface ImportStellarLocalHorizonResult extends FileOperationResult {
   profile?: ImportedStellarLocalHorizonProfile;
 }
@@ -328,6 +334,7 @@ export interface SimulatorDesktopApi {
   importExperiment(): Promise<ImportExperimentResult>;
   exportExperimentReport(id: string): Promise<FileOperationResult>;
   importObservationPhoto(): Promise<ImportObservationPhotoResult>;
+  loadObservationPhoto(source: PhotoSourceMetadata): Promise<LoadObservationPhotoResult>;
   importStellarLocalHorizon(): Promise<ImportStellarLocalHorizonResult>;
   importStellarMotionSource(): Promise<ImportStellarMotionResult>;
   importStellarDemSkyline(): Promise<ImportStellarDemSkylineResult>;

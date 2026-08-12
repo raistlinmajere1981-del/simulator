@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { simulationModels } from '../../../models';
 import type { AtmosphereExperimentState } from '../../../shared/atmosphere';
-import type { ExperimentDefinition } from '../../../shared/domain';
+import type { ExperimentDefinition, UncertainValue } from '../../../shared/domain';
 import { getSimulationScenario, type SimulationScenarioId } from '../../../shared/scenario';
 import type { SimulatorInputs } from '../../../shared/simulator';
 import type { ManualTerrainPoint, TerrainProfile } from '../../../shared/terrain';
@@ -119,7 +119,7 @@ export function useExperimentModelState({
         type: 'celestial',
         observer,
         observedAtIso: experimentObservedAtIso,
-        measurements: {}
+        measurements: {} as Record<string, UncertainValue>
       };
     }
 
@@ -130,7 +130,7 @@ export function useExperimentModelState({
         type: 'shadow',
         observer,
         observedAtIso: experimentObservedAtIso,
-        measurements: {}
+        measurements: {} as Record<string, UncertainValue>
       };
     }
 
@@ -141,7 +141,7 @@ export function useExperimentModelState({
         type: 'horizon',
         observer,
         observedAtIso: experimentObservedAtIso,
-        measurements: {}
+        measurements: {} as Record<string, UncertainValue>
       };
     }
 

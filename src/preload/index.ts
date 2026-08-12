@@ -4,6 +4,7 @@ import type {
   FileOperationResult,
   ImportExperimentResult,
   ImportObservationPhotoResult,
+  LoadObservationPhotoResult,
   ImportStellarLocalHorizonResult,
   ImportTerrainProfileResult,
   SavedExperiment,
@@ -20,7 +21,7 @@ import type {
 import type { ImportStellarMotionResult } from '../shared/stellar-motion-source';
 
 const api: SimulatorDesktopApi = {
-  version: '1.33.0',
+  version: '1.33.1',
   platform: process.platform,
   listExperiments: () =>
     ipcRenderer.invoke('experiments:list') as Promise<SavedExperiment[]>,
@@ -36,6 +37,8 @@ const api: SimulatorDesktopApi = {
     ipcRenderer.invoke('experiments:report', id) as Promise<FileOperationResult>,
   importObservationPhoto: () =>
     ipcRenderer.invoke('photo:import') as Promise<ImportObservationPhotoResult>,
+  loadObservationPhoto: (source) =>
+    ipcRenderer.invoke('photo:load-saved', source) as Promise<LoadObservationPhotoResult>,
   importStellarLocalHorizon: () =>
     ipcRenderer.invoke('stellar-horizon:import') as Promise<ImportStellarLocalHorizonResult>,
   importStellarMotionSource: () =>
