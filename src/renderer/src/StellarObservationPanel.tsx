@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BRIGHT_STAR_CATALOG, BRIGHT_STAR_CATALOG_SOURCE } from '../../simulation/bright-star-catalog';
+import { BRIGHT_STAR_CATALOG } from '../../simulation/bright-star-catalog';
 import {
   STELLAR_LOCAL_HORIZON_DIRECTIONS,
   type StellarObservationResult,
@@ -11,167 +11,24 @@ import type { SavedStellarMotionSource } from '../../shared/stellar-motion-sourc
 import { DraftNumberInput } from './DraftNumberInput';
 import { StellarDemSkylineControl } from './StellarDemSkylineControl';
 import { StellarPanoramaSkylineControl } from './StellarPanoramaSkylineControl';
-import { projectStellarSkyPoint, stellarSkyMarkerRadius } from './stellar-sky-visualization';
+import { StellarObservationResults } from './StellarObservationResults';
+import { StellarSkySnapshotPanel } from './StellarSkySnapshotPanel';
+import {
+  angleFormatter,
+  cloneExternalSource,
+  cloneMotionSource,
+  currentLocalHorizonState,
+  externalSourceSignature,
+  formatAngle,
+  formatImportedAt,
+  localHorizonDraftFromSettings,
+  localHorizonDraftMatchesSettings,
+  localHorizonSignature,
+  motionSourceSignature,
+  type LocalHorizonDirectionKey,
+  type LocalHorizonDraft
+} from './stellar-observation-view-model';
 import './stellar-observation-panel.css';
-
-const angleFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
-const preciseFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 5 });
-
-type LocalHorizonDirectionKey = (typeof STELLAR_LOCAL_HORIZON_DIRECTIONS)[number]['key'];
-type LocalHorizonDraft = Pick<
-  StellarObservationSettings,
-  'localHorizonEnabled' | 'localHorizonSourceMode' | LocalHorizonDirectionKey
->;
-
-const horizonClassLabels: Record<StellarObservationResult['position']['horizonClass'], string> = {
-  'circumpolar-above': 'Çevresel · ufkun üstünde',
-  'rises-and-sets': 'Doğar ve batar',
-  'never-rises': 'Bu enlemde doğmaz',
-  'grazes-horizon': 'Ufka teğet / sınır'
-};
-
-function formatAngle(value: number | null): string {
-  return value === null ? 'Tanımsız' : `${angleFormatter.format(value)}°`;
-}
-
-function formatDuration(minutes: number | null): string {
-  if (minutes === null) return 'Tanımsız';
-  if (minutes < 60) return `${angleFormatter.format(minutes)} dk`;
-  return `${angleFormatter.format(minutes / 60)} sa`;
-}
-
-function formatClock(iso: string): string {
-  return new Intl.DateTimeFormat('tr-TR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-    timeZone: 'UTC'
-  }).format(new Date(iso));
-}
-
-function formatImportedAt(iso: string): string {
-  return new Intl.DateTimeFormat('tr-TR', {
-    dateStyle: 'short',
-    timeStyle: 'medium',
-    hourCycle: 'h23'
-  }).format(new Date(iso));
-}
-
-function graphY(altitudeDeg: number): number {
-  return Math.max(4, Math.min(96, 50 - (altitudeDeg / 90) * 44));
-}
-
-function trailPolyline(result: StellarObservationResult): string {
-  const samples = result.trail.samples;
-  if (samples.length < 2) return '';
-  const duration = Math.max(result.trail.durationMinutes, 1);
-  return samples.map((sample) => {
-    const x = 4 + (sample.elapsedMinutes / duration) * 92;
-    return `${x.toFixed(2)},${graphY(sample.elevationDeg).toFixed(2)}`;
-  }).join(' ');
-}
-
-function apparentTrailPolyline(result: StellarObservationResult): string {
-  const samples = result.apparentTrailSamples;
-  if (samples.length < 2) return '';
-  const duration = Math.max(result.trail.durationMinutes, 1);
-  return samples.map((sample) => {
-    const x = 4 + (sample.elapsedMinutes / duration) * 92;
-    return `${x.toFixed(2)},${graphY(sample.apparentAltitudeDeg).toFixed(2)}`;
-  }).join(' ');
-}
-
-function localHorizonPolyline(result: StellarObservationResult): string {
-  const localTrail = result.localHorizonTrail;
-  if (!localTrail || localTrail.samples.length < 2) return '';
-  const duration = Math.max(localTrail.durationMinutes, 1);
-  return localTrail.samples
-    .filter((sample) => sample.localHorizonAltitudeDeg !== null)
-    .map((sample) => {
-      const x = 4 + (sample.elapsedMinutes / duration) * 92;
-      return `${x.toFixed(2)},${graphY(sample.localHorizonAltitudeDeg!).toFixed(2)}`;
-    })
-    .join(' ');
-}
-
-function currentLocalHorizonState(result: StellarObservationResult): {
-  label: string;
-  className: string;
-} | null {
-  const sample = result.localHorizonTrail?.samples[0];
-  if (!sample) return null;
-  if (sample.status === 'undefined-azimuth') {
-    return { label: 'YEREL UFUK AZİMUTU TANIMSIZ', className: 'stellar-state neutral' };
-  }
-  if (sample.status === 'below') {
-    return { label: 'YEREL UFKUN ALTINDA', className: 'stellar-state below' };
-  }
-  if (sample.status === 'on-horizon') {
-    return { label: 'YEREL UFUK SINIRINDA', className: 'stellar-state neutral' };
-  }
-  return { label: 'YEREL UFKUN ÜSTÜNDE', className: 'stellar-state visible' };
-}
-
-function localHorizonDraftFromSettings(settings: StellarObservationSettings): LocalHorizonDraft {
-  const draft = {
-    localHorizonEnabled: settings.localHorizonEnabled,
-    localHorizonSourceMode: settings.localHorizonSourceMode
-  } as LocalHorizonDraft;
-  for (const direction of STELLAR_LOCAL_HORIZON_DIRECTIONS) {
-    draft[direction.key] = settings[direction.key];
-  }
-  return draft;
-}
-
-function localHorizonSignature(settings: StellarObservationSettings): string {
-  return [
-    settings.localHorizonEnabled ? '1' : '0',
-    settings.localHorizonSourceMode,
-    ...STELLAR_LOCAL_HORIZON_DIRECTIONS.map((direction) => String(settings[direction.key]))
-  ].join('|');
-}
-
-function localHorizonDraftMatchesSettings(
-  draft: LocalHorizonDraft,
-  settings: StellarObservationSettings
-): boolean {
-  return draft.localHorizonEnabled === settings.localHorizonEnabled &&
-    draft.localHorizonSourceMode === settings.localHorizonSourceMode &&
-    STELLAR_LOCAL_HORIZON_DIRECTIONS.every((direction) => draft[direction.key] === settings[direction.key]);
-}
-
-function cloneExternalSource(
-  source: SavedStellarLocalHorizonSource | undefined
-): SavedStellarLocalHorizonSource | undefined {
-  return source
-    ? {
-        ...source,
-        points: source.points.map((point) => ({ ...point })),
-        warnings: [...source.warnings],
-        ...(source.demDerivation ? { demDerivation: { ...source.demDerivation } } : {}),
-        ...(source.panoramaDerivation
-          ? { panoramaDerivation: {
-              ...source.panoramaDerivation,
-              geometry: { ...source.panoramaDerivation.geometry },
-              marks: source.panoramaDerivation.marks.map((mark) => ({ ...mark }))
-            } }
-          : {})
-      }
-    : undefined;
-}
-
-function externalSourceSignature(source: SavedStellarLocalHorizonSource | undefined): string {
-  return source ? `${source.sha256}|${source.fileName}|${source.importedAtIso}` : '';
-}
-
-function cloneMotionSource(source: SavedStellarMotionSource | undefined): SavedStellarMotionSource | undefined {
-  return source ? { ...source, entries: source.entries.map((entry) => ({ ...entry })) } : undefined;
-}
-
-function motionSourceSignature(source: SavedStellarMotionSource | undefined): string {
-  return source ? `${source.sha256}|${source.fileName}|${source.importedAtIso}|${source.entryCount}` : '';
-}
 
 export function StellarObservationPanel({
   result,
@@ -230,28 +87,8 @@ export function StellarObservationPanel({
   }, [appliedMotionSourceSignature]);
 
   const position = result.position;
-  const crossings = result.trail.horizonCrossings;
-  const localCrossings = result.localHorizonTrail?.localHorizonCrossings ?? [];
-  const polyline = trailPolyline(result);
-  const apparentPolyline = apparentTrailPolyline(result);
-  const skylinePolyline = localHorizonPolyline(result);
   const localState = currentLocalHorizonState(result);
-  const firstLocalSample = result.localHorizonTrail?.samples[0];
   const apparent = result.apparentDiagnostic;
-  const skyStars = result.skySnapshot.stars.filter((star) => star.aboveGeometricHorizon && star.azimuthDeg !== null);
-  const brightestSkyStarIds = new Set(
-    [...skyStars]
-      .sort((left, right) => left.visualMagnitude - right.visualMagnitude)
-      .slice(0, 5)
-      .map((star) => star.starId)
-  );
-  brightestSkyStarIds.add(settings.starId);
-  const selectedSkyStar = result.skySnapshot.stars.find((star) => star.starId === settings.starId);
-  const plottedLocalCounts = {
-    above: skyStars.filter((star) => star.localHorizonStatus === 'above').length,
-    onHorizon: skyStars.filter((star) => star.localHorizonStatus === 'on-horizon').length,
-    below: skyStars.filter((star) => star.localHorizonStatus === 'below').length
-  };
   const sourceDraftDirty = externalSourceSignature(draftExternalLocalHorizonSource) !== appliedExternalSourceSignature;
   const motionSourceDirty = motionSourceSignature(draftMotionSource) !== appliedMotionSourceSignature;
   const draftMotionEntry = draftMotionSource?.entries.find((entry) => entry.starId === settings.starId);
@@ -631,181 +468,19 @@ export function StellarObservationPanel({
         </div>
       </div>
 
-      <div className={showSkySnapshot ? 'stellar-sky-panel active' : 'stellar-sky-panel'}>
-        <div className="stellar-sky-heading">
-          <div>
-            <strong>Çoklu yıldız gökyüzü · geometrik</strong>
-            <span>Zenit merkezde, 0° astronomik ufuk dış çemberde. Katalogdaki 19 yıldız aynı gözlem anında çözülür.</span>
-          </div>
-          <label className="stellar-sky-toggle">
-            <input
-              type="checkbox"
-              checked={showSkySnapshot}
-              onChange={(event) => setShowSkySnapshot(event.currentTarget.checked)}
-            />
-            <span>{showSkySnapshot ? 'Gösteriliyor' : 'Kapalı'}</span>
-          </label>
-        </div>
-        {showSkySnapshot && (
-          <>
-            <div className="stellar-sky-summary">
-              <span>Haritada çizilen <strong>{skyStars.length}/{result.skySnapshot.starCount}</strong></span>
-              <span>Geometrik 0° <strong>üstünde {result.skySnapshot.aboveGeometricHorizonCount} · altında ve çizilmeyen {result.skySnapshot.belowGeometricHorizonCount}</strong></span>
-              {result.skySnapshot.localHorizonCounts && (
-                <span>Çizilenlerde yerel skyline <strong>üstünde {plottedLocalCounts.above} · sınır {plottedLocalCounts.onHorizon} · altında {plottedLocalCounts.below}</strong></span>
-              )}
-              {selectedSkyStar && !selectedSkyStar.aboveGeometricHorizon && (
-                <span>Seçili yıldız <strong>0° geometrik ufkun altında · haritada çizilmez</strong></span>
-              )}
-            </div>
-            <div className="stellar-sky-chart-wrap">
-              <svg aria-label="Katalog yıldızlarının zenit merkezli geometrik polar gökyüzü görünümü" role="img" viewBox="0 0 100 100">
-                <circle className="stellar-sky-horizon" cx="50" cy="50" r="43" />
-                <circle className="stellar-sky-altitude-ring" cx="50" cy="50" r="28.67" />
-                <circle className="stellar-sky-altitude-ring" cx="50" cy="50" r="14.33" />
-                <line className="stellar-sky-axis" x1="50" y1="7" x2="50" y2="93" />
-                <line className="stellar-sky-axis" x1="7" y1="50" x2="93" y2="50" />
-                <text className="stellar-sky-cardinal north" x="50" y="4.5">K</text>
-                <text className="stellar-sky-cardinal east" x="96" y="51.5">D</text>
-                <text className="stellar-sky-cardinal south" x="50" y="98.5">G</text>
-                <text className="stellar-sky-cardinal west" x="4" y="51.5">B</text>
-                <text className="stellar-sky-altitude-label" x="50" y="20.5">60°</text>
-                <text className="stellar-sky-altitude-label" x="50" y="35">30°</text>
-                {skyStars.map((star) => {
-                  const point = projectStellarSkyPoint({ elevationDeg: star.elevationDeg, azimuthDeg: star.azimuthDeg! });
-                  const selected = star.starId === settings.starId;
-                  const locallyBlocked = star.localHorizonStatus === 'below';
-                  const onLocalHorizon = star.localHorizonStatus === 'on-horizon';
-                  const className = selected
-                    ? 'stellar-sky-star selected'
-                    : locallyBlocked
-                      ? 'stellar-sky-star locally-blocked'
-                      : onLocalHorizon
-                        ? 'stellar-sky-star local-boundary'
-                        : 'stellar-sky-star';
-                  return (
-                    <g key={star.starId} className={className}>
-                      <title>{star.commonName} · h {angleFormatter.format(star.elevationDeg)}° · A {angleFormatter.format(star.azimuthDeg!)}° · V {angleFormatter.format(star.visualMagnitude)}</title>
-                      <circle cx={point.x} cy={point.y} r={stellarSkyMarkerRadius(star.visualMagnitude) + (selected ? 0.5 : 0)} />
-                      {brightestSkyStarIds.has(star.starId) && (
-                        <text x={point.x + 2.2} y={point.y - 1.8}>{star.commonName}</text>
-                      )}
-                    </g>
-                  );
-                })}
-              </svg>
-              <div className="stellar-sky-legend">
-                <span className="catalog-star">Geometrik 0° üstü katalog yıldızı</span>
-                <span className="selected-star">Seçili yıldız</span>
-                {result.skySnapshot.localHorizonApplied && <span className="blocked-star">Geometrik olarak yerel skyline altında</span>}
-              </div>
-            </div>
-            <p className="stellar-sky-note">
-              Bu harita üst geometrik yarımküreyi gösterir. Nokta büyüklüğü katalog görsel kadrini yalnız ayırt edici ölçek olarak kullanır; atmosferik sönümleme, gökyüzü parlaklığı ve çıplak-göz eşiği uygulanmadığı için optik görünürlük haritası değildir. Standart apparent tanı bu haritaya uygulanmaz.
-            </p>
-          </>
-        )}
-      </div>
+      <StellarSkySnapshotPanel
+        onShowChange={setShowSkySnapshot}
+        result={result}
+        settings={settings}
+        show={showSkySnapshot}
+      />
 
-      <div className="stellar-coordinate-grid">
-        <article>
-          <span>Katalog · J2000</span>
-          <strong>α {preciseFormatter.format(result.sourceRightAscensionJ2000Deg)}°</strong>
-          <b>δ {preciseFormatter.format(result.sourceDeclinationJ2000Deg)}°</b>
-        </article>
-        <article>
-          <span>Gözlem tarihi · ortalama</span>
-          <strong>α {preciseFormatter.format(result.meanOfDateRightAscensionDeg)}°</strong>
-          <b>δ {preciseFormatter.format(result.meanOfDateDeclinationDeg)}°</b>
-        </article>
-        <article>
-          <span>Precession kayması</span>
-          <strong>{angleFormatter.format(result.precessionAngularShiftArcsec)}″</strong>
-          <b>IAU 2006</b>
-        </article>
-        <article>
-          <span>Yerel yıldız zamanı</span>
-          <strong>{angleFormatter.format(position.localMeanSiderealTimeDeg)}°</strong>
-          <b>LMST</b>
-        </article>
-      </div>
-
-      <div className="stellar-position-grid">
-        <article><span>Yükseklik</span><strong>{formatAngle(position.elevationDeg)}</strong></article>
-        <article><span>Azimut</span><strong>{formatAngle(position.azimuthDeg)}</strong></article>
-        <article><span>Saat açısı</span><strong>{formatAngle(position.hourAngleDeg)}</strong></article>
-        <article><span>Günlük sınıf</span><strong>{horizonClassLabels[position.horizonClass]}</strong></article>
-        {settings.localHorizonEnabled && (
-          <>
-            <article><span>Bu azimutta yerel ufuk</span><strong>{formatAngle(firstLocalSample?.localHorizonAltitudeDeg ?? null)}</strong></article>
-            <article><span>Yerel ufuk açıklığı</span><strong>{formatAngle(firstLocalSample?.geometricClearanceDeg ?? null)}</strong></article>
-          </>
-        )}
-      </div>
-
-      <div className="stellar-trail-card">
-        <div className="stellar-trail-title">
-          <div>
-            <span>Geometrik yıldız izi</span>
-            <strong>{formatDuration(result.trail.durationMinutes)} pencere · {result.trail.samples.length} örnek</strong>
-          </div>
-          <div>
-            <span>0° ufuk üstü</span>
-            <strong>{formatDuration(result.trail.visibleDurationMinutes)}</strong>
-          </div>
-          {result.localHorizonTrail && (
-            <div>
-              <span>Yerel ufuk üstü</span>
-              <strong>{formatDuration(result.localHorizonTrail.visibleDurationMinutes)}</strong>
-            </div>
-          )}
-        </div>
-        <svg aria-label="Geometrik yıldız yüksekliği, isteğe bağlı standart apparent yıldız yüksekliği ve yerel skyline zaman izi" role="img" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <line className="stellar-horizon-line" x1="4" x2="96" y1="50" y2="50" />
-          <line className="stellar-guide-line" x1="4" x2="96" y1="6" y2="6" />
-          <line className="stellar-guide-line" x1="4" x2="96" y1="94" y2="94" />
-          {skylinePolyline && <polyline className="stellar-local-horizon-line" points={skylinePolyline} fill="none" />}
-          <polyline className="stellar-trail-line" points={polyline} fill="none" />
-          {showRefractionDiagnostic && apparentPolyline && <polyline className="stellar-apparent-trail-line" points={apparentPolyline} fill="none" />}
-        </svg>
-        <div className="stellar-trail-axis"><span>+90°</span><span>0° astronomik ufuk</span><span>−90°</span></div>
-        {(result.localHorizonTrail || showRefractionDiagnostic) && (
-          <div className="stellar-trail-legend">
-            <span className="star-line-key">Geometrik yıldız</span>
-            {showRefractionDiagnostic && <span className="apparent-line-key">Standart apparent</span>}
-            {result.localHorizonTrail && <span className="skyline-line-key">Yerel skyline</span>}
-          </div>
-        )}
-      </div>
-
-      <div className="stellar-crossings">
-        <span>0° astronomik ufuk geçişleri</span>
-        {crossings.length === 0 ? (
-          <strong>Bu zaman penceresinde 0° doğuş/batış geçişi yok.</strong>
-        ) : crossings.map((crossing) => (
-          <strong key={`${crossing.kind}-${crossing.observedAtIso}`}>
-            {crossing.kind === 'rise' ? 'Doğuş' : 'Batış'} · UTC {formatClock(crossing.observedAtIso)} · A {formatAngle(crossing.azimuthDeg)}
-          </strong>
-        ))}
-      </div>
-
-      {result.localHorizonTrail && (
-        <div className="stellar-crossings local">
-          <span>Yerel skyline geçişleri</span>
-          {localCrossings.length === 0 ? (
-            <strong>Bu zaman penceresinde yerel ufuk geçişi yok.</strong>
-          ) : localCrossings.map((crossing) => (
-            <strong key={`${crossing.kind}-${crossing.observedAtIso}`}>
-              {crossing.kind === 'rise' ? 'Yerel doğuş' : 'Yerel batış'} · UTC {formatClock(crossing.observedAtIso)} · A {formatAngle(crossing.azimuthDeg)} · ufuk {formatAngle(crossing.localHorizonAltitudeDeg)}
-            </strong>
-          ))}
-        </div>
-      )}
-
-      <p className="stellar-source-note">
-        {BRIGHT_STAR_CATALOG_SOURCE}. Geometrik yıldız izi ve yerel skyline ana sonuçlardır. Standart kırılma tanısı yalnız yıldız ışını için yaklaşık apparent yüksekliği ayrı gösterir; geometrik skyline ile karma fark yerel optik görünürlük değildir. Sönümleme, gökyüzü parlaklığı, gerçek hava profili, bulut, seeing ve çıplak-göz algı eşiği uygulanmaz.
-      </p>
-      {prediction.warnings.length > 0 && <p className="stellar-warning">{prediction.warnings[2]}</p>}
+      <StellarObservationResults
+        prediction={prediction}
+        result={result}
+        settings={settings}
+        showRefractionDiagnostic={showRefractionDiagnostic}
+      />
     </section>
   );
 }
