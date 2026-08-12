@@ -62,7 +62,16 @@ describe('AI lineage verification', () => {
     expect(result.analysis.status).toBe('verified');
   });
 
-  it('reports partial verification when source snapshot is missing or changed', async () => {
+  it('still verifies when only source updatedAt differs but reconstructed package is identical', async () => {
+    const entry = await provenance();
+    const sameContent = sourceExperiment();
+    sameContent.updatedAtIso = '2026-08-12T14:05:00.000Z';
+    const result = await verifyAiFollowUpProvenance(entry, [sameContent]);
+    expect(result.status).toBe('verified');
+    expect(result.analysis.status).toBe('verified');
+  });
+
+  it('reports partial verification when source snapshot is missing or its content changed', async () => {
     const entry = await provenance();
     const missing = await verifyAiFollowUpProvenance(entry, []);
     expect(missing.status).toBe('partial');
@@ -70,6 +79,7 @@ describe('AI lineage verification', () => {
 
     const changed = sourceExperiment();
     changed.updatedAtIso = '2026-08-12T14:05:00.000Z';
+    changed.inputs = { ...changed.inputs, surfaceDistanceKm: 41 };
     const changedResult = await verifyAiFollowUpProvenance(entry, [changed]);
     expect(changedResult.status).toBe('partial');
     expect(changedResult.analysis.status).toBe('source-changed');
