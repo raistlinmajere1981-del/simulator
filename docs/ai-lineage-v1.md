@@ -38,3 +38,14 @@ Dış AI hesap otoritesi değildir. GGL yalnız kendi deterministik hesapların�
 ## Rapor ve sonraki AI paketi
 
 Çevrimdışı HTML raporu AI takip kaydının kaynak deney kimliğini ve iki SHA-256 özetini gösterir. Sonraki `GGL-AI-ANALYSIS` paketinde yalnız hash tabanlı lineage özeti bulunur; önceki dış AI yanıtı veya kanonik test metni pakete tekrar gömülmez.
+
+## Aşama 8.8 · yerel doğrulama
+
+Veri Yöneticisi, kayıtlı bir `ai-follow-up` zincirini ağ veya dış AI çağrısı olmadan yeniden denetleyebilir.
+
+- Kanonik test bütünlüğü her zaman `sourceText.trim()` üzerinden tekrar SHA-256 hesaplanarak `canonicalTestSha256` ile karşılaştırılır.
+- Kaynak deney aynı `sourceExperimentId` ve aynı `sourceExperimentUpdatedAtIso` ile hâlâ kayıt listesinde bulunuyorsa `GGL-AI-ANALYSIS` paketi kayıtlı `analysisGeneratedAtIso` ile yeniden üretilir ve `analysisSha256` tekrar doğrulanır.
+- Kaynak deney silinmişse veya aynı kimlik daha yeni bir snapshot ile üzerine yazılmışsa analiz paketi tarihsel olarak yeniden üretilemez. Bu durum `KISMİ DOĞRULAMA` olarak gösterilir; tek başına hata sayılmaz.
+- Kanonik test hash'i veya yeniden üretilebilen analiz hash'i eşleşmiyorsa durum `UYUŞMAZLIK` olur.
+
+Bu denetim AI yorumunun bilimsel olarak doğru olup olmadığını kanıtlamaz. Yalnız kayıtlı provenance zincirinin ve yeniden üretilebilen deterministik GGL paketinin kriptografik olarak tutarlı olup olmadığını kontrol eder.
