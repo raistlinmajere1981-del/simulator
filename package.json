@@ -12,6 +12,9 @@
     "electron": true,
     "esbuild": true
   },
+  "overrides": {
+    "yauzl": "^3.3.1"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
