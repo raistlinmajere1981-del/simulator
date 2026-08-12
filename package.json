@@ -4,14 +4,6 @@
   "private": true,
   "description": "Farklı geometrik ve fiziksel modelleri ölçülebilir gözlemler üzerinden sayısal olarak karşılaştıran masaüstü simülasyon laboratuvarı.",
   "main": "./out/main/index.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/raistlinmajere1981-del/simulator.git"
-  },
-  "bugs": {
-    "url": "https://github.com/raistlinmajere1981-del/simulator/issues"
-  },
-  "homepage": "https://github.com/raistlinmajere1981-del/simulator#readme",
   "engines": {
     "node": ">=22"
   },
