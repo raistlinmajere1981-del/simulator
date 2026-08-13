@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   defaultExperimentName,
+  getDatumLabel,
   getScenarioPresentation,
   getSidebarModelLabel
 } from '../src/renderer/src/app/app-config';
@@ -27,5 +28,12 @@ describe('localized renderer scenario presentation', () => {
     expect(getSidebarModelLabel('tr', 'ideal-sphere', 'Mevcut Türkçe Ad')).toBe('Mevcut Türkçe Ad');
     expect(getSidebarModelLabel('en', 'ideal-sphere', 'Mevcut Türkçe Ad')).toBe('Ideal Sphere');
     expect(getSidebarModelLabel('en', 'unknown-model', 'Custom Model')).toBe('Custom Model');
+  });
+
+  it('localizes vertical datum presentation without changing persisted datum ids', () => {
+    expect(getDatumLabel('tr', 'orthometric-msl')).toBe('Ortalama deniz seviyesi');
+    expect(getDatumLabel('en', 'orthometric-msl')).toBe('Mean sea level');
+    expect(getDatumLabel('en', 'ellipsoidal-wgs84')).toBe('WGS84 ellipsoidal height');
+    expect(getDatumLabel('en', 'local')).toBe('Local vertical reference');
   });
 });

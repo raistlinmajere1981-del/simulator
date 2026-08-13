@@ -37,5 +37,6 @@ The localization stage is complete only after both languages cover all user-faci
 
 - Foundation: locale bootstrap, persisted explicit TR/EN switch, document language/title and top application shell.
 - Navigation slice: scenario labels/descriptions, sidebar states/model references/visual layers and locale-aware default experiment names.
+- Core panel slice: visibility/horizon scenario summary, observation reference panels, vertical datum presentation and explicit locale-aware number/coordinate/bearing/percent formatting.
 
-The main experiment panels, astronomy time card, dialogs, help/AI guidance and reports remain separate follow-up slices.
+Model result cards/tables, astronomy time card, specialized panels, dialogs, help/AI guidance and reports remain separate follow-up slices.

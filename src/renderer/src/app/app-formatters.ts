@@ -1,4 +1,5 @@
 import type { ModelPrediction, ResultStatus } from '../../../shared/domain';
+import { appLocaleTag, type AppLocale } from '../i18n';
 import type { NumericInputKey } from './app-types';
 
 export const statusLabels: Record<ResultStatus, string> = {
@@ -26,18 +27,35 @@ export const inputRanges: Record<NumericInputKey, { min: number; max: number }> 
   refractionCoefficient: { min: -1, max: 0.99 }
 };
 
-export const numberFormatter = new Intl.NumberFormat('tr-TR', {
-  maximumFractionDigits: 2
-});
+const numberFormatters: Record<AppLocale, Intl.NumberFormat> = {
+  tr: new Intl.NumberFormat(appLocaleTag('tr'), { maximumFractionDigits: 2 }),
+  en: new Intl.NumberFormat(appLocaleTag('en'), { maximumFractionDigits: 2 })
+};
+const coordinateFormatters: Record<AppLocale, Intl.NumberFormat> = {
+  tr: new Intl.NumberFormat(appLocaleTag('tr'), { minimumFractionDigits: 4, maximumFractionDigits: 6 }),
+  en: new Intl.NumberFormat(appLocaleTag('en'), { minimumFractionDigits: 4, maximumFractionDigits: 6 })
+};
+const bearingFormatters: Record<AppLocale, Intl.NumberFormat> = {
+  tr: new Intl.NumberFormat(appLocaleTag('tr'), { maximumFractionDigits: 3 }),
+  en: new Intl.NumberFormat(appLocaleTag('en'), { maximumFractionDigits: 3 })
+};
 
-export const coordinateFormatter = new Intl.NumberFormat('tr-TR', {
-  minimumFractionDigits: 4,
-  maximumFractionDigits: 6
-});
+// Historical exports remain Turkish until each legacy caller is migrated to an explicit locale.
+export const numberFormatter = numberFormatters.tr;
+export const coordinateFormatter = coordinateFormatters.tr;
+export const bearingFormatter = bearingFormatters.tr;
 
-export const bearingFormatter = new Intl.NumberFormat('tr-TR', {
-  maximumFractionDigits: 3
-});
+export function numberFormatterFor(locale: AppLocale): Intl.NumberFormat {
+  return numberFormatters[locale];
+}
+
+export function coordinateFormatterFor(locale: AppLocale): Intl.NumberFormat {
+  return coordinateFormatters[locale];
+}
+
+export function bearingFormatterFor(locale: AppLocale): Intl.NumberFormat {
+  return bearingFormatters[locale];
+}
 
 export function getMetric(
   prediction: ModelPrediction | undefined,
@@ -46,27 +64,42 @@ export function getMetric(
   return prediction?.metrics.find((metric) => metric.key === key)?.value ?? null;
 }
 
-export function formatPercent(fraction: number | null): string {
-  return fraction === null ? '—' : `%${numberFormatter.format(fraction * 100)}`;
+export function formatPercentValue(valuePercent: number, locale: AppLocale = 'tr'): string {
+  const formatted = numberFormatterFor(locale).format(valuePercent);
+  return locale === 'tr' ? `%${formatted}` : `${formatted}%`;
 }
 
-export function formatDistance(distanceM: number | null, infinite = false): string {
+export function formatSignedPercentValue(valuePercent: number, locale: AppLocale = 'tr'): string {
+  const formatted = numberFormatterFor(locale).format(valuePercent);
+  return locale === 'tr' ? `±%${formatted}` : `±${formatted}%`;
+}
+
+export function formatPercent(fraction: number | null, locale: AppLocale = 'tr'): string {
+  return fraction === null ? '—' : formatPercentValue(fraction * 100, locale);
+}
+
+export function formatDistance(
+  distanceM: number | null,
+  infinite = false,
+  locale: AppLocale = 'tr'
+): string {
   if (distanceM === null) return infinite ? '∞' : '—';
-  return `${numberFormatter.format(distanceM / 1_000)} km`;
+  return `${numberFormatterFor(locale).format(distanceM / 1_000)} km`;
 }
 
-export function formatMetres(valueM: number | null): string {
-  return valueM === null ? '—' : `${numberFormatter.format(valueM)} m`;
+export function formatMetres(valueM: number | null, locale: AppLocale = 'tr'): string {
+  return valueM === null ? '—' : `${numberFormatterFor(locale).format(valueM)} m`;
 }
 
-export function formatAngle(angleDeg: number | null): string {
-  return angleDeg === null ? '—' : `${numberFormatter.format(angleDeg)}°`;
+export function formatAngle(angleDeg: number | null, locale: AppLocale = 'tr'): string {
+  return angleDeg === null ? '—' : `${numberFormatterFor(locale).format(angleDeg)}°`;
 }
 
-export function formatDifference(differencePp: number | null): string {
-  return differencePp === null
-    ? '—'
-    : `${numberFormatter.format(differencePp)} puan`;
+export function formatDifference(differencePp: number | null, locale: AppLocale = 'tr'): string {
+  if (differencePp === null) return '—';
+  return locale === 'tr'
+    ? `${numberFormatterFor(locale).format(differencePp)} puan`
+    : `${numberFormatterFor(locale).format(differencePp)} pp`;
 }
 
 export function clampInputValue(key: NumericInputKey, value: number): number {
