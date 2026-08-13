@@ -1,11 +1,17 @@
 import type { AtmosphereMode } from '../../../shared/atmosphere';
-import { getSimulationScenario, type SimulationScenarioId } from '../../../shared/scenario';
+import type { SimulationScenarioId } from '../../../shared/scenario';
 import type { DistanceSource, SimulatorInputs } from '../../../shared/simulator';
 import type { VerticalDatumKind } from '../../../shared/terrain';
 import type { GeodesicResult } from '../../../simulation/geodesy';
 import { PanelHelpButton } from '../HelpSystem';
+import { useI18n } from '../I18nProvider';
 import { NumericField } from './NumericField';
-import { bearingFormatter, coordinateFormatter, numberFormatter } from './app-formatters';
+import { getDatumLabel, getScenarioPresentation } from './app-config';
+import {
+  bearingFormatterFor,
+  coordinateFormatterFor,
+  numberFormatterFor
+} from './app-formatters';
 import type { NumericInputKey } from './app-types';
 
 export function ScenarioSummary({
@@ -37,97 +43,107 @@ export function ScenarioSummary({
   onSave(): void;
   onShowGeodesicTrace(): void;
 }): React.JSX.Element {
-  const scenario = getSimulationScenario(scenarioId);
+  const { locale, t } = useI18n();
+  const scenario = getScenarioPresentation(locale, scenarioId);
   const isHorizon = scenarioId === 'horizon';
+  const numberFormatter = numberFormatterFor(locale);
+  const coordinateFormatter = coordinateFormatterFor(locale);
+  const bearingFormatter = bearingFormatterFor(locale);
+  const atmosphereModeLabel = atmosphereMode === 'off'
+    ? t('atmosphere.off')
+    : atmosphereMode === 'standard'
+      ? t('atmosphere.standard')
+      : t('atmosphere.layered');
+
   return (
     <section className="scenario-summary panel coordinate-summary">
       <div className="panel-title-row">
         <div>
-          <span className="eyebrow">Aktif senaryo</span>
+          <span className="eyebrow">{t('core.activeScenario')}</span>
           <h2>{activeName || scenario.label}</h2>
         </div>
         <div className="title-actions">
           <PanelHelpButton panelId="scenario-summary" />
-          {isDirty && <span className="dirty-badge">KAYDEDİLMEDİ</span>}
-          <button className="save-button" onClick={onSave} type="button">Deneyi Kaydet</button>
-          <button className="reset-button" onClick={onReset} type="button">Yeni / Varsayılan</button>
-          <span className="calculation-badge">CANLI HESAPLAMA</span>
+          {isDirty && <span className="dirty-badge">{t('core.unsaved')}</span>}
+          <button className="save-button" onClick={onSave} type="button">{t('core.saveExperiment')}</button>
+          <button className="reset-button" onClick={onReset} type="button">{t('core.newDefault')}</button>
+          <span className="calculation-badge">{t('core.liveCalculation')}</span>
         </div>
       </div>
 
       <div className={`input-grid base-input-grid ${isHorizon ? 'horizon-input-grid' : ''}`}>
-        <NumericField inputKey="observerHeightM" label="Göz yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+        <NumericField inputKey="observerHeightM" label={t('field.eyeHeight')} unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
         {isHorizon ? (
           <>
-            <NumericField inputKey="observerGroundElevationM" label="Gözlemci zemin kotu" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
-            <NumericField inputKey="verticalDatumOffsetM" label="Datum / yerel ofset" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+            <NumericField inputKey="observerGroundElevationM" label={t('field.observerGroundElevation')} unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+            <NumericField inputKey="verticalDatumOffsetM" label={t('field.datumOffset')} unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
             <label className="input-field horizon-datum-field">
-              <span>Düşey datum</span>
+              <span>{t('field.verticalDatum')}</span>
               <select value={inputs.verticalDatumKind} onChange={(event) => onDatumChange(event.currentTarget.value as VerticalDatumKind)}>
-                <option value="orthometric-msl">Ortalama deniz seviyesi</option>
-                <option value="ellipsoidal-wgs84">WGS84 elipsoidal</option>
-                <option value="local">Yerel düşey datum</option>
+                <option value="orthometric-msl">{getDatumLabel(locale, 'orthometric-msl')}</option>
+                <option value="ellipsoidal-wgs84">{getDatumLabel(locale, 'ellipsoidal-wgs84')}</option>
+                <option value="local">{getDatumLabel(locale, 'local')}</option>
               </select>
             </label>
           </>
         ) : (
           <>
-            <NumericField inputKey="targetHeightM" label="Hedef yüksekliği" unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
-            <NumericField inputKey="observedVisiblePercent" label="Gözlenen görünürlük" unit="%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
-            <NumericField inputKey="observationUncertaintyPercent" label="Gözlem belirsizliği" unit="±%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
+            <NumericField inputKey="targetHeightM" label={t('field.targetHeight')} unit="m" step={0.1} inputs={inputs} onNumberChange={onNumberChange} />
+            <NumericField inputKey="observedVisiblePercent" label={t('field.observedVisibility')} unit="%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
+            <NumericField inputKey="observationUncertaintyPercent" label={t('field.observationUncertainty')} unit="±%" step={1} inputs={inputs} onNumberChange={onNumberChange} />
           </>
         )}
-        <NumericField inputKey="refractionCoefficient" label="Kırılma katsayısı" unit="k" step={0.01} inputs={inputs} disabled={atmosphereMode !== 'standard'} onNumberChange={onNumberChange} />
+        <NumericField inputKey="refractionCoefficient" label={t('field.refractionCoefficient')} unit="k" step={0.01} inputs={inputs} disabled={atmosphereMode !== 'standard'} onNumberChange={onNumberChange} />
       </div>
 
       {!isHorizon && <div className="distance-source-panel">
         <div className="distance-source-heading">
           <div>
-            <span className="eyebrow">Mesafe kaynağı</span>
-            <strong>{inputs.distanceSource === 'manual' ? 'Elle girilen yüzey mesafesi' : 'WGS84 koordinat çözümü'}</strong>
+            <span className="eyebrow">{t('distance.source')}</span>
+            <strong>{inputs.distanceSource === 'manual' ? t('distance.manualSurface') : t('distance.coordinateSolution')}</strong>
           </div>
           <div className="distance-mode-buttons">
-            <button className={inputs.distanceSource === 'manual' ? 'selected' : ''} type="button" onClick={() => onDistanceSourceChange('manual')}>Manuel</button>
-            <button className={inputs.distanceSource === 'coordinates' ? 'selected' : ''} type="button" onClick={() => onDistanceSourceChange('coordinates')}>Koordinat</button>
+            <button className={inputs.distanceSource === 'manual' ? 'selected' : ''} type="button" onClick={() => onDistanceSourceChange('manual')}>{t('distance.manual')}</button>
+            <button className={inputs.distanceSource === 'coordinates' ? 'selected' : ''} type="button" onClick={() => onDistanceSourceChange('coordinates')}>{t('distance.coordinates')}</button>
           </div>
         </div>
 
         {inputs.distanceSource === 'manual' ? (
           <div className="manual-distance-row">
-            <NumericField inputKey="surfaceDistanceKm" label="Yüzey mesafesi" unit="km" step={0.01} inputs={inputs} onNumberChange={onNumberChange} />
-            <p>Bu değer bütün modellerin ortak deney mesafesi olarak kullanılır.</p>
+            <NumericField inputKey="surfaceDistanceKm" label={t('field.surfaceDistance')} unit="km" step={0.01} inputs={inputs} onNumberChange={onNumberChange} />
+            <p>{t('distance.manualNote')}</p>
           </div>
         ) : (
           <>
             <div className="coordinate-grid">
-              <NumericField inputKey="observerLatitudeDeg" label="Gözlemci enlemi" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
-              <NumericField inputKey="observerLongitudeDeg" label="Gözlemci boylamı" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
-              <NumericField inputKey="targetLatitudeDeg" label="Hedef enlemi" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
-              <NumericField inputKey="targetLongitudeDeg" label="Hedef boylamı" unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
+              <NumericField inputKey="observerLatitudeDeg" label={t('field.observerLatitude')} unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
+              <NumericField inputKey="observerLongitudeDeg" label={t('field.observerLongitude')} unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
+              <NumericField inputKey="targetLatitudeDeg" label={t('field.targetLatitude')} unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
+              <NumericField inputKey="targetLongitudeDeg" label={t('field.targetLongitude')} unit="°" step={0.000001} inputs={inputs} onNumberChange={onNumberChange} />
             </div>
             <div className={`geodesic-summary ${geodesic?.method === 'spherical-fallback' ? 'fallback' : ''}`}>
-              <div><small>WGS84 mesafesi</small><strong>{numberFormatter.format(effectiveDistanceKm)} km</strong></div>
-              <div><small>Başlangıç azimutu</small><strong>{geodesic ? `${bearingFormatter.format(geodesic.initialBearingDeg)}°` : '—'}</strong></div>
-              <div><small>Varış azimutu</small><strong>{geodesic ? `${bearingFormatter.format(geodesic.finalBearingDeg)}°` : '—'}</strong></div>
-              <div><small>Çözüm</small><strong>{geodesic?.method === 'vincenty' ? `Vincenty · ${geodesic.iterations} iterasyon` : 'Küresel yedek'}</strong></div>
-              <button type="button" onClick={onShowGeodesicTrace}>Jeodezik hesap izi</button>
+              <div><small>{t('geodesic.distance')}</small><strong>{numberFormatter.format(effectiveDistanceKm)} km</strong></div>
+              <div><small>{t('geodesic.initialBearing')}</small><strong>{geodesic ? `${bearingFormatter.format(geodesic.initialBearingDeg)}°` : '—'}</strong></div>
+              <div><small>{t('geodesic.finalBearing')}</small><strong>{geodesic ? `${bearingFormatter.format(geodesic.finalBearingDeg)}°` : '—'}</strong></div>
+              <div><small>{t('geodesic.solution')}</small><strong>{geodesic?.method === 'vincenty' ? t('geodesic.vincentySolution', { iterations: geodesic.iterations }) : t('geodesic.sphericalFallback')}</strong></div>
+              <button type="button" onClick={onShowGeodesicTrace}>{t('geodesic.trace')}</button>
             </div>
             <p className="coordinate-note">
-              Gözlemci {coordinateFormatter.format(inputs.observerLatitudeDeg)}°, {coordinateFormatter.format(inputs.observerLongitudeDeg)}° · Hedef {coordinateFormatter.format(inputs.targetLatitudeDeg)}°, {coordinateFormatter.format(inputs.targetLongitudeDeg)}°
+              {t('geodesic.coordinateNote', {
+                observerLat: coordinateFormatter.format(inputs.observerLatitudeDeg),
+                observerLon: coordinateFormatter.format(inputs.observerLongitudeDeg),
+                targetLat: coordinateFormatter.format(inputs.targetLatitudeDeg),
+                targetLon: coordinateFormatter.format(inputs.targetLongitudeDeg)
+              })}
             </p>
           </>
         )}
       </div>}
 
-      {isHorizon && (
-        <p className="scenario-scope-note">
-          Ufuk Analizi hedef, rota ve arazi profilini kullanmaz. Sonuç yalnız gözlemci toplam kotu,
-          seçilen yüzey geometrisi ve desteklenen atmosfer varsayımından üretilir.
-        </p>
-      )}
+      {isHorizon && <p className="scenario-scope-note">{t('horizon.scope')}</p>}
 
       <div className="refraction-control">
-        <span>Atmosfer modu: {atmosphereMode === 'off' ? 'Kapalı' : atmosphereMode === 'standard' ? 'Standart k' : 'Katmanlı profil'} · ayrıntılar aşağıdaki Atmosfer panelinden yönetilir.</span>
+        <span>{t('atmosphere.modeSummary', { mode: atmosphereModeLabel })}</span>
       </div>
     </section>
   );

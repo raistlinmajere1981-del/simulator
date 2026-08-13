@@ -76,11 +76,21 @@ const sidebarModelTranslationKeys: Record<string, TranslationKey> = {
   'azimuthal-projection': 'model.azimuthalProjection'
 };
 
+const datumTranslationKeys: Record<VerticalDatumKind, TranslationKey> = {
+  'orthometric-msl': 'datum.orthometricMsl',
+  'ellipsoidal-wgs84': 'datum.ellipsoidalWgs84',
+  local: 'datum.local'
+};
+
 export const datumLabels: Record<VerticalDatumKind, string> = {
   'orthometric-msl': 'Ortalama deniz seviyesi',
   'ellipsoidal-wgs84': 'WGS84 elipsoidal yükseklik',
   local: 'Yerel düşey referans'
 };
+
+export function getDatumLabel(locale: AppLocale, kind: VerticalDatumKind): string {
+  return translate(locale, datumTranslationKeys[kind]);
+}
 
 export function getPresentation(modelId: string): ModelPresentation {
   return presentationByModelId[modelId] ?? { tone: 'violet', shape: 'gleason' };
