@@ -1,0 +1,19 @@
+GGL-AI-TEST v1
+scenario: stellar-observation
+name: Contract fixture Polaris
+observed_at_utc: 2026-08-13T21:00:00Z
+utc_offset: +03:00
+observer.coordinates: 41.0082,28.9784
+stellar.star_id: hr-0424
+stellar.trail_duration_minutes: 720
+stellar.sample_interval_minutes: 10
+stellar.local_horizon.enabled: true
+stellar.local_horizon.n_deg: 5
+stellar.local_horizon.ne_deg: 4
+stellar.local_horizon.e_deg: 3
+stellar.local_horizon.se_deg: 2
+stellar.local_horizon.s_deg: 1
+stellar.local_horizon.sw_deg: 2
+stellar.local_horizon.w_deg: 3
+stellar.local_horizon.nw_deg: 4
+END GGL-AI-TEST

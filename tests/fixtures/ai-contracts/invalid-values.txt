@@ -1,0 +1,8 @@
+GGL-AI-TEST v1
+scenario: orbital-dynamics
+name: Invalid contract values
+observer.coordinates: 95,250
+surface_distance_km: -1
+stellar.star_id: not-a-catalog-id
+stellar.trail_duration_minutes: 123
+END GGL-AI-TEST

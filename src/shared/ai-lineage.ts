@@ -1,8 +1,14 @@
 import type { SavedExperiment } from './simulator';
 import { GGL_AI_TEST_END, GGL_AI_TEST_HEADER } from './ai-workflow';
+import {
+  AI_ANALYSIS_SNAPSHOT_FORMAT,
+  AI_FOLLOW_UP_LINEAGE_VERSION
+} from './ai-contracts';
 
-export const AI_FOLLOW_UP_LINEAGE_VERSION = 'v1';
-export const AI_ANALYSIS_SNAPSHOT_FORMAT = 'GGL-AI-ANALYSIS';
+export {
+  AI_ANALYSIS_SNAPSHOT_FORMAT,
+  AI_FOLLOW_UP_LINEAGE_VERSION
+} from './ai-contracts';
 export const MAX_AI_ANALYSIS_SNAPSHOT_CHARS = 256_000;
 
 export interface AiAnalysisSnapshotEvidence {

@@ -1,0 +1,11 @@
+First proposal:
+GGL-AI-TEST v1
+scenario: target-visibility
+surface_distance_km: 42
+END GGL-AI-TEST
+
+Second proposal:
+GGL-AI-TEST v1
+scenario: horizon
+surface_distance_km: 100
+END GGL-AI-TEST
