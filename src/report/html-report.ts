@@ -160,13 +160,13 @@ export function createExperimentHtmlReport(
       <div class="notice">${messages.notice}</div>
     </header>
 
-    ${geodesicSection(experiment)}
-    ${verticalTerrainSection(experiment, effectiveDistanceKm)}
-    ${photoCalibrationSection(experiment)}
-    ${photoModelUncertaintySection(experiment)}
-    ${textSetupHistorySection(experiment)}
-    ${stellarLocalHorizonSourceSection(experiment)}
-    ${stellarMotionSourceSection(experiment)}
+    ${geodesicSection(experiment, locale)}
+    ${verticalTerrainSection(experiment, effectiveDistanceKm, locale)}
+    ${photoCalibrationSection(experiment, locale)}
+    ${photoModelUncertaintySection(experiment, locale)}
+    ${textSetupHistorySection(experiment, locale)}
+    ${stellarLocalHorizonSourceSection(experiment, locale)}
+    ${stellarMotionSourceSection(experiment, locale)}
     ${astronomyResultsSection(experiment, locale)}
     ${experiment.predictions
       .filter((prediction) => !astronomyModelIds.has(prediction.modelId))
