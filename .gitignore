@@ -11,3 +11,5 @@ Thumbs.db
 !.env.example
 .vscode/*
 !.vscode/extensions.json
+__pycache__/
+*.py[cod]

@@ -6,6 +6,7 @@ import type {
 } from '../../shared/simulator';
 import type { ManualTerrainPoint } from '../../shared/terrain';
 import { sortManualTerrainPoints } from '../../simulation/manual-terrain-profile';
+import { appLocaleTag, translate, type AppLocale } from './i18n';
 
 export interface PreviewPoint {
   id: string;
@@ -27,9 +28,12 @@ export interface TerrainPointDragState {
 }
 
 export const MAX_EDITOR_POINTS = 2_000;
-export const numberFormatter = new Intl.NumberFormat('tr-TR', {
-  maximumFractionDigits: 2
-});
+
+export function terrainNumberFormatter(locale: AppLocale): Intl.NumberFormat {
+  return new Intl.NumberFormat(appLocaleTag(locale), {
+    maximumFractionDigits: 2
+  });
+}
 
 function newPointId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -130,34 +134,42 @@ export function isDemProfile(
   return 'kind' in profile && profile.kind === 'dem';
 }
 
-export function distanceUnitLabel(profile: TerrainProfileImport): string {
-  if (isDemProfile(profile)) return 'WGS84 rota örnekleri';
-  if (isGeoJsonProfile(profile)) return 'WGS84 koordinatları';
-  if (profile.distanceUnit === 'percent') return 'rotanın yüzdesi';
-  if (profile.distanceUnit === 'km') return 'kilometre';
-  return 'metre';
+export function distanceUnitLabel(locale: AppLocale, profile: TerrainProfileImport): string {
+  if (isDemProfile(profile)) return translate(locale, 'terrain.import.distanceUnit.dem');
+  if (isGeoJsonProfile(profile)) return translate(locale, 'terrain.import.distanceUnit.geojson');
+  if (profile.distanceUnit === 'percent') return translate(locale, 'terrain.import.distanceUnit.percent');
+  if (profile.distanceUnit === 'km') return translate(locale, 'terrain.import.distanceUnit.km');
+  return translate(locale, 'terrain.import.distanceUnit.m');
 }
 
-export function sourceDistanceLabel(profile: TerrainProfileImport): string {
-  if (profile.sourceDistanceM === null) return 'Konumlar yüzde olarak verilmiş';
-  const sourceLabel = isDemProfile(profile)
-    ? 'DEM örnek rotası'
+export function sourceDistanceLabel(locale: AppLocale, profile: TerrainProfileImport): string {
+  if (profile.sourceDistanceM === null) {
+    return translate(locale, 'terrain.import.sourceDistancePercent');
+  }
+  const source = isDemProfile(profile)
+    ? translate(locale, 'terrain.import.source.dem')
     : isGeoJsonProfile(profile)
-      ? 'GeoJSON rotası'
-      : 'CSV rotası';
-  return `${numberFormatter.format(profile.sourceDistanceM / 1_000)} km ${sourceLabel}`;
+      ? translate(locale, 'terrain.import.source.geojson')
+      : translate(locale, 'terrain.import.source.csv');
+  return translate(locale, 'terrain.import.sourceDistance', {
+    distance: terrainNumberFormatter(locale).format(profile.sourceDistanceM / 1_000),
+    source
+  });
 }
 
-export function sourceRecordLabel(profile: TerrainProfileImport): string {
-  if (isDemProfile(profile)) return 'DEM rota örneği';
-  if (isGeoJsonProfile(profile)) return 'GeoJSON koordinatı';
-  return 'Dosyadaki veri satırı';
+export function sourceRecordLabel(locale: AppLocale, profile: TerrainProfileImport): string {
+  if (isDemProfile(profile)) return translate(locale, 'terrain.import.record.dem');
+  if (isGeoJsonProfile(profile)) return translate(locale, 'terrain.import.record.geojson');
+  return translate(locale, 'terrain.import.record.csv');
 }
 
-export function demDiagnosticLabel(status: ImportedDemTerrainProfile['diagnosticStatus']): string {
-  if (status === 'good') return 'iyi';
-  if (status === 'caution') return 'dikkat';
-  return 'sınırlı';
+export function demDiagnosticLabel(
+  locale: AppLocale,
+  status: ImportedDemTerrainProfile['diagnosticStatus']
+): string {
+  if (status === 'good') return translate(locale, 'terrain.import.diagnostic.good');
+  if (status === 'caution') return translate(locale, 'terrain.import.diagnostic.caution');
+  return translate(locale, 'terrain.import.diagnostic.limited');
 }
 
 export function sourceRecordCount(profile: TerrainProfileImport): number {
@@ -166,8 +178,10 @@ export function sourceRecordCount(profile: TerrainProfileImport): number {
   return profile.rowCount;
 }
 
-export function delimiterLabel(request: TerrainProfileMappingRequest): string {
-  if (request.delimiter === 'semicolon') return 'noktalı virgül (;)';
-  if (request.delimiter === 'tab') return 'sekme';
-  return 'virgül (,)';
+export function delimiterLabel(locale: AppLocale, request: TerrainProfileMappingRequest): string {
+  if (request.delimiter === 'semicolon') {
+    return translate(locale, 'terrain.import.delimiter.semicolon');
+  }
+  if (request.delimiter === 'tab') return translate(locale, 'terrain.import.delimiter.tab');
+  return translate(locale, 'terrain.import.delimiter.comma');
 }

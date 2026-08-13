@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import type { ImportedDemTerrainProfile } from '../../shared/simulator';
 import { reviewDemLineOfSight } from '../../simulation/dem-line-of-sight-review';
 import { summarizeDemSourceTraceability } from '../../simulation/dem-source-traceability';
+import { useI18n } from './I18nProvider';
+import { appLocaleTag } from './i18n';
 import './dem-line-of-sight-review.css';
 
 interface DemLineOfSightReviewCardProps {
@@ -17,16 +19,6 @@ interface DemLineOfSightReviewCardProps {
   refractionCoefficient: number;
 }
 
-const numberFormatter = new Intl.NumberFormat('tr-TR', {
-  maximumFractionDigits: 2
-});
-
-function traceabilityLabel(status: 'complete' | 'partial' | 'legacy'): string {
-  if (status === 'complete') return 'TAM KAYNAK İZİ';
-  if (status === 'partial') return 'KISMİ KAYNAK İZİ';
-  return 'ESKİ KAYNAK KAYDI';
-}
-
 export function DemLineOfSightReviewCard({
   profile,
   applyObserverEndpoint,
@@ -39,6 +31,16 @@ export function DemLineOfSightReviewCard({
   useStandardRefraction,
   refractionCoefficient
 }: DemLineOfSightReviewCardProps): React.JSX.Element {
+  const { locale, t } = useI18n();
+  const numberFormatter = new Intl.NumberFormat(appLocaleTag(locale), {
+    maximumFractionDigits: 2
+  });
+  const cellSizeFormatter = new Intl.NumberFormat(appLocaleTag(locale), {
+    minimumFractionDigits: 8,
+    maximumFractionDigits: 8,
+    useGrouping: false
+  });
+
   const traceability = useMemo(
     () => summarizeDemSourceTraceability(profile),
     [profile]
@@ -66,7 +68,7 @@ export function DemLineOfSightReviewCard({
         status: 'error' as const,
         error: error instanceof Error
           ? error.message
-          : 'DEM görüş hattı önizlemesi hesaplanamadı.'
+          : t('terrain.demReview.previewFallbackError')
       };
     }
   }, [
@@ -76,16 +78,23 @@ export function DemLineOfSightReviewCard({
     observerHeightM,
     profile,
     refractionCoefficient,
+    t,
     targetGroundElevationM,
     targetHeightM,
     useStandardRefraction,
     verticalDatumOffsetM
   ]);
 
+  const traceabilityLabel = traceability.status === 'complete'
+    ? t('terrain.demReview.trace.complete')
+    : traceability.status === 'partial'
+      ? t('terrain.demReview.trace.partial')
+      : t('terrain.demReview.trace.legacy');
+
   if (preview.status === 'error') {
     return (
       <div className="dem-line-of-sight-review error">
-        <strong>Görüş hattı önizlemesi hesaplanamadı</strong>
+        <strong>{t('terrain.demReview.previewError')}</strong>
         <span>{preview.error}</span>
       </div>
     );
@@ -97,107 +106,118 @@ export function DemLineOfSightReviewCard({
       <div className={`dem-source-traceability ${traceability.status}`}>
         <div className="dem-source-traceability-heading">
           <div>
-            <small>VERİ KAYNAĞI VE ÇÖZÜNÜRLÜK İZİ</small>
+            <small>{t('terrain.demReview.traceTitle')}</small>
             <strong>{profile.fileName}</strong>
           </div>
-          <b>{traceabilityLabel(traceability.status)}</b>
+          <b>{traceabilityLabel}</b>
         </div>
+
         <div className="dem-source-traceability-metrics">
           <span>
-            Yatay referans
-            <b>WGS 84 · coğrafi derece</b>
-            <i>İçe aktarma sözleşmesi; .prj kanıtı yok</i>
+            {t('terrain.demReview.horizontalReference')}
+            <b>{t('terrain.demReview.horizontalReferenceValue')}</b>
+            <i>{t('terrain.demReview.horizontalReferenceNote')}</i>
           </span>
           <span>
-            Düşey referans
-            <b>Dosyadan bilinmiyor</b>
-            <i>Deney datumuyla kullanıcı tarafından eşleştirilir</i>
+            {t('terrain.demReview.verticalReference')}
+            <b>{t('terrain.demReview.verticalReferenceValue')}</b>
+            <i>{t('terrain.demReview.verticalReferenceNote')}</i>
           </span>
           <span>
-            Dosya bütünlüğü
+            {t('terrain.demReview.fileIntegrity')}
             <b>
               {traceability.integrityRecorded
-                ? `${numberFormatter.format(traceability.fileSizeBytes ?? 0)} bayt · ${traceability.sha256Short}…`
-                : 'Boyut / SHA-256 kaydı yok'}
+                ? t('terrain.demReview.integrityValue', {
+                    bytes: numberFormatter.format(traceability.fileSizeBytes ?? 0),
+                    sha: traceability.sha256Short ?? ''
+                  })
+                : t('terrain.demReview.integrityMissing')}
             </b>
           </span>
           <span>
-            Doğal çözünürlük
-            <b>{profile.cellSizeDeg.toFixed(8)}° hücre</b>
+            {t('terrain.demReview.nativeResolution')}
+            <b>{t('terrain.demReview.cellValue', {
+              size: cellSizeFormatter.format(profile.cellSizeDeg)
+            })}</b>
           </span>
           <span>
-            Etkili çözünürlük
+            {t('terrain.demReview.effectiveResolution')}
             <b>
               {traceability.effectiveCellSpanM === null
-                ? 'Eski kayıtta yok'
+                ? t('terrain.demReview.legacyMissing')
                 : `${numberFormatter.format(traceability.effectiveCellSpanM)} m`}
             </b>
-            <i>Rota orta enleminde en dar hücre açıklığı</i>
+            <i>{t('terrain.demReview.effectiveResolutionNote')}</i>
           </span>
           <span>
-            Kapsam / grid
-            <b>
-              {numberFormatter.format(traceability.coverageWidthDeg)}° ×{' '}
-              {numberFormatter.format(traceability.coverageHeightDeg)}° ·{' '}
-              {numberFormatter.format(traceability.gridCellCount)} hücre
-            </b>
+            {t('terrain.demReview.coverageGrid')}
+            <b>{t('terrain.demReview.coverageGridValue', {
+              width: numberFormatter.format(traceability.coverageWidthDeg),
+              height: numberFormatter.format(traceability.coverageHeightDeg),
+              cells: numberFormatter.format(traceability.gridCellCount)
+            })}</b>
           </span>
         </div>
-        <p>
-          Kaynak izi dosyanın yeniden tanınmasını ve çözünürlük sınırlarının
-          görülmesini sağlar; DEM'in bilimsel doğruluğunu veya düşey datumunu
-          tek başına doğrulamaz.
-        </p>
+
+        <p>{t('terrain.demReview.traceNote')}</p>
       </div>
 
       <div className="dem-line-of-sight-heading">
         <div>
-          <small>DEM ÖRNEKLERİ BOYUNCA KÜRESEL GÖRÜŞ HATTI</small>
+          <small>{t('terrain.demReview.losTitle')}</small>
           <strong>
             {result.blocked
-              ? 'Görüş hattı arazi tarafından engelleniyor'
-              : 'Görüş hattı DEM örneklerini temizliyor'}
+              ? t('terrain.demReview.blocked')
+              : t('terrain.demReview.clear')}
           </strong>
         </div>
-        <b>{result.blocked ? 'ENGELLİ' : 'AÇIK'}</b>
+        <b>
+          {result.blocked
+            ? t('terrain.demReview.blockedBadge')
+            : t('terrain.demReview.clearBadge')}
+        </b>
       </div>
+
       <div className="dem-line-of-sight-metrics">
         <span>
-          Minimum açıklık
+          {t('terrain.demReview.minimumClearance')}
           <b>{numberFormatter.format(result.minimumClearanceM)} m</b>
         </span>
         <span>
-          Kritik konum
+          {t('terrain.demReview.criticalLocation')}
           <b>
             %{numberFormatter.format(result.criticalDistancePercent)} ·{' '}
             {numberFormatter.format(result.criticalDistanceM / 1_000)} km
           </b>
         </span>
         <span>
-          Kritik arazi / görüş hattı
+          {t('terrain.demReview.criticalTerrainLos')}
           <b>
             {numberFormatter.format(result.criticalTerrainElevationM)} /{' '}
             {numberFormatter.format(result.criticalLineOfSightElevationM)} m
           </b>
         </span>
-        <span>Engelleyen örnek <b>{result.blockingSampleCount}</b></span>
         <span>
-          0–{numberFormatter.format(result.nearClearanceThresholdM)} m yakın örnek
-          <b>{result.nearClearanceSampleCount}</b>
+          {t('terrain.demReview.blockingSamples')}{' '}
+          <b>{numberFormatter.format(result.blockingSampleCount)}</b>
         </span>
         <span>
-          Geometri
+          {t('terrain.demReview.nearSamples', {
+            threshold: numberFormatter.format(result.nearClearanceThresholdM)
+          })}
+          <b>{numberFormatter.format(result.nearClearanceSampleCount)}</b>
+        </span>
+        <span>
+          {t('terrain.demReview.geometry')}
           <b>
             {result.atmosphereMode === 'standard'
-              ? 'etkin yarıçap / standart kırılma'
-              : 'ortalama Dünya yarıçapı / kırılma kapalı'}
+              ? t('terrain.demReview.geometryStandard')
+              : t('terrain.demReview.geometryNoRefraction')}
           </b>
         </span>
       </div>
-      <p>
-        Uç kotu kutuları, gözlemci ve hedef yükseklikleri, datum ofseti ve kırılma
-        ayarı değiştikçe bu önizleme canlı yenilenir.
-      </p>
+
+      <p>{t('terrain.demReview.liveNote')}</p>
     </div>
   );
 }
