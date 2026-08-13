@@ -87,7 +87,8 @@ bulunmalıdır.
 | UI orchestration | `src/renderer/src/AppNext.tsx`, `src/renderer/src/app/` |
 | Electron I/O | `src/main/`, `src/preload/` |
 | HTML rapor | `src/report/` |
-| AI test sözleşmesi | `src/shared/ai-test-spec.ts`, `docs/ai-test-spec-v1.md` |
+| AI sözleşme registry | `src/shared/ai-contracts.ts`, `docs/ai-contracts.md` |
+| AI test sözleşmesi | `src/shared/ai-test-spec.ts`, `docs/ai-test-spec-v1.md`, `tests/fixtures/ai-contracts/` |
 | AI analiz paketi | `src/shared/ai-analysis-package.ts` |
 | AI kontrollü aktarım | `src/shared/ai-workflow.ts`, `src/renderer/src/AiWorkflowDialog.tsx` |
 | AI lineage | `src/shared/ai-lineage*.ts`, `docs/ai-lineage-v1.md` |
@@ -132,6 +133,7 @@ Yeni özellik bu sınırı gevşetiyorsa bunun açık bir mimari karar ve ayrı 
 - v1 parser geriye uyumlu mu?
 - ambiguous/multiple block reddi korunuyor mu?
 - canonical metin/hash semantiği değişiyor mu?
+- `src/shared/ai-contracts.ts` registry ve canonical fixture corpus etkileniyor mu?
 - lineage ve HTML raporu etkileniyor mu?
 
 ## 7. Refactor yöntemi

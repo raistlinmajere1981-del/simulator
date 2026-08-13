@@ -1,0 +1,11 @@
+GGL-AI-TEST v1
+scenario: target-visibility
+name: Contract fixture target visibility
+observed_at_utc: 2026-08-13T08:00:00Z
+utc_offset: +03:00
+surface_distance_km: 42
+observer.coordinates: 41.0082,28.9784
+observer.eye_height_m: 1.75
+target.coordinates: 40.7128,29.9000
+target.height_m: 30
+END GGL-AI-TEST

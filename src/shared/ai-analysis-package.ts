@@ -1,9 +1,19 @@
 import { getSimulationScenario, normalizeSimulationScenarioId } from './scenario';
 import type { ModelPrediction, PredictionMetric } from './domain';
 import type { SavedExperiment } from './simulator';
+import {
+  GGL_AI_ANALYSIS_END,
+  GGL_AI_ANALYSIS_HEADER,
+  GGL_AI_ANALYSIS_PACKAGE_VERSION,
+  GGL_AI_COMPARISON_END,
+  GGL_AI_COMPARISON_HEADER,
+  GGL_AI_COMPARISON_PACKAGE_VERSION
+} from './ai-contracts';
 
-export const GGL_AI_ANALYSIS_PACKAGE_VERSION = 'v1';
-export const GGL_AI_COMPARISON_PACKAGE_VERSION = 'v1';
+export {
+  GGL_AI_ANALYSIS_PACKAGE_VERSION,
+  GGL_AI_COMPARISON_PACKAGE_VERSION
+} from './ai-contracts';
 
 function finite(value: number | undefined): string {
   return value === undefined || !Number.isFinite(value) ? 'unknown' : String(value);
@@ -174,12 +184,12 @@ const COMPARISON_AI_TASK = [
 
 export function createAiAnalysisPackage(experiment: SavedExperiment, generatedAtIso = new Date().toISOString()): string {
   return [
-    `GGL-AI-ANALYSIS ${GGL_AI_ANALYSIS_PACKAGE_VERSION}`,
+    GGL_AI_ANALYSIS_HEADER,
     `generated_at_utc: ${generatedAtIso}`,
     ...experimentLines(experiment),
     '',
     ...SINGLE_AI_TASK,
-    'END GGL-AI-ANALYSIS'
+    GGL_AI_ANALYSIS_END
   ].join('\n');
 }
 
@@ -193,7 +203,7 @@ export function createAiComparisonPackage(
 
   const scenarioIds = new Set(experiments.map((experiment) => normalizeSimulationScenarioId(experiment.scenarioId)));
   const lines = [
-    `GGL-AI-COMPARISON ${GGL_AI_COMPARISON_PACKAGE_VERSION}`,
+    GGL_AI_COMPARISON_HEADER,
     `generated_at_utc: ${generatedAtIso}`,
     `experiment_count: ${experiments.length}`,
     `same_scenario: ${scenarioIds.size === 1 ? 'true' : 'false'}`,
@@ -206,6 +216,6 @@ export function createAiComparisonPackage(
     lines.push(`EXPERIMENT ${index + 1} END`, '');
   });
 
-  lines.push(...COMPARISON_AI_TASK, 'END GGL-AI-COMPARISON');
+  lines.push(...COMPARISON_AI_TASK, GGL_AI_COMPARISON_END);
   return lines.join('\n');
 }

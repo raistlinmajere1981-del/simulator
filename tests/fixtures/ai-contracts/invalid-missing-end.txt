@@ -1,0 +1,3 @@
+GGL-AI-TEST v1
+scenario: target-visibility
+surface_distance_km: 42

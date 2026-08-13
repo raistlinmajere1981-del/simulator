@@ -1,0 +1,4 @@
+GGL-AI-TEST v1
+scenario: target-visibility
+magic.curvature_override: 0.8
+END GGL-AI-TEST

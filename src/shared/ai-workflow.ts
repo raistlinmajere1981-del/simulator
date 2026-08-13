@@ -1,5 +1,6 @@
-export const GGL_AI_TEST_HEADER = 'GGL-AI-TEST v1';
-export const GGL_AI_TEST_END = 'END GGL-AI-TEST';
+import { GGL_AI_TEST_END, GGL_AI_TEST_HEADER } from './ai-contracts';
+
+export { GGL_AI_TEST_END, GGL_AI_TEST_HEADER } from './ai-contracts';
 
 export type AiTestExtraction =
   | { status: 'empty'; block?: undefined; message: string }

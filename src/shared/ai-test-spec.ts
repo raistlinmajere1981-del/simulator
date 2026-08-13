@@ -5,7 +5,7 @@ import type {
   ExperimentSetupFieldId
 } from './text-experiment-setup';
 
-export const GGL_AI_TEST_SPEC_VERSION = 'v1';
+export { GGL_AI_TEST_SPEC_VERSION } from './ai-contracts';
 
 export type AiTestSpecCandidate = Omit<ExperimentSetupCandidate, 'id'>;
 

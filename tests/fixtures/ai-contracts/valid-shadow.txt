@@ -1,0 +1,12 @@
+GGL-AI-TEST v1
+scenario: shadow-observation
+name: Contract fixture shadow
+observed_at_utc: 2024-06-21T12:00:00Z
+utc_offset: +00:00
+observer.coordinates: 41.0082,28.9784
+shadow.gnomon_height_m: 1.5
+shadow.observed_length_m: 0.65
+shadow.observed_length_uncertainty_m: 0.02
+shadow.station_b.coordinates: 39.9334,32.8597
+shadow.station_b.gnomon_height_m: 1
+END GGL-AI-TEST
