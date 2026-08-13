@@ -9,18 +9,16 @@ import type { ModelPrediction } from '../../shared/domain';
 import type { SavedStellarLocalHorizonSource } from '../../shared/stellar-local-horizon-import';
 import type { SavedStellarMotionSource } from '../../shared/stellar-motion-source';
 import { DraftNumberInput } from './DraftNumberInput';
+import { useI18n } from './I18nProvider';
+import { appLocaleTag, translate, type AppLocale } from './i18n';
 import { StellarDemSkylineControl } from './StellarDemSkylineControl';
 import { StellarPanoramaSkylineControl } from './StellarPanoramaSkylineControl';
 import { StellarObservationResults } from './StellarObservationResults';
 import { StellarSkySnapshotPanel } from './StellarSkySnapshotPanel';
 import {
-  angleFormatter,
   cloneExternalSource,
   cloneMotionSource,
-  currentLocalHorizonState,
   externalSourceSignature,
-  formatAngle,
-  formatImportedAt,
   localHorizonDraftFromSettings,
   localHorizonDraftMatchesSettings,
   localHorizonSignature,
@@ -29,6 +27,15 @@ import {
   type LocalHorizonDraft
 } from './stellar-observation-view-model';
 import './stellar-observation-panel.css';
+
+function localizedLocalHorizonState(result: StellarObservationResult, locale: AppLocale): { label: string; className: string } | null {
+  const sample = result.localHorizonTrail?.samples[0];
+  if (!sample) return null;
+  if (sample.status === 'undefined-azimuth') return { label: translate(locale, 'stellar.controls.localUndefinedAzimuth'), className: 'stellar-state neutral' };
+  if (sample.status === 'below') return { label: translate(locale, 'stellar.controls.localBelow'), className: 'stellar-state below' };
+  if (sample.status === 'on-horizon') return { label: translate(locale, 'stellar.controls.localBoundary'), className: 'stellar-state neutral' };
+  return { label: translate(locale, 'stellar.controls.localAbove'), className: 'stellar-state visible' };
+}
 
 export function StellarObservationPanel({
   result,
@@ -57,6 +64,11 @@ export function StellarObservationPanel({
   onApplyLocalHorizon(settings: StellarObservationSettings, source?: SavedStellarLocalHorizonSource): void;
   onShowTrace(): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
+  const angleFormatter = new Intl.NumberFormat(appLocaleTag(locale), { maximumFractionDigits: 2 });
+  const formatAngle = (value: number | null): string => value === null ? t('stellar.undefined') : `${angleFormatter.format(value)}°`;
+  const importedAtFormatter = new Intl.DateTimeFormat(appLocaleTag(locale), { dateStyle: 'short', timeStyle: 'medium', hourCycle: 'h23' });
+  const formatImportedAt = (iso: string): string => importedAtFormatter.format(new Date(iso));
   const [localHorizonDraft, setLocalHorizonDraft] = useState<LocalHorizonDraft>(() =>
     localHorizonDraftFromSettings(settings)
   );
@@ -87,7 +99,7 @@ export function StellarObservationPanel({
   }, [appliedMotionSourceSignature]);
 
   const position = result.position;
-  const localState = currentLocalHorizonState(result);
+  const localState = localizedLocalHorizonState(result, locale);
   const apparent = result.apparentDiagnostic;
   const sourceDraftDirty = externalSourceSignature(draftExternalLocalHorizonSource) !== appliedExternalSourceSignature;
   const motionSourceDirty = motionSourceSignature(draftMotionSource) !== appliedMotionSourceSignature;
@@ -102,9 +114,9 @@ export function StellarObservationPanel({
       const imported = await onImportStellarMotion();
       if (!imported) return;
       setDraftMotionSource(cloneMotionSource(imported));
-      setMotionImportMessage(`“${imported.fileName}” doğrulandı. Uygula ve hesapla ile proper motion etkinleşecek.`);
+      setMotionImportMessage(t('stellar.motion.validated', { fileName: imported.fileName }));
     } catch (error) {
-      setMotionImportMessage(error instanceof Error ? error.message : 'BSC5P proper-motion kaynağı içe aktarılamadı.');
+      setMotionImportMessage(error instanceof Error ? error.message : t('stellar.motion.importError'));
     } finally {
       setIsImportingMotion(false);
     }
@@ -175,22 +187,22 @@ export function StellarObservationPanel({
     <section className="panel stellar-observation-panel">
       <div className="stellar-panel-heading">
         <div>
-          <span className="eyebrow">Astronomik referans · yıldız</span>
+          <span className="eyebrow">{t('stellar.controls.stage')}</span>
           <h3>{result.star.commonName} <small>{result.star.bayerDesignation}</small></h3>
           <p>{result.star.constellation} · HR {result.star.hrNumber} · V {angleFormatter.format(result.star.visualMagnitude)}</p>
         </div>
         <div className="stellar-heading-actions">
           <span className={position.aboveGeometricHorizon ? 'stellar-state visible' : 'stellar-state below'}>
-            {position.aboveGeometricHorizon ? '0° UFKUN ÜSTÜNDE' : '0° UFKUN ALTINDA'}
+            {position.aboveGeometricHorizon ? t('stellar.controls.aboveZero') : t('stellar.controls.belowZero')}
           </span>
           {localState && <span className={localState.className}>{localState.label}</span>}
-          <button className="trace-button" type="button" onClick={onShowTrace}>Hesap izini aç</button>
+          <button className="trace-button" type="button" onClick={onShowTrace}>{t('stellar.controls.trace')}</button>
         </div>
       </div>
 
       <div className="stellar-controls">
         <label>
-          <span>Katalog yıldızı</span>
+          <span>{t('stellar.controls.catalogStar')}</span>
           <select
             value={settings.starId}
             onChange={(event) => onChange({ ...settings, starId: event.currentTarget.value })}
@@ -203,29 +215,29 @@ export function StellarObservationPanel({
           </select>
         </label>
         <label>
-          <span>İz süresi</span>
+          <span>{t('stellar.controls.trailDuration')}</span>
           <select
             value={settings.trailDurationMinutes}
             onChange={(event) => onChange({ ...settings, trailDurationMinutes: Number(event.currentTarget.value) })}
           >
-            <option value={180}>3 saat</option>
-            <option value={360}>6 saat</option>
-            <option value={720}>12 saat</option>
-            <option value={1440}>24 saat</option>
-            <option value={2880}>48 saat</option>
+            <option value={180}>{t('stellar.controls.hours', { value: 3 })}</option>
+            <option value={360}>{t('stellar.controls.hours', { value: 6 })}</option>
+            <option value={720}>{t('stellar.controls.hours', { value: 12 })}</option>
+            <option value={1440}>{t('stellar.controls.hours', { value: 24 })}</option>
+            <option value={2880}>{t('stellar.controls.hours', { value: 48 })}</option>
           </select>
         </label>
         <label>
-          <span>Örnekleme</span>
+          <span>{t('stellar.controls.sampling')}</span>
           <select
             value={settings.trailSampleIntervalMinutes}
             onChange={(event) => onChange({ ...settings, trailSampleIntervalMinutes: Number(event.currentTarget.value) })}
           >
-            <option value={5}>5 dk</option>
-            <option value={10}>10 dk</option>
-            <option value={15}>15 dk</option>
-            <option value={30}>30 dk</option>
-            <option value={60}>60 dk</option>
+            <option value={5}>{t('stellar.controls.minutes', { value: 5 })}</option>
+            <option value={10}>{t('stellar.controls.minutes', { value: 10 })}</option>
+            <option value={15}>{t('stellar.controls.minutes', { value: 15 })}</option>
+            <option value={30}>{t('stellar.controls.minutes', { value: 30 })}</option>
+            <option value={60}>{t('stellar.controls.minutes', { value: 60 })}</option>
           </select>
         </label>
       </div>
@@ -233,21 +245,21 @@ export function StellarObservationPanel({
       <div className={stellarMotionSource ? 'stellar-motion-source active' : 'stellar-motion-source'}>
         <div className="stellar-motion-heading">
           <div>
-            <strong>Doğrulanmış proper motion · BSC5P</strong>
-            <span>Resmi V/50 catalog dosyası 19/19 HR + J2000 konum + V kadri üzerinden doğrulanır. Dosya seçimi hesap motorunu çalıştırmaz.</span>
+            <strong>{t('stellar.motion.title')}</strong>
+            <span>{t('stellar.motion.description')}</span>
           </div>
           <button className="stellar-motion-import-button" disabled={isImportingMotion} type="button" onClick={() => void importMotionSource()}>
-            {isImportingMotion ? 'Katalog okunuyor…' : 'BSC5P catalog dosyasından al'}
+            {isImportingMotion ? t('stellar.motion.importing') : t('stellar.motion.import')}
           </button>
         </div>
         {draftMotionSource ? (
           <div className={motionSourceDirty ? 'stellar-motion-source-card draft' : 'stellar-motion-source-card'}>
             <div>
-              <small>PROPER MOTION KAYNAĞI</small>
+              <small>{t('stellar.motion.sourceLabel')}</small>
               <strong>{draftMotionSource.fileName}</strong>
-              <span>{draftMotionSource.entryCount}/19 kayıt · FK5/J2000 · kaynak epok J{angleFormatter.format(draftMotionSource.sourceEpochJulianYear)}</span>
+              <span>{t('stellar.motion.records', { count: draftMotionSource.entryCount, epoch: angleFormatter.format(draftMotionSource.sourceEpochJulianYear) })}</span>
               {draftMotionEntry && (
-                <span>Seçili yıldız: μ_α* {angleFormatter.format(draftMotionEntry.properMotionRaStarArcsecPerYear)}″/yıl · μ_δ {angleFormatter.format(draftMotionEntry.properMotionDecArcsecPerYear)}″/yıl</span>
+                <span>{t('stellar.motion.selectedStar', { ra: angleFormatter.format(draftMotionEntry.properMotionRaStarArcsecPerYear), dec: angleFormatter.format(draftMotionEntry.properMotionDecArcsecPerYear) })}</span>
               )}
             </div>
             <div>
@@ -256,31 +268,31 @@ export function StellarObservationPanel({
             </div>
           </div>
         ) : (
-          <p className="stellar-motion-empty">Kaynak uygulanmadı; yıldız sonuçları proper motion olmadan mevcut J2000 → precession zincirini kullanır.</p>
+          <p className="stellar-motion-empty">{t('stellar.motion.empty')}</p>
         )}
         {stellarMotionSource && result.properMotion && !motionSourceDirty && (
           <div className="stellar-motion-result">
-            <span>Uygulanan toplam PM kayması <strong>{angleFormatter.format(result.properMotion.angularShiftArcsec)}″</strong></span>
-            <span>J{angleFormatter.format(result.properMotion.sourceEpochJulianYear)} → gözlem epoch'u <strong>{angleFormatter.format(result.properMotion.elapsedJulianYears)} Jülyen yıl</strong></span>
+            <span>{t('stellar.motion.totalShift')} <strong>{angleFormatter.format(result.properMotion.angularShiftArcsec)}″</strong></span>
+            <span>{t('stellar.motion.epochSpan', { epoch: angleFormatter.format(result.properMotion.sourceEpochJulianYear) })} <strong>{t('stellar.motion.julianYears', { value: angleFormatter.format(result.properMotion.elapsedJulianYears) })}</strong></span>
           </div>
         )}
         {motionImportMessage && <p className="stellar-motion-message" role="status">{motionImportMessage}</p>}
         <div className="stellar-motion-apply-row">
-          <span>{motionSourceDirty ? 'Proper-motion kaynak değişikliği henüz hesaplanmadı.' : stellarMotionSource ? 'Doğrulanmış proper-motion kaynağı hesapta uygulanıyor.' : 'Proper motion kapalı.'}</span>
+          <span>{motionSourceDirty ? t('stellar.motion.dirty') : stellarMotionSource ? t('stellar.motion.applied') : t('stellar.motion.off')}</span>
           <div>
             <button
               className="stellar-motion-remove"
               disabled={!draftMotionSource}
               type="button"
               onClick={() => { setDraftMotionSource(undefined); setMotionImportMessage(''); }}
-            >Kaynağı kaldır</button>
+            >{t('stellar.motion.remove')}</button>
             <button
               className="stellar-motion-revert"
               disabled={!motionSourceDirty}
               type="button"
               onClick={() => { setDraftMotionSource(cloneMotionSource(stellarMotionSource)); setMotionImportMessage(''); }}
-            >Geri al</button>
-            <button className="stellar-motion-apply" disabled={!motionSourceDirty} type="button" onClick={applyMotionSource}>Uygula ve hesapla</button>
+            >{t('stellar.motion.revert')}</button>
+            <button className="stellar-motion-apply" disabled={!motionSourceDirty} type="button" onClick={applyMotionSource}>{t('stellar.motion.apply')}</button>
           </div>
         </div>
       </div>
@@ -288,8 +300,8 @@ export function StellarObservationPanel({
       <div className={showRefractionDiagnostic ? 'stellar-refraction-diagnostic active' : 'stellar-refraction-diagnostic'}>
         <div className="stellar-refraction-heading">
           <div>
-            <strong>Standart atmosferik kırılma tanısı</strong>
-            <span>NOAA standart yaklaşımı yalnız yıldız ışınına uygulanır. Geometrik yıldız/skyline sonuçlarını değiştirmez.</span>
+            <strong>{t('stellar.refraction.title')}</strong>
+            <span>{t('stellar.refraction.description')}</span>
           </div>
           <label className="stellar-refraction-toggle">
             <input
@@ -297,38 +309,38 @@ export function StellarObservationPanel({
               checked={showRefractionDiagnostic}
               onChange={(event) => setShowRefractionDiagnostic(event.currentTarget.checked)}
             />
-            <span>{showRefractionDiagnostic ? 'Gösteriliyor' : 'Kapalı'}</span>
+            <span>{showRefractionDiagnostic ? t('stellar.sky.shown') : t('stellar.sky.off')}</span>
           </label>
         </div>
         {showRefractionDiagnostic && (
           <>
             <div className="stellar-refraction-grid">
               <article>
-                <span>Geometrik yükseklik</span>
+                <span>{t('stellar.refraction.geometricAltitude')}</span>
                 <strong>{formatAngle(apparent.geometricAltitudeDeg)}</strong>
               </article>
               <article>
-                <span>Standart apparent yükseklik</span>
+                <span>{t('stellar.refraction.apparentAltitude')}</span>
                 <strong>{formatAngle(apparent.refraction.apparentAltitudeDeg)}</strong>
               </article>
               <article>
-                <span>Kırılma düzeltmesi</span>
+                <span>{t('stellar.refraction.correction')}</span>
                 <strong>{angleFormatter.format(apparent.refraction.refractionCorrectionArcmin)}′</strong>
               </article>
               <article>
-                <span>Apparent astronomik 0°</span>
-                <strong>{apparent.refraction.aboveApparentAstronomicalHorizon ? 'Üstünde' : 'Altında'}</strong>
+                <span>{t('stellar.refraction.apparentZero')}</span>
+                <strong>{apparent.refraction.aboveApparentAstronomicalHorizon ? t('stellar.refraction.above') : t('stellar.refraction.below')}</strong>
               </article>
               {apparent.starOnlyApparentMinusGeometricSkylineDeg !== null && (
                 <article className="mixed-reference">
-                  <span>Apparent yıldız − geometrik skyline</span>
+                  <span>{t('stellar.refraction.mixedReference')}</span>
                   <strong>{formatAngle(apparent.starOnlyApparentMinusGeometricSkylineDeg)}</strong>
-                  <b>Tanı · yerel görünürlük değildir</b>
+                  <b>{t('stellar.refraction.diagnosticOnly')}</b>
                 </article>
               )}
             </div>
             <p className="stellar-refraction-warning">
-              Apparent yıldız yüksekliği ile geometrik skyline farklı referanslardadır. Skyline/terrain ışını aynı atmosfer modeliyle çözülmediği için bu farktan yerel görünür/görünmez kararı üretilmez.
+              {t('stellar.refraction.warning')}
             </p>
           </>
         )}
