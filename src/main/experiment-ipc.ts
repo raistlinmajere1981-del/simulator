@@ -13,6 +13,7 @@ import type {
   ImportExperimentResult,
   SavedExperiment
 } from '../shared/simulator';
+import { normalizeUiLocale } from '../shared/ui-locale';
 import {
   createPortableObservationPhotoAsset,
   persistPortableObservationPhotoAsset
@@ -173,28 +174,39 @@ export function registerExperimentIpcHandlers(): void {
 
   ipcMain.handle(
     'experiments:report',
-    async (event, id: string): Promise<FileOperationResult> => {
+    async (event, id: string, requestedLocale?: unknown): Promise<FileOperationResult> => {
+      const locale = normalizeUiLocale(requestedLocale);
       const experiment = await getExperimentOrThrow(id);
-      const fileName = `${safeFileStem(experiment.name)}-rapor.html`;
+      const fileName = `${safeFileStem(experiment.name)}-${locale === 'en' ? 'report' : 'rapor'}.html`;
       const selection = await showSaveDialog(event, {
-        title: 'Deney Raporunu Kaydet',
+        title: locale === 'en' ? 'Save Experiment Report' : 'Deney Raporunu Kaydet',
         defaultPath: join(app.getPath('documents'), fileName),
-        filters: [{ name: 'Çevrimdışı HTML Raporu', extensions: ['html'] }]
+        filters: [{
+          name: locale === 'en' ? 'Offline HTML Report' : 'Çevrimdışı HTML Raporu',
+          extensions: ['html']
+        }]
       });
 
       if (selection.canceled || !selection.filePath) {
-        return { status: 'cancelled', message: 'Rapor oluşturma iptal edildi.' };
+        return {
+          status: 'cancelled',
+          message: locale === 'en'
+            ? 'Report generation was cancelled.'
+            : 'Rapor oluşturma iptal edildi.'
+        };
       }
 
       await fs.writeFile(
         selection.filePath,
-        createExperimentHtmlReport(experiment),
+        createExperimentHtmlReport(experiment, new Date().toISOString(), locale),
         'utf-8'
       );
 
       return {
         status: 'success',
-        message: `“${experiment.name}” için çevrimdışı HTML raporu oluşturuldu.`,
+        message: locale === 'en'
+          ? `Offline HTML report created for “${experiment.name}”.`
+          : `“${experiment.name}” için çevrimdışı HTML raporu oluşturuldu.`,
         filePath: selection.filePath
       };
     }

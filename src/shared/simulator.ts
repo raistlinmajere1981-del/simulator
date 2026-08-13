@@ -14,6 +14,7 @@ import type {
   StellarDemSkylineGenerationSettings
 } from './stellar-local-horizon-import';
 import type { ImportStellarMotionResult, SavedStellarMotionSource } from './stellar-motion-source';
+import type { UiLocale } from './ui-locale';
 
 export type DistanceSource = 'manual' | 'coordinates';
 export type TerrainMode = 'off' | 'manual-three-point' | 'manual-points';
@@ -332,7 +333,7 @@ export interface SimulatorDesktopApi {
   deleteExperiment(id: string): Promise<boolean>;
   exportExperiment(id: string): Promise<FileOperationResult>;
   importExperiment(): Promise<ImportExperimentResult>;
-  exportExperimentReport(id: string): Promise<FileOperationResult>;
+  exportExperimentReport(id: string, locale?: UiLocale): Promise<FileOperationResult>;
   importObservationPhoto(): Promise<ImportObservationPhotoResult>;
   loadObservationPhoto(source: PhotoSourceMetadata): Promise<LoadObservationPhotoResult>;
   importStellarLocalHorizon(): Promise<ImportStellarLocalHorizonResult>;

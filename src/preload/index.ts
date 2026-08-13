@@ -33,8 +33,8 @@ const api: SimulatorDesktopApi = {
     ipcRenderer.invoke('experiments:export', id) as Promise<FileOperationResult>,
   importExperiment: () =>
     ipcRenderer.invoke('experiments:import') as Promise<ImportExperimentResult>,
-  exportExperimentReport: (id) =>
-    ipcRenderer.invoke('experiments:report', id) as Promise<FileOperationResult>,
+  exportExperimentReport: (id, locale) =>
+    ipcRenderer.invoke('experiments:report', id, locale) as Promise<FileOperationResult>,
   importObservationPhoto: () =>
     ipcRenderer.invoke('photo:import') as Promise<ImportObservationPhotoResult>,
   loadObservationPhoto: (source) =>

@@ -911,10 +911,10 @@ export function AppNext(): React.JSX.Element {
 
   const exportReport = async (saved: SavedExperiment): Promise<void> => {
     try {
-      const result = await window.simulatorDesktop.exportExperimentReport(saved.id);
+      const result = await window.simulatorDesktop.exportExperimentReport(saved.id, locale);
       setStorageMessage(result.message);
     } catch (error) {
-      setStorageMessage(error instanceof Error ? error.message : 'Deney raporu oluşturulamadı.');
+      setStorageMessage(error instanceof Error ? error.message : t('report.exportError'));
     }
   };
 

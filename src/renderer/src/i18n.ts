@@ -968,6 +968,7 @@ const trMessages = {
   'photo.comparison.footnote.withModel': ' Model tarafında kullanıcı tarafından açıkça tanımlanan girdi belirsizlikleri de hassasiyet hesabıyla zarfa katılmıştır.',
   'photo.comparison.footnote.withoutModel': ' Model girdi belirsizliği tanımlanmadıysa model tarafına varsayımsal ± değer eklenmez.',
 
+  'report.exportError': 'Deney raporu oluşturulamadı.',
   'dialog.save.aria': 'Deneyi kaydet',
   'dialog.save.eyebrow': 'Yerel deney kaydı',
   'dialog.save.title': 'Deneyi Kaydet',
@@ -2097,6 +2098,7 @@ const enMessages: Record<TranslationKey, string> = {
   'photo.comparison.footnote.withModel': ' User-defined model input uncertainties are also propagated through the sensitivity calculation and included in the envelope.',
   'photo.comparison.footnote.withoutModel': ' If model input uncertainty is not defined, no invented ± value is added on the model side.',
 
+  'report.exportError': 'The experiment report could not be created.',
   'dialog.save.aria': 'Save experiment',
   'dialog.save.eyebrow': 'Local experiment record',
   'dialog.save.title': 'Save Experiment',

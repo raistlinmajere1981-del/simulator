@@ -1,34 +1,11 @@
 import type {
   CalculationTrace,
   ModelPrediction,
-  PredictionMetric,
-  ResultStatus
+  PredictionMetric
 } from '../shared/domain';
-
-const statusLabels: Record<ResultStatus, string> = {
-  compatible: 'Gözlem aralığıyla uyumlu',
-  incompatible: 'Gözlem aralığıyla uyumsuz',
-  indeterminate: 'Belirsizlik nedeniyle karar verilemedi',
-  unsupported: 'Bu deney için fiziksel kurallar tanımsız'
-};
-
-const modelNames: Record<string, string> = {
-  'ideal-sphere': 'İdeal Küre',
-  'defined-plane': 'Tanımlı Düzlem',
-  'azimuthal-projection': 'Azimutal Gösterim',
-  'photo-calibration': 'Fotoğraf / Kamera Kalibrasyonu',
-  'solar-position-noaa': 'Güneş Konumu · Astronomik Referans',
-  'solar-day-events': 'Gün Doğumu / Batımı · Astronomik Referans',
-  'solar-time-offset': 'Sivil Saat / Güneş Zamanı · Astronomik Referans',
-  'solar-season-events': 'Ekinoks / Gündönümü · Yıllık Güneş Referansı',
-  'solar-route-comparison': 'Güneş Rota Karşılaştırması · Astronomik Referans',
-  'lunar-position-low-precision': 'Ay Konumu ve Fazı · Astronomik Referans',
-  'solar-eclipse-overlap-low-precision': 'Güneş Tutulması Anlık Geometrisi · Düşük Hassasiyetli Referans',
-  'solar-eclipse-event-search-low-precision': 'Güneş Tutulması Yerel Olay Araması · Düşük Hassasiyetli Referans',
-  'solar-shadow-observation': 'Gölge Geometrisi · Astronomik Referans',
-  'dual-shadow-comparison': 'İki Konumlu Gölge Karşılaştırması · Astronomik Referans',
-  'stellar-observation-reference': 'Yıldız Gözlemi · Astronomik Referans'
-};
+import type { UiLocale } from '../shared/ui-locale';
+import { uiLocaleTag } from '../shared/ui-locale';
+import { reportMessages } from './report-i18n';
 
 export const astronomyModelIds = new Set([
   'solar-position-noaa',
@@ -44,6 +21,8 @@ export const astronomyModelIds = new Set([
   'stellar-observation-reference'
 ]);
 
+// Backward-compatible Turkish formatters used by report sub-sections that are
+// localized separately in part 12b.
 export const inputNumberFormatter = new Intl.NumberFormat('tr-TR', {
   maximumFractionDigits: 2
 });
@@ -60,6 +39,28 @@ export const metricNumberFormatters = {
   default: new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 })
 };
 
+function formatter(
+  locale: UiLocale,
+  options: Intl.NumberFormatOptions
+): Intl.NumberFormat {
+  return new Intl.NumberFormat(uiLocaleTag(locale), options);
+}
+
+export function formatInputNumber(value: number, locale: UiLocale = 'tr'): string {
+  return formatter(locale, { maximumFractionDigits: 2 }).format(value);
+}
+
+export function formatCoordinate(value: number, locale: UiLocale = 'tr'): string {
+  return formatter(locale, {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 6
+  }).format(value);
+}
+
+export function formatDegree(value: number, locale: UiLocale = 'tr'): string {
+  return formatter(locale, { maximumFractionDigits: 3 }).format(value);
+}
+
 export function escapeHtml(value: unknown): string {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -69,98 +70,119 @@ export function escapeHtml(value: unknown): string {
     .replaceAll("'", '&#039;');
 }
 
-export function formatDate(iso: string): string {
+export function formatDate(iso: string, locale: UiLocale = 'tr'): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return escapeHtml(iso);
-  return escapeHtml(new Intl.DateTimeFormat('tr-TR', {
+  return escapeHtml(new Intl.DateTimeFormat(uiLocaleTag(locale), {
     dateStyle: 'long',
     timeStyle: 'medium'
   }).format(date));
 }
 
-export function yesNo(value: boolean): string {
-  return value ? 'Evet' : 'Hayır';
+export function yesNo(value: boolean, locale: UiLocale = 'tr'): string {
+  const messages = reportMessages(locale);
+  return value ? messages.yes : messages.no;
 }
 
-function formatMetric(metric: PredictionMetric): string {
+export function formatPercent(
+  value: number,
+  locale: UiLocale = 'tr',
+  uncertainty = false
+): string {
+  const formatted = formatter(locale, { maximumFractionDigits: 2 }).format(value);
+  if (locale === 'tr') return `${uncertainty ? '±' : ''}%${formatted}`;
+  return `${uncertainty ? '±' : ''}${formatted}%`;
+}
+
+function formatMetric(metric: PredictionMetric, locale: UiLocale): string {
   if (metric.value === null) return '—';
+  const messages = reportMessages(locale);
   if (metric.unit === 'fraction') {
-    return `%${metricNumberFormatters.fraction.format(metric.value * 100)}`;
+    return formatPercent(metric.value * 100, locale);
   }
   if (metric.unit === 'percentage-point') {
-    return `${metricNumberFormatters.percentagePoint.format(metric.value)} yüzde puan`;
+    return `${formatter(locale, { maximumFractionDigits: 2 }).format(metric.value)} ${messages.percentagePoint}`;
   }
   if (metric.unit === 'deg') {
-    return `${metricNumberFormatters.degree.format(metric.value)}°`;
+    return `${formatDegree(metric.value, locale)}°`;
   }
   if (metric.unit === 'unix-ms') {
-    return formatDate(new Date(metric.value).toISOString());
+    return formatDate(new Date(metric.value).toISOString(), locale);
   }
   if (metric.unit === 'boolean') {
-    return metric.value >= 0.5 ? 'Evet' : 'Hayır';
+    return metric.value >= 0.5 ? messages.yes : messages.no;
   }
   if (metric.unit === 'count') {
-    return metricNumberFormatters.default.format(metric.value);
+    return formatter(locale, { maximumFractionDigits: 2 }).format(metric.value);
   }
-  return `${metricNumberFormatters.default.format(metric.value)} ${escapeHtml(metric.unit)}`;
+  return `${formatter(locale, { maximumFractionDigits: 2 }).format(metric.value)} ${escapeHtml(metric.unit)}`;
 }
 
-function metricRows(prediction: ModelPrediction): string {
+function metricRows(prediction: ModelPrediction, locale: UiLocale): string {
+  const messages = reportMessages(locale);
   if (prediction.metrics.length === 0) {
-    return '<tr><td colspan="2">Bu model/gösterim sayısal sonuç üretmedi.</td></tr>';
+    return `<tr><td colspan="2">${messages.noNumericResult}</td></tr>`;
   }
+  // Metric labels are stored in the prediction snapshot. They remain raw in
+  // this slice so persisted calculation semantics are not rewritten.
   return prediction.metrics.map((metric) => `
-    <tr><td>${escapeHtml(metric.label)}</td><td>${formatMetric(metric)}</td></tr>`).join('');
+    <tr><td>${escapeHtml(metric.label)}</td><td>${formatMetric(metric, locale)}</td></tr>`).join('');
 }
 
-function traceSteps(trace: CalculationTrace): string {
+function traceSteps(trace: CalculationTrace, locale: UiLocale): string {
+  const messages = reportMessages(locale);
   if (trace.steps.length === 0) {
-    return '<p class="muted">Hesap adımı bulunmuyor.</p>';
+    return `<p class="muted">${messages.noTraceSteps}</p>`;
   }
+  // Step titles, formulas, substitutions, results and notes are calculation
+  // evidence stored by the engine. Only the surrounding report chrome is localized.
   return trace.steps.map((step, index) => `
     <article class="trace-step">
       <div class="trace-number">${index + 1}</div>
       <div>
         <h4>${escapeHtml(step.title)}</h4>
         <code>${escapeHtml(step.formula)}</code>
-        <p><strong>Yerine koyma:</strong> ${escapeHtml(step.substitution)}</p>
+        <p><strong>${messages.substitution}:</strong> ${escapeHtml(step.substitution)}</p>
         <p class="trace-result">${escapeHtml(step.result)}</p>
         ${step.note ? `<small>${escapeHtml(step.note)}</small>` : ''}
       </div>
     </article>`).join('');
 }
 
-function predictionDisplayName(modelId: string): string {
+function predictionDisplayName(modelId: string, locale: UiLocale): string {
+  const messages = reportMessages(locale);
   const comparisonPrefix = 'photo-angular-comparison:';
   if (modelId.startsWith(comparisonPrefix)) {
     const sourceModelId = modelId.slice(comparisonPrefix.length);
-    return `Fotoğraf Açısal Karşılaştırması · ${modelNames[sourceModelId] ?? sourceModelId}`;
+    return `${messages.photoAngularComparison} · ${messages.modelNames[sourceModelId] ?? sourceModelId}`;
   }
-  return modelNames[modelId] ?? modelId;
+  return messages.modelNames[modelId] ?? modelId;
 }
 
 export function predictionSection(
   prediction: ModelPrediction,
-  modelVersion: string | undefined
+  modelVersion: string | undefined,
+  locale: UiLocale = 'tr'
 ): string {
-  const modelName = predictionDisplayName(prediction.modelId);
+  const messages = reportMessages(locale);
+  const modelName = predictionDisplayName(prediction.modelId, locale);
   return `
     <section class="model-section">
       <header class="model-heading">
-        <div><h2>${escapeHtml(modelName)}</h2><span>Sürüm ${escapeHtml(modelVersion ?? 'bilinmiyor')}</span></div>
-        <strong class="status status-${escapeHtml(prediction.status)}">${escapeHtml(statusLabels[prediction.status])}</strong>
+        <div><h2>${escapeHtml(modelName)}</h2><span>${messages.version} ${escapeHtml(modelVersion ?? messages.unknown)}</span></div>
+        <strong class="status status-${escapeHtml(prediction.status)}">${escapeHtml(messages.status[prediction.status])}</strong>
       </header>
       <p>${escapeHtml(prediction.trace.summary)}</p>
       <div class="two-column">
-        <div><h3>Sonuçlar</h3><table><thead><tr><th>Metrik</th><th>Değer</th></tr></thead><tbody>${metricRows(prediction)}</tbody></table></div>
+        <div><h3>${messages.results}</h3><table><thead><tr><th>${messages.metric}</th><th>${messages.value}</th></tr></thead><tbody>${metricRows(prediction, locale)}</tbody></table></div>
         <div>
-          <h3>Varsayımlar</h3>
+          <h3>${messages.assumptions}</h3>
           <ul>${prediction.trace.assumptions.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
-          ${prediction.warnings.length > 0 ? `<h3>Uyarılar</h3><ul class="warnings">${prediction.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
+          ${prediction.warnings.length > 0 ? `<h3>${messages.warnings}</h3><ul class="warnings">${prediction.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
         </div>
       </div>
-      <h3>Hesap izi</h3>
-      <div class="trace-list">${traceSteps(prediction.trace)}</div>
-      <p class="trace-id">İz kimliği: ${escapeHtml(prediction.traceId)}</p>
+      <h3>${messages.calculationTrace}</h3>
+      <div class="trace-list">${traceSteps(prediction.trace, locale)}</div>
+      <p class="trace-id">${messages.traceId}: ${escapeHtml(prediction.traceId)}</p>
     </section>`;
 }

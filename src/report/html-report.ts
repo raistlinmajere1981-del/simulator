@@ -1,12 +1,15 @@
 import type { SavedExperiment } from '../shared/simulator';
+import type { UiLocale } from '../shared/ui-locale';
 import {
   astronomyModelIds,
-  coordinateFormatter,
   escapeHtml,
+  formatCoordinate,
   formatDate,
-  inputNumberFormatter,
+  formatInputNumber,
+  formatPercent,
   predictionSection
 } from './report-core';
+import { reportMessages } from './report-i18n';
 import {
   photoCalibrationSection,
   photoModelUncertaintySection,
@@ -16,28 +19,37 @@ import {
 } from './report-provenance';
 import { geodesicSection, verticalTerrainSection } from './report-terrain';
 
-function astronomyResultsSection(experiment: SavedExperiment): string {
-  const predictions = experiment.predictions.filter((prediction) => astronomyModelIds.has(prediction.modelId));
+function astronomyResultsSection(
+  experiment: SavedExperiment,
+  locale: UiLocale
+): string {
+  const messages = reportMessages(locale);
+  const predictions = experiment.predictions.filter(
+    (prediction) => astronomyModelIds.has(prediction.modelId)
+  );
   if (predictions.length === 0) return '';
   const observedAtIso = experiment.observedAtIso ?? experiment.createdAtIso;
   return `
     <div class="astronomy-group">
       <div class="astronomy-group-heading">
-        <div><span class="eyebrow">Aşama 7 · kaydedilmiş astronomi anlık görüntüleri</span><h2>Astronomi sonuçları</h2></div>
-        <strong>${predictions.length} hesap kaydı</strong>
+        <div><span class="eyebrow">${messages.astronomyEyebrow}</span><h2>${messages.astronomyResults}</h2></div>
+        <strong>${formatInputNumber(predictions.length, locale)} ${messages.calculationRecords}</strong>
       </div>
-      <p>Bu bölüm kaydedilen gözlem anı (${formatDate(observedAtIso)}), açık UTC ofseti ve model sürümleriyle birlikte saklanan Güneş, Ay, tutulma, mevsim, Güneş zamanı ve rota karşılaştırması sonuçlarını gösterir.</p>
+      <p>${messages.astronomyIntroBefore} (${formatDate(observedAtIso, locale)}), ${messages.astronomyIntroAfter}</p>
       ${predictions.map((prediction) => predictionSection(
         prediction,
-        experiment.modelVersions[prediction.modelId]
+        experiment.modelVersions[prediction.modelId],
+        locale
       )).join('')}
     </div>`;
 }
 
 export function createExperimentHtmlReport(
   experiment: SavedExperiment,
-  generatedAtIso = new Date().toISOString()
+  generatedAtIso = new Date().toISOString(),
+  locale: UiLocale = 'tr'
 ): string {
+  const messages = reportMessages(locale);
   const inputs = experiment.inputs;
   const effectiveDistanceKm = experiment.geodesic?.distanceM !== undefined &&
     inputs.distanceSource === 'coordinates'
@@ -47,32 +59,36 @@ export function createExperimentHtmlReport(
   const isShadowObservation = experiment.scenarioId === 'shadow-observation';
   const isStellarObservation = experiment.scenarioId === 'stellar-observation';
   const isEclipseObservation = experiment.scenarioId === 'eclipse-simulation';
-  const isAstronomyObservation = isCelestial || isShadowObservation || isStellarObservation || isEclipseObservation;
+  const isAstronomyObservation =
+    isCelestial || isShadowObservation || isStellarObservation || isEclipseObservation;
+
   const coordinateCards = inputs.distanceSource === 'coordinates' ? `
-    <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
-    <div class="input-card"><small>Hedef koordinatı</small><strong>${coordinateFormatter.format(inputs.targetLatitudeDeg)}°, ${coordinateFormatter.format(inputs.targetLongitudeDeg)}°</strong></div>
-    <div class="input-card"><small>Mesafe kaynağı</small><strong>WGS84 koordinat çözümü</strong></div>` : `
-    <div class="input-card"><small>Mesafe kaynağı</small><strong>Manuel giriş</strong></div>`;
+    <div class="input-card"><small>${messages.observerCoordinates}</small><strong>${formatCoordinate(inputs.observerLatitudeDeg, locale)}°, ${formatCoordinate(inputs.observerLongitudeDeg, locale)}°</strong></div>
+    <div class="input-card"><small>${messages.targetCoordinates}</small><strong>${formatCoordinate(inputs.targetLatitudeDeg, locale)}°, ${formatCoordinate(inputs.targetLongitudeDeg, locale)}°</strong></div>
+    <div class="input-card"><small>${messages.distanceSource}</small><strong>${messages.coordinateSolution}</strong></div>` : `
+    <div class="input-card"><small>${messages.distanceSource}</small><strong>${messages.manualInput}</strong></div>`;
+
+  const observationOffset = experiment.observationUtcOffsetMinutes;
   const reportInputCards = isAstronomyObservation ? `
-    <div class="input-card"><small>Gözlem zamanı · UTC</small><strong>${formatDate(experiment.observedAtIso ?? experiment.createdAtIso)}</strong></div>
-    <div class="input-card"><small>UTC ofset provenansı</small><strong>${experiment.observationUtcOffsetMinutes === undefined ? 'Tanımlanmadı' : `${experiment.observationUtcOffsetMinutes >= 0 ? '+' : ''}${inputNumberFormatter.format(experiment.observationUtcOffsetMinutes / 60)} saat`}</strong></div>
-    <div class="input-card"><small>Gözlemci koordinatı</small><strong>${coordinateFormatter.format(inputs.observerLatitudeDeg)}°, ${coordinateFormatter.format(inputs.observerLongitudeDeg)}°</strong></div>
-    ${isCelestial ? `<div class="input-card"><small>Rota karşılaştırması B</small><strong>${coordinateFormatter.format(inputs.targetLatitudeDeg)}°, ${coordinateFormatter.format(inputs.targetLongitudeDeg)}°</strong></div>` : ''}
-    <div class="input-card"><small>${isShadowObservation ? '6.3 hesap türü' : isStellarObservation ? 'Yıldız gözlemi' : isEclipseObservation ? 'Tutulma hesabı' : 'Aşama 7 astronomi'}</small><strong>${isShadowObservation ? 'Dikey gnomon gölge geometrisi' : isStellarObservation ? 'Katalog yıldızı, precession ve geometrik skyline izi' : isEclipseObservation ? 'Anlık Güneş–Ay disk geometrisi ve kontrollü olay araması' : 'Güneş/Ay, günlük/yıllık olaylar, Güneş zamanı ve WGS84 rota karşılaştırması'}</strong></div>` : `
-    <div class="input-card"><small>Göz yüksekliği</small><strong>${inputNumberFormatter.format(inputs.observerHeightM)} m</strong></div>
-    <div class="input-card"><small>Hedef yüksekliği</small><strong>${inputNumberFormatter.format(inputs.targetHeightM)} m</strong></div>
-    <div class="input-card"><small>Yüzey mesafesi</small><strong>${inputNumberFormatter.format(effectiveDistanceKm)} km</strong></div>
-    <div class="input-card"><small>Gözlenen görünürlük</small><strong>%${inputNumberFormatter.format(inputs.observedVisiblePercent)}</strong></div>
-    <div class="input-card"><small>Gözlem belirsizliği</small><strong>±%${inputNumberFormatter.format(inputs.observationUncertaintyPercent)}</strong></div>
-    <div class="input-card"><small>Atmosfer</small><strong>${inputs.useStandardRefraction ? `Standart kırılma (k=${inputNumberFormatter.format(inputs.refractionCoefficient)})` : 'Kapalı'}</strong></div>
+    <div class="input-card"><small>${messages.observationTimeUtc}</small><strong>${formatDate(experiment.observedAtIso ?? experiment.createdAtIso, locale)}</strong></div>
+    <div class="input-card"><small>${messages.utcOffsetProvenance}</small><strong>${observationOffset === undefined ? messages.undefined : `${observationOffset >= 0 ? '+' : ''}${formatInputNumber(observationOffset / 60, locale)} ${messages.hours}`}</strong></div>
+    <div class="input-card"><small>${messages.observerCoordinates}</small><strong>${formatCoordinate(inputs.observerLatitudeDeg, locale)}°, ${formatCoordinate(inputs.observerLongitudeDeg, locale)}°</strong></div>
+    ${isCelestial ? `<div class="input-card"><small>${messages.routeComparisonB}</small><strong>${formatCoordinate(inputs.targetLatitudeDeg, locale)}°, ${formatCoordinate(inputs.targetLongitudeDeg, locale)}°</strong></div>` : ''}
+    <div class="input-card"><small>${isShadowObservation ? messages.shadowCalculationType : isStellarObservation ? messages.stellarObservation : isEclipseObservation ? messages.eclipseCalculation : messages.stage7Astronomy}</small><strong>${isShadowObservation ? messages.shadowDescription : isStellarObservation ? messages.stellarDescription : isEclipseObservation ? messages.eclipseDescription : messages.astronomyDescription}</strong></div>` : `
+    <div class="input-card"><small>${messages.eyeHeight}</small><strong>${formatInputNumber(inputs.observerHeightM, locale)} m</strong></div>
+    <div class="input-card"><small>${messages.targetHeight}</small><strong>${formatInputNumber(inputs.targetHeightM, locale)} m</strong></div>
+    <div class="input-card"><small>${messages.surfaceDistance}</small><strong>${formatInputNumber(effectiveDistanceKm, locale)} km</strong></div>
+    <div class="input-card"><small>${messages.observedVisibility}</small><strong>${formatPercent(inputs.observedVisiblePercent, locale)}</strong></div>
+    <div class="input-card"><small>${messages.observationUncertainty}</small><strong>${formatPercent(inputs.observationUncertaintyPercent, locale, true)}</strong></div>
+    <div class="input-card"><small>${messages.atmosphere}</small><strong>${inputs.useStandardRefraction ? `${messages.standardRefraction} (k=${formatInputNumber(inputs.refractionCoefficient, locale)})` : messages.off}</strong></div>
     ${coordinateCards}`;
 
   return `<!doctype html>
-<html lang="tr">
+<html lang="${locale}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(experiment.name)} · Deney Raporu</title>
+  <title>${escapeHtml(experiment.name)} · ${messages.reportTitle}</title>
   <style>
     :root { color-scheme: light; font-family: Inter, Arial, sans-serif; color: #18232d; background: #eef2f5; }
     * { box-sizing: border-box; }
@@ -130,18 +146,18 @@ export function createExperimentHtmlReport(
 <body>
   <main>
     <header class="report-header">
-      <span class="eyebrow">Geometrik Gözlem Laboratuvarı · Deney Raporu</span>
+      <span class="eyebrow">${messages.headerEyebrow}</span>
       <h1>${escapeHtml(experiment.name)}</h1>
       <div class="meta">
-        <span>Kayıt kimliği: ${escapeHtml(experiment.id)}</span>
-        <span>Oluşturma: ${formatDate(experiment.createdAtIso)}</span>
-        <span>Son güncelleme: ${formatDate(experiment.updatedAtIso)}</span>
-        <span>Rapor üretimi: ${formatDate(generatedAtIso)}</span>
+        <span>${messages.recordId}: ${escapeHtml(experiment.id)}</span>
+        <span>${messages.created}: ${formatDate(experiment.createdAtIso, locale)}</span>
+        <span>${messages.updated}: ${formatDate(experiment.updatedAtIso, locale)}</span>
+        <span>${messages.generated}: ${formatDate(generatedAtIso, locale)}</span>
       </div>
       <div class="input-grid">
         ${reportInputCards}
       </div>
-      <div class="notice">Bu rapor, kaydedildiği andaki model sürümlerini, sonuç anlık görüntülerini ve hesap izlerini gösterir. Tek bir deneydeki uyum, bir modelin genel doğruluğu anlamına gelmez.</div>
+      <div class="notice">${messages.notice}</div>
     </header>
 
     ${geodesicSection(experiment)}
@@ -151,15 +167,16 @@ export function createExperimentHtmlReport(
     ${textSetupHistorySection(experiment)}
     ${stellarLocalHorizonSourceSection(experiment)}
     ${stellarMotionSourceSection(experiment)}
-    ${astronomyResultsSection(experiment)}
+    ${astronomyResultsSection(experiment, locale)}
     ${experiment.predictions
       .filter((prediction) => !astronomyModelIds.has(prediction.modelId))
       .map((prediction) => predictionSection(
         prediction,
-        experiment.modelVersions[prediction.modelId]
+        experiment.modelVersions[prediction.modelId],
+        locale
       )).join('')}
 
-    <footer>Bu dosya çevrimdışı okunabilen, kendine yeterli bir HTML raporudur. Geometrik Gözlem Laboratuvarı tarafından üretilmiştir.</footer>
+    <footer>${messages.footer}</footer>
   </main>
 </body>
 </html>`;
