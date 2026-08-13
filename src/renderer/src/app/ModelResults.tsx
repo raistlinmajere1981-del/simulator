@@ -6,8 +6,9 @@ import type { SimulatorInputs } from '../../../shared/simulator';
 import type { TerrainProfile } from '../../../shared/terrain';
 import type { ModelRun } from '../../../simulation/runner';
 import { PanelHelpButton } from '../HelpSystem';
+import { useI18n } from '../I18nProvider';
 import { WorldModelViewport } from '../WorldModelViewport';
-import { getPresentation } from './app-config';
+import { getModelPresentationLabel, getPresentation } from './app-config';
 import {
   formatAngle,
   formatDifference,
@@ -15,8 +16,8 @@ import {
   formatMetres,
   formatPercent,
   getMetric,
-  numberFormatter,
-  statusLabels
+  getStatusLabel,
+  numberFormatterFor
 } from './app-formatters';
 import type { VisualLayerState } from './app-types';
 
@@ -41,7 +42,10 @@ export function ModelCard({
   visualLayers: VisualLayerState;
   onShowTrace(): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
   const presentation = getPresentation(metadata.id);
+  const modelLabel = getModelPresentationLabel(locale, metadata.id, metadata.name);
+  const numberFormatter = numberFormatterFor(locale);
   const prediction = run?.prediction;
   const status = prediction?.status ?? 'indeterminate';
   const visibleFraction = getMetric(prediction, 'visibleFraction');
@@ -54,15 +58,17 @@ export function ModelCard({
   const warning = prediction?.warnings[0];
   const isProjection = metadata.id === 'azimuthal-projection';
   const isHorizon = scenarioId === 'horizon';
-  const statusLabel = isHorizon && status !== 'unsupported' ? 'Hesaplandı' : statusLabels[status];
+  const statusLabel = isHorizon && status !== 'unsupported'
+    ? t('model.calculated')
+    : getStatusLabel(locale, status);
 
   return (
     <article className={`model-card ${presentation.tone} ${isProjection ? 'projection-card' : ''}`}>
       <header>
-        <h3>{metadata.name}</h3>
+        <h3>{modelLabel}</h3>
         <div className="model-header-actions">
           <PanelHelpButton panelId="model-visualization" />
-          <button className="trace-button" disabled={!prediction} type="button" onClick={onShowTrace}>Hesap izi</button>
+          <button className="trace-button" disabled={!prediction} type="button" onClick={onShowTrace}>{t('model.trace')}</button>
           <span className={`status-pill status-${status}`}>{statusLabel}</span>
         </div>
       </header>
@@ -87,38 +93,38 @@ export function ModelCard({
       />
       {isProjection ? (
         <div className="projection-explanation">
-          <strong>Hesaplama yapılmadı</strong>
-          <p>Yüzey geometrisi, yerel dikey yön ve ışık ilerleme kuralları tanımlanmadan sayısal sonuç üretilemez.</p>
+          <strong>{t('model.noCalculation')}</strong>
+          <p>{t('model.unsupportedExplanation')}</p>
         </div>
       ) : isHorizon ? (
         <div className="horizon-analysis-view">
           <span className="horizon-analysis-observer" />
           <span className={`horizon-analysis-surface ${presentation.shape}`} />
           <span className="horizon-analysis-tangent" />
-          <p>Hedef ve rota kullanılmadan geometrik ufuk tanımı değerlendirilir.</p>
+          <p>{t('model.horizonDefinitionNote')}</p>
         </div>
       ) : (
         <div className="profile-view">
-          <div className="profile-label left">Gözlemci<br /><b>{numberFormatter.format(inputs.observerGroundElevationM + inputs.observerHeightM)} m</b></div>
-          <div className="profile-label right">Hedef tepesi<br /><b>{numberFormatter.format(inputs.targetGroundElevationM + inputs.targetHeightM)} m</b></div>
+          <div className="profile-label left">{t('model.observer')}<br /><b>{numberFormatter.format(inputs.observerGroundElevationM + inputs.observerHeightM)} m</b></div>
+          <div className="profile-label right">{t('model.targetTop')}<br /><b>{numberFormatter.format(inputs.targetGroundElevationM + inputs.targetHeightM)} m</b></div>
           <span className="line-of-sight" /><span className={`surface ${presentation.shape}`} />
-          {inputs.terrainMode !== 'off' && <span className="terrain-obstacle" title="Manuel arazi profili" />}
+          {inputs.terrainMode !== 'off' && <span className="terrain-obstacle" title={t('model.manualTerrainProfile')} />}
         </div>
       )}
       <div className={`metric-grid ${isProjection ? 'unsupported-metrics' : ''} ${isHorizon ? 'horizon-metrics' : ''}`}>
         {isHorizon ? (
           <>
-            <div><small>Geometrik ufuk</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane')}</strong></div>
-            <div><small>Gözlemci toplam kotu</small><strong>{formatMetres(observerTotalElevationM)}</strong></div>
-            <div><small>Etkin yarıçap</small><strong>{effectiveRadiusM === null ? (metadata.id === 'defined-plane' ? 'Düzlem' : '—') : formatDistance(effectiveRadiusM)}</strong></div>
-            <div><small>Senaryo</small><strong>{statusLabel}</strong></div>
+            <div><small>{t('metric.geometricHorizon')}</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane', locale)}</strong></div>
+            <div><small>{t('metric.observerTotalElevation')}</small><strong>{formatMetres(observerTotalElevationM, locale)}</strong></div>
+            <div><small>{t('metric.effectiveRadius')}</small><strong>{effectiveRadiusM === null ? (metadata.id === 'defined-plane' ? t('model.plane') : '—') : formatDistance(effectiveRadiusM, false, locale)}</strong></div>
+            <div><small>{t('metric.scenario')}</small><strong>{statusLabel}</strong></div>
           </>
         ) : (
           <>
-            <div><small>Beklenen görünürlük</small><strong>{formatPercent(visibleFraction)}</strong></div>
-            <div><small>Gizlenen kısım</small><strong>{formatPercent(hiddenFraction)}</strong></div>
-            <div><small>Ufuk mesafesi</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane')}</strong></div>
-            <div><small>{terrainClearanceM === null ? 'Hedef tepe açısı' : 'Arazi açıklığı'}</small><strong>{terrainClearanceM === null ? formatAngle(targetAngleDeg) : formatMetres(terrainClearanceM)}</strong></div>
+            <div><small>{t('metric.expectedVisibility')}</small><strong>{formatPercent(visibleFraction, locale)}</strong></div>
+            <div><small>{t('metric.hiddenFraction')}</small><strong>{formatPercent(hiddenFraction, locale)}</strong></div>
+            <div><small>{t('metric.horizonDistance')}</small><strong>{formatDistance(horizonDistanceM, metadata.id === 'defined-plane', locale)}</strong></div>
+            <div><small>{terrainClearanceM === null ? t('metric.targetTopAngle') : t('metric.terrainClearance')}</small><strong>{terrainClearanceM === null ? formatAngle(targetAngleDeg, locale) : formatMetres(terrainClearanceM, locale)}</strong></div>
           </>
         )}
       </div>
@@ -136,28 +142,32 @@ export function ResultsTable({
   scenarioId: SimulationScenarioId;
   onShowTrace(modelId: string): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
+
   if (scenarioId === 'horizon') {
     return (
       <section className="results panel">
-        <div className="results-help-heading"><span className="eyebrow">Ufuk sonucu karşılaştırma</span><PanelHelpButton panelId="results" /></div>
+        <div className="results-help-heading"><span className="eyebrow">{t('results.horizonComparison')}</span><PanelHelpButton panelId="results" /></div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Model / gösterim</th><th>Geometrik ufuk</th><th>Gözlemci toplam kotu</th><th>Etkin yarıçap</th><th>Durum</th><th>İz</th></tr></thead>
+            <thead><tr><th>{t('results.modelDisplay')}</th><th>{t('metric.geometricHorizon')}</th><th>{t('metric.observerTotalElevation')}</th><th>{t('metric.effectiveRadius')}</th><th>{t('results.status')}</th><th>{t('results.trace')}</th></tr></thead>
             <tbody>
               {simulationModels.map((model) => {
                 const run = runs.find((candidate) => candidate.metadata.id === model.metadata.id);
                 const prediction = run?.prediction;
                 const presentation = getPresentation(model.metadata.id);
+                const modelLabel = getModelPresentationLabel(locale, model.metadata.id, model.metadata.name);
                 const status = prediction?.status ?? 'indeterminate';
                 const isProjection = model.metadata.id === 'azimuthal-projection';
+                const effectiveRadiusM = getMetric(prediction, 'effectiveRadiusM');
                 return (
                   <tr className={isProjection ? 'projection-row' : ''} key={model.metadata.id}>
-                    <td><span className={`model-dot ${presentation.tone}`} />{model.metadata.name}<small>{isProjection ? 'Kartografik referans' : 'Fiziksel model'}</small></td>
-                    <td>{formatDistance(getMetric(prediction, 'horizonSurfaceDistanceM'), model.metadata.id === 'defined-plane')}</td>
-                    <td>{formatMetres(getMetric(prediction, 'observerTotalElevationM'))}</td>
-                    <td>{getMetric(prediction, 'effectiveRadiusM') === null ? (model.metadata.id === 'defined-plane' ? 'Düzlem' : '—') : formatDistance(getMetric(prediction, 'effectiveRadiusM'))}</td>
-                    <td>{status === 'unsupported' ? statusLabels[status] : 'Hesaplandı'}</td>
-                    <td><button className="table-trace-button" disabled={!prediction} type="button" onClick={() => onShowTrace(model.metadata.id)}>Aç</button></td>
+                    <td><span className={`model-dot ${presentation.tone}`} />{modelLabel}<small>{isProjection ? t('results.cartographicReference') : t('results.physicalModel')}</small></td>
+                    <td>{formatDistance(getMetric(prediction, 'horizonSurfaceDistanceM'), model.metadata.id === 'defined-plane', locale)}</td>
+                    <td>{formatMetres(getMetric(prediction, 'observerTotalElevationM'), locale)}</td>
+                    <td>{effectiveRadiusM === null ? (model.metadata.id === 'defined-plane' ? t('model.plane') : '—') : formatDistance(effectiveRadiusM, false, locale)}</td>
+                    <td>{status === 'unsupported' ? getStatusLabel(locale, status) : t('model.calculated')}</td>
+                    <td><button className="table-trace-button" disabled={!prediction} type="button" onClick={() => onShowTrace(model.metadata.id)}>{t('results.open')}</button></td>
                   </tr>
                 );
               })}
@@ -170,27 +180,28 @@ export function ResultsTable({
 
   return (
     <section className="results panel">
-      <div className="results-help-heading"><span className="eyebrow">Sonuç karşılaştırma</span><PanelHelpButton panelId="results" /></div>
+      <div className="results-help-heading"><span className="eyebrow">{t('results.comparison')}</span><PanelHelpButton panelId="results" /></div>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Model / gösterim</th><th>Beklenen görünürlük</th><th>Gizlenen</th><th>Görüş açısı</th><th>Ufuk</th><th>Arazi açıklığı</th><th>Gözlem farkı</th><th>İz</th></tr></thead>
+          <thead><tr><th>{t('results.modelDisplay')}</th><th>{t('metric.expectedVisibility')}</th><th>{t('metric.hiddenFraction')}</th><th>{t('results.viewAngle')}</th><th>{t('results.horizon')}</th><th>{t('metric.terrainClearance')}</th><th>{t('results.observationDifference')}</th><th>{t('results.trace')}</th></tr></thead>
           <tbody>
             {simulationModels.map((model) => {
               const run = runs.find((candidate) => candidate.metadata.id === model.metadata.id);
               const prediction = run?.prediction;
               const presentation = getPresentation(model.metadata.id);
+              const modelLabel = getModelPresentationLabel(locale, model.metadata.id, model.metadata.name);
               const status = prediction?.status ?? 'indeterminate';
               const isProjection = model.metadata.id === 'azimuthal-projection';
               return (
                 <tr className={isProjection ? 'projection-row' : ''} key={model.metadata.id}>
-                  <td><span className={`model-dot ${presentation.tone}`} />{model.metadata.name}<small>{isProjection ? 'Kartografik referans · ' : 'Fiziksel model · '}{statusLabels[status]}</small></td>
-                  <td>{formatPercent(getMetric(prediction, 'visibleFraction'))}</td>
-                  <td>{formatPercent(getMetric(prediction, 'hiddenFraction'))}</td>
-                  <td>{formatAngle(getMetric(prediction, 'targetTopElevationDeg'))}</td>
-                  <td>{formatDistance(getMetric(prediction, 'horizonSurfaceDistanceM'), model.metadata.id === 'defined-plane')}</td>
-                  <td>{formatMetres(getMetric(prediction, 'terrainMinimumClearanceM'))}</td>
-                  <td>{formatDifference(getMetric(prediction, 'observationDifferencePp'))}</td>
-                  <td><button className="table-trace-button" disabled={!prediction} type="button" onClick={() => onShowTrace(model.metadata.id)}>Aç</button></td>
+                  <td><span className={`model-dot ${presentation.tone}`} />{modelLabel}<small>{isProjection ? `${t('results.cartographicReference')} · ` : `${t('results.physicalModel')} · `}{getStatusLabel(locale, status)}</small></td>
+                  <td>{formatPercent(getMetric(prediction, 'visibleFraction'), locale)}</td>
+                  <td>{formatPercent(getMetric(prediction, 'hiddenFraction'), locale)}</td>
+                  <td>{formatAngle(getMetric(prediction, 'targetTopElevationDeg'), locale)}</td>
+                  <td>{formatDistance(getMetric(prediction, 'horizonSurfaceDistanceM'), model.metadata.id === 'defined-plane', locale)}</td>
+                  <td>{formatMetres(getMetric(prediction, 'terrainMinimumClearanceM'), locale)}</td>
+                  <td>{formatDifference(getMetric(prediction, 'observationDifferencePp'), locale)}</td>
+                  <td><button className="table-trace-button" disabled={!prediction} type="button" onClick={() => onShowTrace(model.metadata.id)}>{t('results.open')}</button></td>
                 </tr>
               );
             })}

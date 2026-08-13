@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   defaultExperimentName,
   getDatumLabel,
+  getModelPresentationLabel,
   getScenarioPresentation,
   getSidebarModelLabel
 } from '../src/renderer/src/app/app-config';
@@ -24,10 +25,12 @@ describe('localized renderer scenario presentation', () => {
     expect(defaultExperimentName('stellar-observation', 'en', instant)).toMatch(/^Stellar Observations /);
   });
 
-  it('preserves existing Turkish model metadata labels while supplying English sidebar labels', () => {
-    expect(getSidebarModelLabel('tr', 'ideal-sphere', 'Mevcut Türkçe Ad')).toBe('Mevcut Türkçe Ad');
+  it('preserves existing Turkish model metadata labels while supplying English renderer labels', () => {
+    expect(getModelPresentationLabel('tr', 'ideal-sphere', 'Mevcut Türkçe Ad')).toBe('Mevcut Türkçe Ad');
+    expect(getModelPresentationLabel('en', 'ideal-sphere', 'Mevcut Türkçe Ad')).toBe('Ideal Sphere');
+    expect(getModelPresentationLabel('en', 'defined-plane', 'Tanımlı Düzlem')).toBe('Defined Plane');
+    expect(getModelPresentationLabel('en', 'unknown-model', 'Custom Model')).toBe('Custom Model');
     expect(getSidebarModelLabel('en', 'ideal-sphere', 'Mevcut Türkçe Ad')).toBe('Ideal Sphere');
-    expect(getSidebarModelLabel('en', 'unknown-model', 'Custom Model')).toBe('Custom Model');
   });
 
   it('localizes vertical datum presentation without changing persisted datum ids', () => {

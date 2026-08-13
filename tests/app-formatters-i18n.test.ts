@@ -6,6 +6,7 @@ import {
   formatPercent,
   formatPercentValue,
   formatSignedPercentValue,
+  getStatusLabel,
   numberFormatterFor
 } from '../src/renderer/src/app/app-formatters';
 
@@ -30,5 +31,11 @@ describe('locale-aware renderer formatters', () => {
     expect(formatPercent(0.425)).toBe('%42,5');
     expect(formatDifference(1.25)).toBe('1,25 puan');
     expect(formatDifference(1.25, 'en')).toBe('1.25 pp');
+  });
+
+  it('localizes result status labels without changing status ids', () => {
+    expect(getStatusLabel('tr', 'compatible')).toBe('Gözlem aralığıyla uyumlu');
+    expect(getStatusLabel('en', 'compatible')).toBe('Compatible with observation range');
+    expect(getStatusLabel('en', 'unsupported')).toBe('Physical model rules are undefined');
   });
 });
