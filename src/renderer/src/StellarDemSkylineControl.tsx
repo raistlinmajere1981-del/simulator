@@ -7,9 +7,9 @@ import type {
   StellarDemSkylineSamplingMethod
 } from '../../shared/stellar-local-horizon-import';
 import { DraftNumberInput } from './DraftNumberInput';
+import { useI18n } from './I18nProvider';
+import { appLocaleTag } from './i18n';
 import './stellar-dem-skyline-control.css';
-
-const numberFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
 
 interface StellarDemSkylineControlProps {
   observerLatitudeDeg: number;
@@ -34,9 +34,9 @@ const DEFAULT_SETTINGS: DemSkylineDraftSettings = {
   heightDatumToEllipsoidOffsetM: 0
 };
 
-function formatBytes(bytes: number): string {
-  if (bytes >= 1024 * 1024) return `${numberFormatter.format(bytes / (1024 * 1024))} MB`;
-  return `${numberFormatter.format(bytes / 1024)} KB`;
+function formatBytes(bytes: number, formatter: Intl.NumberFormat): string {
+  if (bytes >= 1024 * 1024) return `${formatter.format(bytes / (1024 * 1024))} MB`;
+  return `${formatter.format(bytes / 1024)} KB`;
 }
 
 function settingsForGeneration(
@@ -61,6 +61,8 @@ export function StellarDemSkylineControl({
   observerHeightM,
   onPreparedSource
 }: StellarDemSkylineControlProps): React.JSX.Element {
+  const { locale, t } = useI18n();
+  const numberFormatter = new Intl.NumberFormat(appLocaleTag(locale), { maximumFractionDigits: 2 });
   const [draft, setDraft] = useState<StellarDemSkylineDraft>();
   const [settings, setSettings] = useState<DemSkylineDraftSettings>({ ...DEFAULT_SETTINGS });
   const [isImporting, setIsImporting] = useState(false);
@@ -83,7 +85,7 @@ export function StellarDemSkylineControl({
       setDraft(result.draft);
       setMessage(result.message);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'DEM skyline kaynağı içe aktarılamadı.');
+      setMessage(error instanceof Error ? error.message : t('stellar.dem.importError'));
     } finally {
       setIsImporting(false);
     }
@@ -118,7 +120,7 @@ export function StellarDemSkylineControl({
           : {})
       });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'DEM skyline üretimi tamamlanamadı.');
+      setMessage(error instanceof Error ? error.message : t('stellar.dem.generationError'));
     } finally {
       setIsGenerating(false);
     }
@@ -128,11 +130,11 @@ export function StellarDemSkylineControl({
     <div className="stellar-dem-skyline-control">
       <div className="stellar-dem-skyline-heading">
         <div>
-          <strong>DEM’den 360° geometrik skyline</strong>
-          <span>ESRI ASCII Grid seçimi yalnız taslak hazırlar. 360° tarama ayrı düğmeyle çalışır; eksik kapsama yıldız skyline’ına uygulanmaz.</span>
+          <strong>{t('stellar.dem.title')}</strong>
+          <span>{t('stellar.dem.description')}</span>
         </div>
         <button type="button" disabled={isImporting || isGenerating} onClick={() => void importDem()}>
-          {isImporting ? 'DEM okunuyor…' : 'ESRI ASCII DEM seç'}
+          {isImporting ? t('stellar.dem.importing') : t('stellar.dem.import')}
         </button>
       </div>
 
@@ -140,20 +142,20 @@ export function StellarDemSkylineControl({
         <>
           <div className="stellar-dem-source-card">
             <div>
-              <small>DEM TASLAĞI · 360° TARAMA HENÜZ AYRI İŞLEM</small>
+              <small>{t('stellar.dem.sourceLabel')}</small>
               <strong>{draft.fileName}</strong>
-              <span>{draft.columnCount}×{draft.rowCount} hücre · cellsize {numberFormatter.format(draft.cellSizeDeg)}° · {formatBytes(draft.fileSizeBytes)}</span>
-              <span>Kapsam: {numberFormatter.format(draft.southBoundaryDeg)}…{numberFormatter.format(draft.northBoundaryDeg)}° enlem · {numberFormatter.format(draft.westBoundaryDeg)}…{numberFormatter.format(draft.eastBoundaryDeg)}° boylam</span>
+              <span>{t('stellar.dem.cellsSummary', { columns: draft.columnCount, rows: draft.rowCount, cellSize: numberFormatter.format(draft.cellSizeDeg), size: formatBytes(draft.fileSizeBytes, numberFormatter) })}</span>
+              <span>{t('stellar.dem.coverage', { south: numberFormatter.format(draft.southBoundaryDeg), north: numberFormatter.format(draft.northBoundaryDeg), west: numberFormatter.format(draft.westBoundaryDeg), east: numberFormatter.format(draft.eastBoundaryDeg) })}</span>
             </div>
             <div>
               <span>SHA-256 <code title={draft.sha256}>{draft.sha256.slice(0, 12)}…</code></span>
-              <span>Gözlemci: {numberFormatter.format(observerLatitudeDeg)}°, {numberFormatter.format(observerLongitudeDeg)}° · göz {numberFormatter.format(observerHeightM)} m</span>
+              <span>{t('stellar.dem.observer', { latitude: numberFormatter.format(observerLatitudeDeg), longitude: numberFormatter.format(observerLongitudeDeg), height: numberFormatter.format(observerHeightM) })}</span>
             </div>
           </div>
 
           <div className="stellar-dem-settings">
             <label>
-              <span>Azimut adımı</span>
+              <span>{t('stellar.dem.azimuthStep')}</span>
               <select
                 disabled={isGenerating}
                 value={settings.azimuthStepDeg}
@@ -162,20 +164,20 @@ export function StellarDemSkylineControl({
                   azimuthStepDeg: Number(event.currentTarget.value)
                 }))}
               >
-                <option value={1}>1° · 360 yön</option>
-                <option value={2}>2° · 180 yön</option>
-                <option value={5}>5° · 72 yön</option>
-                <option value={10}>10° · 36 yön</option>
-                <option value={15}>15° · 24 yön</option>
-                <option value={30}>30° · 12 yön</option>
-                <option value={45}>45° · 8 yön</option>
-                <option value={90}>90° · 4 yön</option>
+                <option value={1}>1° · {t('stellar.dem.directionCount', { count: 360 })}</option>
+                <option value={2}>2° · {t('stellar.dem.directionCount', { count: 180 })}</option>
+                <option value={5}>5° · {t('stellar.dem.directionCount', { count: 72 })}</option>
+                <option value={10}>10° · {t('stellar.dem.directionCount', { count: 36 })}</option>
+                <option value={15}>15° · {t('stellar.dem.directionCount', { count: 24 })}</option>
+                <option value={30}>30° · {t('stellar.dem.directionCount', { count: 12 })}</option>
+                <option value={45}>45° · {t('stellar.dem.directionCount', { count: 8 })}</option>
+                <option value={90}>90° · {t('stellar.dem.directionCount', { count: 4 })}</option>
               </select>
             </label>
             <label>
-              <span>Mesafe adımı · m</span>
+              <span>{t('stellar.dem.distanceStep')}</span>
               <DraftNumberInput
-                ariaLabel="DEM skyline mesafe örnekleme adımı"
+                ariaLabel={t('stellar.dem.distanceStepAria')}
                 disabled={isGenerating}
                 min={10}
                 max={100_000}
@@ -185,9 +187,9 @@ export function StellarDemSkylineControl({
               />
             </label>
             <label>
-              <span>Maksimum mesafe · m</span>
+              <span>{t('stellar.dem.maximumDistance')}</span>
               <DraftNumberInput
-                ariaLabel="DEM skyline maksimum mesafesi"
+                ariaLabel={t('stellar.dem.maximumDistanceAria')}
                 disabled={isGenerating}
                 min={10}
                 max={500_000}
@@ -197,9 +199,9 @@ export function StellarDemSkylineControl({
               />
             </label>
             <label>
-              <span>DEM → WGS84 elipsoid ofseti · m</span>
+              <span>{t('stellar.dem.ellipsoidOffset')}</span>
               <DraftNumberInput
-                ariaLabel="DEM WGS84 elipsoid yükseklik ofseti"
+                ariaLabel={t('stellar.dem.ellipsoidOffsetAria')}
                 disabled={isGenerating}
                 min={-20_000}
                 max={20_000}
@@ -209,7 +211,7 @@ export function StellarDemSkylineControl({
               />
             </label>
             <label>
-              <span>DEM örnekleme</span>
+              <span>{t('stellar.dem.sampling')}</span>
               <select
                 disabled={isGenerating}
                 value={settings.samplingMethod}
@@ -225,9 +227,9 @@ export function StellarDemSkylineControl({
           </div>
 
           <div className="stellar-dem-generate-row">
-            <span>Datum ofseti sabittir; geoit değişimi, kırılma, bina ve bitki örtüsü bu geometrik taramaya dahil değildir.</span>
+            <span>{t('stellar.dem.geometryNote')}</span>
             <button type="button" disabled={isGenerating} onClick={() => void generate()}>
-              {isGenerating ? '360° taranıyor…' : 'DEM skyline üret'}
+              {isGenerating ? t('stellar.dem.generating') : t('stellar.dem.generate')}
             </button>
           </div>
         </>
@@ -235,18 +237,18 @@ export function StellarDemSkylineControl({
 
       {diagnostics && (
         <div className={diagnostics.completeRayCount === diagnostics.pointCount ? 'stellar-dem-diagnostics complete' : 'stellar-dem-diagnostics incomplete'}>
-          <span>Tam azimut <strong>{diagnostics.completeRayCount}/{diagnostics.pointCount}</strong></span>
-          <span>Bilinen <strong>{diagnostics.knownPointCount}</strong></span>
-          <span>Kapsama sınırlı <strong>{diagnostics.coverageLimitedRayCount}</strong></span>
-          <span>NODATA etkili <strong>{diagnostics.noDataAffectedRayCount}</strong></span>
-          <span>Kapsamasız <strong>{diagnostics.noCoverageRayCount}</strong></span>
+          <span>{t('stellar.dem.completeAzimuth')} <strong>{diagnostics.completeRayCount}/{diagnostics.pointCount}</strong></span>
+          <span>{t('stellar.dem.known')} <strong>{diagnostics.knownPointCount}</strong></span>
+          <span>{t('stellar.dem.coverageLimited')} <strong>{diagnostics.coverageLimitedRayCount}</strong></span>
+          <span>{t('stellar.dem.noData')} <strong>{diagnostics.noDataAffectedRayCount}</strong></span>
+          <span>{t('stellar.dem.noCoverage')} <strong>{diagnostics.noCoverageRayCount}</strong></span>
         </div>
       )}
 
       {message && (
         <p className={diagnostics && diagnostics.completeRayCount !== diagnostics.pointCount ? 'stellar-dem-message warning' : 'stellar-dem-message'} role="status">
           {message}
-          {lastGeneratedSourceSha && ' Profil yerel ufuk taslağına aktarıldı; yıldız hesabı için alttaki “Uygula ve hesapla” düğmesini kullan.'}
+          {lastGeneratedSourceSha && t('stellar.dem.profileTransferred')}
         </p>
       )}
     </div>

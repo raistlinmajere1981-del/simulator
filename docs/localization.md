@@ -45,5 +45,6 @@ The localization stage is complete only after both languages cover all user-faci
 - Astronomy result slice (part 3): single/dual shadow result surfaces plus core stellar result and geometric sky-snapshot presentation use TR/EN; raw engine warnings/traces and stellar source/editor controls remain follow-up work.
 - Stellar control slice (part 4): catalog/trail controls, verified proper-motion source and standard-refraction diagnostic use TR/EN and active-locale formatting; local-horizon/DEM/panorama editors remain follow-up work.
 - Stellar control slice (part 5): local-horizon source/editor presentation uses TR/EN while stable direction/source ids and raw imported warnings/messages remain unchanged; DEM and panorama controls remain follow-up work.
+- Stellar control slice (part 6): DEM skyline draft/generation controls and diagnostics use TR/EN and active-locale numeric formatting; DEM sampling ids and raw IPC messages remain unchanged.
 
-Engine-emitted warnings/assumptions/raw calculation errors and traces, DEM/panorama skyline controls, terrain/calibration panels, dialogs, help/AI guidance and reports remain separate follow-up slices.
+Engine-emitted warnings/assumptions/raw calculation errors and traces, panorama skyline controls, terrain/calibration panels, dialogs, help/AI guidance and reports remain separate follow-up slices.
