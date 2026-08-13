@@ -42,5 +42,6 @@ The localization stage is complete only after both languages cover all user-faci
 - Astronomy shell slice: shared Time and date card plus Sun/Moon, eclipse, shadow and stellar scenario-summary shells.
 - Astronomy result slice (part 1): Sun/Moon position panels plus eclipse overlap/event-search result surfaces, with renderer-only phase/geometry presentation mapping and active-locale numeric formatting.
 - Astronomy result slice (part 2): daily solar events, civil↔solar time, annual season events and same-instant WGS84 route comparison surfaces; threshold/season domain ids remain unchanged.
+- Astronomy result slice (part 3): single/dual shadow result surfaces plus core stellar result and geometric sky-snapshot presentation use TR/EN; raw engine warnings/traces and stellar source/editor controls remain follow-up work.
 
 Engine-emitted warnings/assumptions/raw calculation errors, shadow/stellar specialized panels, terrain/calibration panels, dialogs, help/AI guidance and reports remain separate follow-up slices.
