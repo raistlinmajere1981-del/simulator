@@ -143,6 +143,7 @@ import { ShadowObservationPanel } from './ShadowObservationPanel';
 import { DualShadowComparisonPanel } from './DualShadowComparisonPanel';
 import { StellarScenarioSummary } from './StellarScenarioSummary';
 import { StellarObservationPanel } from './StellarObservationPanel';
+import { useI18n } from './I18nProvider';
 
 interface GeoidConversionRecordState {
   prediction: ModelPrediction;
@@ -228,6 +229,7 @@ function terrainVisualizationSourceLabel(source: TerrainProfileSource | undefine
 }
 
 export function AppNext(): React.JSX.Element {
+  const { locale, setLocale, t } = useI18n();
   const [inputs, setInputs] = useState<SimulatorInputs>(DEFAULT_SIMULATOR_INPUTS);
   const [atmosphereState, setAtmosphereState] = useState<AtmosphereExperimentState>(() =>
     createDefaultAtmosphereExperimentState(DEFAULT_SIMULATOR_INPUTS.useStandardRefraction ? 'standard' : 'off')
@@ -1005,35 +1007,51 @@ export function AppNext(): React.JSX.Element {
       <header className="topbar">
         <div className="brand">
           <button className="menu-button" type="button">☰</button>
-          <strong>GEOMETRİK GÖZLEM LABORATUVARI</strong>
+          <strong>{t('app.brand')}</strong>
           <span className={isCalculating ? 'calculation-state busy' : 'calculation-state ready'}>
-            {isCalculating ? 'Hesaplanıyor…' : 'Hesaplama hazır'}
+            {isCalculating ? t('calculation.busy') : t('calculation.ready')}
           </span>
           {storageMessage && <span className="storage-message" title={storageMessage}>{storageMessage}</span>}
         </div>
         <div className="top-actions">
+          <div className="language-switch" role="group" aria-label={t('language.label')}>
+            <button
+              aria-pressed={locale === 'tr'}
+              className={locale === 'tr' ? 'active' : ''}
+              title={t('language.tr')}
+              type="button"
+              onClick={() => setLocale('tr')}
+            >TR</button>
+            <button
+              aria-pressed={locale === 'en'}
+              className={locale === 'en' ? 'active' : ''}
+              title={t('language.en')}
+              type="button"
+              onClick={() => setLocale('en')}
+            >EN</button>
+          </div>
           <button type="button" onClick={() => {
             setTextSetupInitialText('');
             setTextSetupProvenanceContext(undefined);
             setTextSetupOpen(true);
-          }}>✦ Metinden Hazırla</button>
+          }}>✦ {t('action.textSetup')}</button>
           <button type="button" onClick={() => {
             if (isCalculating) {
-              setStorageMessage('Hesaplama tamamlanmadan AI paketi hazırlanmadı.');
+              setStorageMessage(t('ai.waitCalculation'));
               return;
             }
             if (!modelUncertaintyReady) {
-              setStorageMessage('Model girdi belirsizliği hesabı tamamlanmadan AI paketi hazırlanmadı.');
+              setStorageMessage(t('ai.waitUncertainty'));
               return;
             }
             setAiWorkflowExperiment(buildActiveExperimentRecord(
               activeExperimentName || defaultExperimentName(activeScenarioId)
             ));
-          }}>◇ AI ile Analiz</button>
-          <button type="button" onClick={() => setAiGuideOpen(true)}>▧ AI Kılavuzu</button>
-          <button type="button" onClick={() => setDataManagerOpen(true)}>▤ Veri Yöneticisi</button>
-          <button disabled title="Ayarlar modülü sonraki aşamada" type="button">⚙ Ayarlar</button>
-          <button type="button" onClick={openHelpCatalog}>ⓘ Yardım</button>
+          }}>◇ {t('action.aiAnalysis')}</button>
+          <button type="button" onClick={() => setAiGuideOpen(true)}>▧ {t('action.aiGuide')}</button>
+          <button type="button" onClick={() => setDataManagerOpen(true)}>▤ {t('action.dataManager')}</button>
+          <button disabled title={t('action.settingsUnavailable')} type="button">⚙ {t('action.settings')}</button>
+          <button type="button" onClick={openHelpCatalog}>ⓘ {t('action.help')}</button>
         </div>
       </header>
 
