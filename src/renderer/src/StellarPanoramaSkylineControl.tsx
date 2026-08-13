@@ -16,8 +16,8 @@ import { suggestPanoramaSkyline } from '../../simulation/panorama-skyline-assist
 import { savedStellarLocalHorizonSourceFromPanorama } from '../../simulation/stellar-panorama-skyline-source';
 import { DraftNumberInput } from './DraftNumberInput';
 import { useI18n } from './I18nProvider';
-import { appLocaleTag } from './i18n';
-import { getStellarPanoramaMetadataStatusLabel } from './astronomy-result-presentation';
+import { appLocaleTag, translate, type AppLocale } from './i18n';
+import { getStellarPanoramaMarkingMethodLabel, getStellarPanoramaMetadataStatusLabel } from './astronomy-result-presentation';
 import './stellar-panorama-skyline-control.css';
 
 interface StellarPanoramaSkylineControlProps {
@@ -54,12 +54,6 @@ function cloneGeometry(geometry: StellarPanoramaGeometry): StellarPanoramaGeomet
   return { ...geometry };
 }
 
-function markingMethodLabel(method: StellarPanoramaMarkingMethod): string {
-  if (method === 'assisted-gradient-v1') return 'Yardımcı gradyan taslağı · kullanıcı kabul etti';
-  if (method === 'assisted-gradient-v1-edited') return 'Yardımcı gradyan taslağı · elle düzenlendi';
-  return 'Manuel işaretleme';
-}
-
 function editedMarkingMethod(method: StellarPanoramaMarkingMethod): StellarPanoramaMarkingMethod {
   return method === 'manual' ? 'manual' : 'assisted-gradient-v1-edited';
 }
@@ -71,11 +65,11 @@ function markPercent(mark: PanoramaSkylinePixelMark, draft: StellarPanoramaSkyli
   };
 }
 
-async function createAssistedDraft(draft: StellarPanoramaSkylineDraft): Promise<AssistedSkylineDraft> {
+async function createAssistedDraft(draft: StellarPanoramaSkylineDraft, locale: AppLocale): Promise<AssistedSkylineDraft> {
   const image = new Image();
   await new Promise<void>((resolve, reject) => {
     image.onload = () => resolve();
-    image.onerror = () => reject(new Error('Panorama yardımcı taslak için bitmap olarak açılamadı.'));
+    image.onerror = () => reject(new Error(translate(locale, 'stellar.panorama.assist.bitmapOpenError')));
     image.src = draft.dataUrl;
   });
 
@@ -87,7 +81,7 @@ async function createAssistedDraft(draft: StellarPanoramaSkylineDraft): Promise<
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) throw new Error('Panorama yardımcı taslak için Canvas 2D bağlamı açılamadı.');
+  if (!context) throw new Error(translate(locale, 'stellar.panorama.assist.canvasError'));
   context.drawImage(image, 0, 0, width, height);
   const pixels = context.getImageData(0, 0, width, height);
   const result = suggestPanoramaSkyline({ width, height, data: pixels.data }, { sampleCount: 72 });
@@ -151,7 +145,7 @@ export function StellarPanoramaSkylineControl({
         error: error instanceof Error ? error.message : t('stellar.panorama.previewError')
       };
     }
-  }, [draft, geometry, marks]);
+  }, [draft, geometry, marks, t]);
 
   const mappedMarks = useMemo(() => {
     if (!geometry) return [];
@@ -244,12 +238,12 @@ export function StellarPanoramaSkylineControl({
     setPreparedSha('');
     setMessage('');
     try {
-      const suggestion = await createAssistedDraft(draft);
+      const suggestion = await createAssistedDraft(draft, locale);
       setAssistedDraft(suggestion);
-      setMessage(`Yardımcı skyline taslağı üretildi (${suggestion.marks.length} nokta · güven ${confidenceFormatter.format(suggestion.confidence)}). Hesaba girmeden önce çizgiyi kontrol edip açıkça kabul et.`);
+      setMessage(t('stellar.panorama.assist.generated', { count: suggestion.marks.length, confidence: confidenceFormatter.format(suggestion.confidence) }));
     } catch (error) {
       setAssistedDraft(undefined);
-      setMessage(error instanceof Error ? error.message : 'Panorama yardımcı skyline taslağı üretilemedi.');
+      setMessage(error instanceof Error ? error.message : t('stellar.panorama.assist.generationError'));
     } finally {
       setIsSuggesting(false);
     }
@@ -261,7 +255,7 @@ export function StellarPanoramaSkylineControl({
     setMarkingMethod('assisted-gradient-v1');
     setAssistedDraft(undefined);
     setPreparedSha('');
-    setMessage('Yardımcı skyline taslağı işaretlere aktarıldı. Noktaları silebilir veya elle yeni noktalar ekleyebilirsin; böyle bir değişiklik provenansta ayrıca işaretlenir.');
+    setMessage(t('stellar.panorama.assist.accepted'));
   };
 
   const prepare = (): void => {
@@ -292,9 +286,9 @@ export function StellarPanoramaSkylineControl({
           : {})
       });
       setPreparedSha(source.sha256);
-      setMessage(`“${source.fileName}” panorama skyline taslağı hazırlandı.`);
+      setMessage(t('stellar.panorama.prepared', { fileName: source.fileName }));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Panorama skyline kaynağı hazırlanamadı.');
+      setMessage(error instanceof Error ? error.message : t('stellar.panorama.prepareError'));
     }
   };
 
@@ -389,29 +383,29 @@ export function StellarPanoramaSkylineControl({
           </div>
 
           <div className="stellar-panorama-image-help">
-            <span>Elle noktalayabilir veya “Skyline taslağı öner” ile yalnız editör içinde çalışan gradyan yardımcısını kullanabilirsin. Öneri kendiliğinden kaynak veya hesap sonucu olmaz.</span>
+            <span>{t('stellar.panorama.assist.help')}</span>
             <div>
-              <button type="button" disabled={isSuggesting} onClick={() => void suggestDraft()}>{isSuggesting ? 'Taslak aranıyor…' : 'Skyline taslağı öner'}</button>
-              {assistedDraft && <button type="button" className="assist-accept" onClick={acceptAssistedDraft}>Taslağı işaretlere aktar</button>}
-              {assistedDraft && <button type="button" onClick={() => { setAssistedDraft(undefined); setMessage('Yardımcı skyline taslağı atıldı; mevcut işaretler değiştirilmedi.'); }}>Taslağı at</button>}
-              <button type="button" disabled={marks.length === 0} onClick={() => { setMarks((current) => current.slice(0, -1)); markEdited(); }}>Son noktayı geri al</button>
-              <button type="button" disabled={marks.length === 0} onClick={() => { setMarks([]); markEdited(); }}>Temizle</button>
+              <button type="button" disabled={isSuggesting} onClick={() => void suggestDraft()}>{isSuggesting ? t('stellar.panorama.assist.suggesting') : t('stellar.panorama.assist.suggest')}</button>
+              {assistedDraft && <button type="button" className="assist-accept" onClick={acceptAssistedDraft}>{t('stellar.panorama.assist.accept')}</button>}
+              {assistedDraft && <button type="button" onClick={() => { setAssistedDraft(undefined); setMessage(t('stellar.panorama.assist.discarded')); }}>{t('stellar.panorama.assist.discard')}</button>}
+              <button type="button" disabled={marks.length === 0} onClick={() => { setMarks((current) => current.slice(0, -1)); markEdited(); }}>{t('stellar.panorama.assist.undoLast')}</button>
+              <button type="button" disabled={marks.length === 0} onClick={() => { setMarks([]); markEdited(); }}>{t('stellar.panorama.assist.clear')}</button>
             </div>
           </div>
 
           {assistedDraft && (
             <div className="stellar-panorama-assist-status">
               <div>
-                <strong>Yardımcı taslak · henüz uygulanmadı</strong>
-                <span>{assistedDraft.marks.length} nokta · güven göstergesi {confidenceFormatter.format(assistedDraft.confidence)} · gradient-dp v{assistedDraft.algorithmVersion}</span>
+                <strong>{t('stellar.panorama.assist.pending')}</strong>
+                <span>{t('stellar.panorama.assist.summary', { count: assistedDraft.marks.length, confidence: confidenceFormatter.format(assistedDraft.confidence), version: assistedDraft.algorithmVersion })}</span>
               </div>
-              <span>Çizgiyi özellikle ağaç, bina, bulut ve 0°/360° seam çevresinde kontrol et. Güven göstergesi bilimsel doğruluk olasılığı değildir.</span>
+              <span>{t('stellar.panorama.assist.reviewWarning')}</span>
               {assistedDraft.warnings.map((warning, index) => <small key={`${warning}-${index}`}>{warning}</small>)}
             </div>
           )}
 
           <div className="stellar-panorama-image-stage">
-            <img src={draft.dataUrl} alt="Skyline noktaları işaretlenecek panorama" draggable={false} onClick={addMark} />
+            <img src={draft.dataUrl} alt={t('stellar.panorama.imageAlt')} draggable={false} onClick={addMark} />
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
               {assistedDraft && assistedDraft.marks.length > 1 && (
                 <polyline
@@ -439,10 +433,10 @@ export function StellarPanoramaSkylineControl({
                   type="button"
                   className={`stellar-panorama-mark${compactMarks ? ' compact' : ''}`}
                   style={position}
-                  aria-label={`Skyline noktası ${index + 1}`}
+                  aria-label={t('stellar.panorama.markAria', { index: index + 1 })}
                   title={mark.azimuthDeg === null
-                    ? `Nokta ${index + 1}`
-                    : `Nokta ${index + 1} · A ${angleFormatter.format(mark.azimuthDeg)}° · h ${angleFormatter.format(mark.altitudeDeg ?? 0)}°`}
+                    ? t('stellar.panorama.markTitleInvalid', { index: index + 1 })
+                    : t('stellar.panorama.markTitle', { index: index + 1, azimuth: angleFormatter.format(mark.azimuthDeg), altitude: angleFormatter.format(mark.altitudeDeg ?? 0) })}
                   onClick={(event) => {
                     event.stopPropagation();
                     setMarks((current) => current.filter((_, markIndex) => markIndex !== index));
@@ -454,26 +448,26 @@ export function StellarPanoramaSkylineControl({
           </div>
 
           <div className="stellar-panorama-diagnostics">
-            <span>Nokta <strong>{marks.length}</strong>/8+</span>
-            <span>İşaret kaynağı <strong>{markingMethodLabel(markingMethod)}</strong></span>
-            <span>Yatay kapsam <strong>{preview?.horizontalCoverageDeg === null || preview?.horizontalCoverageDeg === undefined ? '—' : `${angleFormatter.format(preview.horizontalCoverageDeg)}°`}</strong></span>
-            <span>Düşey kapsam <strong>{preview?.verticalCoverageDeg === null || preview?.verticalCoverageDeg === undefined ? '—' : `${angleFormatter.format(preview.verticalCoverageDeg)}°`}</strong></span>
-            <span>En büyük azimut boşluğu <strong>{preview?.maximumGapDeg === null || preview?.maximumGapDeg === undefined ? '—' : `${angleFormatter.format(preview.maximumGapDeg)}°`}</strong></span>
+            <span>{t('stellar.panorama.diagnostics.points')} <strong>{marks.length}</strong>/8+</span>
+            <span>{t('stellar.panorama.diagnostics.markSource')} <strong>{getStellarPanoramaMarkingMethodLabel(locale, markingMethod)}</strong></span>
+            <span>{t('stellar.panorama.diagnostics.horizontalCoverage')} <strong>{preview?.horizontalCoverageDeg === null || preview?.horizontalCoverageDeg === undefined ? '—' : `${angleFormatter.format(preview.horizontalCoverageDeg)}°`}</strong></span>
+            <span>{t('stellar.panorama.diagnostics.verticalCoverage')} <strong>{preview?.verticalCoverageDeg === null || preview?.verticalCoverageDeg === undefined ? '—' : `${angleFormatter.format(preview.verticalCoverageDeg)}°`}</strong></span>
+            <span>{t('stellar.panorama.diagnostics.maximumGap')} <strong>{preview?.maximumGapDeg === null || preview?.maximumGapDeg === undefined ? '—' : `${angleFormatter.format(preview.maximumGapDeg)}°`}</strong></span>
           </div>
 
           {mappedMarks.length > 0 && (
             <div className="stellar-panorama-mark-readout">
               {mappedMarks.slice(-4).map((mark, index) => (
                 <span key={`${mark.xPx}-${mark.yPx}-${index}`}>
-                  x {numberFormatter.format(mark.xPx)} · y {numberFormatter.format(mark.yPx)} → {mark.azimuthDeg === null ? 'geometri geçersiz' : `A ${angleFormatter.format(mark.azimuthDeg)}° · h ${angleFormatter.format(mark.altitudeDeg ?? 0)}°`}
+                  x {numberFormatter.format(mark.xPx)} · y {numberFormatter.format(mark.yPx)} → {mark.azimuthDeg === null ? t('stellar.panorama.invalidGeometry') : `A ${angleFormatter.format(mark.azimuthDeg)}° · h ${angleFormatter.format(mark.altitudeDeg ?? 0)}°`}
                 </span>
               ))}
             </div>
           )}
 
           <div className="stellar-panorama-prepare-row">
-            <span>{preview?.error || (!coverageReady ? '360° yatay panorama kapsamı gerekir.' : !marksReady ? 'En az 8 skyline noktası gerekir.' : !gapReady ? 'Azimut işaretleri arasındaki boşluk 90°’yi aşamaz.' : 'Kaynak taslağı hazırlanabilir; yıldız hesabı ayrıca uygulanacaktır.')}</span>
-            <button type="button" disabled={!canPrepare} onClick={prepare}>Panorama skyline hazırla</button>
+            <span>{preview?.error || (!coverageReady ? t('stellar.panorama.needCoverage') : !marksReady ? t('stellar.panorama.needMarks') : !gapReady ? t('stellar.panorama.needGap') : t('stellar.panorama.ready'))}</span>
+            <button type="button" disabled={!canPrepare} onClick={prepare}>{t('stellar.panorama.prepare')}</button>
           </div>
         </>
       )}
@@ -483,7 +477,7 @@ export function StellarPanoramaSkylineControl({
       ))}
       {message && (
         <p className={preparedSha ? 'stellar-panorama-message prepared' : 'stellar-panorama-message'} role="status">
-          {message}{preparedSha ? ' Profil yerel ufuk taslağına aktarıldı; yıldız hesabı için alttaki “Uygula ve hesapla” düğmesini kullan.' : ''}
+          {message}{preparedSha ? t('stellar.panorama.profileTransferred') : ''}
         </p>
       )}
     </div>
