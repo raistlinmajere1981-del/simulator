@@ -2,6 +2,7 @@ import type { LunarPhaseName } from '../../simulation/lunar-position';
 import type { SolarEclipseInstantGeometryClass } from '../../simulation/solar-eclipse-overlap';
 import type { SolarThresholdState } from '../../simulation/solar-day-events';
 import type { SolarSeasonEventKind } from '../../simulation/solar-season-events';
+import type { StellarObservationResult } from '../../simulation/stellar-observation';
 import { translate, type AppLocale, type TranslationKey } from './i18n';
 
 const lunarPhaseKeys: Record<LunarPhaseName, TranslationKey> = {
@@ -74,6 +75,20 @@ const southernSeasonKeys: Record<SolarSeasonEventKind, TranslationKey> = {
   'september-equinox': 'solar.season.springStart',
   'december-solstice': 'solar.season.summerStart'
 };
+
+const stellarHorizonClassKeys: Record<StellarObservationResult['position']['horizonClass'], TranslationKey> = {
+  'circumpolar-above': 'stellar.horizon.circumpolarAbove',
+  'rises-and-sets': 'stellar.horizon.risesSets',
+  'never-rises': 'stellar.horizon.neverRises',
+  'grazes-horizon': 'stellar.horizon.grazes'
+};
+
+export function getStellarHorizonClassLabel(
+  locale: AppLocale,
+  horizonClass: StellarObservationResult['position']['horizonClass']
+): string {
+  return translate(locale, stellarHorizonClassKeys[horizonClass]);
+}
 
 export function getSolarThresholdStateLabel(locale: AppLocale, state: SolarThresholdState): string {
   return translate(locale, solarThresholdStateKeys[state]);
