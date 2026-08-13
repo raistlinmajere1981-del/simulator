@@ -1,6 +1,8 @@
 import type { SimulatorInputs } from '../../shared/simulator';
 import { DraftNumberInput } from './DraftNumberInput';
 import { PanelHelpButton } from './HelpSystem';
+import { useI18n } from './I18nProvider';
+import { getScenarioPresentation } from './app/app-config';
 import './solar-scenario-summary.css';
 
 export function StellarScenarioSummary({
@@ -18,36 +20,37 @@ export function StellarScenarioSummary({
   onReset(): void;
   onSave(): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
+  const scenario = getScenarioPresentation(locale, 'stellar-observation');
+
   return (
     <section className="scenario-summary panel solar-scenario-summary">
       <div className="panel-title-row">
         <div>
-          <span className="eyebrow">Aktif senaryo</span>
-          <h2>{activeName || 'Yıldız Gözlemleri'}</h2>
+          <span className="eyebrow">{t('core.activeScenario')}</span>
+          <h2>{activeName || scenario.label}</h2>
         </div>
         <div className="title-actions">
           <PanelHelpButton panelId="scenario-summary" />
-          {isDirty && <span className="dirty-badge">KAYDEDİLMEDİ</span>}
-          <button className="save-button" onClick={onSave} type="button">Deneyi Kaydet</button>
-          <button className="reset-button" onClick={onReset} type="button">Yeni / Varsayılan</button>
-          <span className="calculation-badge">CANLI HESAPLAMA</span>
+          {isDirty && <span className="dirty-badge">{t('core.unsaved')}</span>}
+          <button className="save-button" onClick={onSave} type="button">{t('core.saveExperiment')}</button>
+          <button className="reset-button" onClick={onReset} type="button">{t('core.newDefault')}</button>
+          <span className="calculation-badge">{t('core.liveCalculation')}</span>
         </div>
       </div>
 
       <div className="solar-location-grid">
         <label className="input-field">
-          <span>Gözlemci enlemi</span>
+          <span>{t('field.observerLatitude')}</span>
           <div><DraftNumberInput min={-90} max={90} step={0.000001} value={inputs.observerLatitudeDeg} onCommit={(value) => onCoordinateChange('observerLatitudeDeg', value)} /><b>°</b></div>
         </label>
         <label className="input-field">
-          <span>Gözlemci boylamı</span>
+          <span>{t('field.observerLongitude')}</span>
           <div><DraftNumberInput min={-180} max={180} step={0.000001} value={inputs.observerLongitudeDeg} onCommit={(value) => onCoordinateChange('observerLongitudeDeg', value)} /><b>°</b></div>
         </label>
       </div>
 
-      <p className="scenario-scope-note">
-        Parlak yıldız kataloğu çevrimdışı tutulur. Katalogdaki J2000 yönü gözlem tarihine açık IAU 2006 precession adımıyla dönüştürülür; ardından geometrik yükseklik, azimut ve yıldız izi hesaplanır. Proper motion, atmosferik kırılma, gökyüzü parlaklığı ve topoğrafik ufuk bu aşamada uygulanmaz.
-      </p>
+      <p className="scenario-scope-note">{t('astronomy.summary.stellarScope')}</p>
     </section>
   );
 }

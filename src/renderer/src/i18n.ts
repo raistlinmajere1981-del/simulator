@@ -184,7 +184,25 @@ const trMessages = {
   'results.observationDifference': 'Gözlem farkı',
   'results.cartographicReference': 'Kartografik referans',
   'results.physicalModel': 'Fiziksel model',
-  'results.open': 'Aç'
+  'results.open': 'Aç',
+  'time.title': 'Zaman ve tarih',
+  'time.astronomyModule': 'astronomi modülü',
+  'time.inactiveNote': 'Astronomi gözlem senaryolarında etkinleşir.',
+  'time.astronomyUtc': 'ASTRONOMİ · UTC',
+  'time.localDateTime': 'Yerel tarih / saat · sistem görünümü',
+  'time.localDateTimeAria': 'Astronomi gözlemi yerel tarih ve saati',
+  'time.exactLocalTime': 'Kesin yerel zaman · 24 saat',
+  'time.exactAria': '24 saatlik kesin yerel gözlem zamanı {time} {offset}',
+  'time.utcOffset': 'UTC ofseti',
+  'time.utcOffsetAria': 'Astronomi gözlemi UTC ofseti saat',
+  'time.now': 'Şimdi',
+  'time.nowAria': 'Astronomi gözlem zamanını şimdi yap',
+  'astronomy.controlledSearch': 'KONTROLLÜ ARAMA',
+  'astronomy.eclipse.activeStage': 'Aktif senaryo · Aşama 7.4',
+  'astronomy.summary.sunMoonScope': 'Aşama 6.2 Güneşin geometrik yerel konumunu ve Ayın düşük hassasiyetli topocentrik konum/faz referansını aynı gözlem anında hesaplar. Tarih/saat sol alttaki Zaman ve tarih kartından yönetilir. Hedef, rota, arazi, su yüzeyi, fotoğraf görünürlük hesabı ve atmosferik kırılma bu astronomik referanslara katılmaz.',
+  'astronomy.summary.eclipseScope': 'Bu ayrı iş akışı seçili UTC anındaki Güneş–Ay apparent disk geometrisini ve kullanıcı tarafından başlatılan yerel zaman penceresi taramasını kaydedilebilir deney sonucu olarak taşır. Tarih/saat sol alttaki Zaman ve tarih kartından yönetilir. Sonuç resmi tutulma efemerisi, C1–C4 temasları veya Dünya üzerindeki tutulma yolu değildir.',
+  'astronomy.summary.shadowScope': 'Dikey bir gnomonun yerel yatay yüzeyde oluşturacağı gölge geometrisi hesaplanır. İstersen ikinci WGS84 gözlem noktasını aynı UTC anında eşzamanlı karşılaştırmaya ekleyebilirsin. Tarih/saat sol alttaki Zaman ve tarih kartından yönetilir. Bu astronomik referans herhangi bir Dünya modeli için fiziksel Güneş kuralı uydurmaz.',
+  'astronomy.summary.stellarScope': 'Parlak yıldız kataloğu çevrimdışı tutulur. Katalogdaki J2000 yönü gözlem tarihine açık IAU 2006 precession adımıyla dönüştürülür; ardından geometrik yükseklik, azimut ve yıldız izi hesaplanır. Proper motion, atmosferik kırılma, gökyüzü parlaklığı ve topoğrafik ufuk bu aşamada uygulanmaz.'
 } as const;
 
 export type TranslationKey = keyof typeof trMessages;
@@ -353,7 +371,25 @@ const enMessages: Record<TranslationKey, string> = {
   'results.observationDifference': 'Observation difference',
   'results.cartographicReference': 'Cartographic reference',
   'results.physicalModel': 'Physical model',
-  'results.open': 'Open'
+  'results.open': 'Open',
+  'time.title': 'Time and date',
+  'time.astronomyModule': 'astronomy module',
+  'time.inactiveNote': 'Enabled for astronomy observation scenarios.',
+  'time.astronomyUtc': 'ASTRONOMY · UTC',
+  'time.localDateTime': 'Local date / time · system view',
+  'time.localDateTimeAria': 'Astronomy observation local date and time',
+  'time.exactLocalTime': 'Exact local time · 24-hour',
+  'time.exactAria': 'Exact 24-hour local observation time {time} {offset}',
+  'time.utcOffset': 'UTC offset',
+  'time.utcOffsetAria': 'Astronomy observation UTC offset hours',
+  'time.now': 'Now',
+  'time.nowAria': 'Set astronomy observation time to now',
+  'astronomy.controlledSearch': 'CONTROLLED SEARCH',
+  'astronomy.eclipse.activeStage': 'Active scenario · Stage 7.4',
+  'astronomy.summary.sunMoonScope': 'Stage 6.2 calculates the Sun’s geometric local position and the Moon’s low-precision topocentric position/phase reference at the same observation instant. Date/time is managed from the Time and date card at lower left. Target, route, terrain, water surface, photo visibility calculation and atmospheric refraction do not participate in these astronomical references.',
+  'astronomy.summary.eclipseScope': 'This separate workflow stores the Sun–Moon apparent disk geometry at the selected UTC instant and a user-started local time-window scan as a saveable experiment result. Date/time is managed from the Time and date card at lower left. The result is not an official eclipse ephemeris, C1–C4 contact solution or eclipse path over Earth.',
+  'astronomy.summary.shadowScope': 'The shadow geometry produced by a vertical gnomon on the local horizontal surface is calculated. A second WGS84 observation point may optionally be added for simultaneous comparison at the same UTC instant. Date/time is managed from the Time and date card at lower left. This astronomical reference does not invent a physical Sun rule for any Earth model.',
+  'astronomy.summary.stellarScope': 'The bright-star catalog is kept offline. The catalog J2000 direction is transformed to the observation date with an explicit IAU 2006 precession step; geometric altitude, azimuth and star trail are then calculated. Proper motion, atmospheric refraction, sky brightness and topographic horizon are not applied in this stage.'
 };
 
 export function translate(

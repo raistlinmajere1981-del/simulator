@@ -7,6 +7,8 @@ import {
 } from '../../shared/celestial-time';
 import { DraftNumberInput } from './DraftNumberInput';
 import { PanelHelpButton } from './HelpSystem';
+import { useI18n } from './I18nProvider';
+import { appLocaleTag } from './i18n';
 import './celestial-time-card.css';
 
 export function CelestialTimeCard({
@@ -20,14 +22,16 @@ export function CelestialTimeCard({
   utcOffsetMinutes: number;
   onChange(observedAtIso: string, utcOffsetMinutes: number): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
+
   if (!active) {
     return (
       <section className="time-card disabled-section">
         <div className="section-heading">
-          <span>Zaman ve tarih</span>
-          <span className="section-state">astronomi modülü</span>
+          <span>{t('time.title')}</span>
+          <span className="section-state">{t('time.astronomyModule')}</span>
         </div>
-        <div className="time-placeholder">Astronomi gözlem senaryolarında etkinleşir.</div>
+        <div className="time-placeholder">{t('time.inactiveNote')}</div>
       </section>
     );
   }
@@ -40,14 +44,14 @@ export function CelestialTimeCard({
   return (
     <section className="time-card celestial-time-card">
       <div className="section-heading celestial-time-heading">
-        <span>Zaman ve tarih</span>
-        <div><span className="section-state">ASTRONOMİ · UTC</span><PanelHelpButton panelId="celestial-time" /></div>
+        <span>{t('time.title')}</span>
+        <div><span className="section-state">{t('time.astronomyUtc')}</span><PanelHelpButton panelId="celestial-time" /></div>
       </div>
       <label>
-        <span>Yerel tarih / saat · sistem görünümü</span>
+        <span>{t('time.localDateTime')}</span>
         <input
-          aria-label="Astronomi gözlemi yerel tarih ve saati"
-          lang="tr-TR"
+          aria-label={t('time.localDateTimeAria')}
+          lang={appLocaleTag(locale)}
           type="datetime-local"
           step="1"
           value={localValue}
@@ -57,16 +61,16 @@ export function CelestialTimeCard({
           }}
         />
       </label>
-      <div className="celestial-time-exact" aria-label={`24 saatlik kesin yerel gözlem zamanı ${explicitLocalTime} ${offsetLabel}`}>
-        <span>Kesin yerel zaman · 24 saat</span>
+      <div className="celestial-time-exact" aria-label={t('time.exactAria', { time: explicitLocalTime, offset: offsetLabel })}>
+        <span>{t('time.exactLocalTime')}</span>
         <strong>{explicitLocalTime}</strong>
         <b>{offsetLabel}</b>
       </div>
       <label>
-        <span>UTC ofseti</span>
+        <span>{t('time.utcOffset')}</span>
         <div className="celestial-offset-row">
           <DraftNumberInput
-            ariaLabel="Astronomi gözlemi UTC ofseti saat"
+            ariaLabel={t('time.utcOffsetAria')}
             min={-12}
             max={14}
             step={0.25}
@@ -80,7 +84,7 @@ export function CelestialTimeCard({
         </div>
       </label>
       <button
-        aria-label="Astronomi gözlem zamanını şimdi yap"
+        aria-label={t('time.nowAria')}
         className="celestial-now-button"
         type="button"
         onClick={() => {
@@ -88,7 +92,7 @@ export function CelestialTimeCard({
           onChange(now.toISOString(), systemUtcOffsetMinutes(now));
         }}
       >
-        Şimdi
+        {t('time.now')}
       </button>
       <small title={observedAtIso}>UTC: {observedAtIso.replace('.000Z', 'Z')}</small>
     </section>
