@@ -2,7 +2,7 @@ import type { LunarPhaseName } from '../../simulation/lunar-position';
 import type { SolarEclipseInstantGeometryClass } from '../../simulation/solar-eclipse-overlap';
 import type { SolarThresholdState } from '../../simulation/solar-day-events';
 import type { SolarSeasonEventKind } from '../../simulation/solar-season-events';
-import type { StellarObservationResult } from '../../simulation/stellar-observation';
+import type { StellarLocalHorizonSettingKey, StellarObservationResult } from '../../simulation/stellar-observation';
 import { translate, type AppLocale, type TranslationKey } from './i18n';
 
 const lunarPhaseKeys: Record<LunarPhaseName, TranslationKey> = {
@@ -83,11 +83,29 @@ const stellarHorizonClassKeys: Record<StellarObservationResult['position']['hori
   'grazes-horizon': 'stellar.horizon.grazes'
 };
 
+const stellarLocalHorizonDirectionKeys: Record<StellarLocalHorizonSettingKey, TranslationKey> = {
+  localHorizonNorthDeg: 'stellar.direction.north',
+  localHorizonNorthEastDeg: 'stellar.direction.northEast',
+  localHorizonEastDeg: 'stellar.direction.east',
+  localHorizonSouthEastDeg: 'stellar.direction.southEast',
+  localHorizonSouthDeg: 'stellar.direction.south',
+  localHorizonSouthWestDeg: 'stellar.direction.southWest',
+  localHorizonWestDeg: 'stellar.direction.west',
+  localHorizonNorthWestDeg: 'stellar.direction.northWest'
+};
+
 export function getStellarHorizonClassLabel(
   locale: AppLocale,
   horizonClass: StellarObservationResult['position']['horizonClass']
 ): string {
   return translate(locale, stellarHorizonClassKeys[horizonClass]);
+}
+
+export function getStellarLocalHorizonDirectionLabel(
+  locale: AppLocale,
+  key: StellarLocalHorizonSettingKey
+): string {
+  return translate(locale, stellarLocalHorizonDirectionKeys[key]);
 }
 
 export function getSolarThresholdStateLabel(locale: AppLocale, state: SolarThresholdState): string {

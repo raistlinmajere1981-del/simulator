@@ -11,6 +11,7 @@ import type { SavedStellarMotionSource } from '../../shared/stellar-motion-sourc
 import { DraftNumberInput } from './DraftNumberInput';
 import { useI18n } from './I18nProvider';
 import { appLocaleTag, translate, type AppLocale } from './i18n';
+import { getStellarLocalHorizonDirectionLabel } from './astronomy-result-presentation';
 import { StellarDemSkylineControl } from './StellarDemSkylineControl';
 import { StellarPanoramaSkylineControl } from './StellarPanoramaSkylineControl';
 import { StellarObservationResults } from './StellarObservationResults';
@@ -133,7 +134,7 @@ export function StellarObservationPanel({
 
   const applyLocalHorizonDraft = (): void => {
     if (localHorizonDraft.localHorizonEnabled && usesExternalDraft && !draftExternalLocalHorizonSource) {
-      setHorizonImportMessage('Dış skyline modu için önce doğrulanmış bir dosya içe aktarılmalıdır.');
+      setHorizonImportMessage(t('stellar.horizonEditor.externalRequired'));
       return;
     }
     setHorizonImportMessage('');
@@ -155,9 +156,9 @@ export function StellarObservationPanel({
         localHorizonEnabled: true,
         localHorizonSourceMode: 'external'
       }));
-      setHorizonImportMessage(`“${imported.fileName}” hazır. Uygula ve hesapla ile yıldız izine bağlanacak.`);
+      setHorizonImportMessage(t('stellar.horizonEditor.importedReady', { fileName: imported.fileName }));
     } catch (error) {
-      setHorizonImportMessage(error instanceof Error ? error.message : 'Skyline dosyası içe aktarılamadı.');
+      setHorizonImportMessage(error instanceof Error ? error.message : t('stellar.horizonEditor.importError'));
     } finally {
       setIsImportingHorizon(false);
     }
@@ -170,7 +171,7 @@ export function StellarObservationPanel({
     localHorizonEnabled: true,
     localHorizonSourceMode: 'external'
   }));
-  setHorizonImportMessage(`“${source.fileName}” DEM skyline taslağı hazır. Uygula ve hesapla ile yıldız izine bağlanacak.`);
+  setHorizonImportMessage(t('stellar.horizonEditor.demReady', { fileName: source.fileName }));
 };
 
   const preparePanoramaSkylineSource = (source: SavedStellarLocalHorizonSource): void => {
@@ -180,7 +181,7 @@ export function StellarObservationPanel({
       localHorizonEnabled: true,
       localHorizonSourceMode: 'external'
     }));
-    setHorizonImportMessage(`“${source.fileName}” panorama skyline taslağı hazır. Uygula ve hesapla ile yıldız izine bağlanacak.`);
+    setHorizonImportMessage(t('stellar.horizonEditor.panoramaReady', { fileName: source.fileName }));
   };
 
   return (
@@ -349,8 +350,8 @@ export function StellarObservationPanel({
       <div className={localHorizonDraft.localHorizonEnabled ? 'stellar-local-horizon-editor active' : 'stellar-local-horizon-editor'}>
         <div className="stellar-local-horizon-heading">
           <div>
-            <strong>Yerel ufuk · manuel veya dosya skyline</strong>
-            <span>Kaynak ve değer düzenlemeleri hesap motorunu çalıştırmaz; seçilen profil tek seferde uygulanır.</span>
+            <strong>{t('stellar.horizonEditor.title')}</strong>
+            <span>{t('stellar.horizonEditor.description')}</span>
           </div>
           <label className="stellar-local-horizon-toggle">
             <input
@@ -361,7 +362,7 @@ export function StellarObservationPanel({
                 setLocalHorizonDraft((current) => ({ ...current, localHorizonEnabled }));
               }}
             />
-            <span>{localHorizonDraft.localHorizonEnabled ? 'Etkin' : 'Kapalı'}</span>
+            <span>{localHorizonDraft.localHorizonEnabled ? t('stellar.horizonEditor.enabled') : t('stellar.horizonEditor.off')}</span>
           </label>
         </div>
 
@@ -372,7 +373,7 @@ export function StellarObservationPanel({
               type="button"
               onClick={() => setLocalHorizonDraft((current) => ({ ...current, localHorizonSourceMode: 'manual' }))}
             >
-              8 yönlü manuel
+              {t('stellar.horizonEditor.manualMode')}
             </button>
             <button
               className={usesExternalDraft ? 'selected' : ''}
@@ -380,11 +381,11 @@ export function StellarObservationPanel({
               type="button"
               onClick={() => setLocalHorizonDraft((current) => ({ ...current, localHorizonSourceMode: 'external' }))}
             >
-              Dosya profili
+              {t('stellar.horizonEditor.fileMode')}
             </button>
           </div>
           <button className="stellar-skyline-import-button" disabled={isImportingHorizon} type="button" onClick={() => void importLocalHorizon()}>
-            {isImportingHorizon ? 'Dosya okunuyor…' : 'Skyline dosyasından al'}
+            {isImportingHorizon ? t('stellar.horizonEditor.importing') : t('stellar.horizonEditor.import')}
           </button>
         </div>
 
@@ -402,14 +403,14 @@ export function StellarObservationPanel({
       {draftExternalLocalHorizonSource && (
           <div className={usesExternalDraft ? 'stellar-skyline-source-card selected' : 'stellar-skyline-source-card'}>
             <div>
-              <small>YEREL SKYLINE KAYNAĞI</small>
+              <small>{t('stellar.horizonEditor.sourceLabel')}</small>
               <strong>{draftExternalLocalHorizonSource.fileName}</strong>
-              <span>{draftExternalLocalHorizonSource.format === 'dem' ? 'DEM · türetilmiş geometrik' : draftExternalLocalHorizonSource.format === 'panorama' ? 'PANORAMA · türetilmiş geometrik' : draftExternalLocalHorizonSource.format.toUpperCase()} · {draftExternalLocalHorizonSource.pointCount} nokta · en büyük boşluk {angleFormatter.format(draftExternalLocalHorizonSource.maximumAzimuthGapDeg)}°</span>
+              <span>{t('stellar.horizonEditor.sourceSummary', { format: draftExternalLocalHorizonSource.format === 'dem' ? t('stellar.horizonEditor.formatDem') : draftExternalLocalHorizonSource.format === 'panorama' ? t('stellar.horizonEditor.formatPanorama') : draftExternalLocalHorizonSource.format.toUpperCase(), count: draftExternalLocalHorizonSource.pointCount, gap: angleFormatter.format(draftExternalLocalHorizonSource.maximumAzimuthGapDeg) })}</span>
         {draftExternalLocalHorizonSource.demDerivation && (
-          <span>ΔA {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.azimuthStepDeg)}° · Δs {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.distanceStepM)} m · menzil {angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.maximumDistanceM / 1_000)} km · {draftExternalLocalHorizonSource.demDerivation.samplingMethod}</span>
+          <span>{t('stellar.horizonEditor.demDetails', { azimuth: angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.azimuthStepDeg), distance: angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.distanceStepM), range: angleFormatter.format(draftExternalLocalHorizonSource.demDerivation.maximumDistanceM / 1_000), sampling: draftExternalLocalHorizonSource.demDerivation.samplingMethod })}</span>
         )}
         {draftExternalLocalHorizonSource.panoramaDerivation && (
-          <span>{draftExternalLocalHorizonSource.panoramaDerivation.geometrySource === 'gpano-xmp' ? 'GPano XMP' : 'Manuel geometri'} · yatay {angleFormatter.format(draftExternalLocalHorizonSource.panoramaDerivation.horizontalCoverageDeg)}° · heading {angleFormatter.format(draftExternalLocalHorizonSource.panoramaDerivation.geometry.poseHeadingDeg)}° · {draftExternalLocalHorizonSource.panoramaDerivation.marks.length} işaret</span>
+          <span>{t('stellar.horizonEditor.panoramaDetails', { geometry: draftExternalLocalHorizonSource.panoramaDerivation.geometrySource === 'gpano-xmp' ? t('stellar.horizonEditor.geometryGpano') : t('stellar.horizonEditor.geometryManual'), coverage: angleFormatter.format(draftExternalLocalHorizonSource.panoramaDerivation.horizontalCoverageDeg), heading: angleFormatter.format(draftExternalLocalHorizonSource.panoramaDerivation.geometry.poseHeadingDeg), count: draftExternalLocalHorizonSource.panoramaDerivation.marks.length })}</span>
         )}
             </div>
             <div>
@@ -423,10 +424,10 @@ export function StellarObservationPanel({
           <div className="stellar-local-horizon-grid">
             {STELLAR_LOCAL_HORIZON_DIRECTIONS.map((direction) => (
               <label key={direction.key}>
-                <span>{direction.label} · {direction.azimuthDeg}°</span>
+                <span>{getStellarLocalHorizonDirectionLabel(locale, direction.key)} · {direction.azimuthDeg}°</span>
                 <div>
                   <DraftNumberInput
-                    ariaLabel={`${direction.label} yerel ufuk yüksekliği`}
+                    ariaLabel={t('stellar.horizonEditor.directionAria', { direction: getStellarLocalHorizonDirectionLabel(locale, direction.key) })}
                     min={-90}
                     max={90}
                     step={0.1}
@@ -442,7 +443,7 @@ export function StellarObservationPanel({
         )}
 
         {localHorizonDraft.localHorizonEnabled && usesExternalDraft && !draftExternalLocalHorizonSource && (
-          <p className="stellar-skyline-source-empty">Dış profil için CSV/TSV/TXT/JSON skyline içe aktar, ESRI ASCII DEM'den profil üret veya 360° panoramayı manuel işaretle.</p>
+          <p className="stellar-skyline-source-empty">{t('stellar.horizonEditor.externalEmpty')}</p>
         )}
         {draftExternalLocalHorizonSource && draftExternalLocalHorizonSource.warnings.length > 0 && usesExternalDraft && (
           <div className="stellar-skyline-source-warnings">
@@ -453,7 +454,7 @@ export function StellarObservationPanel({
 
         <div className="stellar-local-horizon-apply-row">
           <span className={localHorizonDirty ? 'stellar-local-horizon-draft dirty' : 'stellar-local-horizon-draft'}>
-            {localHorizonDirty ? 'Değişiklikler henüz hesaplanmadı.' : 'Editör ile hesaplanan sonuç eşleşiyor.'}
+            {localHorizonDirty ? t('stellar.horizonEditor.dirty') : t('stellar.horizonEditor.clean')}
           </span>
           <div>
             <button
@@ -466,7 +467,7 @@ export function StellarObservationPanel({
                 setDraftExternalLocalHorizonSource(cloneExternalSource(externalLocalHorizonSource));
               }}
             >
-              Geri al
+              {t('stellar.horizonEditor.revert')}
             </button>
             <button
               className="stellar-local-horizon-apply"
@@ -474,7 +475,7 @@ export function StellarObservationPanel({
               type="button"
               onClick={applyLocalHorizonDraft}
             >
-              Uygula ve hesapla
+              {t('stellar.horizonEditor.apply')}
             </button>
           </div>
         </div>
