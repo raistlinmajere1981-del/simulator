@@ -55,7 +55,7 @@ export function AiWorkflowDialog({
       >
         <header>
           <div>
-            <span className="eyebrow">AŞAMA 8.7 · AI TAKİP SOY AĞACI</span>
+            <span className="eyebrow">AŞAMA 8.9 · TARİHSEL ANALİZ KANITI</span>
             <h2>AI Çalışma Döngüsü</h2>
           </div>
           <button className="dialog-close" type="button" onClick={onClose}>×</button>
@@ -64,7 +64,7 @@ export function AiWorkflowDialog({
         <div className="portable-info">
           <strong>{experiment.name}</strong>
           <span>
-            Bu anlık görüntü cihazdaki kayıt listesine yazılmaz. Mevcut girdiler ve şu anda hesaplanmış sonuçlar yalnız AI analiz paketi üretmek için kullanılır.
+            Bu deterministik GGL-AI-ANALYSIS paketi dış AI'ye gönderilecek anlık görüntüdür. Yalnız bir takip testi kullanıcı tarafından uygulanırsa bu exact paket lineage snapshot kanıtı olarak saklanır; dış AI'nin serbest yanıtı kaydedilmez.
           </span>
         </div>
 
@@ -135,7 +135,7 @@ export function AiWorkflowDialog({
 
         <footer>
           <span style={{ marginRight: 'auto', opacity: 0.76 }}>
-            AI hiçbir alanı doğrudan değiştirmez. Serbest AI yanıtı kaydedilmez; yalnız kanonik test bloğu ve SHA-256 soy ağacı kontrollü önizlemeye taşınır.
+            AI hiçbir alanı doğrudan değiştirmez. Serbest AI yanıtı kaydedilmez; kanonik test bloğu, hashler ve GGL'nin kendi deterministik analiz snapshot kanıtı kontrollü provenansa taşınır.
           </span>
           <button className="secondary-button" type="button" onClick={onClose}>Kapat</button>
           <button

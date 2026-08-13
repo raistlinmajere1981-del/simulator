@@ -105,7 +105,7 @@ Deterministik deney snapshot'ı
   → Metinden Hazırla preview
   → kullanıcı checkbox/onayı
   → yeni deney
-  → SHA-256 lineage
+  → SHA-256 lineage + deterministik GGL-AI-ANALYSIS snapshot kanıtı
   → yerel lineage doğrulama
 ```
 

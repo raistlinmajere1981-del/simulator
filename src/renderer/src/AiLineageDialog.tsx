@@ -11,12 +11,22 @@ const statusLabel: Record<AiFollowUpVerification['status'], string> = {
   mismatch: 'UYUŞMAZLIK'
 };
 
-const analysisLabel: Record<AiFollowUpVerification['analysis']['status'], string> = {
-  verified: 'Kaynak analiz yeniden üretildi ve hash eşleşti.',
-  'source-missing': 'Kaynak deney kayıt listesinde yok; analiz hash’i yeniden üretilemedi.',
-  'source-changed': 'Aynı deney kimliği bulundu ancak mevcut içerik tarihsel analiz hash’ini üretmiyor; kaynak kayıt sonradan değişmiş olabilir.',
-  mismatch: 'Aynı snapshot zamanı bulundu ancak yeniden üretilen analiz SHA-256 eşleşmedi.'
-};
+function analysisLabel(analysis: AiFollowUpVerification['analysis']): string {
+  if (analysis.status === 'verified') {
+    return analysis.verificationMethod === 'snapshot'
+      ? 'Kayıtlı tarihsel GGL-AI-ANALYSIS snapshot kanıtının SHA-256 özeti eşleşti.'
+      : 'Kaynak analiz yeniden üretildi ve hash eşleşti.';
+  }
+  if (analysis.status === 'source-missing') {
+    return 'Eski lineage kaydında snapshot kanıtı yok ve kaynak deney kayıt listesinde bulunamadı.';
+  }
+  if (analysis.status === 'source-changed') {
+    return 'Eski lineage kaydında snapshot kanıtı yok; aynı deney kimliği bulundu ancak mevcut içerik tarihsel analiz hash’ini üretmiyor.';
+  }
+  return analysis.verificationMethod === 'snapshot'
+    ? 'Kayıtlı tarihsel analiz snapshot kanıtı veya SHA-256 özeti uyuşmuyor.'
+    : 'Aynı snapshot zamanı bulundu ancak yeniden üretilen analiz SHA-256 eşleşmedi.';
+}
 
 function shortHash(hash: string): string {
   return `${hash.slice(0, 12)}…${hash.slice(-12)}`;
@@ -60,7 +70,7 @@ export function AiLineageDialog({
       >
         <header>
           <div>
-            <span className="eyebrow">AŞAMA 8.8 · HASH DOĞRULAMA</span>
+            <span className="eyebrow">AŞAMA 8.9 · SNAPSHOT + HASH DOĞRULAMA</span>
             <h2>AI Soy Ağacı Doğrulaması</h2>
           </div>
           <button className="dialog-close" type="button" onClick={onClose}>×</button>
@@ -69,7 +79,7 @@ export function AiLineageDialog({
         <div className="portable-info">
           <strong>{experiment.name}</strong>
           <span>
-            Kanonik GGL-AI-TEST bloğunun SHA-256 özeti her zaman yeniden hesaplanır. Kaynak deney aynı kimlikle hâlâ kayıt listesinde bulunuyorsa GGL-AI-ANALYSIS paketi kayıtlı üretim zamanı ile yeniden oluşturulur ve hash doğrudan karşılaştırılır. updatedAt farkı tek başına uyuşmazlık sayılmaz.
+            Kanonik GGL-AI-TEST bloğunun SHA-256 özeti her zaman yeniden hesaplanır. Yeni AI takip kayıtlarında GGL'nin dış AI'ye gönderdiği deterministik GGL-AI-ANALYSIS paketi immutable snapshot kanıtı olarak saklanır ve kaynak deney sonradan değişse veya silinse bile kendi hash'iyle doğrulanır. Eski kayıtlarda snapshot yoksa Aşama 8.8 yeniden-üretim yöntemi geriye uyumlu olarak kullanılır.
           </span>
         </div>
 
@@ -100,13 +110,14 @@ export function AiLineageDialog({
                 <tr><td>Kanonik test</td><td>{result.canonicalTest.status === 'verified' ? 'SHA-256 eşleşti' : 'SHA-256 UYUŞMADI'}</td></tr>
                 <tr><td>Beklenen test hash</td><td><code title={result.canonicalTest.expectedSha256}>{shortHash(result.canonicalTest.expectedSha256)}</code></td></tr>
                 <tr><td>Hesaplanan test hash</td><td><code title={result.canonicalTest.actualSha256}>{shortHash(result.canonicalTest.actualSha256)}</code></td></tr>
-                <tr><td>Kaynak analiz</td><td>{analysisLabel[result.analysis.status]}</td></tr>
+                <tr><td>Analiz doğrulama yöntemi</td><td>{result.analysis.verificationMethod === 'snapshot' ? 'Tarihsel snapshot kanıtı' : 'Kaynak deneyden yeniden üretim'}</td></tr>
+                <tr><td>Kaynak analiz</td><td>{analysisLabel(result.analysis)}</td></tr>
                 <tr><td>Beklenen analiz hash</td><td><code title={result.analysis.expectedSha256}>{shortHash(result.analysis.expectedSha256)}</code></td></tr>
                 {result.analysis.actualSha256 && <tr><td>Hesaplanan analiz hash</td><td><code title={result.analysis.actualSha256}>{shortHash(result.analysis.actualSha256)}</code></td></tr>}
               </tbody></table>
               {result.status === 'partial' && (
                 <p className="muted">
-                  Kısmi doğrulama bir hata değildir: tarihsel kaynak kayıt artık yoksa veya aynı kimlikteki kayıt sonradan değişmişse özgün analiz paketi tam olarak yeniden üretilemeyebilir. Kanonik test bloğunun bütünlüğü yine bağımsız olarak doğrulanır.
+                  Kısmi doğrulama yalnız snapshot kanıtı eklenmeden önce oluşturulmuş eski lineage kayıtlarında beklenebilir: tarihsel kaynak artık yoksa veya değişmişse özgün analiz paketi yeniden üretilemeyebilir. Kanonik test bloğunun bütünlüğü yine bağımsız olarak doğrulanır.
                 </p>
               )}
             </article>

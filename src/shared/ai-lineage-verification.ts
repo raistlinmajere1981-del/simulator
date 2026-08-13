@@ -1,5 +1,5 @@
 import { createAiAnalysisPackage } from './ai-analysis-package';
-import { sha256Utf8 } from './ai-lineage';
+import { isAiAnalysisSnapshotEvidence, sha256Utf8 } from './ai-lineage';
 import type { SavedExperiment } from './simulator';
 import type { TextExperimentSetupProvenance } from './text-experiment-setup';
 
@@ -9,6 +9,7 @@ export type AiLineageAnalysisVerificationStatus =
   | 'source-missing'
   | 'source-changed'
   | 'mismatch';
+export type AiLineageAnalysisVerificationMethod = 'snapshot' | 'reconstructed-source';
 
 export interface AiFollowUpVerification {
   historyIndex: number;
@@ -20,6 +21,7 @@ export interface AiFollowUpVerification {
   };
   analysis: {
     status: AiLineageAnalysisVerificationStatus;
+    verificationMethod: AiLineageAnalysisVerificationMethod;
     expectedSha256: string;
     actualSha256?: string;
     sourceExperimentId: string;
@@ -53,9 +55,28 @@ export async function verifyAiFollowUpProvenance(
   );
 
   let analysis: AiFollowUpVerification['analysis'];
-  if (!sourceExperiment) {
+  if (lineage.analysisSnapshot) {
+    const structurallyValid = isAiAnalysisSnapshotEvidence(
+      lineage.analysisSnapshot,
+      lineage.analysisPackageVersion,
+      lineage.analysisGeneratedAtIso
+    );
+    const actualAnalysisSha256 = await sha256Utf8(lineage.analysisSnapshot.packageText);
+    analysis = {
+      status: structurallyValid && actualAnalysisSha256 === lineage.analysisSha256
+        ? 'verified'
+        : 'mismatch',
+      verificationMethod: 'snapshot',
+      expectedSha256: lineage.analysisSha256,
+      actualSha256: actualAnalysisSha256,
+      sourceExperimentId: lineage.sourceExperimentId,
+      sourceExperimentUpdatedAtIso: lineage.sourceExperimentUpdatedAtIso,
+      ...(sourceExperiment ? { availableSourceUpdatedAtIso: sourceExperiment.updatedAtIso } : {})
+    };
+  } else if (!sourceExperiment) {
     analysis = {
       status: 'source-missing',
+      verificationMethod: 'reconstructed-source',
       expectedSha256: lineage.analysisSha256,
       sourceExperimentId: lineage.sourceExperimentId,
       sourceExperimentUpdatedAtIso: lineage.sourceExperimentUpdatedAtIso
@@ -74,6 +95,7 @@ export async function verifyAiFollowUpProvenance(
         : snapshotTimeMatches
           ? 'mismatch'
           : 'source-changed',
+      verificationMethod: 'reconstructed-source',
       expectedSha256: lineage.analysisSha256,
       actualSha256: actualAnalysisSha256,
       sourceExperimentId: lineage.sourceExperimentId,
