@@ -54,4 +54,6 @@ The localization stage is complete only after both languages cover all user-faci
 - AI/help shell slice (part 10a): AI guide/workflow/lineage dialog chrome and the contextual-help overlay shell use TR/EN, with active-locale counts and stable extraction reason codes. Canonical GGL-AI prompts/packages/test blocks, hashes and lineage serialization remain unchanged.
 - Help content slice (part 10b): the complete contextual-help panel catalog and glossary use TR/EN, including locale-aware search. Existing panel ids, term ids and related-term links remain stable; symbolic physical units keep their meaning while human-readable unit labels may be localized. No help text is written into experiment persistence or machine contracts.
 
-Engine-emitted warnings/assumptions/raw calculation errors and traces, remaining general/text-setup dialogs and reports remain separate follow-up slices.
+- General/text dialog slice (part 11): save/data-manager/AI-package dialog chrome, calculation-trace chrome and Prepare from Text presentation use TR/EN with active-locale date/number formatting. Text parser semantics, stable field ids, canonical GGL-AI blocks, persisted provenance and raw engine trace content remain unchanged.
+
+Engine-emitted warnings/assumptions/raw calculation errors and traces, reports and final untranslated-string audit remain separate follow-up slices.

@@ -4,6 +4,8 @@ import { createAiAnalysisPackage, createAiComparisonPackage } from '../../shared
 import type { SavedExperiment } from '../../shared/simulator';
 import { PanelHelpButton } from './HelpSystem';
 import { AiLineageDialog } from './AiLineageDialog';
+import { useI18n } from './I18nProvider';
+import { appLocaleTag, type AppLocale } from './i18n';
 
 interface SaveExperimentDialogProps {
   initialName: string;
@@ -20,6 +22,7 @@ export function SaveExperimentDialog({
   onSave,
   photoWarning
 }: SaveExperimentDialogProps): React.JSX.Element | null {
+  const { t } = useI18n();
   const [name, setName] = useState(initialName);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -44,20 +47,20 @@ export function SaveExperimentDialog({
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onCancel}>
       <form
-        aria-label="Deneyi kaydet"
+        aria-label={t('dialog.save.aria')}
         className="dialog-card save-dialog"
         onMouseDown={(event) => event.stopPropagation()}
         onSubmit={(event) => void submit(event)}
       >
         <header>
           <div>
-            <span className="eyebrow">Yerel deney kaydı</span>
-            <h2>Deneyi Kaydet</h2>
+            <span className="eyebrow">{t('dialog.save.eyebrow')}</span>
+            <h2>{t('dialog.save.title')}</h2>
           </div>
           <button className="dialog-close" type="button" onClick={onCancel}>×</button>
         </header>
         <label className="dialog-field">
-          <span>Deney adı</span>
+          <span>{t('dialog.save.name')}</span>
           <input
             autoFocus
             maxLength={80}
@@ -66,13 +69,13 @@ export function SaveExperimentDialog({
           />
         </label>
         <p className="dialog-help">
-          Girdiler, model sürümleri, sonuç anlık görüntüsü ve hesap izleri cihazdaki uygulama veri klasörüne kaydedilir.
+          {t('dialog.save.help')}
         </p>
         {photoWarning && <p className="dialog-warning" role="status">{photoWarning}</p>}
         <footer>
-          <button className="secondary-button" type="button" onClick={onCancel}>İptal</button>
+          <button className="secondary-button" type="button" onClick={onCancel}>{t('dialog.common.cancel')}</button>
           <button className="primary-button" disabled={name.trim().length === 0 || isSaving} type="submit">
-            {isSaving ? 'Kaydediliyor…' : 'Kaydet'}
+            {isSaving ? t('dialog.common.saving') : t('dialog.common.save')}
           </button>
         </footer>
       </form>
@@ -91,10 +94,10 @@ interface DataManagerDialogProps {
   onReport(experiment: SavedExperiment): Promise<void>;
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: AppLocale): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat('tr-TR', {
+  return new Intl.DateTimeFormat(appLocaleTag(locale), {
     dateStyle: 'short',
     timeStyle: 'short'
   }).format(date);
@@ -136,13 +139,14 @@ function AiAnalysisPackageDialog({
   experiment: SavedExperiment;
   onClose(): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
   const text = useMemo(() => createAiAnalysisPackage(experiment), [experiment]);
   const [copyMessage, setCopyMessage] = useState('');
 
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onClose} style={{ zIndex: 1200 }}>
       <section
-        aria-label="AI analiz paketi"
+        aria-label={t('dialog.aiAnalysis.aria')}
         className="dialog-card data-dialog"
         onMouseDown={(event) => event.stopPropagation()}
         style={{ width: 'min(1120px, 94vw)', maxWidth: '1120px' }}
@@ -150,7 +154,7 @@ function AiAnalysisPackageDialog({
         <header>
           <div>
             <span className="eyebrow">GGL-AI-ANALYSIS v1</span>
-            <h2>AI Analiz Paketi</h2>
+            <h2>{t('dialog.aiAnalysis.title')}</h2>
           </div>
           <button className="dialog-close" type="button" onClick={onClose}>×</button>
         </header>
@@ -158,12 +162,12 @@ function AiAnalysisPackageDialog({
         <div className="portable-info">
           <strong>{experiment.name}</strong>
           <span>
-            Bu metin deney girdilerini, kayıtlı model sonuçlarını, uyarıları, varsayımları ve kaynak provenansını başka bir AI'ye vermek için kompakt biçimde hazırlar. Hesap izi adımlarının tamamı pakete eklenmez; özet ve iz kimliği korunur.
+            {t('dialog.aiAnalysis.info')}
           </span>
         </div>
 
         <textarea
-          aria-label="AI analiz paketi metni"
+          aria-label={t('dialog.aiAnalysis.textAria')}
           readOnly
           spellCheck={false}
           value={text}
@@ -180,17 +184,17 @@ function AiAnalysisPackageDialog({
 
         <footer>
           <span style={{ marginRight: 'auto', opacity: 0.8 }}>
-            {copyMessage || `${text.length.toLocaleString('tr-TR')} karakter · ${experiment.predictions.length} hesap sonucu`}
+            {copyMessage || t('dialog.aiAnalysis.summary', { characters: text.length.toLocaleString(appLocaleTag(locale)), results: experiment.predictions.length.toLocaleString(appLocaleTag(locale)) })}
           </span>
-          <button className="secondary-button" type="button" onClick={onClose}>Kapat</button>
+          <button className="secondary-button" type="button" onClick={onClose}>{t('dialog.common.close')}</button>
           <button
             className="primary-button"
             type="button"
             onClick={() => void copyText(text).then((copied) => {
-              setCopyMessage(copied ? 'AI analiz paketi panoya kopyalandı.' : 'Otomatik kopyalama başarısız; metni seçip kopyalayabilirsin.');
+              setCopyMessage(copied ? t('dialog.aiAnalysis.copySuccess') : t('dialog.aiAnalysis.copyFailure'));
             })}
           >
-            Panoya Kopyala
+            {t('dialog.common.copy')}
           </button>
         </footer>
       </section>
@@ -206,6 +210,7 @@ function AiComparisonPackageDialog({
   experiments: SavedExperiment[];
   onClose(): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
   const text = useMemo(() => createAiComparisonPackage(experiments), [experiments]);
   const [copyMessage, setCopyMessage] = useState('');
   const resultCount = experiments.reduce((sum, experiment) => sum + experiment.predictions.length, 0);
@@ -213,7 +218,7 @@ function AiComparisonPackageDialog({
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onClose} style={{ zIndex: 1200 }}>
       <section
-        aria-label="AI karşılaştırma paketi"
+        aria-label={t('dialog.aiComparison.aria')}
         className="dialog-card data-dialog"
         onMouseDown={(event) => event.stopPropagation()}
         style={{ width: 'min(1180px, 95vw)', maxWidth: '1180px' }}
@@ -221,20 +226,20 @@ function AiComparisonPackageDialog({
         <header>
           <div>
             <span className="eyebrow">GGL-AI-COMPARISON v1</span>
-            <h2>AI Karşılaştırma Paketi</h2>
+            <h2>{t('dialog.aiComparison.title')}</h2>
           </div>
           <button className="dialog-close" type="button" onClick={onClose}>×</button>
         </header>
 
         <div className="portable-info">
-          <strong>{experiments.length} bağımsız deney</strong>
+          <strong>{t('dialog.aiComparison.experimentCount', { count: experiments.length })}</strong>
           <span>
-            Her deney ayrı EXPERIMENT bloğunda tutulur. AI yalnız anlamı ve birimi aynı metrikleri doğrudan karşılaştırmalı; farklı senaryoların sonuçları otomatik olarak eşdeğer sayılmaz.
+            {t('dialog.aiComparison.info')}
           </span>
         </div>
 
         <textarea
-          aria-label="AI karşılaştırma paketi metni"
+          aria-label={t('dialog.aiComparison.textAria')}
           readOnly
           spellCheck={false}
           value={text}
@@ -251,17 +256,17 @@ function AiComparisonPackageDialog({
 
         <footer>
           <span style={{ marginRight: 'auto', opacity: 0.8 }}>
-            {copyMessage || `${text.length.toLocaleString('tr-TR')} karakter · ${experiments.length} deney · ${resultCount} hesap sonucu`}
+            {copyMessage || t('dialog.aiComparison.summary', { characters: text.length.toLocaleString(appLocaleTag(locale)), experiments: experiments.length.toLocaleString(appLocaleTag(locale)), results: resultCount.toLocaleString(appLocaleTag(locale)) })}
           </span>
-          <button className="secondary-button" type="button" onClick={onClose}>Kapat</button>
+          <button className="secondary-button" type="button" onClick={onClose}>{t('dialog.common.close')}</button>
           <button
             className="primary-button"
             type="button"
             onClick={() => void copyText(text).then((copied) => {
-              setCopyMessage(copied ? 'AI karşılaştırma paketi panoya kopyalandı.' : 'Otomatik kopyalama başarısız; metni seçip kopyalayabilirsin.');
+              setCopyMessage(copied ? t('dialog.aiComparison.copySuccess') : t('dialog.aiComparison.copyFailure'));
             })}
           >
-            Panoya Kopyala
+            {t('dialog.common.copy')}
           </button>
         </footer>
       </section>
@@ -279,6 +284,7 @@ export function DataManagerDialog({
   onLoad,
   onReport
 }: DataManagerDialogProps): React.JSX.Element | null {
+  const { locale, t } = useI18n();
   const [busyAction, setBusyAction] = useState<string>();
   const [analysisExperiment, setAnalysisExperiment] = useState<SavedExperiment>();
   const [lineageExperiment, setLineageExperiment] = useState<SavedExperiment>();
@@ -313,14 +319,14 @@ export function DataManagerDialog({
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
       <section
-        aria-label="Veri yöneticisi"
+        aria-label={t('dialog.data.aria')}
         className="dialog-card data-dialog"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header>
           <div>
-            <span className="eyebrow">Yerel ve taşınabilir veri yöneticisi</span>
-            <h2>Kaydedilen Deneyler</h2>
+            <span className="eyebrow">{t('dialog.data.eyebrow')}</span>
+            <h2>{t('dialog.data.title')}</h2>
           </div>
           <div className="dialog-header-actions">
             <PanelHelpButton panelId="data-manager" />
@@ -330,24 +336,24 @@ export function DataManagerDialog({
               type="button"
               onClick={() => void runAction('import', onImport)}
             >
-              {busyAction === 'import' ? 'İçe aktarılıyor…' : 'JSON İçe Aktar'}
+              {busyAction === 'import' ? t('dialog.data.importing') : t('dialog.data.importJson')}
             </button>
             <button className="dialog-close" type="button" onClick={onClose}>×</button>
           </div>
         </header>
 
         <div className="portable-info">
-          <strong>Sürümlemeli deney dosyaları</strong>
+          <strong>{t('dialog.data.versionedTitle')}</strong>
           <span>
-            JSON dosyaları girdileri, model sürümlerini, sonuç anlık görüntülerini ve hesap izlerini birlikte taşır. HTML raporları çevrimdışı açılabilir; AI Paketi ise aynı kaydın başka bir AI tarafından analiz edilmesi için kompakt metin üretir.
+            {t('dialog.data.versionedInfo')}
           </span>
         </div>
 
 
         <div className="portable-info">
-          <strong>AI karşılaştırma seçimi</strong>
+          <strong>{t('dialog.data.compareTitle')}</strong>
           <span>
-            2-12 kayıt seç. Paket deney sınırlarını korur ve karşılaştırılabilir olmayan metriklerin eşdeğer sayılmamasını AI görevine açıkça yazar.
+            {t('dialog.data.compareInfo')}
           </span>
           <button
             className="primary-button"
@@ -357,14 +363,14 @@ export function DataManagerDialog({
               experiments.filter((experiment) => selectedAnalysisIds.includes(experiment.id))
             )}
           >
-            AI Karşılaştırması ({selectedAnalysisIds.length})
+            {t('dialog.data.compareAction', { count: selectedAnalysisIds.length })}
           </button>
         </div>
 
         {experiments.length === 0 ? (
           <div className="empty-state">
-            <strong>Henüz kayıt yok</strong>
-            <span>Aktif deneyi kaydedin veya taşınabilir bir JSON deney dosyası içe aktarın.</span>
+            <strong>{t('dialog.data.emptyTitle')}</strong>
+            <span>{t('dialog.data.emptyInfo')}</span>
           </div>
         ) : (
           <div className="experiment-list">
@@ -372,17 +378,15 @@ export function DataManagerDialog({
               <article className="experiment-record" key={experiment.id}>
                 <div>
                   <strong>{experiment.name}</strong>
-                  <span>Güncelleme: {formatDate(experiment.updatedAtIso)}</span>
+                  <span>{t('dialog.data.updated', { date: formatDate(experiment.updatedAtIso, locale) })}</span>
                   <small>
-                    {experiment.inputs.surfaceDistanceKm.toLocaleString('tr-TR')} km ·
-                    {' '}gözlem %{experiment.inputs.observedVisiblePercent.toLocaleString('tr-TR')} ·
-                    {' '}{experiment.predictions.length} çıktı
-                    {experiment.photoCalibration
-                      ? ' · fotoğraf provenansı kayıtlı'
-                      : ' · fotoğraf kaydı yok'}
-                    {aiFollowUpCount(experiment) > 0
-                      ? ` · AI takip ${aiFollowUpCount(experiment)}`
-                      : ''}
+                    {t('dialog.data.recordSummary', {
+                      distance: experiment.inputs.surfaceDistanceKm.toLocaleString(appLocaleTag(locale)),
+                      visibility: experiment.inputs.observedVisiblePercent.toLocaleString(appLocaleTag(locale)),
+                      results: experiment.predictions.length.toLocaleString(appLocaleTag(locale))
+                    })}
+                    {experiment.photoCalibration ? t('dialog.data.photoSaved') : t('dialog.data.photoMissing')}
+                    {aiFollowUpCount(experiment) > 0 ? t('dialog.data.aiFollowUp', { count: aiFollowUpCount(experiment) }) : ''}
                   </small>
                 </div>
                 <div className="record-actions portable-actions">
@@ -395,7 +399,7 @@ export function DataManagerDialog({
                       onClose();
                     }}
                   >
-                    Aç
+                    {t('dialog.data.open')}
                   </button>
                   <button
                     className="secondary-button"
@@ -406,7 +410,7 @@ export function DataManagerDialog({
                       () => onExport(experiment)
                     )}
                   >
-                    {busyAction === `export:${experiment.id}` ? 'Kaydediliyor…' : 'JSON'}
+                    {busyAction === `export:${experiment.id}` ? t('dialog.common.saving') : 'JSON'}
                   </button>
 
                   <button
@@ -417,7 +421,7 @@ export function DataManagerDialog({
                       ? current.filter((id) => id !== experiment.id)
                       : [...current, experiment.id])}
                   >
-                    {selectedAnalysisIds.includes(experiment.id) ? 'Seçili' : 'Karşılaştır'}
+                    {selectedAnalysisIds.includes(experiment.id) ? t('dialog.data.selected') : t('dialog.data.compare')}
                   </button>
                   <button
                     className="secondary-button"
@@ -425,7 +429,7 @@ export function DataManagerDialog({
                     type="button"
                     onClick={() => setAnalysisExperiment(experiment)}
                   >
-                    AI Paketi
+                    {t('dialog.data.aiPackage')}
                   </button>
                   {aiFollowUpCount(experiment) > 0 && (
                     <button
@@ -434,7 +438,7 @@ export function DataManagerDialog({
                       type="button"
                       onClick={() => setLineageExperiment(experiment)}
                     >
-                      AI Soy Ağacı
+                      {t('dialog.data.aiLineage')}
                     </button>
                   )}
                   <button
@@ -446,7 +450,7 @@ export function DataManagerDialog({
                       () => onReport(experiment)
                     )}
                   >
-                    {busyAction === `report:${experiment.id}` ? 'Üretiliyor…' : 'Rapor'}
+                    {busyAction === `report:${experiment.id}` ? t('dialog.data.generating') : t('dialog.data.report')}
                   </button>
                   <button
                     className="danger-button"
@@ -457,7 +461,7 @@ export function DataManagerDialog({
                       () => onDelete(experiment)
                     )}
                   >
-                    {busyAction === `delete:${experiment.id}` ? 'Siliniyor…' : 'Sil'}
+                    {busyAction === `delete:${experiment.id}` ? t('dialog.data.deleting') : t('dialog.data.delete')}
                   </button>
                 </div>
               </article>
@@ -501,19 +505,20 @@ export function TraceDialog({
   prediction,
   onClose
 }: TraceDialogProps): React.JSX.Element | null {
+  const { t } = useI18n();
   if (!metadata || !prediction) return null;
 
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
       <section
-        aria-label={`${metadata.name} hesap izi`}
+        aria-label={t('dialog.trace.aria', { model: metadata.name })}
         className="dialog-card trace-dialog"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header>
           <div>
-            <span className="eyebrow">Yeniden üretilebilir hesap</span>
-            <h2>{metadata.name} · Hesap İzi</h2>
+            <span className="eyebrow">{t('dialog.trace.eyebrow')}</span>
+            <h2>{t('dialog.trace.title', { model: metadata.name })}</h2>
           </div>
           <button className="dialog-close" type="button" onClick={onClose}>×</button>
         </header>
@@ -522,18 +527,18 @@ export function TraceDialog({
 
         <div className="trace-layout">
           <aside className="trace-assumptions">
-            <span className="eyebrow">Varsayımlar</span>
+            <span className="eyebrow">{t('dialog.trace.assumptions')}</span>
             <ul>
               {prediction.trace.assumptions.map((assumption) => (
                 <li key={assumption}>{assumption}</li>
               ))}
             </ul>
-            <small>İz kimliği: {prediction.traceId}</small>
+            <small>{t('dialog.trace.traceId', { id: prediction.traceId })}</small>
           </aside>
 
           <div className="trace-steps">
             {prediction.trace.steps.length === 0 ? (
-              <div className="empty-state">Hesap adımı üretilemedi.</div>
+              <div className="empty-state">{t('dialog.trace.noSteps')}</div>
             ) : (
               prediction.trace.steps.map((step, index) => (
                 <article className="trace-step" key={step.id}>
@@ -541,7 +546,7 @@ export function TraceDialog({
                   <div>
                     <h3>{step.title}</h3>
                     <code>{step.formula}</code>
-                    <p><b>Yerine koyma:</b> {step.substitution}</p>
+                    <p><b>{t('dialog.trace.substitution')}</b> {step.substitution}</p>
                     <strong className="trace-result">{step.result}</strong>
                     {step.note && <small>{step.note}</small>}
                   </div>
