@@ -1,15 +1,24 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode
+} from 'react';
 import {
   UI_LOCALE_STORAGE_KEY,
   type AppLocale,
   type TranslationKey,
+  type TranslationValues,
   translate
 } from './i18n';
 
 interface I18nContextValue {
   locale: AppLocale;
   setLocale(locale: AppLocale): void;
-  t(key: TranslationKey): string;
+  t(key: TranslationKey, values?: TranslationValues): string;
 }
 
 const I18nContext = createContext<I18nContextValue | undefined>(undefined);
@@ -21,23 +30,27 @@ export function I18nProvider({
   initialLocale: AppLocale;
   children: ReactNode;
 }): React.JSX.Element {
-  const [locale, setLocale] = useState<AppLocale>(initialLocale);
+  const [locale, setLocaleState] = useState<AppLocale>(initialLocale);
 
   useEffect(() => {
     document.documentElement.lang = locale;
     document.title = translate(locale, 'app.title');
+  }, [locale]);
+
+  const setLocale = useCallback((nextLocale: AppLocale): void => {
+    setLocaleState(nextLocale);
     try {
-      window.localStorage.setItem(UI_LOCALE_STORAGE_KEY, locale);
+      window.localStorage.setItem(UI_LOCALE_STORAGE_KEY, nextLocale);
     } catch {
       // A disabled/unavailable localStorage must not prevent the desktop UI from working.
     }
-  }, [locale]);
+  }, []);
 
   const value = useMemo<I18nContextValue>(() => ({
     locale,
     setLocale,
-    t: (key) => translate(locale, key)
-  }), [locale]);
+    t: (key, values) => translate(locale, key, values)
+  }), [locale, setLocale]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

@@ -124,6 +124,7 @@ import {
 import {
   datumLabels,
   defaultExperimentName,
+  getScenarioPresentation,
   isAstronomyScenario
 } from './app/app-config';
 import {
@@ -998,7 +999,7 @@ export function AppNext(): React.JSX.Element {
     setExperimentObservedAtIso(new Date().toISOString());
     setObservationUtcOffsetMinutes(systemUtcOffsetMinutes());
     setIsDirty(false);
-    setStorageMessage('Yeni deney hazırlandı.');
+    setStorageMessage(t('experiment.newReady'));
   };
 
   return (
@@ -1045,7 +1046,7 @@ export function AppNext(): React.JSX.Element {
               return;
             }
             setAiWorkflowExperiment(buildActiveExperimentRecord(
-              activeExperimentName || defaultExperimentName(activeScenarioId)
+              activeExperimentName || defaultExperimentName(activeScenarioId, locale)
             ));
           }}>◇ {t('action.aiAnalysis')}</button>
           <button type="button" onClick={() => setAiGuideOpen(true)}>▧ {t('action.aiGuide')}</button>
@@ -1091,7 +1092,9 @@ export function AppNext(): React.JSX.Element {
             setModelAngularUncertaintyById({});
             setModelUncertaintyError(undefined);
             setIsDirty(false);
-            setStorageMessage(`${getSimulationScenario(scenarioId).label} senaryosu hazırlandı.`);
+            setStorageMessage(t('scenario.readyMessage', {
+              scenario: getScenarioPresentation(locale, scenarioId).label
+            }));
           }}
           onLoadExperiment={loadExperiment}
           onVisualLayerChange={(key, enabled) => {
@@ -1407,7 +1410,7 @@ export function AppNext(): React.JSX.Element {
         />
       )}
       <SaveExperimentDialog
-        initialName={activeExperimentName || defaultExperimentName(activeScenarioId)}
+        initialName={activeExperimentName || defaultExperimentName(activeScenarioId, locale)}
         open={saveDialogOpen}
         onCancel={() => setSaveDialogOpen(false)}
         onSave={saveExperiment}

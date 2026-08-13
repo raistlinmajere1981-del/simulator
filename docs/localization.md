@@ -32,3 +32,10 @@ Human-readable descriptions around those contracts may be localized, but machine
 5. HTML reports and public documentation, followed by a final untranslated-string audit.
 
 The localization stage is complete only after both languages cover all user-facing application/report/help surfaces; the foundation PR by itself is intentionally partial.
+
+## Implemented progress
+
+- Foundation: locale bootstrap, persisted explicit TR/EN switch, document language/title and top application shell.
+- Navigation slice: scenario labels/descriptions, sidebar states/model references/visual layers and locale-aware default experiment names.
+
+The main experiment panels, astronomy time card, dialogs, help/AI guidance and reports remain separate follow-up slices.

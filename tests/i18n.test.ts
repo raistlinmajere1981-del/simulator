@@ -39,4 +39,10 @@ describe('renderer i18n foundation', () => {
     expect(translate('tr', 'action.dataManager')).toBe('Veri Yöneticisi');
     expect(translate('en', 'action.dataManager')).toBe('Data Manager');
   });
+
+  it('interpolates typed navigation messages without touching unknown placeholders', () => {
+    expect(translate('tr', 'sidebar.readyCount', { ready: 7, total: 7 })).toBe('7 / 7 hazır');
+    expect(translate('en', 'sidebar.savedCount', { count: 3 })).toBe('3 saved');
+    expect(translate('en', 'scenario.readyMessage', { scenario: 'Horizon Analysis' })).toBe('Horizon Analysis scenario is ready.');
+  });
 });
