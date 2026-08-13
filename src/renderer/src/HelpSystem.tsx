@@ -6,6 +6,7 @@ import {
   searchHelp,
   type HelpPanelId
 } from '../../shared/help-content';
+import { useI18n } from './I18nProvider';
 import './help-system.css';
 
 interface HelpContextValue {
@@ -37,16 +38,21 @@ export function useHelp(): HelpContextValue {
   return value;
 }
 
-export function PanelHelpButton({ panelId, label = 'Bu panel hakkında yardım' }: {
+export function PanelHelpButton({
+  panelId,
+  label
+}: {
   panelId: HelpPanelId;
   label?: string;
 }): React.JSX.Element {
+  const { t } = useI18n();
   const { openPanel } = useHelp();
+  const resolvedLabel = label ?? t('help.panelButton');
   return (
     <button
-      aria-label={label}
+      aria-label={resolvedLabel}
       className="panel-help-button"
-      title={label}
+      title={resolvedLabel}
       type="button"
       onClick={() => openPanel(panelId)}
     >
@@ -55,13 +61,30 @@ export function PanelHelpButton({ panelId, label = 'Bu panel hakkında yardım' 
   );
 }
 
-function TermChip({ termId, onOpen }: { termId: string; onOpen(termId: string): void }): React.JSX.Element | null {
+function TermChip({
+  termId,
+  onOpen
+}: {
+  termId: string;
+  onOpen(termId: string): void;
+}): React.JSX.Element | null {
   const term = getHelpTerm(termId);
   if (!term) return null;
-  return <button className="help-term-chip" type="button" onClick={() => onOpen(termId)}>{term.label}</button>;
+  return (
+    <button className="help-term-chip" type="button" onClick={() => onOpen(termId)}>
+      {term.label}
+    </button>
+  );
 }
 
-function PanelArticle({ panelId, onOpenTerm }: { panelId: HelpPanelId; onOpenTerm(termId: string): void }): React.JSX.Element {
+function PanelArticle({
+  panelId,
+  onOpenTerm
+}: {
+  panelId: HelpPanelId;
+  onOpenTerm(termId: string): void;
+}): React.JSX.Element {
+  const { t } = useI18n();
   const content = getHelpPanel(panelId);
   return (
     <article className="help-article">
@@ -71,11 +94,14 @@ function PanelArticle({ panelId, onOpenTerm }: { panelId: HelpPanelId; onOpenTer
 
       {content.fields.length > 0 && (
         <section>
-          <h3>Alanlar ve hesap etkisi</h3>
+          <h3>{t('help.section.fields')}</h3>
           <div className="help-field-list">
             {content.fields.map((field) => (
               <div className="help-field" key={field.label}>
-                <div><strong>{field.label}</strong>{field.unit && <span>{field.unit}</span>}</div>
+                <div>
+                  <strong>{field.label}</strong>
+                  {field.unit && <span>{field.unit}</span>}
+                </div>
                 <p>{field.description}</p>
                 {field.calculationEffect && <small>{field.calculationEffect}</small>}
               </div>
@@ -86,30 +112,34 @@ function PanelArticle({ panelId, onOpenTerm }: { panelId: HelpPanelId; onOpenTer
 
       {content.assumptions.length > 0 && (
         <section>
-          <h3>Varsayımlar ve sınırlar</h3>
+          <h3>{t('help.section.assumptions')}</h3>
           <ul>{content.assumptions.map((item) => <li key={item}>{item}</li>)}</ul>
         </section>
       )}
 
       {content.commonMistakes.length > 0 && (
         <section>
-          <h3>Yaygın hatalar</h3>
-          <ul className="help-warning-list">{content.commonMistakes.map((item) => <li key={item}>{item}</li>)}</ul>
+          <h3>{t('help.section.mistakes')}</h3>
+          <ul className="help-warning-list">
+            {content.commonMistakes.map((item) => <li key={item}>{item}</li>)}
+          </ul>
         </section>
       )}
 
       {content.example && (
         <section>
-          <h3>Kısa örnek</h3>
+          <h3>{t('help.section.example')}</h3>
           <p>{content.example}</p>
         </section>
       )}
 
       {content.relatedTerms.length > 0 && (
         <section>
-          <h3>İlgili terimler</h3>
+          <h3>{t('help.section.related')}</h3>
           <div className="help-term-row">
-            {content.relatedTerms.map((termId) => <TermChip key={termId} termId={termId} onOpen={onOpenTerm} />)}
+            {content.relatedTerms.map((termId) => (
+              <TermChip key={termId} termId={termId} onOpen={onOpenTerm} />
+            ))}
           </div>
         </section>
       )}
@@ -120,7 +150,11 @@ function PanelArticle({ panelId, onOpenTerm }: { panelId: HelpPanelId; onOpenTer
 function focusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(
     'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
-  )).filter((element) => !element.hasAttribute('hidden') && element.getAttribute('aria-hidden') !== 'true');
+  )).filter(
+    (element) =>
+      !element.hasAttribute('hidden') &&
+      element.getAttribute('aria-hidden') !== 'true'
+  );
 }
 
 export function HelpOverlay({
@@ -132,6 +166,7 @@ export function HelpOverlay({
   catalogOpen: boolean;
   onClose(): void;
 }): React.JSX.Element | null {
+  const { t } = useI18n();
   const open = panelId !== undefined || catalogOpen;
   const [query, setQuery] = useState('');
   const [selectedPanelId, setSelectedPanelId] = useState<HelpPanelId | undefined>(panelId);
@@ -141,7 +176,8 @@ export function HelpOverlay({
 
   useEffect(() => {
     if (!open) return;
-    previousActive.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    previousActive.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     window.setTimeout(() => dialogRef.current?.focus(), 0);
     const handleKey = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
@@ -187,16 +223,23 @@ export function HelpOverlay({
   const results = useMemo(() => searchHelp(query), [query]);
   if (!open) return null;
 
-  const showCatalog = catalogOpen && selectedPanelId === undefined && selectedTermId === undefined;
+  const showCatalog =
+    catalogOpen &&
+    selectedPanelId === undefined &&
+    selectedTermId === undefined;
   const selectedTerm = selectedTermId ? getHelpTerm(selectedTermId) : undefined;
 
   return (
-    <div className="help-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.currentTarget === event.target) onClose();
-    }}>
+    <div
+      className="help-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
       <div
         ref={dialogRef}
-        aria-label="Uygulama yardımı"
+        aria-label={t('help.overlay.aria')}
         aria-modal="true"
         className="help-dialog"
         role="dialog"
@@ -204,18 +247,27 @@ export function HelpOverlay({
       >
         <header className="help-dialog-header">
           <div>
-            <span className="eyebrow">Bağlamsal yardım</span>
-            <strong>{panelId ? getHelpPanel(panelId).title : 'Geometrik Gözlem Laboratuvarı Yardımı'}</strong>
+            <span className="eyebrow">{t('help.overlay.eyebrow')}</span>
+            <strong>
+              {panelId ? getHelpPanel(panelId).title : t('help.overlay.title')}
+            </strong>
           </div>
-          <button aria-label="Yardımı kapat" className="help-close" type="button" onClick={onClose}>×</button>
+          <button
+            aria-label={t('help.overlay.close')}
+            className="help-close"
+            type="button"
+            onClick={onClose}
+          >
+            ×
+          </button>
         </header>
 
         {catalogOpen && (
           <div className="help-search-row">
             <input
-              aria-label="Yardımda ara"
+              aria-label={t('help.search.aria')}
               autoComplete="off"
-              placeholder="Panel veya terim ara: datum, FOV, DEM, kırılma…"
+              placeholder={t('help.search.placeholder')}
               type="search"
               value={query}
               onChange={(event) => {
@@ -225,35 +277,51 @@ export function HelpOverlay({
               }}
             />
             {(selectedPanelId || selectedTermId) && (
-              <button type="button" onClick={() => {
-                setSelectedPanelId(undefined);
-                setSelectedTermId(undefined);
-              }}>Tüm yardım</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPanelId(undefined);
+                  setSelectedTermId(undefined);
+                }}
+              >
+                {t('help.search.all')}
+              </button>
             )}
           </div>
         )}
 
         <div className="help-dialog-body">
           {selectedPanelId ? (
-            <PanelArticle panelId={selectedPanelId} onOpenTerm={(termId) => {
-              setSelectedTermId(termId);
-              setSelectedPanelId(undefined);
-            }} />
+            <PanelArticle
+              panelId={selectedPanelId}
+              onOpenTerm={(termId) => {
+                setSelectedTermId(termId);
+                setSelectedPanelId(undefined);
+              }}
+            />
           ) : selectedTerm ? (
             <article className="help-article help-term-article">
-              <div className="help-article-category">Terim sözlüğü</div>
+              <div className="help-article-category">{t('help.glossary')}</div>
               <h2>{selectedTerm.label}</h2>
               <p className="help-summary">{selectedTerm.definition}</p>
-              {selectedTerm.caution && <div className="help-term-caution">{selectedTerm.caution}</div>}
-              <button type="button" onClick={() => setSelectedTermId(undefined)}>← Yardım listesine dön</button>
+              {selectedTerm.caution && (
+                <div className="help-term-caution">{selectedTerm.caution}</div>
+              )}
+              <button type="button" onClick={() => setSelectedTermId(undefined)}>
+                {t('help.back')}
+              </button>
             </article>
           ) : showCatalog ? (
             <div className="help-catalog">
               <section>
-                <h2>Paneller</h2>
+                <h2>{t('help.panels')}</h2>
                 <div className="help-catalog-grid">
                   {results.panels.map((panel) => (
-                    <button key={panel.id} type="button" onClick={() => setSelectedPanelId(panel.id)}>
+                    <button
+                      key={panel.id}
+                      type="button"
+                      onClick={() => setSelectedPanelId(panel.id)}
+                    >
                       <span>{panel.category}</span>
                       <strong>{panel.title}</strong>
                       <small>{panel.summary}</small>
@@ -262,15 +330,24 @@ export function HelpOverlay({
                 </div>
               </section>
               <section>
-                <h2>Terimler</h2>
+                <h2>{t('help.terms')}</h2>
                 <div className="help-term-row">
                   {results.terms.map((term) => (
-                    <button className="help-term-chip" key={term.id} type="button" onClick={() => setSelectedTermId(term.id)}>{term.label}</button>
+                    <button
+                      className="help-term-chip"
+                      key={term.id}
+                      type="button"
+                      onClick={() => setSelectedTermId(term.id)}
+                    >
+                      {term.label}
+                    </button>
                   ))}
                 </div>
               </section>
               {results.panels.length === 0 && results.terms.length === 0 && (
-                <div className="help-empty">“{query}” için yardım kaydı bulunamadı.</div>
+                <div className="help-empty">
+                  {t('help.noResults', { query })}
+                </div>
               )}
             </div>
           ) : panelId ? (
@@ -278,11 +355,17 @@ export function HelpOverlay({
           ) : (
             <div className="help-catalog">
               <section>
-                <h2>Paneller</h2>
+                <h2>{t('help.panels')}</h2>
                 <div className="help-catalog-grid">
                   {HELP_PANELS.map((panel) => (
-                    <button key={panel.id} type="button" onClick={() => setSelectedPanelId(panel.id)}>
-                      <span>{panel.category}</span><strong>{panel.title}</strong><small>{panel.summary}</small>
+                    <button
+                      key={panel.id}
+                      type="button"
+                      onClick={() => setSelectedPanelId(panel.id)}
+                    >
+                      <span>{panel.category}</span>
+                      <strong>{panel.title}</strong>
+                      <small>{panel.summary}</small>
                     </button>
                   ))}
                 </div>
