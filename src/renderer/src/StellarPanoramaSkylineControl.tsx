@@ -15,11 +15,10 @@ import {
 import { suggestPanoramaSkyline } from '../../simulation/panorama-skyline-assist';
 import { savedStellarLocalHorizonSourceFromPanorama } from '../../simulation/stellar-panorama-skyline-source';
 import { DraftNumberInput } from './DraftNumberInput';
+import { useI18n } from './I18nProvider';
+import { appLocaleTag } from './i18n';
+import { getStellarPanoramaMetadataStatusLabel } from './astronomy-result-presentation';
 import './stellar-panorama-skyline-control.css';
-
-const numberFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
-const angleFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 3 });
-const confidenceFormatter = new Intl.NumberFormat('tr-TR', { style: 'percent', maximumFractionDigits: 0 });
 
 interface StellarPanoramaSkylineControlProps {
   onPreparedSource(source: SavedStellarLocalHorizonSource): void;
@@ -32,9 +31,9 @@ interface AssistedSkylineDraft {
   warnings: string[];
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes >= 1024 * 1024) return `${numberFormatter.format(bytes / (1024 * 1024))} MB`;
-  return `${numberFormatter.format(bytes / 1024)} KB`;
+function formatBytes(bytes: number, formatter: Intl.NumberFormat): string {
+  if (bytes >= 1024 * 1024) return `${formatter.format(bytes / (1024 * 1024))} MB`;
+  return `${formatter.format(bytes / 1024)} KB`;
 }
 
 function defaultManualGeometry(draft: StellarPanoramaSkylineDraft): StellarPanoramaGeometry {
@@ -53,21 +52,6 @@ function defaultManualGeometry(draft: StellarPanoramaSkylineDraft): StellarPanor
 
 function cloneGeometry(geometry: StellarPanoramaGeometry): StellarPanoramaGeometry {
   return { ...geometry };
-}
-
-function metadataStatusLabel(draft: StellarPanoramaSkylineDraft): string {
-  switch (draft.metadata.status) {
-    case 'complete':
-      return draft.metadata.metadataScaledToImage ? 'GPano XMP · doğrulandı ve ölçeklendi' : 'GPano XMP · doğrulandı';
-    case 'incomplete':
-      return 'GPano XMP · eksik';
-    case 'unsupported-projection':
-      return `GPano · desteklenmeyen projeksiyon${draft.metadata.projectionType ? ` (${draft.metadata.projectionType})` : ''}`;
-    case 'incompatible-scale':
-      return 'GPano XMP · bitmap ölçeği uyumsuz';
-    default:
-      return 'GPano geometrisi yok · manuel giriş';
-  }
 }
 
 function markingMethodLabel(method: StellarPanoramaMarkingMethod): string {
@@ -128,6 +112,10 @@ async function createAssistedDraft(draft: StellarPanoramaSkylineDraft): Promise<
 export function StellarPanoramaSkylineControl({
   onPreparedSource
 }: StellarPanoramaSkylineControlProps): React.JSX.Element {
+  const { locale, t } = useI18n();
+  const numberFormatter = new Intl.NumberFormat(appLocaleTag(locale), { maximumFractionDigits: 2 });
+  const angleFormatter = new Intl.NumberFormat(appLocaleTag(locale), { maximumFractionDigits: 3 });
+  const confidenceFormatter = new Intl.NumberFormat(appLocaleTag(locale), { style: 'percent', maximumFractionDigits: 0 });
   const [draft, setDraft] = useState<StellarPanoramaSkylineDraft>();
   const [geometrySource, setGeometrySource] = useState<StellarPanoramaGeometrySource>('manual');
   const [geometry, setGeometry] = useState<StellarPanoramaGeometry>();
@@ -160,7 +148,7 @@ export function StellarPanoramaSkylineControl({
         horizontalCoverageDeg: null,
         verticalCoverageDeg: null,
         fullSphereCoverage: false,
-        error: error instanceof Error ? error.message : 'Panorama geometri önizlemesi üretilemedi.'
+        error: error instanceof Error ? error.message : t('stellar.panorama.previewError')
       };
     }
   }, [draft, geometry, marks]);
@@ -197,7 +185,7 @@ export function StellarPanoramaSkylineControl({
       setAssistedDraft(undefined);
       setMessage(result.message);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Panorama görüntüsü içe aktarılamadı.');
+      setMessage(error instanceof Error ? error.message : t('stellar.panorama.importError'));
     } finally {
       setIsImporting(false);
     }
@@ -323,11 +311,11 @@ export function StellarPanoramaSkylineControl({
     <div className="stellar-panorama-control">
       <div className="stellar-panorama-heading">
         <div>
-          <strong>Panoramadan 360° geometrik skyline</strong>
-          <span>Skyline elle işaretlenebilir veya yerel görüntü gradyanından kullanıcı-denetimli bir taslak önerilebilir. Yardımcı taslak otomatik doğrulanmış segmentasyon değildir.</span>
+          <strong>{t('stellar.panorama.title')}</strong>
+          <span>{t('stellar.panorama.description')}</span>
         </div>
         <button type="button" disabled={isImporting} onClick={() => void importPanorama()}>
-          {isImporting ? 'Panorama okunuyor…' : 'Panorama seç'}
+          {isImporting ? t('stellar.panorama.importing') : t('stellar.panorama.import')}
         </button>
       </div>
 
@@ -335,14 +323,14 @@ export function StellarPanoramaSkylineControl({
         <>
           <div className="stellar-panorama-source-card">
             <div>
-              <small>PANORAMA TASLAĞI · GÖRÜNTÜ BAYTLARI KALICI KAYDA GİRMEZ</small>
+              <small>{t('stellar.panorama.sourceLabel')}</small>
               <strong>{draft.fileName}</strong>
-              <span>{draft.imageWidthPx}×{draft.imageHeightPx} px · {formatBytes(draft.fileSizeBytes)}</span>
-              <span>{metadataStatusLabel(draft)}</span>
+              <span>{t('stellar.panorama.dimensions', { width: draft.imageWidthPx, height: draft.imageHeightPx, size: formatBytes(draft.fileSizeBytes, numberFormatter) })}</span>
+              <span>{getStellarPanoramaMetadataStatusLabel(locale, draft.metadata.status, draft.metadata.metadataScaledToImage, draft.metadata.projectionType)}</span>
             </div>
             <div>
               <span>SHA-256 <code title={draft.sha256}>{draft.sha256.slice(0, 12)}…</code></span>
-              <span>Standart XMP {draft.metadata.standardXmpPacketFound ? 'var' : 'yok'} · Extended XMP {draft.metadata.extendedXmpPacketFound ? 'var' : 'yok'}</span>
+              <span>{t('stellar.panorama.xmpSummary', { standard: draft.metadata.standardXmpPacketFound ? t('stellar.panorama.yes') : t('stellar.panorama.no'), extended: draft.metadata.extendedXmpPacketFound ? t('stellar.panorama.yes') : t('stellar.panorama.no') })}</span>
             </div>
           </div>
 
@@ -357,46 +345,46 @@ export function StellarPanoramaSkylineControl({
               type="button"
               className={geometrySource === 'manual' ? 'selected' : ''}
               onClick={() => switchGeometrySource('manual')}
-            >Manuel geometri</button>
-            <span>{geometrySource === 'gpano-xmp' ? 'Doğrulanmış metadata kilitli kullanılıyor.' : 'Yön ve crop değerleri kullanıcı girdisi olarak kaydedilecek.'}</span>
+            >{t('stellar.panorama.geometryManual')}</button>
+            <span>{geometrySource === 'gpano-xmp' ? t('stellar.panorama.geometryGpanoLocked') : t('stellar.panorama.geometryManualNote')}</span>
           </div>
 
           <div className="stellar-panorama-geometry-grid">
             <label>
-              <span>Bitmap genişliği</span>
+              <span>{t('stellar.panorama.bitmapWidth')}</span>
               <input value={geometry.imageWidthPx} disabled readOnly />
             </label>
             <label>
-              <span>Bitmap yüksekliği</span>
+              <span>{t('stellar.panorama.bitmapHeight')}</span>
               <input value={geometry.imageHeightPx} disabled readOnly />
             </label>
             <label>
-              <span>Tam pano genişliği · px</span>
-              <DraftNumberInput ariaLabel="Panorama tam genişliği" disabled={geometrySource !== 'manual'} min={1} max={200_000} step={1} value={geometry.fullPanoWidthPx} onCommit={(value) => updateGeometry('fullPanoWidthPx', Math.round(value))} />
+              <span>{t('stellar.panorama.fullPanoWidth')}</span>
+              <DraftNumberInput ariaLabel={t('stellar.panorama.fullPanoWidthAria')} disabled={geometrySource !== 'manual'} min={1} max={200_000} step={1} value={geometry.fullPanoWidthPx} onCommit={(value) => updateGeometry('fullPanoWidthPx', Math.round(value))} />
             </label>
             <label>
-              <span>Tam pano yüksekliği · px</span>
-              <DraftNumberInput ariaLabel="Panorama tam yüksekliği" disabled={geometrySource !== 'manual'} min={1} max={200_000} step={1} value={geometry.fullPanoHeightPx} onCommit={(value) => updateGeometry('fullPanoHeightPx', Math.round(value))} />
+              <span>{t('stellar.panorama.fullPanoHeight')}</span>
+              <DraftNumberInput ariaLabel={t('stellar.panorama.fullPanoHeightAria')} disabled={geometrySource !== 'manual'} min={1} max={200_000} step={1} value={geometry.fullPanoHeightPx} onCommit={(value) => updateGeometry('fullPanoHeightPx', Math.round(value))} />
             </label>
             <label>
-              <span>Crop sol · px</span>
-              <DraftNumberInput ariaLabel="Panorama crop sol" disabled={geometrySource !== 'manual'} min={0} max={200_000} step={1} value={geometry.croppedAreaLeftPx} onCommit={(value) => updateGeometry('croppedAreaLeftPx', Math.round(value))} />
+              <span>{t('stellar.panorama.cropLeft')}</span>
+              <DraftNumberInput ariaLabel={t('stellar.panorama.cropLeftAria')} disabled={geometrySource !== 'manual'} min={0} max={200_000} step={1} value={geometry.croppedAreaLeftPx} onCommit={(value) => updateGeometry('croppedAreaLeftPx', Math.round(value))} />
             </label>
             <label>
-              <span>Crop üst · px</span>
-              <DraftNumberInput ariaLabel="Panorama crop üst" disabled={geometrySource !== 'manual'} min={0} max={200_000} step={1} value={geometry.croppedAreaTopPx} onCommit={(value) => updateGeometry('croppedAreaTopPx', Math.round(value))} />
+              <span>{t('stellar.panorama.cropTop')}</span>
+              <DraftNumberInput ariaLabel={t('stellar.panorama.cropTopAria')} disabled={geometrySource !== 'manual'} min={0} max={200_000} step={1} value={geometry.croppedAreaTopPx} onCommit={(value) => updateGeometry('croppedAreaTopPx', Math.round(value))} />
             </label>
             <label>
-              <span>Heading · °</span>
-              <DraftNumberInput ariaLabel="Panorama heading" disabled={geometrySource !== 'manual'} min={0} max={359.999999} step={0.1} value={geometry.poseHeadingDeg} onCommit={(value) => updateGeometry('poseHeadingDeg', value)} />
+              <span>{t('stellar.panorama.heading')}</span>
+              <DraftNumberInput ariaLabel={t('stellar.panorama.headingAria')} disabled={geometrySource !== 'manual'} min={0} max={359.999999} step={0.1} value={geometry.poseHeadingDeg} onCommit={(value) => updateGeometry('poseHeadingDeg', value)} />
             </label>
             <label>
-              <span>Pitch · °</span>
-              <DraftNumberInput ariaLabel="Panorama pitch" disabled={geometrySource !== 'manual'} min={-90} max={90} step={0.1} value={geometry.posePitchDeg} onCommit={(value) => updateGeometry('posePitchDeg', value)} />
+              <span>{t('stellar.panorama.pitch')}</span>
+              <DraftNumberInput ariaLabel={t('stellar.panorama.pitchAria')} disabled={geometrySource !== 'manual'} min={-90} max={90} step={0.1} value={geometry.posePitchDeg} onCommit={(value) => updateGeometry('posePitchDeg', value)} />
             </label>
             <label>
-              <span>Roll · °</span>
-              <DraftNumberInput ariaLabel="Panorama roll" disabled={geometrySource !== 'manual'} min={-179.999999} max={180} step={0.1} value={geometry.poseRollDeg} onCommit={(value) => updateGeometry('poseRollDeg', value)} />
+              <span>{t('stellar.panorama.roll')}</span>
+              <DraftNumberInput ariaLabel={t('stellar.panorama.rollAria')} disabled={geometrySource !== 'manual'} min={-179.999999} max={180} step={0.1} value={geometry.poseRollDeg} onCommit={(value) => updateGeometry('poseRollDeg', value)} />
             </label>
           </div>
 
