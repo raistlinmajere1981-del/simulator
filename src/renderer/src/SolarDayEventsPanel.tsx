@@ -87,8 +87,6 @@ export function SolarDayEventsPanel({
   const standardRiseMinute = localMinuteOfDay(result.standardApparent.riseIso, result.utcOffsetMinutes);
   const standardSetMinute = localMinuteOfDay(result.standardApparent.setIso, result.utcOffsetMinutes);
   const noonMinute = localMinuteOfDay(result.solarNoonIso, result.utcOffsetMinutes);
-  const seasonalYear = Number(result.localDate.slice(0, 4));
-  const seasonalYearSupported = Number.isInteger(seasonalYear) && seasonalYear >= MIN_SEASON_YEAR && seasonalYear <= MAX_SEASON_YEAR;
   const angle = (value: number | null): string => value === null ? '—' : `${numberFormatter.format(value)}°`;
 
   return (
@@ -166,7 +164,7 @@ export function SolarDayEventsPanel({
 
       {seasonResult ? (
         <SolarSeasonEventsPanel result={seasonResult} />
-      ) : seasonalYearSupported ? null : (
+      ) : (
         <section className="solar-season-panel panel">
           <span className="eyebrow">{t('solar.season.stage')}</span>
           <h2>{t('solar.season.unsupportedTitle')}</h2>
