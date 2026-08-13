@@ -39,6 +39,6 @@ The localization stage is complete only after both languages cover all user-faci
 - Navigation slice: scenario labels/descriptions, sidebar states/model references/visual layers and locale-aware default experiment names.
 - Core panel slice: visibility/horizon scenario summary, observation reference panels, vertical datum presentation and explicit locale-aware number/coordinate/bearing/percent formatting.
 - Model-results slice: physical/reference model labels, result status presentation, visibility/horizon model cards and comparison tables, all using active-locale human numeric formatting.
-- Astronomy shell slice: astronomy time/date card plus Sun/Moon, eclipse, shadow and stellar scenario summary shells use the active locale; UTC and machine identifiers remain invariant.
+- Astronomy shell slice: shared Time and date card plus Sun/Moon, eclipse, shadow and stellar scenario-summary shells.
 
-Engine-emitted warnings/assumptions, specialized astronomy result panels, terrain/calibration panels, dialogs, help/AI guidance and reports remain separate follow-up slices.
+Engine-emitted warnings/assumptions, specialized astronomy result panels, dialogs, help/AI guidance and reports remain separate follow-up slices.
