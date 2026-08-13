@@ -107,7 +107,7 @@ export function getScenarioPresentation(
   };
 }
 
-export function getSidebarModelLabel(
+export function getModelPresentationLabel(
   locale: AppLocale,
   modelId: string,
   fallbackLabel: string
@@ -115,6 +115,14 @@ export function getSidebarModelLabel(
   if (locale === 'tr') return fallbackLabel;
   const key = sidebarModelTranslationKeys[modelId];
   return key ? translate(locale, key) : fallbackLabel;
+}
+
+export function getSidebarModelLabel(
+  locale: AppLocale,
+  modelId: string,
+  fallbackLabel: string
+): string {
+  return getModelPresentationLabel(locale, modelId, fallbackLabel);
 }
 
 export function isAstronomyScenario(scenarioId: SimulationScenarioId): boolean {

@@ -1,5 +1,10 @@
 import type { ModelPrediction, ResultStatus } from '../../../shared/domain';
-import { appLocaleTag, type AppLocale } from '../i18n';
+import {
+  appLocaleTag,
+  translate,
+  type AppLocale,
+  type TranslationKey
+} from '../i18n';
 import type { NumericInputKey } from './app-types';
 
 export const statusLabels: Record<ResultStatus, string> = {
@@ -8,6 +13,17 @@ export const statusLabels: Record<ResultStatus, string> = {
   indeterminate: 'Belirsizlik içinde karar verilemedi',
   unsupported: 'Fiziksel model kuralları tanımsız'
 };
+
+const statusTranslationKeys: Record<ResultStatus, TranslationKey> = {
+  compatible: 'result.status.compatible',
+  incompatible: 'result.status.incompatible',
+  indeterminate: 'result.status.indeterminate',
+  unsupported: 'result.status.unsupported'
+};
+
+export function getStatusLabel(locale: AppLocale, status: ResultStatus): string {
+  return translate(locale, statusTranslationKeys[status]);
+}
 
 export const inputRanges: Record<NumericInputKey, { min: number; max: number }> = {
   observerHeightM: { min: 0, max: 100_000 },
