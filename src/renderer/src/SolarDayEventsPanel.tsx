@@ -7,13 +7,17 @@ import type { SolarSeasonEventsResult } from '../../simulation/solar-season-even
 import type { SolarTimeOffsetResult } from '../../simulation/solar-time-offset';
 import type { SolarRouteComparisonResult } from '../../simulation/solar-route-comparison';
 import { PanelHelpButton } from './HelpSystem';
+import { useI18n } from './I18nProvider';
+import { getSolarThresholdStateLabel } from './astronomy-result-presentation';
+import { numberFormatterFor } from './app/app-formatters';
+import type { AppLocale, TranslationKey, TranslationValues } from './i18n';
+
+type TranslationFunction = (key: TranslationKey, values?: TranslationValues) => string;
 import { SolarSeasonEventsPanel } from './SolarSeasonEventsPanel';
 import { SolarTimeOffsetPanel } from './SolarTimeOffsetPanel';
 import { SolarRouteComparisonPanel } from './SolarRouteComparisonPanel';
 import './solar-day-events-panel.css';
 
-const numberFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
-const angleFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
 const MIN_SEASON_YEAR = 1900;
 const MAX_SEASON_YEAR = 2100;
 
@@ -32,28 +36,22 @@ function localMinuteOfDay(iso: string | null, offsetMinutes: number): number | n
   return hour * 60 + minute + second / 60;
 }
 
-function duration(minutes: number): string {
+function duration(minutes: number, locale: AppLocale, t: TranslationFunction): string {
   const hours = Math.floor(minutes / 60);
   const remainder = Math.round(minutes - hours * 60);
-  return `${hours} sa ${String(remainder).padStart(2, '0')} dk`;
+  return `${numberFormatterFor(locale).format(hours)} ${t('unit.hoursShort')} ${String(remainder).padStart(2, '0')} ${t('unit.minutesShort')}`;
 }
 
-function stateLabel(events: SolarThresholdEvents): string {
-  if (events.state === 'continuous-above') return '24 SAAT EŞİK ÜSTÜ';
-  if (events.state === 'continuous-below') return '24 SAAT EŞİK ALTI';
-  if (events.state === 'grazing') return 'TEĞET / SINIR DURUMU';
-  return 'DOĞUŞ + BATIŞ VAR';
-}
-
-function eventClock(events: SolarThresholdEvents, kind: 'rise' | 'set', offsetMinutes: number): string {
-  if (events.state === 'continuous-above') return 'geçiş yok · sürekli üstte';
-  if (events.state === 'continuous-below') return 'geçiş yok · sürekli altta';
-  if (events.state === 'grazing') return 'güvenilir geçiş yok';
+function eventClock(
+  events: SolarThresholdEvents,
+  kind: 'rise' | 'set',
+  offsetMinutes: number,
+  t: TranslationFunction
+): string {
+  if (events.state === 'continuous-above') return t('solar.day.noTransitionAbove');
+  if (events.state === 'continuous-below') return t('solar.day.noTransitionBelow');
+  if (events.state === 'grazing') return t('solar.day.noReliableTransition');
   return localClock(kind === 'rise' ? events.riseIso : events.setIso, offsetMinutes);
-}
-
-function azimuth(value: number | null): string {
-  return value === null ? '—' : `${angleFormatter.format(value)}°`;
 }
 
 function markerStyle(minute: number | null): React.CSSProperties | undefined {
@@ -82,27 +80,29 @@ export function SolarDayEventsPanel({
   onRouteEndCoordinateChange(key: 'latitude' | 'longitude', value: number): void;
   onShowTrace(): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
+  const numberFormatter = numberFormatterFor(locale);
   const geometricRiseMinute = localMinuteOfDay(result.geometric.riseIso, result.utcOffsetMinutes);
   const geometricSetMinute = localMinuteOfDay(result.geometric.setIso, result.utcOffsetMinutes);
   const standardRiseMinute = localMinuteOfDay(result.standardApparent.riseIso, result.utcOffsetMinutes);
   const standardSetMinute = localMinuteOfDay(result.standardApparent.setIso, result.utcOffsetMinutes);
   const noonMinute = localMinuteOfDay(result.solarNoonIso, result.utcOffsetMinutes);
   const seasonalYear = Number(result.localDate.slice(0, 4));
-  const seasonalYearSupported = Number.isInteger(seasonalYear) &&
-    seasonalYear >= MIN_SEASON_YEAR && seasonalYear <= MAX_SEASON_YEAR;
+  const seasonalYearSupported = Number.isInteger(seasonalYear) && seasonalYear >= MIN_SEASON_YEAR && seasonalYear <= MAX_SEASON_YEAR;
+  const angle = (value: number | null): string => value === null ? '—' : `${numberFormatter.format(value)}°`;
 
   return (
     <>
       <section className="solar-day-events-panel panel">
         <div className="panel-title-row">
           <div>
-            <span className="eyebrow">Astronomik referans · günlük Güneş olayları</span>
-            <h2>Gün doğumu, gün batımı ve güneş öğlesi</h2>
+            <span className="eyebrow">{t('solar.day.stage')}</span>
+            <h2>{t('solar.day.title')}</h2>
           </div>
           <div className="title-actions">
             <PanelHelpButton panelId="solar-day-events" />
             <span className="solar-day-date-badge">{result.localDate} · {formatUtcOffset(result.utcOffsetMinutes)}</span>
-            <button type="button" onClick={onShowTrace}>Hesap izi</button>
+            <button type="button" onClick={onShowTrace}>{t('model.trace')}</button>
           </div>
         </div>
 
@@ -113,71 +113,64 @@ export function SolarDayEventsPanel({
           <span className="solar-time-label q2">12</span>
           <span className="solar-time-label q3">18</span>
           <span className="solar-time-label end">24</span>
-          {standardRiseMinute !== null && <span className="solar-event-marker standard rise" style={markerStyle(standardRiseMinute)} title="Standart doğuş" />}
-          {standardSetMinute !== null && <span className="solar-event-marker standard set" style={markerStyle(standardSetMinute)} title="Standart batış" />}
-          {geometricRiseMinute !== null && <span className="solar-event-marker geometric rise" style={markerStyle(geometricRiseMinute)} title="Geometrik doğuş" />}
-          {geometricSetMinute !== null && <span className="solar-event-marker geometric set" style={markerStyle(geometricSetMinute)} title="Geometrik batış" />}
-          {noonMinute !== null && <span className="solar-event-marker noon" style={markerStyle(noonMinute)} title="Güneş öğlesi" />}
+          {standardRiseMinute !== null && <span className="solar-event-marker standard rise" style={markerStyle(standardRiseMinute)} title={t('solar.day.standardRise')} />}
+          {standardSetMinute !== null && <span className="solar-event-marker standard set" style={markerStyle(standardSetMinute)} title={t('solar.day.standardSet')} />}
+          {geometricRiseMinute !== null && <span className="solar-event-marker geometric rise" style={markerStyle(geometricRiseMinute)} title={t('solar.day.geometricRise')} />}
+          {geometricSetMinute !== null && <span className="solar-event-marker geometric set" style={markerStyle(geometricSetMinute)} title={t('solar.day.geometricSet')} />}
+          {noonMinute !== null && <span className="solar-event-marker noon" style={markerStyle(noonMinute)} title={t('solar.day.solarNoon')} />}
         </div>
 
         <div className="solar-event-card-grid">
           <article className="solar-event-card geometric">
             <header>
-              <div><span>GEOMETRİK MERKEZ</span><strong>Ufuk eşiği 0°</strong></div>
-              <b>{stateLabel(result.geometric)}</b>
+              <div><span>{t('solar.day.geometricCenter')}</span><strong>{t('solar.day.geometricThreshold')}</strong></div>
+              <b>{getSolarThresholdStateLabel(locale, result.geometric.state)}</b>
             </header>
             <dl>
-              <div><dt>Doğuş</dt><dd>{eventClock(result.geometric, 'rise', result.utcOffsetMinutes)}</dd><small>azimut {azimuth(result.geometric.riseAzimuthDeg)}</small></div>
-              <div><dt>Batış</dt><dd>{eventClock(result.geometric, 'set', result.utcOffsetMinutes)}</dd><small>azimut {azimuth(result.geometric.setAzimuthDeg)}</small></div>
-              <div><dt>Eşik üstü süre</dt><dd>{duration(result.geometric.aboveThresholdDurationMinutes)}</dd><small>seçilen yerel gün içinde</small></div>
+              <div><dt>{t('solar.day.rise')}</dt><dd>{eventClock(result.geometric, 'rise', result.utcOffsetMinutes, t)}</dd><small>{t('solar.day.azimuthValue', { value: angle(result.geometric.riseAzimuthDeg) })}</small></div>
+              <div><dt>{t('solar.day.set')}</dt><dd>{eventClock(result.geometric, 'set', result.utcOffsetMinutes, t)}</dd><small>{t('solar.day.azimuthValue', { value: angle(result.geometric.setAzimuthDeg) })}</small></div>
+              <div><dt>{t('solar.day.aboveDuration')}</dt><dd>{duration(result.geometric.aboveThresholdDurationMinutes, locale, t)}</dd><small>{t('solar.day.selectedLocalDay')}</small></div>
             </dl>
           </article>
 
           <article className="solar-event-card standard">
             <header>
-              <div><span>STANDART GÖRÜNÜR REFERANS</span><strong>Merkez eşiği -0,833°</strong></div>
-              <b>{stateLabel(result.standardApparent)}</b>
+              <div><span>{t('solar.day.standardVisibleReference')}</span><strong>{t('solar.day.standardThreshold')}</strong></div>
+              <b>{getSolarThresholdStateLabel(locale, result.standardApparent.state)}</b>
             </header>
             <dl>
-              <div><dt>Doğuş</dt><dd>{eventClock(result.standardApparent, 'rise', result.utcOffsetMinutes)}</dd><small>azimut {azimuth(result.standardApparent.riseAzimuthDeg)}</small></div>
-              <div><dt>Batış</dt><dd>{eventClock(result.standardApparent, 'set', result.utcOffsetMinutes)}</dd><small>azimut {azimuth(result.standardApparent.setAzimuthDeg)}</small></div>
-              <div><dt>Eşik üstü süre</dt><dd>{duration(result.standardApparent.aboveThresholdDurationMinutes)}</dd><small>yaklaşık takvim referansı</small></div>
+              <div><dt>{t('solar.day.rise')}</dt><dd>{eventClock(result.standardApparent, 'rise', result.utcOffsetMinutes, t)}</dd><small>{t('solar.day.azimuthValue', { value: angle(result.standardApparent.riseAzimuthDeg) })}</small></div>
+              <div><dt>{t('solar.day.set')}</dt><dd>{eventClock(result.standardApparent, 'set', result.utcOffsetMinutes, t)}</dd><small>{t('solar.day.azimuthValue', { value: angle(result.standardApparent.setAzimuthDeg) })}</small></div>
+              <div><dt>{t('solar.day.aboveDuration')}</dt><dd>{duration(result.standardApparent.aboveThresholdDurationMinutes, locale, t)}</dd><small>{t('solar.day.approxCalendarReference')}</small></div>
             </dl>
           </article>
 
           <article className="solar-event-card noon">
-            <header>
-              <div><span>GÜNEŞ ÖĞLESİ</span><strong>Yerel gün içi maksimum yükseklik</strong></div>
-            </header>
+            <header><div><span>{t('solar.day.solarNoon').toUpperCase()}</span><strong>{t('solar.day.localMaximumElevation')}</strong></div></header>
             <dl>
-              <div><dt>Saat</dt><dd>{localClock(result.solarNoonIso, result.utcOffsetMinutes)}</dd><small>{formatUtcOffset(result.utcOffsetMinutes)}</small></div>
-              <div><dt>Maks. yükseklik</dt><dd>{angleFormatter.format(result.solarNoonElevationDeg)}°</dd><small>geometrik merkez</small></div>
-              <div><dt>Azimut</dt><dd>{angleFormatter.format(result.solarNoonAzimuthDeg)}°</dd><small>coğrafi kuzeyden</small></div>
+              <div><dt>{t('solar.day.time')}</dt><dd>{localClock(result.solarNoonIso, result.utcOffsetMinutes)}</dd><small>{formatUtcOffset(result.utcOffsetMinutes)}</small></div>
+              <div><dt>{t('solar.day.maximumElevation')}</dt><dd>{numberFormatter.format(result.solarNoonElevationDeg)}°</dd><small>{t('solar.day.geometricCenterSmall')}</small></div>
+              <div><dt>{t('solar.day.azimuth')}</dt><dd>{numberFormatter.format(result.solarNoonAzimuthDeg)}°</dd><small>{t('solar.day.fromGeographicNorth')}</small></div>
             </dl>
           </article>
         </div>
 
         <div className="solar-day-comparison-strip">
-          <span>Standart referansın geometrik 0° kanalına göre ek eşik-üstü süresi</span>
-          <strong>{numberFormatter.format(result.standardApparent.aboveThresholdDurationMinutes - result.geometric.aboveThresholdDurationMinutes)} dk</strong>
+          <span>{t('solar.day.extraDuration')}</span>
+          <strong>{numberFormatter.format(result.standardApparent.aboveThresholdDurationMinutes - result.geometric.aboveThresholdDurationMinutes)} {t('unit.minutesShort')}</strong>
         </div>
-
-        <p className="solar-day-events-note">
-          0° kanalı Güneş merkezinin geometrik ufuk geçişidir. -0,833° kanalı gerçek atmosfer ölçümü değildir; Güneşin görünür üst kenarı ve standart kırılma için kullanılan sabit yaklaşık takvim eşiğidir. Yerel gün, kaydedilmiş açık UTC ofsetiyle kurulmuştur; saat dilimi adı veya DST kuralı otomatik uygulanmaz.
-        </p>
+        <p className="solar-day-events-note">{t('solar.day.note')}</p>
       </section>
 
       <SolarTimeOffsetPanel result={solarTimeResult} solarNoonIso={result.solarNoonIso} />
 
       {seasonResult ? (
         <SolarSeasonEventsPanel result={seasonResult} />
-      ) : (
+      ) : seasonalYearSupported ? null : (
         <section className="solar-season-panel panel">
-          <span className="eyebrow">Aşama 7.5 · yıllık Güneş döngüsü</span>
-          <h2>Yıllık mevsim referansı bu yıl için kapalı</h2>
-          <p className="solar-season-note">
-            İlk doğrulama aralığı {MIN_SEASON_YEAR}–{MAX_SEASON_YEAR}. Günlük Güneş hesabı çalışmaya devam eder; bu aralığın dışındaki yıllarda ekinoks/gündönümü kartları güvenli biçimde üretilmez.
-          </p>
+          <span className="eyebrow">{t('solar.season.stage')}</span>
+          <h2>{t('solar.season.unsupportedTitle')}</h2>
+          <p className="solar-season-note">{t('solar.season.unsupportedNote', { min: MIN_SEASON_YEAR, max: MAX_SEASON_YEAR })}</p>
         </section>
       )}
 
