@@ -4,10 +4,11 @@ import type {
   PhotoCalibrationMarks,
   PhotoSourceMetadata
 } from '../../shared/photo-calibration';
+import { useI18n } from './I18nProvider';
 import {
-  markLabels,
+  markLabel,
   markOrder,
-  markShortLabels,
+  markShortLabel,
   markSummary,
   type MarkKey
 } from './photo-calibration-state';
@@ -31,6 +32,7 @@ export function PhotoCalibrationMarkerPanel({
   onPlaceSelectedMark(event: PointerEvent<SVGSVGElement>): void;
   onSelectMark(mark: MarkKey): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
   const markerRadius = source ? Math.max(8, source.imageWidthPx * 0.012) : 10;
   const markerLabelSize = source ? Math.max(14, source.imageWidthPx * 0.018) : 20;
 
@@ -38,8 +40,7 @@ export function PhotoCalibrationMarkerPanel({
     <>
       {preview && (
         <p className="photo-calibration-note">
-          Sıradaki işaret: <strong>{markLabels[selectedMark]}</strong>. Fotoğraf üzerinde ilgili noktaya tıkla;
-          seçim otomatik olarak sonraki işarete geçer.
+          {t('photo.marker.next', { label: markLabel(locale, selectedMark) })}
         </p>
       )}
 
@@ -49,10 +50,10 @@ export function PhotoCalibrationMarkerPanel({
           ref={viewportRef}
           style={{ aspectRatio: `${preview.imageWidthPx} / ${preview.imageHeightPx}` }}
         >
-          <img alt="Kalibrasyon için yüklenen gözlem" src={preview.dataUrl} />
+          <img alt={t('photo.marker.imageAlt')} src={preview.dataUrl} />
           {marks && (
             <svg
-              aria-label="Fotoğraf kalibrasyon işaretleri"
+              aria-label={t('photo.marker.svgAria')}
               onPointerDown={onPlaceSelectedMark}
               preserveAspectRatio="xMidYMid meet"
               viewBox={`0 0 ${preview.imageWidthPx} ${preview.imageHeightPx}`}
@@ -73,7 +74,9 @@ export function PhotoCalibrationMarkerPanel({
                       style={{ fontSize: `${markerLabelSize}px` }}
                       x={mark.xPx + markerRadius * 1.35}
                       y={mark.yPx - markerRadius * 1.35}
-                    >{markShortLabels[key]}</text>
+                    >
+                      {markShortLabel(locale, key)}
+                    </text>
                   </g>
                 );
               })}
@@ -81,10 +84,7 @@ export function PhotoCalibrationMarkerPanel({
           )}
         </div>
       ) : source ? (
-        <div className="photo-preview-missing">
-          Fotoğraf provenansı ve işaretler kayıtlı, ancak kaynak görüntü varlığı bu makinede yok.
-          Aynı dosyayı yeniden seç; SHA-256 eşleşirse mevcut kalibrasyon ve işaretler korunur.
-        </div>
+        <div className="photo-preview-missing">{t('photo.marker.previewMissing')}</div>
       ) : null}
 
       {source && marks && (
@@ -97,16 +97,22 @@ export function PhotoCalibrationMarkerPanel({
                 type="button"
                 onClick={() => onSelectMark(key)}
               >
-                <b>{markShortLabels[key]}</b>
-                <span>{markLabels[key]}</span>
-                <small>{touchedMarks.has(key) ? markSummary(marks[key]) : 'fotoğrafta tıkla'}</small>
+                <b>{markShortLabel(locale, key)}</b>
+                <span>{markLabel(locale, key)}</span>
+                <small>
+                  {touchedMarks.has(key)
+                    ? markSummary(locale, marks[key])
+                    : t('photo.marker.click')}
+                </small>
               </button>
             ))}
           </div>
           {touchedMarks.size < markOrder.length && (
             <p className="photo-warning">
-              Yeni fotoğraftaki örnek işaretler ölçüm değildir. Kalibrasyon için dört işaretin
-              her birini fotoğraf üzerinde bir kez yerleştir ({touchedMarks.size}/4).
+              {t('photo.marker.measureWarning', {
+                count: touchedMarks.size,
+                total: markOrder.length
+              })}
             </p>
           )}
         </>

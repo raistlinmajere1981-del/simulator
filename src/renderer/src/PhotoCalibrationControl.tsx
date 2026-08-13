@@ -28,6 +28,7 @@ import {
 } from './photo-calibration-state';
 import './photo-calibration-control.css';
 import { PanelHelpButton } from './HelpSystem';
+import { useI18n } from './I18nProvider';
 import { PhotoCalibrationMarkerPanel } from './PhotoCalibrationMarkerPanel';
 
 interface PhotoSessionStatus {
@@ -50,6 +51,7 @@ export function PhotoCalibrationControl({
   onClear(): void;
   onPhotoSessionChange(status: PhotoSessionStatus): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
   const viewportRef = useRef<HTMLDivElement>(null);
   const [preview, setPreview] = useState<ImportedObservationPhoto>();
   const [draft, setDraft] = useState<DraftState>(() => draftFromSaved(savedCalibration));
@@ -82,7 +84,7 @@ export function PhotoCalibrationControl({
         })
         .catch((caught) => {
           if (!cancelled) {
-            setMessage(caught instanceof Error ? caught.message : 'Kayıtlı fotoğraf varlığı yüklenemedi.');
+            setMessage(caught instanceof Error ? caught.message : t('photo.calibration.savedPhotoLoadFallback'));
           }
         });
     }
@@ -101,8 +103,8 @@ export function PhotoCalibrationControl({
   }, [draft.source, savedCalibration, onPhotoSessionChange]);
 
   const candidate = useMemo(
-    () => buildPhotoCalibrationCandidate(draft, experimentId, touchedMarks),
-    [draft, experimentId, touchedMarks]
+    () => buildPhotoCalibrationCandidate(draft, experimentId, touchedMarks, locale),
+    [draft, experimentId, locale, touchedMarks]
   );
 
   const loadPhoto = async (): Promise<void> => {
@@ -122,7 +124,7 @@ export function PhotoCalibrationControl({
         setDraft(draftFromSaved(savedCalibration));
         setTouchedMarks(new Set(markOrder));
         setIsDirty(false);
-        setMessage('Kayıtlı fotoğraf SHA-256 ile eşleşti; mevcut işaretler yeniden gösterildi.');
+        setMessage(t('photo.calibration.sourceMatched'));
         return;
       }
 
@@ -136,9 +138,9 @@ export function PhotoCalibrationControl({
       setTouchedMarks(new Set());
       setIsDirty(true);
       onClear();
-      setMessage('Yeni fotoğraf yüklendi. Dört örnek işaretin her birini fotoğraf üzerinde yeniden yerleştir.');
+      setMessage(t('photo.calibration.newPhoto'));
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : 'Fotoğraf yüklenemedi.');
+      setMessage(caught instanceof Error ? caught.message : t('photo.calibration.loadFallback'));
     }
   };
 
@@ -184,7 +186,7 @@ export function PhotoCalibrationControl({
     const defaultMarkUncertaintyPx = Number(draft.defaultMarkUncertaintyPx);
     const principalPointXPx = finiteDraftNumber(draft.principalPointXPx);
     const principalPointYPx = finiteDraftNumber(draft.principalPointYPx);
-    const cameraUncertainty = cameraUncertaintyFromDraft(draft);
+    const cameraUncertainty = cameraUncertaintyFromDraft(draft, locale);
     const calibration = draft.calibrationSource === 'field-of-view'
       ? {
           sourceKind: 'field-of-view' as const,
@@ -234,7 +236,7 @@ export function PhotoCalibrationControl({
     });
     onSave(saved, record);
     setIsDirty(false);
-    setMessage('Fotoğraf kalibrasyonu deney kaydına hazırlandı. Deneyi kaydettiğinde provenans ve hesap izi korunacak.');
+    setMessage(t('photo.calibration.savedPrepared'));
   };
 
   const displayedPrediction = isDirty ? candidate.record?.prediction : savedPrediction ?? candidate.record?.prediction;
@@ -249,29 +251,25 @@ export function PhotoCalibrationControl({
     <section className="photo-calibration-panel">
       <div className="photo-calibration-heading">
         <div>
-          <span className="eyebrow">Fotoğraf / kamera kalibrasyonu</span>
-          <strong>{source ? source.fileName : 'Henüz fotoğraf yüklenmedi'}</strong>
+          <span className="eyebrow">{t('photo.calibration.eyebrow')}</span>
+          <strong>{source ? source.fileName : t('photo.calibration.noPhoto')}</strong>
         </div>
         <div className="photo-calibration-actions">
           <PanelHelpButton panelId="photo-calibration" />
-          {savedCalibration && !isDirty && <span className="photo-state saved">KAYITLI</span>}
-          {isDirty && <span className="photo-state dirty">DÜZENLENDİ</span>}
+          {savedCalibration && !isDirty && <span className="photo-state saved">{t('photo.calibration.saved')}</span>}
+          {isDirty && <span className="photo-state dirty">{t('photo.calibration.edited')}</span>}
           <button type="button" onClick={() => void loadPhoto()}>
-            {source ? 'Fotoğraf seç / yeniden yükle' : 'Fotoğraf yükle'}
+            {source ? t('photo.calibration.selectReload') : t('photo.calibration.load')}
           </button>
         </div>
       </div>
 
-      <p className="photo-calibration-note">
-        Fotoğraf, deney kaydından ayrı ve SHA-256 anahtarlı yerel varlık olarak tutulur.
-        Taşınabilir deney JSON’u oluşturulurken mevcut kaynak görüntü de pakete eklenir;
-        provenans, kamera parametreleri ve işaretler ayrıca doğrulanır.
-      </p>
+      <p className="photo-calibration-note">{t('photo.calibration.assetNote')}</p>
 
       {source && (
         <div className="photo-source-strip">
           <span>{source.imageWidthPx}×{source.imageHeightPx} px</span>
-          <span>{formatBytes(source.fileSizeBytes)}</span>
+          <span>{formatBytes(locale, source.fileSizeBytes)}</span>
           <span>{source.mimeType}</span>
           <code title={source.sha256}>SHA-256 {source.sha256.slice(0, 12)}…</code>
         </div>
@@ -292,51 +290,51 @@ export function PhotoCalibrationControl({
         <>
           <div className="photo-camera-grid">
             <label>
-              <span>Kalibrasyon yöntemi</span>
+              <span>{t('photo.calibration.method')}</span>
               <select
                 value={draft.calibrationSource}
                 onChange={(event) => updateDraft('calibrationSource', event.currentTarget.value as CalibrationSource)}
               >
-                <option value="field-of-view">Yatay / düşey görüş açısı</option>
-                <option value="sensor-focal">Sensör + odak uzaklığı</option>
+                <option value="field-of-view">{t('photo.calibration.method.fov')}</option>
+                <option value="sensor-focal">{t('photo.calibration.method.sensorFocal')}</option>
               </select>
             </label>
             <label>
-              <span>U1–U2 referans anlamı</span>
+              <span>{t('photo.calibration.referenceKind')}</span>
               <select
                 value={draft.referenceKind}
                 onChange={(event) => updateDraft('referenceKind', event.currentTarget.value as PhotoReferenceKind)}
               >
-                <option value="visual-reference">Görsel referans · yalnız açısal yükseklik</option>
-                <option value="local-horizontal">Fiziksel yerel yatay · taban/tepe de karşılaştır</option>
+                <option value="visual-reference">{t('photo.calibration.reference.visual')}</option>
+                <option value="local-horizontal">{t('photo.calibration.reference.horizontal')}</option>
               </select>
             </label>
 
             {draft.calibrationSource === 'field-of-view' ? (
               <>
-                <label><span>Yatay FOV</span><div><input inputMode="decimal" value={draft.horizontalFovDeg} onChange={(event) => updateDraft('horizontalFovDeg', event.currentTarget.value)} /><em>°</em></div></label>
-                <label><span>Düşey FOV</span><div><input inputMode="decimal" value={draft.verticalFovDeg} onChange={(event) => updateDraft('verticalFovDeg', event.currentTarget.value)} /><em>°</em></div></label>
+                <label><span>{t('photo.calibration.horizontalFov')}</span><div><input inputMode="decimal" value={draft.horizontalFovDeg} onChange={(event) => updateDraft('horizontalFovDeg', event.currentTarget.value)} /><em>°</em></div></label>
+                <label><span>{t('photo.calibration.verticalFov')}</span><div><input inputMode="decimal" value={draft.verticalFovDeg} onChange={(event) => updateDraft('verticalFovDeg', event.currentTarget.value)} /><em>°</em></div></label>
               </>
             ) : (
               <>
-                <label><span>Odak uzaklığı</span><div><input inputMode="decimal" value={draft.focalLengthMm} onChange={(event) => updateDraft('focalLengthMm', event.currentTarget.value)} /><em>mm</em></div></label>
-                <label><span>Sensör genişliği</span><div><input inputMode="decimal" value={draft.sensorWidthMm} onChange={(event) => updateDraft('sensorWidthMm', event.currentTarget.value)} /><em>mm</em></div></label>
-                <label><span>Sensör yüksekliği</span><div><input inputMode="decimal" value={draft.sensorHeightMm} onChange={(event) => updateDraft('sensorHeightMm', event.currentTarget.value)} /><em>mm</em></div></label>
+                <label><span>{t('photo.calibration.focalLength')}</span><div><input inputMode="decimal" value={draft.focalLengthMm} onChange={(event) => updateDraft('focalLengthMm', event.currentTarget.value)} /><em>mm</em></div></label>
+                <label><span>{t('photo.calibration.sensorWidth')}</span><div><input inputMode="decimal" value={draft.sensorWidthMm} onChange={(event) => updateDraft('sensorWidthMm', event.currentTarget.value)} /><em>mm</em></div></label>
+                <label><span>{t('photo.calibration.sensorHeight')}</span><div><input inputMode="decimal" value={draft.sensorHeightMm} onChange={(event) => updateDraft('sensorHeightMm', event.currentTarget.value)} /><em>mm</em></div></label>
               </>
             )}
 
-            <label><span>Asal nokta X (opsiyonel)</span><div><input inputMode="decimal" placeholder="görüntü merkezi" value={draft.principalPointXPx} onChange={(event) => updateDraft('principalPointXPx', event.currentTarget.value)} /><em>px</em></div></label>
-            <label><span>Asal nokta Y (opsiyonel)</span><div><input inputMode="decimal" placeholder="görüntü merkezi" value={draft.principalPointYPx} onChange={(event) => updateDraft('principalPointYPx', event.currentTarget.value)} /><em>px</em></div></label>
-            <label><span>İşaret belirsizliği</span><div><input inputMode="decimal" value={draft.defaultMarkUncertaintyPx} onChange={(event) => updateDraft('defaultMarkUncertaintyPx', event.currentTarget.value)} /><em>px</em></div></label>
-            <label className="photo-checkbox"><input type="checkbox" checked={draft.distortionCorrected} onChange={(event) => updateDraft('distortionCorrected', event.currentTarget.checked)} /><span>Lens distorsiyonu önceden düzeltildi</span></label>
-            <label className="photo-notes"><span>Not</span><input value={draft.notes} onChange={(event) => updateDraft('notes', event.currentTarget.value)} placeholder="Kamera, lens, çekim veya işaretleme notu" /></label>
+            <label><span>{t('photo.calibration.principalX')}</span><div><input inputMode="decimal" placeholder={t('photo.calibration.imageCenter')} value={draft.principalPointXPx} onChange={(event) => updateDraft('principalPointXPx', event.currentTarget.value)} /><em>px</em></div></label>
+            <label><span>{t('photo.calibration.principalY')}</span><div><input inputMode="decimal" placeholder={t('photo.calibration.imageCenter')} value={draft.principalPointYPx} onChange={(event) => updateDraft('principalPointYPx', event.currentTarget.value)} /><em>px</em></div></label>
+            <label><span>{t('photo.calibration.markUncertainty')}</span><div><input inputMode="decimal" value={draft.defaultMarkUncertaintyPx} onChange={(event) => updateDraft('defaultMarkUncertaintyPx', event.currentTarget.value)} /><em>px</em></div></label>
+            <label className="photo-checkbox"><input type="checkbox" checked={draft.distortionCorrected} onChange={(event) => updateDraft('distortionCorrected', event.currentTarget.checked)} /><span>{t('photo.calibration.distortionCorrected')}</span></label>
+            <label className="photo-notes"><span>{t('photo.calibration.notes')}</span><input value={draft.notes} onChange={(event) => updateDraft('notes', event.currentTarget.value)} placeholder={t('photo.calibration.notesPlaceholder')} /></label>
           </div>
 
           <div className="photo-camera-uncertainty">
             <div className="photo-camera-uncertainty-heading">
               <div>
-                <span className="eyebrow">Kamera iç-parametre belirsizliği</span>
-                <strong>Opsiyonel ± aralıklar</strong>
+                <span className="eyebrow">{t('photo.calibration.cameraUncertainty')}</span>
+                <strong>{t('photo.calibration.optionalRanges')}</strong>
               </div>
               <select
                 value={draft.cameraUncertaintyCombination}
@@ -345,47 +343,44 @@ export function PhotoCalibrationControl({
                   event.currentTarget.value as CameraCalibrationUncertainty['combination']
                 )}
               >
-                <option value="linear-conservative">Koruyucu doğrusal toplam</option>
-                <option value="rss-independent">RSS · bağımsız bileşenler</option>
+                <option value="linear-conservative">{t('photo.uncertainty.linear')}</option>
+                <option value="rss-independent">{t('photo.uncertainty.rss')}</option>
               </select>
             </div>
-            <p>
-              Boş alan “belirsizlik tanımlanmadı” demektir. Kamera için ölçmediğin ± değerleri doldurma;
-              uygulama varsayımsal hata payı üretmez.
-            </p>
+            <p>{t('photo.calibration.cameraUncertaintyNote')}</p>
             <div className="photo-camera-grid photo-camera-uncertainty-grid">
               {draft.calibrationSource === 'field-of-view' ? (
                 <>
-                  <label><span>Yatay FOV ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.horizontalFovUncertaintyDeg} onChange={(event) => updateDraft('horizontalFovUncertaintyDeg', event.currentTarget.value)} /><em>°</em></div></label>
-                  <label><span>Düşey FOV ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.verticalFovUncertaintyDeg} onChange={(event) => updateDraft('verticalFovUncertaintyDeg', event.currentTarget.value)} /><em>°</em></div></label>
+                  <label><span>{t('photo.calibration.horizontalFovUncertainty')}</span><div><input inputMode="decimal" placeholder={t('photo.calibration.undefined')} value={draft.horizontalFovUncertaintyDeg} onChange={(event) => updateDraft('horizontalFovUncertaintyDeg', event.currentTarget.value)} /><em>°</em></div></label>
+                  <label><span>{t('photo.calibration.verticalFovUncertainty')}</span><div><input inputMode="decimal" placeholder={t('photo.calibration.undefined')} value={draft.verticalFovUncertaintyDeg} onChange={(event) => updateDraft('verticalFovUncertaintyDeg', event.currentTarget.value)} /><em>°</em></div></label>
                 </>
               ) : (
                 <>
-                  <label><span>Odak uzaklığı ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.focalLengthUncertaintyMm} onChange={(event) => updateDraft('focalLengthUncertaintyMm', event.currentTarget.value)} /><em>mm</em></div></label>
-                  <label><span>Sensör genişliği ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.sensorWidthUncertaintyMm} onChange={(event) => updateDraft('sensorWidthUncertaintyMm', event.currentTarget.value)} /><em>mm</em></div></label>
-                  <label><span>Sensör yüksekliği ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.sensorHeightUncertaintyMm} onChange={(event) => updateDraft('sensorHeightUncertaintyMm', event.currentTarget.value)} /><em>mm</em></div></label>
+                  <label><span>{t('photo.calibration.focalLengthUncertainty')}</span><div><input inputMode="decimal" placeholder={t('photo.calibration.undefined')} value={draft.focalLengthUncertaintyMm} onChange={(event) => updateDraft('focalLengthUncertaintyMm', event.currentTarget.value)} /><em>mm</em></div></label>
+                  <label><span>{t('photo.calibration.sensorWidthUncertainty')}</span><div><input inputMode="decimal" placeholder={t('photo.calibration.undefined')} value={draft.sensorWidthUncertaintyMm} onChange={(event) => updateDraft('sensorWidthUncertaintyMm', event.currentTarget.value)} /><em>mm</em></div></label>
+                  <label><span>{t('photo.calibration.sensorHeightUncertainty')}</span><div><input inputMode="decimal" placeholder={t('photo.calibration.undefined')} value={draft.sensorHeightUncertaintyMm} onChange={(event) => updateDraft('sensorHeightUncertaintyMm', event.currentTarget.value)} /><em>mm</em></div></label>
                 </>
               )}
-              <label><span>Asal nokta X ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.principalPointXUncertaintyPx} onChange={(event) => updateDraft('principalPointXUncertaintyPx', event.currentTarget.value)} /><em>px</em></div></label>
-              <label><span>Asal nokta Y ±</span><div><input inputMode="decimal" placeholder="tanımsız" value={draft.principalPointYUncertaintyPx} onChange={(event) => updateDraft('principalPointYUncertaintyPx', event.currentTarget.value)} /><em>px</em></div></label>
+              <label><span>{t('photo.calibration.principalXUncertainty')}</span><div><input inputMode="decimal" placeholder={t('photo.calibration.undefined')} value={draft.principalPointXUncertaintyPx} onChange={(event) => updateDraft('principalPointXUncertaintyPx', event.currentTarget.value)} /><em>px</em></div></label>
+              <label><span>{t('photo.calibration.principalYUncertainty')}</span><div><input inputMode="decimal" placeholder={t('photo.calibration.undefined')} value={draft.principalPointYUncertaintyPx} onChange={(event) => updateDraft('principalPointYUncertaintyPx', event.currentTarget.value)} /><em>px</em></div></label>
             </div>
             {draft.cameraUncertaintyCombination === 'rss-independent' && (
-              <p className="photo-warning">RSS seçimi kamera belirsizlik bileşenlerinin bağımsız olduğu varsayımını gerektirir.</p>
+              <p className="photo-warning">{t('photo.calibration.rssWarning')}</p>
             )}
           </div>
 
           {(candidate.error || (savedCalibration && isDirty)) && (
             <p className="photo-warning">
-              {candidate.error || 'Kalibrasyon girdileri değişti; kaydedilmiş hesap artık güncel değil.'}
+              {candidate.error || t('photo.calibration.dirtyWarning')}
             </p>
           )}
 
           {(candidate.record || savedPrediction) && (
             <div className="photo-result-grid">
-              <div><span>Referans roll</span><strong>{metrics.horizonRollDeg?.value === undefined ? '—' : formatAngle(metrics.horizonRollDeg.value ?? 0, metrics.horizonRollDeg.uncertainty)}</strong></div>
-              <div><span>Hedef tabanı</span><strong>{metrics.targetBaseRelativeElevationDeg?.value === undefined ? '—' : formatAngle(metrics.targetBaseRelativeElevationDeg.value ?? 0, metrics.targetBaseRelativeElevationDeg.uncertainty)}</strong></div>
-              <div><span>Hedef tepesi</span><strong>{metrics.targetTopRelativeElevationDeg?.value === undefined ? '—' : formatAngle(metrics.targetTopRelativeElevationDeg.value ?? 0, metrics.targetTopRelativeElevationDeg.uncertainty)}</strong></div>
-              <div><span>Açısal yükseklik</span><strong>{metrics.targetAngularHeightDeg?.value === undefined ? '—' : formatAngle(metrics.targetAngularHeightDeg.value ?? 0, metrics.targetAngularHeightDeg.uncertainty)}</strong></div>
+              <div><span>{t('photo.calibration.result.roll')}</span><strong>{metrics.horizonRollDeg?.value === undefined ? '—' : formatAngle(locale, metrics.horizonRollDeg.value ?? 0, metrics.horizonRollDeg.uncertainty)}</strong></div>
+              <div><span>{t('photo.calibration.result.base')}</span><strong>{metrics.targetBaseRelativeElevationDeg?.value === undefined ? '—' : formatAngle(locale, metrics.targetBaseRelativeElevationDeg.value ?? 0, metrics.targetBaseRelativeElevationDeg.uncertainty)}</strong></div>
+              <div><span>{t('photo.calibration.result.top')}</span><strong>{metrics.targetTopRelativeElevationDeg?.value === undefined ? '—' : formatAngle(locale, metrics.targetTopRelativeElevationDeg.value ?? 0, metrics.targetTopRelativeElevationDeg.uncertainty)}</strong></div>
+              <div><span>{t('photo.calibration.result.angularHeight')}</span><strong>{metrics.targetAngularHeightDeg?.value === undefined ? '—' : formatAngle(locale, metrics.targetAngularHeightDeg.value ?? 0, metrics.targetAngularHeightDeg.uncertainty)}</strong></div>
             </div>
           )}
 
@@ -400,7 +395,7 @@ export function PhotoCalibrationControl({
               type="button"
               onClick={saveCalibration}
             >
-              Kalibrasyon kaydını oluştur / güncelle
+              {t('photo.calibration.save')}
             </button>
             {savedCalibration && (
               <button
@@ -410,10 +405,10 @@ export function PhotoCalibrationControl({
                   onClear();
                   setDraft((current) => ({ ...current }));
                   setIsDirty(true);
-                  setMessage('Kayıtlı kalibrasyon kaldırıldı; fotoğraf oturumda açık kalır.');
+                  setMessage(t('photo.calibration.removed'));
                 }}
               >
-                Kayıtlı kalibrasyonu kaldır
+                {t('photo.calibration.remove')}
               </button>
             )}
           </div>

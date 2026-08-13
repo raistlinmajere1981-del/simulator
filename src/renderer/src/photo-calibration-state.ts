@@ -7,6 +7,12 @@ import type {
   SavedPhotoCalibration
 } from '../../shared/photo-calibration';
 import { createPhotoCalibrationRecord } from '../../simulation/photo-calibration';
+import {
+  appLocaleTag,
+  translate,
+  type AppLocale,
+  type TranslationKey
+} from './i18n';
 
 export type MarkKey = keyof PhotoCalibrationMarks;
 export type CalibrationSource = 'field-of-view' | 'sensor-focal';
@@ -43,19 +49,27 @@ export const markOrder: MarkKey[] = [
   'targetTop'
 ];
 
-export const markLabels: Record<MarkKey, string> = {
-  horizonStart: 'Ufuk / referans sol',
-  horizonEnd: 'Ufuk / referans sağ',
-  targetBase: 'Hedef tabanı',
-  targetTop: 'Hedef tepesi'
+const markLabelKeys: Record<MarkKey, TranslationKey> = {
+  horizonStart: 'photo.marker.label.horizonStart',
+  horizonEnd: 'photo.marker.label.horizonEnd',
+  targetBase: 'photo.marker.label.targetBase',
+  targetTop: 'photo.marker.label.targetTop'
 };
 
-export const markShortLabels: Record<MarkKey, string> = {
-  horizonStart: 'U1',
-  horizonEnd: 'U2',
-  targetBase: 'TABAN',
-  targetTop: 'TEPE'
+const markShortLabelKeys: Record<MarkKey, TranslationKey> = {
+  horizonStart: 'photo.marker.short.horizonStart',
+  horizonEnd: 'photo.marker.short.horizonEnd',
+  targetBase: 'photo.marker.short.targetBase',
+  targetTop: 'photo.marker.short.targetTop'
 };
+
+export function markLabel(locale: AppLocale, key: MarkKey): string {
+  return translate(locale, markLabelKeys[key]);
+}
+
+export function markShortLabel(locale: AppLocale, key: MarkKey): string {
+  return translate(locale, markShortLabelKeys[key]);
+}
 
 export function emptyDraft(): DraftState {
   return {
@@ -110,13 +124,27 @@ export function draftFromSaved(saved: SavedPhotoCalibration | undefined): DraftS
       : String(saved.principalPointYPx),
     defaultMarkUncertaintyPx: String(saved.defaultMarkUncertaintyPx),
     cameraUncertaintyCombination: saved.cameraUncertainty?.combination ?? 'linear-conservative',
-    horizontalFovUncertaintyDeg: saved.cameraUncertainty?.horizontalFovDeg === undefined ? '' : String(saved.cameraUncertainty.horizontalFovDeg),
-    verticalFovUncertaintyDeg: saved.cameraUncertainty?.verticalFovDeg === undefined ? '' : String(saved.cameraUncertainty.verticalFovDeg),
-    focalLengthUncertaintyMm: saved.cameraUncertainty?.focalLengthMm === undefined ? '' : String(saved.cameraUncertainty.focalLengthMm),
-    sensorWidthUncertaintyMm: saved.cameraUncertainty?.sensorWidthMm === undefined ? '' : String(saved.cameraUncertainty.sensorWidthMm),
-    sensorHeightUncertaintyMm: saved.cameraUncertainty?.sensorHeightMm === undefined ? '' : String(saved.cameraUncertainty.sensorHeightMm),
-    principalPointXUncertaintyPx: saved.cameraUncertainty?.principalPointXPx === undefined ? '' : String(saved.cameraUncertainty.principalPointXPx),
-    principalPointYUncertaintyPx: saved.cameraUncertainty?.principalPointYPx === undefined ? '' : String(saved.cameraUncertainty.principalPointYPx),
+    horizontalFovUncertaintyDeg: saved.cameraUncertainty?.horizontalFovDeg === undefined
+      ? ''
+      : String(saved.cameraUncertainty.horizontalFovDeg),
+    verticalFovUncertaintyDeg: saved.cameraUncertainty?.verticalFovDeg === undefined
+      ? ''
+      : String(saved.cameraUncertainty.verticalFovDeg),
+    focalLengthUncertaintyMm: saved.cameraUncertainty?.focalLengthMm === undefined
+      ? ''
+      : String(saved.cameraUncertainty.focalLengthMm),
+    sensorWidthUncertaintyMm: saved.cameraUncertainty?.sensorWidthMm === undefined
+      ? ''
+      : String(saved.cameraUncertainty.sensorWidthMm),
+    sensorHeightUncertaintyMm: saved.cameraUncertainty?.sensorHeightMm === undefined
+      ? ''
+      : String(saved.cameraUncertainty.sensorHeightMm),
+    principalPointXUncertaintyPx: saved.cameraUncertainty?.principalPointXPx === undefined
+      ? ''
+      : String(saved.cameraUncertainty.principalPointXPx),
+    principalPointYUncertaintyPx: saved.cameraUncertainty?.principalPointYPx === undefined
+      ? ''
+      : String(saved.cameraUncertainty.principalPointYPx),
     distortionCorrected: saved.distortionCorrected,
     referenceKind: saved.referenceKind ?? 'visual-reference',
     marks: {
@@ -146,35 +174,74 @@ export function finiteDraftNumber(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function uncertaintyDraftNumber(value: string, label: string): number | undefined {
+function uncertaintyDraftNumber(
+  locale: AppLocale,
+  value: string,
+  labelKey: TranslationKey
+): number | undefined {
   if (value.trim() === '') return undefined;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new RangeError(`${label} belirsizliği negatif olmayan sayısal bir değer olmalı.`);
+    throw new RangeError(translate(locale, 'photo.calibration.error.uncertainty', {
+      label: translate(locale, labelKey)
+    }));
   }
   return parsed;
 }
 
-export function cameraUncertaintyFromDraft(draft: DraftState): CameraCalibrationUncertainty | undefined {
+export function cameraUncertaintyFromDraft(
+  draft: DraftState,
+  locale: AppLocale = 'tr'
+): CameraCalibrationUncertainty | undefined {
   const common = {
-    principalPointXPx: uncertaintyDraftNumber(draft.principalPointXUncertaintyPx, 'Asal nokta X'),
-    principalPointYPx: uncertaintyDraftNumber(draft.principalPointYUncertaintyPx, 'Asal nokta Y')
+    principalPointXPx: uncertaintyDraftNumber(
+      locale,
+      draft.principalPointXUncertaintyPx,
+      'photo.calibration.principalX'
+    ),
+    principalPointYPx: uncertaintyDraftNumber(
+      locale,
+      draft.principalPointYUncertaintyPx,
+      'photo.calibration.principalY'
+    )
   };
   const sourceSpecific = draft.calibrationSource === 'field-of-view'
     ? {
-        horizontalFovDeg: uncertaintyDraftNumber(draft.horizontalFovUncertaintyDeg, 'Yatay FOV'),
-        verticalFovDeg: uncertaintyDraftNumber(draft.verticalFovUncertaintyDeg, 'Düşey FOV')
+        horizontalFovDeg: uncertaintyDraftNumber(
+          locale,
+          draft.horizontalFovUncertaintyDeg,
+          'photo.calibration.horizontalFov'
+        ),
+        verticalFovDeg: uncertaintyDraftNumber(
+          locale,
+          draft.verticalFovUncertaintyDeg,
+          'photo.calibration.verticalFov'
+        )
       }
     : {
-        focalLengthMm: uncertaintyDraftNumber(draft.focalLengthUncertaintyMm, 'Odak uzaklığı'),
-        sensorWidthMm: uncertaintyDraftNumber(draft.sensorWidthUncertaintyMm, 'Sensör genişliği'),
-        sensorHeightMm: uncertaintyDraftNumber(draft.sensorHeightUncertaintyMm, 'Sensör yüksekliği')
+        focalLengthMm: uncertaintyDraftNumber(
+          locale,
+          draft.focalLengthUncertaintyMm,
+          'photo.calibration.focalLength'
+        ),
+        sensorWidthMm: uncertaintyDraftNumber(
+          locale,
+          draft.sensorWidthUncertaintyMm,
+          'photo.calibration.sensorWidth'
+        ),
+        sensorHeightMm: uncertaintyDraftNumber(
+          locale,
+          draft.sensorHeightUncertaintyMm,
+          'photo.calibration.sensorHeight'
+        )
       };
   const values = [...Object.values(common), ...Object.values(sourceSpecific)];
   if (values.every((value) => value === undefined)) return undefined;
   return {
     combination: draft.cameraUncertaintyCombination,
-    ...Object.fromEntries(Object.entries({ ...common, ...sourceSpecific }).filter(([, value]) => value !== undefined))
+    ...Object.fromEntries(
+      Object.entries({ ...common, ...sourceSpecific }).filter(([, value]) => value !== undefined)
+    )
   } as CameraCalibrationUncertainty;
 }
 
@@ -190,38 +257,63 @@ export function sourceMetadata(photo: ImportedObservationPhoto): PhotoSourceMeta
   };
 }
 
-export function formatBytes(value: number): string {
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`;
-  return `${(value / (1024 * 1024)).toFixed(2)} MiB`;
+export function formatBytes(locale: AppLocale, value: number): string {
+  const format = (candidate: number, maximumFractionDigits: number): string =>
+    new Intl.NumberFormat(appLocaleTag(locale), {
+      minimumFractionDigits: maximumFractionDigits,
+      maximumFractionDigits
+    }).format(candidate);
+  if (value < 1024) {
+    return `${new Intl.NumberFormat(appLocaleTag(locale)).format(value)} B`;
+  }
+  if (value < 1024 * 1024) return `${format(value / 1024, 1)} KiB`;
+  return `${format(value / (1024 * 1024), 2)} MiB`;
 }
 
-export function formatAngle(value: number, uncertainty?: number): string {
+export function formatAngle(
+  locale: AppLocale,
+  value: number,
+  uncertainty?: number
+): string {
+  const formatter = new Intl.NumberFormat(appLocaleTag(locale), {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4
+  });
   return uncertainty === undefined
-    ? `${value.toFixed(4)}°`
-    : `${value.toFixed(4)}° ±${uncertainty.toFixed(4)}°`;
+    ? `${formatter.format(value)}°`
+    : `${formatter.format(value)}° ±${formatter.format(uncertainty)}°`;
 }
 
-export function markSummary(mark: PhotoCalibrationMarks[MarkKey]): string {
-  return `${mark.xPx.toFixed(1)}, ${mark.yPx.toFixed(1)} px`;
+export function markSummary(
+  locale: AppLocale,
+  mark: PhotoCalibrationMarks[MarkKey]
+): string {
+  const formatter = new Intl.NumberFormat(appLocaleTag(locale), {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  });
+  return `${formatter.format(mark.xPx)}, ${formatter.format(mark.yPx)} px`;
 }
 
 export function buildPhotoCalibrationCandidate(
   draft: DraftState,
   experimentId: string,
-  touchedMarks: ReadonlySet<MarkKey>
+  touchedMarks: ReadonlySet<MarkKey>,
+  locale: AppLocale = 'tr'
 ) {
   if (!draft.source || !draft.marks || touchedMarks.size < markOrder.length) {
     return { record: undefined, error: '' };
   }
   const defaultMarkUncertaintyPx = finiteDraftNumber(draft.defaultMarkUncertaintyPx);
   if (defaultMarkUncertaintyPx === undefined) {
-    return { record: undefined, error: 'İşaret belirsizliği sayısal olmalı.' };
+    return {
+      record: undefined,
+      error: translate(locale, 'photo.calibration.error.markUncertainty')
+    };
   }
 
   const principalPointXPx = finiteDraftNumber(draft.principalPointXPx);
   const principalPointYPx = finiteDraftNumber(draft.principalPointYPx);
-  const cameraUncertainty = cameraUncertaintyFromDraft(draft);
   const calibration = draft.calibrationSource === 'field-of-view'
     ? {
         sourceKind: 'field-of-view' as const,
@@ -240,13 +332,13 @@ export function buildPhotoCalibrationCandidate(
     return {
       record: undefined,
       error: draft.calibrationSource === 'field-of-view'
-        ? 'Yatay ve düşey görüş açısını gir.'
-        : 'Odak uzaklığı ile sensör genişlik/yüksekliğini gir.'
+        ? translate(locale, 'photo.calibration.error.fovRequired')
+        : translate(locale, 'photo.calibration.error.sensorRequired')
     };
   }
 
   try {
-    const cameraUncertainty = cameraUncertaintyFromDraft(draft);
+    const cameraUncertainty = cameraUncertaintyFromDraft(draft, locale);
     const record = createPhotoCalibrationRecord({
       experimentId,
       imageSourceLabel: draft.source.fileName,
@@ -266,7 +358,9 @@ export function buildPhotoCalibrationCandidate(
   } catch (caught) {
     return {
       record: undefined,
-      error: caught instanceof Error ? caught.message : 'Kalibrasyon hesaplanamadı.'
+      error: caught instanceof Error
+        ? caught.message
+        : translate(locale, 'photo.calibration.error.calculationFallback')
     };
   }
 }

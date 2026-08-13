@@ -1,19 +1,26 @@
 import type { ResultStatus } from '../../shared/domain';
 import type { PhotoReferenceKind } from '../../shared/photo-calibration';
-import type { PhotoAngularComparisonResult } from '../../simulation/photo-angular-comparison';
+import type {
+  PhotoAngularChannelResult,
+  PhotoAngularComparisonResult
+} from '../../simulation/photo-angular-comparison';
+import { useI18n } from './I18nProvider';
+import { appLocaleTag, type TranslationKey } from './i18n';
 import './photo-angular-comparison.css';
 import { PanelHelpButton } from './HelpSystem';
 
-const statusLabels: Record<ResultStatus, string> = {
-  compatible: 'Uyumlu',
-  incompatible: 'Uyumsuz',
-  indeterminate: 'Karar verilemedi',
-  unsupported: 'Desteklenmiyor'
+const statusKeys: Record<ResultStatus, TranslationKey> = {
+  compatible: 'photo.comparison.status.compatible',
+  incompatible: 'photo.comparison.status.incompatible',
+  indeterminate: 'photo.comparison.status.indeterminate',
+  unsupported: 'photo.comparison.status.unsupported'
 };
 
-function formatAngle(value: number): string {
-  return `${value.toLocaleString('tr-TR', { maximumFractionDigits: 4 })}°`;
-}
+const channelKeys: Record<PhotoAngularChannelResult['key'], TranslationKey> = {
+  targetAngularHeight: 'photo.comparison.channel.targetAngularHeight',
+  targetBase: 'photo.comparison.channel.targetBase',
+  targetTop: 'photo.comparison.channel.targetTop'
+};
 
 export function PhotoAngularComparisonPanel({
   comparisons,
@@ -22,7 +29,13 @@ export function PhotoAngularComparisonPanel({
   comparisons: PhotoAngularComparisonResult[];
   referenceKind: PhotoReferenceKind;
 }): React.JSX.Element | null {
+  const { locale, t } = useI18n();
   if (comparisons.length === 0) return null;
+
+  const angleFormatter = new Intl.NumberFormat(appLocaleTag(locale), {
+    maximumFractionDigits: 4
+  });
+  const formatAngle = (value: number): string => `${angleFormatter.format(value)}°`;
 
   const hasModelUncertainty = comparisons.some((comparison) =>
     comparison.channels.some((channel) => channel.modelUncertaintyDeg !== undefined)
@@ -32,35 +45,37 @@ export function PhotoAngularComparisonPanel({
     <section className="photo-angular-comparison panel">
       <div className="photo-angular-comparison-heading">
         <div>
-          <span className="eyebrow">Fotoğraf açısal gözlem karşılaştırması</span>
+          <span className="eyebrow">{t('photo.comparison.eyebrow')}</span>
           <strong>
             {referenceKind === 'local-horizontal'
-              ? 'U1–U2: fiziksel yerel yatay'
-              : 'U1–U2: görsel referans'}
+              ? t('photo.comparison.reference.horizontal')
+              : t('photo.comparison.reference.visual')}
           </strong>
         </div>
-        <div className="photo-angular-heading-actions"><PanelHelpButton panelId="photo-comparison" /><span className="photo-angular-independent">BAĞIMSIZ GÖZLEM KANALI</span></div>
+        <div className="photo-angular-heading-actions">
+          <PanelHelpButton panelId="photo-comparison" />
+          <span className="photo-angular-independent">{t('photo.comparison.independent')}</span>
+        </div>
       </div>
 
       <p className="photo-angular-note">
-        Fotoğraf kalibrasyonu model hesabına girdi olmaz. Model açıları önce hesaplanır,
-        ardından bağımsız fotoğraf gözlemiyle karşılaştırılır.
+        {t('photo.comparison.note')}
         {referenceKind === 'visual-reference'
-          ? ' Referans çizgisi yerel yatay sayılmadığı için yalnız referans ofsetinden bağımsız açısal yükseklik karşılaştırılabilir.'
-          : ' Yerel yatay açıkça beyan edildiği için görünür taban/tepe açıları da karşılaştırılabilir.'}
+          ? t('photo.comparison.note.visual')
+          : t('photo.comparison.note.horizontal')}
       </p>
 
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Model / gösterim</th>
-              <th>Açı kanalı</th>
-              <th>Fotoğraf</th>
-              <th>Model</th>
-              <th>Birleşik ±</th>
-              <th>Mutlak fark</th>
-              <th>Sonuç</th>
+              <th>{t('photo.comparison.header.model')}</th>
+              <th>{t('photo.comparison.header.channel')}</th>
+              <th>{t('photo.comparison.header.photo')}</th>
+              <th>{t('photo.comparison.header.prediction')}</th>
+              <th>{t('photo.comparison.header.combined')}</th>
+              <th>{t('photo.comparison.header.difference')}</th>
+              <th>{t('photo.comparison.header.result')}</th>
             </tr>
           </thead>
           <tbody>
@@ -69,10 +84,14 @@ export function PhotoAngularComparisonPanel({
                 return [
                   <tr key={`${comparison.sourceModelId}:none`}>
                     <td>{comparison.sourceModelName}</td>
-                    <td colSpan={5}>{comparison.prediction.warnings[0] ?? 'Karşılaştırılabilir açı kanalı yok.'}</td>
+                    <td colSpan={5}>
+                      {comparison.prediction.warnings[0] ?? t('photo.comparison.noChannel')}
+                    </td>
                     <td>
-                      <span className={`photo-compare-status status-${comparison.prediction.status}`}>
-                        {statusLabels[comparison.prediction.status]}
+                      <span
+                        className={`photo-compare-status status-${comparison.prediction.status}`}
+                      >
+                        {t(statusKeys[comparison.prediction.status])}
                       </span>
                     </td>
                   </tr>
@@ -82,8 +101,10 @@ export function PhotoAngularComparisonPanel({
               return comparison.channels.map((channel, index) => (
                 <tr key={`${comparison.sourceModelId}:${channel.key}`}>
                   <td>{index === 0 ? comparison.sourceModelName : ''}</td>
-                  <td>{channel.label}</td>
-                  <td>{formatAngle(channel.observedDeg)} ±{formatAngle(channel.photoUncertaintyDeg)}</td>
+                  <td>{t(channelKeys[channel.key])}</td>
+                  <td>
+                    {formatAngle(channel.observedDeg)} ±{formatAngle(channel.photoUncertaintyDeg)}
+                  </td>
                   <td>
                     {formatAngle(channel.predictedDeg)}
                     {channel.modelUncertaintyDeg === undefined
@@ -94,7 +115,7 @@ export function PhotoAngularComparisonPanel({
                   <td>{formatAngle(channel.differenceDeg)}</td>
                   <td>
                     <span className={`photo-compare-status status-${channel.status}`}>
-                      {channel.status === 'compatible' ? 'Uyumlu' : 'Uyumsuz'}
+                      {t(statusKeys[channel.status])}
                     </span>
                   </td>
                 </tr>
@@ -105,11 +126,10 @@ export function PhotoAngularComparisonPanel({
       </div>
 
       <p className="photo-angular-footnote">
-        Uyum ölçütü |model − fotoğraf| ≤ birleşik belirsizliktir. Fotoğraf tarafı piksel işaret
-        zarfını ve tanımlanmışsa kamera iç-parametre belirsizliğini içerir.
+        {t('photo.comparison.footnote')}
         {hasModelUncertainty
-          ? ' Model tarafında kullanıcı tarafından açıkça tanımlanan girdi belirsizlikleri de hassasiyet hesabıyla zarfa katılmıştır.'
-          : ' Model girdi belirsizliği tanımlanmadıysa model tarafına varsayımsal ± değer eklenmez.'}
+          ? t('photo.comparison.footnote.withModel')
+          : t('photo.comparison.footnote.withoutModel')}
       </p>
     </section>
   );
