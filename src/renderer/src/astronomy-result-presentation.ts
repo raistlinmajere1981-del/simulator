@@ -1,5 +1,7 @@
 import type { LunarPhaseName } from '../../simulation/lunar-position';
 import type { SolarEclipseInstantGeometryClass } from '../../simulation/solar-eclipse-overlap';
+import type { SolarThresholdState } from '../../simulation/solar-day-events';
+import type { SolarSeasonEventKind } from '../../simulation/solar-season-events';
 import { translate, type AppLocale, type TranslationKey } from './i18n';
 
 const lunarPhaseKeys: Record<LunarPhaseName, TranslationKey> = {
@@ -43,4 +45,51 @@ export function getEclipseGeometryFullLabel(
   geometryClass: SolarEclipseInstantGeometryClass
 ): string {
   return translate(locale, eclipseGeometryFullKeys[geometryClass]);
+}
+
+const solarThresholdStateKeys: Record<SolarThresholdState, TranslationKey> = {
+  normal: 'solar.day.state.normal',
+  'continuous-above': 'solar.day.state.continuousAbove',
+  'continuous-below': 'solar.day.state.continuousBelow',
+  grazing: 'solar.day.state.grazing'
+};
+
+const solarSeasonEventKeys: Record<SolarSeasonEventKind, TranslationKey> = {
+  'march-equinox': 'solar.season.event.marchEquinox',
+  'june-solstice': 'solar.season.event.juneSolstice',
+  'september-equinox': 'solar.season.event.septemberEquinox',
+  'december-solstice': 'solar.season.event.decemberSolstice'
+};
+
+const northernSeasonKeys: Record<SolarSeasonEventKind, TranslationKey> = {
+  'march-equinox': 'solar.season.springStart',
+  'june-solstice': 'solar.season.summerStart',
+  'september-equinox': 'solar.season.autumnStart',
+  'december-solstice': 'solar.season.winterStart'
+};
+
+const southernSeasonKeys: Record<SolarSeasonEventKind, TranslationKey> = {
+  'march-equinox': 'solar.season.autumnStart',
+  'june-solstice': 'solar.season.winterStart',
+  'september-equinox': 'solar.season.springStart',
+  'december-solstice': 'solar.season.summerStart'
+};
+
+export function getSolarThresholdStateLabel(locale: AppLocale, state: SolarThresholdState): string {
+  return translate(locale, solarThresholdStateKeys[state]);
+}
+
+export function getSolarSeasonEventLabel(locale: AppLocale, kind: SolarSeasonEventKind): string {
+  return translate(locale, solarSeasonEventKeys[kind]);
+}
+
+export function getSolarSeasonObserverLabel(
+  locale: AppLocale,
+  kind: SolarSeasonEventKind,
+  latitudeDeg: number
+): string {
+  const north = translate(locale, northernSeasonKeys[kind]);
+  const south = translate(locale, southernSeasonKeys[kind]);
+  if (Math.abs(latitudeDeg) < 1e-9) return `${north} / ${south}`;
+  return latitudeDeg > 0 ? north : south;
 }
