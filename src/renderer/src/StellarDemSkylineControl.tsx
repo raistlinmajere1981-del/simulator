@@ -77,7 +77,7 @@ export function StellarDemSkylineControl({
     setDiagnostics(undefined);
     setLastGeneratedSourceSha('');
     try {
-      const result = await window.simulatorDesktop.importStellarDemSkyline();
+      const result = await window.simulatorDesktop.importStellarDemSkyline(locale);
       if (result.status === 'cancelled' || !result.draft) {
         if (result.status === 'cancelled') setMessage(result.message);
         return;
@@ -105,7 +105,8 @@ export function StellarDemSkylineControl({
       });
       const result = await window.simulatorDesktop.generateStellarDemSkyline(
         draft.requestId,
-        generationSettings
+        generationSettings,
+        locale
       );
       setDiagnostics(result.diagnostics);
       setMessage(result.message);
@@ -220,8 +221,8 @@ export function StellarDemSkylineControl({
                   samplingMethod: event.currentTarget.value as StellarDemSkylineSamplingMethod
                 }))}
               >
-                <option value="bilinear">Bilinear</option>
-                <option value="nearest">Nearest</option>
+                <option value="bilinear">{t('terrain.editor.demSamplingBilinear')}</option>
+                <option value="nearest">{t('terrain.editor.demSamplingNearest')}</option>
               </select>
             </label>
           </div>

@@ -13,7 +13,7 @@ import type {
   ImportExperimentResult,
   SavedExperiment
 } from '../shared/simulator';
-import { normalizeUiLocale } from '../shared/ui-locale';
+import { ipcText, resolveIpcLocale } from './ipc-i18n';
 import {
   createPortableObservationPhotoAsset,
   persistPortableObservationPhotoAsset
@@ -30,9 +30,18 @@ export function registerExperimentIpcHandlers(): void {
 
   ipcMain.handle(
     'experiments:save',
-    async (_event, experiment: SavedExperiment): Promise<SavedExperiment> => {
+    async (
+      _event,
+      experiment: SavedExperiment,
+      requestedLocale?: unknown
+    ): Promise<SavedExperiment> => {
+      const locale = resolveIpcLocale(requestedLocale);
       if (!isSavedExperiment(experiment) || experiment.name.trim().length === 0) {
-        throw new TypeError('Geçerli bir deney kaydı gönderilmedi.');
+        throw new TypeError(ipcText(
+          locale,
+          'Geçerli bir deney kaydı gönderilmedi.',
+          'A valid experiment record was not provided.'
+        ));
       }
 
       const experiments = await readExperiments();
@@ -69,20 +78,25 @@ export function registerExperimentIpcHandlers(): void {
 
   ipcMain.handle(
     'experiments:export',
-    async (event, id: string): Promise<FileOperationResult> => {
+    async (
+      event,
+      id: string,
+      requestedLocale?: unknown
+    ): Promise<FileOperationResult> => {
+      const locale = resolveIpcLocale(requestedLocale);
       const experiment = await getExperimentOrThrow(id);
       const fileName = `${safeFileStem(experiment.name)}.ggl.json`;
       const selection = await showSaveDialog(event, {
-        title: 'Deneyi Dışa Aktar',
+        title: ipcText(locale, 'Deneyi Dışa Aktar', 'Export Experiment'),
         defaultPath: join(app.getPath('documents'), fileName),
         filters: [
-          { name: 'Geometrik Gözlem Deneyi', extensions: ['ggl.json'] },
+          { name: ipcText(locale, 'Geometrik Gözlem Deneyi', 'Geometric Observation Experiment'), extensions: ['ggl.json'] },
           { name: 'JSON', extensions: ['json'] }
         ]
       });
 
       if (selection.canceled || !selection.filePath) {
-        return { status: 'cancelled', message: 'Dışa aktarma iptal edildi.' };
+        return { status: 'cancelled', message: ipcText(locale, 'Dışa aktarma iptal edildi.', 'Export was cancelled.') };
       }
 
       const observationPhoto = experiment.photoCalibration
@@ -104,8 +118,12 @@ export function registerExperimentIpcHandlers(): void {
       return {
         status: 'success',
         message: missingPhotoAsset
-          ? `“${experiment.name}” dışa aktarıldı; kayıtlı kaynak fotoğraf bu makinede bulunamadığı için dosyada yalnız fotoğraf provenansı ve işaretler var.`
-          : `“${experiment.name}” taşınabilir deney dosyası olarak kaydedildi.`,
+          ? (locale === 'en'
+              ? `“${experiment.name}” was exported; the saved source photo was not found on this machine, so the file contains only photo provenance and marks.`
+              : `“${experiment.name}” dışa aktarıldı; kayıtlı kaynak fotoğraf bu makinede bulunamadığı için dosyada yalnız fotoğraf provenansı ve işaretler var.`)
+          : (locale === 'en'
+              ? `“${experiment.name}” was saved as a portable experiment file.`
+              : `“${experiment.name}” taşınabilir deney dosyası olarak kaydedildi.`),
         filePath: selection.filePath
       };
     }
@@ -113,18 +131,19 @@ export function registerExperimentIpcHandlers(): void {
 
   ipcMain.handle(
     'experiments:import',
-    async (event): Promise<ImportExperimentResult> => {
+    async (event, requestedLocale?: unknown): Promise<ImportExperimentResult> => {
+      const locale = resolveIpcLocale(requestedLocale);
       const selection = await showOpenDialog(event, {
-        title: 'Deney Dosyasını İçe Aktar',
+        title: ipcText(locale, 'Deney Dosyasını İçe Aktar', 'Import Experiment File'),
         properties: ['openFile'],
         filters: [
-          { name: 'Geometrik Gözlem Deneyi', extensions: ['json'] }
+          { name: ipcText(locale, 'Geometrik Gözlem Deneyi', 'Geometric Observation Experiment'), extensions: ['json'] }
         ]
       });
 
       const selectedPath = selection.filePaths[0];
       if (selection.canceled || !selectedPath) {
-        return { status: 'cancelled', message: 'İçe aktarma iptal edildi.' };
+        return { status: 'cancelled', message: ipcText(locale, 'İçe aktarma iptal edildi.', 'Import was cancelled.') };
       }
 
       const content = await fs.readFile(selectedPath, 'utf-8');
@@ -132,7 +151,7 @@ export function registerExperimentIpcHandlers(): void {
       try {
         json = JSON.parse(content);
       } catch {
-        throw new Error('Seçilen dosya geçerli JSON içermiyor.');
+        throw new Error(ipcText(locale, 'Seçilen dosya geçerli JSON içermiyor.', 'The selected file does not contain valid JSON.'));
       }
 
       const parsed = parsePortableExperimentFile(json);
@@ -162,8 +181,12 @@ export function registerExperimentIpcHandlers(): void {
       return {
         status: 'success',
         message: parsed.migrated
-          ? `“${imported.name}” eski dosya biçiminden taşınarak içe aktarıldı.`
-          : `“${imported.name}” içe aktarıldı.`,
+          ? (locale === 'en'
+              ? `“${imported.name}” was migrated from an older file format and imported.`
+              : `“${imported.name}” eski dosya biçiminden taşınarak içe aktarıldı.`)
+          : (locale === 'en'
+              ? `“${imported.name}” was imported.`
+              : `“${imported.name}” içe aktarıldı.`),
         filePath: selectedPath,
         experiment: imported,
         migrated: parsed.migrated,
@@ -175,7 +198,7 @@ export function registerExperimentIpcHandlers(): void {
   ipcMain.handle(
     'experiments:report',
     async (event, id: string, requestedLocale?: unknown): Promise<FileOperationResult> => {
-      const locale = normalizeUiLocale(requestedLocale);
+      const locale = resolveIpcLocale(requestedLocale);
       const experiment = await getExperimentOrThrow(id);
       const fileName = `${safeFileStem(experiment.name)}-${locale === 'en' ? 'report' : 'rapor'}.html`;
       const selection = await showSaveDialog(event, {

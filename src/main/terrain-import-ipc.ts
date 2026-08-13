@@ -15,11 +15,13 @@ import type {
   TerrainProfileImportContext,
   TerrainSourceIntegrity
 } from '../shared/simulator';
+import type { UiLocale } from '../shared/ui-locale';
 import {
   attachTerrainSourceIntegrity,
   calculateTerrainSourceIntegrity
 } from './terrain-source-integrity';
 import { showOpenDialog } from './ipc-dialogs';
+import { ipcText, resolveIpcLocale } from './ipc-i18n';
 
 const MAX_TERRAIN_PROFILE_BYTES = 5 * 1024 * 1024;
 const MAX_DEM_BYTES = 64 * 1024 * 1024;
@@ -34,9 +36,9 @@ interface PendingTerrainImport {
 
 const pendingTerrainImports = new Map<string, PendingTerrainImport>();
 
-function validateTerrainImportContext(value: unknown): TerrainProfileImportContext {
+function validateTerrainImportContext(value: unknown, locale: UiLocale): TerrainProfileImportContext {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new TypeError('Arazi profili için geçerli deney bilgisi gönderilmedi.');
+    throw new TypeError(ipcText(locale, 'Arazi profili için geçerli deney bilgisi gönderilmedi.', 'Valid experiment context was not provided for the terrain profile.'));
   }
 
   const candidate = value as Record<string, unknown>;
@@ -44,7 +46,7 @@ function validateTerrainImportContext(value: unknown): TerrainProfileImportConte
     (candidate.routeDistanceM as number) <= 0 ||
     !Number.isFinite(candidate.observerGroundElevationM) ||
     !Number.isFinite(candidate.targetGroundElevationM)) {
-    throw new TypeError('Arazi profili için mesafe ve uç yükseklikleri geçerli olmalı.');
+    throw new TypeError(ipcText(locale, 'Arazi profili için mesafe ve uç yükseklikleri geçerli olmalı.', 'Terrain-profile distance and endpoint elevations must be valid.'));
   }
 
   return {
@@ -54,9 +56,9 @@ function validateTerrainImportContext(value: unknown): TerrainProfileImportConte
   };
 }
 
-function validateDemImportContext(value: unknown): DemTerrainProfileImportContext {
+function validateDemImportContext(value: unknown, locale: UiLocale): DemTerrainProfileImportContext {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new TypeError('DEM profili için geçerli rota koordinatları gönderilmedi.');
+    throw new TypeError(ipcText(locale, 'DEM profili için geçerli rota koordinatları gönderilmedi.', 'Valid route coordinates were not provided for the DEM profile.'));
   }
   const candidate = value as Record<string, unknown>;
   const coordinates = [
@@ -79,7 +81,7 @@ function validateDemImportContext(value: unknown): DemTerrainProfileImportContex
       (!Number.isInteger(candidate.sampleCount) ||
         (candidate.sampleCount as number) < 3 ||
         (candidate.sampleCount as number) > 2_002))) {
-    throw new TypeError('DEM rota koordinatları, örnekleme yöntemi veya örnek sayısı geçersiz.');
+    throw new TypeError(ipcText(locale, 'DEM rota koordinatları, örnekleme yöntemi veya örnek sayısı geçersiz.', 'DEM route coordinates, sampling method or sample count are invalid.'));
   }
   return {
     observerLatitudeDeg: candidate.observerLatitudeDeg as number,
@@ -93,9 +95,9 @@ function validateDemImportContext(value: unknown): DemTerrainProfileImportContex
   };
 }
 
-function validateTerrainColumnMapping(value: unknown): TerrainProfileColumnMapping {
+function validateTerrainColumnMapping(value: unknown, locale: UiLocale): TerrainProfileColumnMapping {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new TypeError('CSV sütun eşlemesi geçersiz.');
+    throw new TypeError(ipcText(locale, 'CSV sütun eşlemesi geçersiz.', 'The CSV column mapping is invalid.'));
   }
   const candidate = value as Record<string, unknown>;
   if (!Number.isInteger(candidate.distanceColumnIndex) ||
@@ -104,7 +106,7 @@ function validateTerrainColumnMapping(value: unknown): TerrainProfileColumnMappi
     (candidate.elevationColumnIndex as number) < 0 ||
     (candidate.distanceUnit !== 'percent' && candidate.distanceUnit !== 'm' &&
       candidate.distanceUnit !== 'km')) {
-    throw new TypeError('CSV sütun eşlemesi geçersiz.');
+    throw new TypeError(ipcText(locale, 'CSV sütun eşlemesi geçersiz.', 'The CSV column mapping is invalid.'));
   }
   return {
     distanceColumnIndex: candidate.distanceColumnIndex as number,
@@ -127,6 +129,7 @@ function terrainMappingResult(
   content: string,
   fileName: string,
   integrity: TerrainSourceIntegrity,
+  locale: UiLocale,
   filePath?: string
 ): ImportTerrainProfileResult {
   purgeExpiredTerrainImports();
@@ -139,7 +142,7 @@ function terrainMappingResult(
   });
   return {
     status: 'success',
-    message: 'CSV sütunları otomatik belirlenemedi; eşleme gerekli.',
+    message: ipcText(locale, 'CSV sütunları otomatik belirlenemedi; eşleme gerekli.', 'CSV columns could not be detected automatically; mapping is required.'),
     filePath,
     mappingRequest: {
       requestId,
@@ -151,26 +154,31 @@ function terrainMappingResult(
 export function registerTerrainImportIpcHandlers(): void {
   ipcMain.handle(
     'terrain:import-csv',
-    async (event, rawContext: unknown): Promise<ImportTerrainProfileResult> => {
-      const context = validateTerrainImportContext(rawContext);
+    async (
+      event,
+      rawContext: unknown,
+      requestedLocale?: unknown
+    ): Promise<ImportTerrainProfileResult> => {
+      const locale = resolveIpcLocale(requestedLocale);
+      const context = validateTerrainImportContext(rawContext, locale);
       const selection = await showOpenDialog(event, {
-        title: 'CSV Arazi Profilini İçe Aktar',
+        title: ipcText(locale, 'CSV Arazi Profilini İçe Aktar', 'Import CSV Terrain Profile'),
         properties: ['openFile'],
         filters: [
-          { name: 'Arazi Profili CSV', extensions: ['csv', 'tsv', 'txt'] },
-          { name: 'Tüm Dosyalar', extensions: ['*'] }
+          { name: ipcText(locale, 'Arazi Profili CSV', 'Terrain Profile CSV'), extensions: ['csv', 'tsv', 'txt'] },
+          { name: ipcText(locale, 'Tüm Dosyalar', 'All Files'), extensions: ['*'] }
         ]
       });
 
       const selectedPath = selection.filePaths[0];
       if (selection.canceled || !selectedPath) {
-        return { status: 'cancelled', message: 'CSV profil içe aktarma iptal edildi.' };
+        return { status: 'cancelled', message: ipcText(locale, 'CSV profil içe aktarma iptal edildi.', 'CSV profile import was cancelled.') };
       }
 
       const statistics = await fs.stat(selectedPath);
-      if (!statistics.isFile()) throw new Error('Seçilen yol normal bir dosya değil.');
+      if (!statistics.isFile()) throw new Error(ipcText(locale, 'Seçilen yol normal bir dosya değil.', 'The selected path is not a regular file.'));
       if (statistics.size > MAX_TERRAIN_PROFILE_BYTES) {
-        throw new Error('CSV arazi profili 5 MB sınırını aşıyor.');
+        throw new Error(ipcText(locale, 'CSV arazi profili 5 MB sınırını aşıyor.', 'The CSV terrain profile exceeds the 5 MB limit.'));
       }
 
       const bytes = await fs.readFile(selectedPath);
@@ -183,7 +191,9 @@ export function registerTerrainImportIpcHandlers(): void {
         );
         return {
           status: 'success',
-          message: `“${profile.fileName}” okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
+          message: locale === 'en'
+            ? `“${profile.fileName}” loaded: ${profile.points.length} intermediate points are ready to apply.`
+            : `“${profile.fileName}” okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
           filePath: selectedPath,
           profile
         };
@@ -194,6 +204,7 @@ export function registerTerrainImportIpcHandlers(): void {
             content,
             selectedPath,
             integrity,
+            locale,
             selectedPath
           );
         }
@@ -208,18 +219,20 @@ export function registerTerrainImportIpcHandlers(): void {
       _event,
       rawRequestId: unknown,
       rawMapping: unknown,
-      rawContext: unknown
+      rawContext: unknown,
+      requestedLocale?: unknown
     ): Promise<ImportTerrainProfileResult> => {
+      const locale = resolveIpcLocale(requestedLocale);
       purgeExpiredTerrainImports();
       if (typeof rawRequestId !== 'string' || rawRequestId.length === 0) {
-        throw new TypeError('CSV eşleme isteği geçersiz.');
+        throw new TypeError(ipcText(locale, 'CSV eşleme isteği geçersiz.', 'The CSV mapping request is invalid.'));
       }
       const pending = pendingTerrainImports.get(rawRequestId);
       if (!pending) {
-        throw new Error('CSV eşleme isteğinin süresi doldu. Dosyayı yeniden seçin.');
+        throw new Error(ipcText(locale, 'CSV eşleme isteğinin süresi doldu. Dosyayı yeniden seçin.', 'The CSV mapping request expired. Select the file again.'));
       }
-      const mapping = validateTerrainColumnMapping(rawMapping);
-      const context = validateTerrainImportContext(rawContext);
+      const mapping = validateTerrainColumnMapping(rawMapping, locale);
+      const context = validateTerrainImportContext(rawContext, locale);
       const profile = attachTerrainSourceIntegrity(
         parseTerrainProfileCsv(
           pending.content,
@@ -232,7 +245,9 @@ export function registerTerrainImportIpcHandlers(): void {
       pendingTerrainImports.delete(rawRequestId);
       return {
         status: 'success',
-        message: `“${profile.fileName}” eşlenen sütunlarla okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
+        message: locale === 'en'
+          ? `“${profile.fileName}” loaded with mapped columns: ${profile.points.length} intermediate points are ready to apply.`
+          : `“${profile.fileName}” eşlenen sütunlarla okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
         profile
       };
     }
@@ -240,26 +255,31 @@ export function registerTerrainImportIpcHandlers(): void {
 
   ipcMain.handle(
     'terrain:import-dem',
-    async (event, rawContext: unknown): Promise<ImportTerrainProfileResult> => {
-      const context = validateDemImportContext(rawContext);
+    async (
+      event,
+      rawContext: unknown,
+      requestedLocale?: unknown
+    ): Promise<ImportTerrainProfileResult> => {
+      const locale = resolveIpcLocale(requestedLocale);
+      const context = validateDemImportContext(rawContext, locale);
       const selection = await showOpenDialog(event, {
-        title: 'ESRI ASCII DEM Dosyasını İçe Aktar',
+        title: ipcText(locale, 'ESRI ASCII DEM Dosyasını İçe Aktar', 'Import ESRI ASCII DEM File'),
         properties: ['openFile'],
         filters: [
           { name: 'ESRI ASCII Grid DEM', extensions: ['asc', 'txt'] },
-          { name: 'Tüm Dosyalar', extensions: ['*'] }
+          { name: ipcText(locale, 'Tüm Dosyalar', 'All Files'), extensions: ['*'] }
         ]
       });
 
       const selectedPath = selection.filePaths[0];
       if (selection.canceled || !selectedPath) {
-        return { status: 'cancelled', message: 'DEM içe aktarma iptal edildi.' };
+        return { status: 'cancelled', message: ipcText(locale, 'DEM içe aktarma iptal edildi.', 'DEM import was cancelled.') };
       }
 
       const statistics = await fs.stat(selectedPath);
-      if (!statistics.isFile()) throw new Error('Seçilen yol normal bir dosya değil.');
+      if (!statistics.isFile()) throw new Error(ipcText(locale, 'Seçilen yol normal bir dosya değil.', 'The selected path is not a regular file.'));
       if (statistics.size > MAX_DEM_BYTES) {
-        throw new Error('ESRI ASCII DEM dosyası 64 MB sınırını aşıyor.');
+        throw new Error(ipcText(locale, 'ESRI ASCII DEM dosyası 64 MB sınırını aşıyor.', 'The ESRI ASCII DEM file exceeds the 64 MB limit.'));
       }
 
       const bytes = await fs.readFile(selectedPath);
@@ -271,7 +291,9 @@ export function registerTerrainImportIpcHandlers(): void {
       );
       return {
         status: 'success',
-        message: `“${profile.fileName}” DEM rotası örneklendi: ${profile.points.length} ara nokta uygulamaya hazır.`,
+        message: locale === 'en'
+          ? `“${profile.fileName}” DEM route sampled: ${profile.points.length} intermediate points are ready to apply.`
+          : `“${profile.fileName}” DEM rotası örneklendi: ${profile.points.length} ara nokta uygulamaya hazır.`,
         filePath: selectedPath,
         profile
       };
@@ -280,14 +302,19 @@ export function registerTerrainImportIpcHandlers(): void {
 
   ipcMain.handle(
     'terrain:import-geojson',
-    async (event, rawContext: unknown): Promise<ImportTerrainProfileResult> => {
-      const context = validateTerrainImportContext(rawContext);
+    async (
+      event,
+      rawContext: unknown,
+      requestedLocale?: unknown
+    ): Promise<ImportTerrainProfileResult> => {
+      const locale = resolveIpcLocale(requestedLocale);
+      const context = validateTerrainImportContext(rawContext, locale);
       const selection = await showOpenDialog(event, {
-        title: 'GeoJSON Arazi Profilini İçe Aktar',
+        title: ipcText(locale, 'GeoJSON Arazi Profilini İçe Aktar', 'Import GeoJSON Terrain Profile'),
         properties: ['openFile'],
         filters: [
-          { name: 'GeoJSON Arazi Profili', extensions: ['geojson', 'json'] },
-          { name: 'Tüm Dosyalar', extensions: ['*'] }
+          { name: ipcText(locale, 'GeoJSON Arazi Profili', 'GeoJSON Terrain Profile'), extensions: ['geojson', 'json'] },
+          { name: ipcText(locale, 'Tüm Dosyalar', 'All Files'), extensions: ['*'] }
         ]
       });
 
@@ -295,14 +322,14 @@ export function registerTerrainImportIpcHandlers(): void {
       if (selection.canceled || !selectedPath) {
         return {
           status: 'cancelled',
-          message: 'GeoJSON profil içe aktarma iptal edildi.'
+          message: ipcText(locale, 'GeoJSON profil içe aktarma iptal edildi.', 'GeoJSON profile import was cancelled.')
         };
       }
 
       const statistics = await fs.stat(selectedPath);
-      if (!statistics.isFile()) throw new Error('Seçilen yol normal bir dosya değil.');
+      if (!statistics.isFile()) throw new Error(ipcText(locale, 'Seçilen yol normal bir dosya değil.', 'The selected path is not a regular file.'));
       if (statistics.size > MAX_TERRAIN_PROFILE_BYTES) {
-        throw new Error('GeoJSON arazi profili 5 MB sınırını aşıyor.');
+        throw new Error(ipcText(locale, 'GeoJSON arazi profili 5 MB sınırını aşıyor.', 'The GeoJSON terrain profile exceeds the 5 MB limit.'));
       }
 
       const bytes = await fs.readFile(selectedPath);
@@ -313,7 +340,9 @@ export function registerTerrainImportIpcHandlers(): void {
       );
       return {
         status: 'success',
-        message: `“${profile.fileName}” okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
+        message: locale === 'en'
+          ? `“${profile.fileName}” loaded: ${profile.points.length} intermediate points are ready to apply.`
+          : `“${profile.fileName}” okundu: ${profile.points.length} ara nokta uygulamaya hazır.`,
         filePath: selectedPath,
         profile
       };

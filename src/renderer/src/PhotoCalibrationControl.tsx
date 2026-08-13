@@ -72,7 +72,7 @@ export function PhotoCalibrationControl({
     setMessage('');
 
     if (savedCalibration) {
-      void window.simulatorDesktop.loadObservationPhoto(savedCalibration.source)
+      void window.simulatorDesktop.loadObservationPhoto(savedCalibration.source, locale)
         .then((result) => {
           if (cancelled) return;
           if (result.status === 'success' && result.photo) {
@@ -110,7 +110,7 @@ export function PhotoCalibrationControl({
   const loadPhoto = async (): Promise<void> => {
     setMessage('');
     try {
-      const result = await window.simulatorDesktop.importObservationPhoto();
+      const result = await window.simulatorDesktop.importObservationPhoto(locale);
       if (result.status === 'cancelled' || !result.photo) {
         setMessage(result.message);
         return;

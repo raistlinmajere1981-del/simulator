@@ -329,33 +329,38 @@ export interface SimulatorDesktopApi {
   version: string;
   platform: string;
   listExperiments(): Promise<SavedExperiment[]>;
-  saveExperiment(experiment: SavedExperiment): Promise<SavedExperiment>;
+  saveExperiment(experiment: SavedExperiment, locale?: UiLocale): Promise<SavedExperiment>;
   deleteExperiment(id: string): Promise<boolean>;
-  exportExperiment(id: string): Promise<FileOperationResult>;
-  importExperiment(): Promise<ImportExperimentResult>;
+  exportExperiment(id: string, locale?: UiLocale): Promise<FileOperationResult>;
+  importExperiment(locale?: UiLocale): Promise<ImportExperimentResult>;
   exportExperimentReport(id: string, locale?: UiLocale): Promise<FileOperationResult>;
-  importObservationPhoto(): Promise<ImportObservationPhotoResult>;
-  loadObservationPhoto(source: PhotoSourceMetadata): Promise<LoadObservationPhotoResult>;
-  importStellarLocalHorizon(): Promise<ImportStellarLocalHorizonResult>;
-  importStellarMotionSource(): Promise<ImportStellarMotionResult>;
-  importStellarDemSkyline(): Promise<ImportStellarDemSkylineResult>;
-  importStellarPanoramaSkyline(): Promise<ImportStellarPanoramaSkylineResult>;
+  importObservationPhoto(locale?: UiLocale): Promise<ImportObservationPhotoResult>;
+  loadObservationPhoto(source: PhotoSourceMetadata, locale?: UiLocale): Promise<LoadObservationPhotoResult>;
+  importStellarLocalHorizon(locale?: UiLocale): Promise<ImportStellarLocalHorizonResult>;
+  importStellarMotionSource(locale?: UiLocale): Promise<ImportStellarMotionResult>;
+  importStellarDemSkyline(locale?: UiLocale): Promise<ImportStellarDemSkylineResult>;
+  importStellarPanoramaSkyline(locale?: UiLocale): Promise<ImportStellarPanoramaSkylineResult>;
   generateStellarDemSkyline(
     requestId: string,
-    settings: StellarDemSkylineGenerationSettings
+    settings: StellarDemSkylineGenerationSettings,
+    locale?: UiLocale
   ): Promise<GenerateStellarDemSkylineResult>;
   importTerrainProfile(
-    context: TerrainProfileImportContext
+    context: TerrainProfileImportContext,
+    locale?: UiLocale
   ): Promise<ImportTerrainProfileResult>;
   importTerrainProfileWithMapping(
     requestId: string,
     mapping: TerrainProfileColumnMapping,
-    context: TerrainProfileImportContext
+    context: TerrainProfileImportContext,
+    locale?: UiLocale
   ): Promise<ImportTerrainProfileResult>;
   importGeoJsonTerrainProfile(
-    context: TerrainProfileImportContext
+    context: TerrainProfileImportContext,
+    locale?: UiLocale
   ): Promise<ImportTerrainProfileResult>;
   importDemTerrainProfile(
-    context: DemTerrainProfileImportContext
+    context: DemTerrainProfileImportContext,
+    locale?: UiLocale
   ): Promise<ImportTerrainProfileResult>;
 }

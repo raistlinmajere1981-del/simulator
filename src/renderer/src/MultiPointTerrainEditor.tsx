@@ -84,7 +84,7 @@ export function MultiPointTerrainEditor({
   onChange,
   onApplyImport
 }: MultiPointTerrainEditorProps): React.JSX.Element {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [operationError, setOperationError] = useState('');
   const [pendingImport, setPendingImport] = useState<TerrainProfileImport>();
   const [mappingRequest, setMappingRequest] = useState<TerrainProfileMappingRequest>();
@@ -196,7 +196,7 @@ export function MultiPointTerrainEditor({
       setImportMessage('');
       onChange(next);
     } catch (error) {
-      setOperationError(error instanceof Error ? error.message : 'Arazi noktası güncellenemedi.');
+      setOperationError(error instanceof Error ? error.message : t('terrain.editor.updateError'));
     }
   };
 
@@ -227,7 +227,7 @@ export function MultiPointTerrainEditor({
         routeDistanceM: routeDistanceKm * 1_000,
         observerGroundElevationM,
         targetGroundElevationM
-      });
+      }, locale);
       if (result.status === 'cancelled') {
         setPendingImport(undefined);
         setMappingRequest(undefined);
@@ -248,7 +248,7 @@ export function MultiPointTerrainEditor({
       setPendingImport(undefined);
       setMappingRequest(undefined);
       setOperationError(
-        error instanceof Error ? error.message : 'CSV arazi profili okunamadı.'
+        error instanceof Error ? error.message : t('terrain.editor.csvReadError')
       );
     } finally {
       setIsImporting(false);
@@ -264,7 +264,7 @@ export function MultiPointTerrainEditor({
         routeDistanceM: routeDistanceKm * 1_000,
         observerGroundElevationM,
         targetGroundElevationM
-      });
+      }, locale);
       if (result.status === 'cancelled') {
         setPendingImport(undefined);
         setMappingRequest(undefined);
@@ -276,7 +276,7 @@ export function MultiPointTerrainEditor({
       setPendingImport(undefined);
       setMappingRequest(undefined);
       setOperationError(
-        error instanceof Error ? error.message : 'GeoJSON arazi profili okunamadı.'
+        error instanceof Error ? error.message : t('terrain.editor.geoJsonReadError')
       );
     } finally {
       setIsImporting(false);
@@ -285,7 +285,7 @@ export function MultiPointTerrainEditor({
 
   const chooseDemProfile = async (): Promise<void> => {
     if (!allowDemImport) {
-      setOperationError('DEM profili için deney mesafe kaynağı koordinat olmalı.');
+      setOperationError(t('terrain.editor.demNeedsCoordinatesError'));
       return;
     }
     setOperationError('');
@@ -295,7 +295,7 @@ export function MultiPointTerrainEditor({
       sampleCount = requestedDemSampleCount(demSampleCountMode, demManualSampleCount);
     } catch (error) {
       setOperationError(
-        error instanceof Error ? error.message : 'DEM örnek sayısı geçersiz.'
+        error instanceof Error ? error.message : t('terrain.editor.demCountError')
       );
       return;
     }
@@ -308,7 +308,7 @@ export function MultiPointTerrainEditor({
         targetLongitudeDeg,
         samplingMethod: demSamplingMethod,
         ...(sampleCount === undefined ? {} : { sampleCount })
-      });
+      }, locale);
       if (result.status === 'cancelled') {
         setPendingImport(undefined);
         setMappingRequest(undefined);
@@ -320,7 +320,7 @@ export function MultiPointTerrainEditor({
       setPendingImport(undefined);
       setMappingRequest(undefined);
       setOperationError(
-        error instanceof Error ? error.message : 'ESRI ASCII DEM profili oluşturulamadı.'
+        error instanceof Error ? error.message : t('terrain.editor.demCreateError')
       );
     } finally {
       setIsImporting(false);
@@ -330,9 +330,7 @@ export function MultiPointTerrainEditor({
   const applyColumnMapping = async (): Promise<void> => {
     if (!mappingRequest) return;
     if (mappingDistanceIndex === mappingElevationIndex) {
-      setOperationError(
-        'Rota üzerindeki konum ve arazi yüksekliği için farklı sütunlar seçin.'
-      );
+      setOperationError(t('terrain.editor.mappingDistinctColumns'));
       return;
     }
 
@@ -350,12 +348,13 @@ export function MultiPointTerrainEditor({
           routeDistanceM: routeDistanceKm * 1_000,
           observerGroundElevationM,
           targetGroundElevationM
-        }
+        },
+        locale
       );
       if (result.profile) stageProfile(result.profile);
     } catch (error) {
       setOperationError(
-        error instanceof Error ? error.message : 'Seçilen CSV sütunları kullanılamadı.'
+        error instanceof Error ? error.message : t('terrain.editor.mappingApplyError')
       );
     } finally {
       setIsImporting(false);
@@ -367,9 +366,10 @@ export function MultiPointTerrainEditor({
     const imported = pendingImport;
     setOperationError('');
     setPendingImport(undefined);
-    setImportMessage(
-      `“${imported.fileName}” arazi profili uygulandı: ${imported.points.length} ara nokta.`
-    );
+    setImportMessage(t('terrain.editor.profileApplied', {
+      fileName: imported.fileName,
+      count: imported.points.length
+    }));
     onApplyImport(imported, {
       applyObserverEndpoint,
       applyTargetEndpoint,

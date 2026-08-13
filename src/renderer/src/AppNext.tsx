@@ -122,7 +122,6 @@ import {
   type RestoredExperimentState
 } from './app/experiment-persistence';
 import {
-  datumLabels,
   defaultExperimentName,
   getScenarioPresentation,
   isAstronomyScenario
@@ -222,8 +221,8 @@ function isCsvTerrainProfileSource(
   return source.kind === 'csv';
 }
 
-function terrainVisualizationSourceLabel(source: TerrainProfileSource | undefined): string {
-  if (!source) return 'Manuel profil';
+function terrainVisualizationSourceLabel(source: TerrainProfileSource | undefined, manualLabel: string): string {
+  if (!source) return manualLabel;
   if (source.kind === 'dem') return `DEM · ${source.fileName}`;
   if (source.kind === 'geojson') return `GeoJSON · ${source.fileName}`;
   return `CSV · ${source.fileName}`;
@@ -361,7 +360,7 @@ export function AppNext(): React.JSX.Element {
     void window.simulatorDesktop.listExperiments()
       .then(setSavedExperiments)
       .catch((error: unknown) => {
-        setStorageMessage(error instanceof Error ? error.message : 'Kayıtlar okunamadı.');
+        setStorageMessage(error instanceof Error ? error.message : t('storage.readError'));
       });
   }, []);
 
@@ -552,7 +551,7 @@ export function AppNext(): React.JSX.Element {
     }
     setIsDirty(true);
     const count = application.provenance.appliedFields.length;
-    setStorageMessage(`Metinden hazırlanan taslaktan ${count} alan uygulandı.`);
+    setStorageMessage(t('storage.textSetupApplied', { count }));
   };
 
   const updateTerrainPoints = (points: ManualTerrainPoint[]): void => {
@@ -577,9 +576,12 @@ export function AppNext(): React.JSX.Element {
     });
     markTerrainSourceModified();
     setIsDirty(true);
-    setStorageMessage(
-      `Bütün zemin ve arazi kotları ${datumLabels[application.targetDatum]} datumuna dönüştürüldü; provenans kayda hazır.`
-    );
+    const datumLabel = application.targetDatum === 'orthometric-msl'
+      ? t('datum.orthometricMsl')
+      : application.targetDatum === 'ellipsoidal-wgs84'
+        ? t('datum.ellipsoidalWgs84')
+        : t('datum.local');
+    setStorageMessage(t('storage.verticalDatumApplied', { datum: datumLabel }));
   };
 
   const recordWaterSurface = (record: WaterSurfaceObservationRecord): void => {
@@ -589,7 +591,7 @@ export function AppNext(): React.JSX.Element {
     });
     setWaterApplicationRecord(undefined);
     setIsDirty(true);
-    setStorageMessage('Su yüzeyi gözlem kaydı deneye eklendi.');
+    setStorageMessage(t('storage.waterRecorded'));
   };
 
   const applyWaterSurface = (result: WaterSurfaceApplicationResult): void => {
@@ -605,7 +607,7 @@ export function AppNext(): React.JSX.Element {
     markTerrainSourceModified();
     markGeoidConversionModified();
     setIsDirty(true);
-    setStorageMessage(`Su yüzeyi ${numberFormatter.format(result.appliedWaterSurfaceM)} m olarak seçilen uçlara uygulandı.`);
+    setStorageMessage(t('storage.waterApplied', { value: numberFormatter.format(result.appliedWaterSurfaceM) }));
   };
 
   const handleNumberChange = (key: NumericInputKey, value: number): void => {
@@ -718,7 +720,7 @@ export function AppNext(): React.JSX.Element {
 
   const importStellarLocalHorizon = async (): Promise<SavedStellarLocalHorizonSource | undefined> => {
     try {
-      const result = await window.simulatorDesktop.importStellarLocalHorizon();
+      const result = await window.simulatorDesktop.importStellarLocalHorizon(locale);
       setStorageMessage(result.message);
       if (result.status !== 'success' || !result.profile) return undefined;
       const nextSource: SavedStellarLocalHorizonSource = {
@@ -727,10 +729,10 @@ export function AppNext(): React.JSX.Element {
         warnings: [...result.profile.warnings],
         modifiedAfterImport: false
       };
-      setStorageMessage(`“${nextSource.fileName}” skyline kaynağı taslak olarak hazır: ${nextSource.pointCount} nokta doğrulandı. Uygula ve hesapla ile etkinleştirilebilir.`);
+      setStorageMessage(t('storage.stellarHorizonDraft', { fileName: nextSource.fileName, count: nextSource.pointCount }));
       return nextSource;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Skyline profili içe aktarılamadı.';
+      const message = error instanceof Error ? error.message : t('storage.stellarHorizonImportError');
       setStorageMessage(message);
       throw error;
     }
@@ -738,17 +740,17 @@ export function AppNext(): React.JSX.Element {
 
   const importStellarMotionSource = async (): Promise<SavedStellarMotionSource | undefined> => {
     try {
-      const result = await window.simulatorDesktop.importStellarMotionSource();
+      const result = await window.simulatorDesktop.importStellarMotionSource(locale);
       setStorageMessage(result.message);
       if (result.status !== 'success' || !result.source) return undefined;
       const source: SavedStellarMotionSource = {
         ...result.source,
         entries: result.source.entries.map((entry) => ({ ...entry }))
       };
-      setStorageMessage(`“${source.fileName}” proper-motion kaynağı taslak olarak hazır: ${source.entryCount}/19 kayıt doğrulandı. Uygula ve hesapla ile etkinleştirilebilir.`);
+      setStorageMessage(t('storage.stellarMotionDraft', { fileName: source.fileName, count: source.entryCount }));
       return source;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'BSC5P proper-motion kaynağı içe aktarılamadı.';
+      const message = error instanceof Error ? error.message : t('storage.stellarMotionImportError');
       setStorageMessage(message);
       throw error;
     }
@@ -785,7 +787,7 @@ export function AppNext(): React.JSX.Element {
   };
 
   const loadExperiment = (saved: SavedExperiment): void => {
-    applyRestoredExperimentState(restoreSavedExperiment(saved), `“${saved.name}” açıldı.`);
+    applyRestoredExperimentState(restoreSavedExperiment(saved), t('storage.experimentOpened', { name: saved.name }));
   };
 
   const buildActiveExperimentRecord = (
@@ -834,21 +836,21 @@ export function AppNext(): React.JSX.Element {
 
   const saveExperiment = async (name: string): Promise<void> => {
     if (!modelUncertaintyReady) {
-      setStorageMessage('Model girdi belirsizliği hesabı tamamlanmadan deney kaydedilmedi.');
+      setStorageMessage(t('storage.uncertaintyPendingSave'));
       return;
     }
     const record = buildActiveExperimentRecord(name);
 
     try {
-      const saved = await window.simulatorDesktop.saveExperiment(record);
+      const saved = await window.simulatorDesktop.saveExperiment(record, locale);
       setSavedExperiments((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
       applyRestoredExperimentState(
         restoreSavedExperiment(saved),
-        `“${saved.name}” cihazda kaydedildi.`
+        t('storage.experimentSaved', { name: saved.name })
       );
       setSaveDialogOpen(false);
     } catch (error) {
-      setStorageMessage(error instanceof Error ? error.message : 'Deney kaydedilemedi.');
+      setStorageMessage(error instanceof Error ? error.message : t('storage.experimentSaveError'));
     }
   };
 
@@ -880,24 +882,24 @@ export function AppNext(): React.JSX.Element {
         setModelUncertaintyError(undefined);
         setIsDirty(true);
       }
-      setStorageMessage(`“${saved.name}” silindi.`);
+      setStorageMessage(t('storage.experimentDeleted', { name: saved.name }));
     } catch (error) {
-      setStorageMessage(error instanceof Error ? error.message : 'Deney silinemedi.');
+      setStorageMessage(error instanceof Error ? error.message : t('storage.experimentDeleteError'));
     }
   };
 
   const exportExperiment = async (saved: SavedExperiment): Promise<void> => {
     try {
-      const result = await window.simulatorDesktop.exportExperiment(saved.id);
+      const result = await window.simulatorDesktop.exportExperiment(saved.id, locale);
       setStorageMessage(result.message);
     } catch (error) {
-      setStorageMessage(error instanceof Error ? error.message : 'Deney dışa aktarılamadı.');
+      setStorageMessage(error instanceof Error ? error.message : t('storage.experimentExportError'));
     }
   };
 
   const importExperiment = async (): Promise<void> => {
     try {
-      const result = await window.simulatorDesktop.importExperiment();
+      const result = await window.simulatorDesktop.importExperiment(locale);
       setStorageMessage(result.message);
       if (result.status !== 'success' || !result.experiment) return;
       setSavedExperiments((current) => [
@@ -905,7 +907,7 @@ export function AppNext(): React.JSX.Element {
         ...current.filter((item) => item.id !== result.experiment?.id)
       ]);
     } catch (error) {
-      setStorageMessage(error instanceof Error ? error.message : 'Deney içe aktarılamadı.');
+      setStorageMessage(error instanceof Error ? error.message : t('storage.experimentImportError'));
     }
   };
 
@@ -1261,7 +1263,7 @@ export function AppNext(): React.JSX.Element {
                   modelVersion: record.modelVersion
                 });
                 setIsDirty(true);
-                setStorageMessage('Fotoğraf kalibrasyonu deneye eklendi.');
+                setStorageMessage(t('storage.photoCalibrationAdded'));
               }}
               onClear={() => {
                 setPhotoCalibration(undefined);
@@ -1333,7 +1335,7 @@ export function AppNext(): React.JSX.Element {
                 inputs={effectiveInputs}
                 atmosphereState={atmosphereState}
                 terrainProfile={terrainProfile}
-                terrainSourceLabel={terrainVisualizationSourceLabel(terrainProfileSource)}
+                terrainSourceLabel={terrainVisualizationSourceLabel(terrainProfileSource, t('storage.manualTerrainProfile'))}
                 visualLayers={visualLayers}
                 onShowTrace={() => setTraceModelId(model.metadata.id)}
               />

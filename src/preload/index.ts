@@ -25,57 +25,63 @@ const api: SimulatorDesktopApi = {
   platform: process.platform,
   listExperiments: () =>
     ipcRenderer.invoke('experiments:list') as Promise<SavedExperiment[]>,
-  saveExperiment: (experiment) =>
-    ipcRenderer.invoke('experiments:save', experiment) as Promise<SavedExperiment>,
+  saveExperiment: (experiment, locale) =>
+    ipcRenderer.invoke('experiments:save', experiment, locale) as Promise<SavedExperiment>,
   deleteExperiment: (id) =>
     ipcRenderer.invoke('experiments:delete', id) as Promise<boolean>,
-  exportExperiment: (id) =>
-    ipcRenderer.invoke('experiments:export', id) as Promise<FileOperationResult>,
-  importExperiment: () =>
-    ipcRenderer.invoke('experiments:import') as Promise<ImportExperimentResult>,
+  exportExperiment: (id, locale) =>
+    ipcRenderer.invoke('experiments:export', id, locale) as Promise<FileOperationResult>,
+  importExperiment: (locale) =>
+    ipcRenderer.invoke('experiments:import', locale) as Promise<ImportExperimentResult>,
   exportExperimentReport: (id, locale) =>
     ipcRenderer.invoke('experiments:report', id, locale) as Promise<FileOperationResult>,
-  importObservationPhoto: () =>
-    ipcRenderer.invoke('photo:import') as Promise<ImportObservationPhotoResult>,
-  loadObservationPhoto: (source) =>
-    ipcRenderer.invoke('photo:load-saved', source) as Promise<LoadObservationPhotoResult>,
-  importStellarLocalHorizon: () =>
-    ipcRenderer.invoke('stellar-horizon:import') as Promise<ImportStellarLocalHorizonResult>,
-  importStellarMotionSource: () =>
-    ipcRenderer.invoke('stellar-motion:import') as Promise<ImportStellarMotionResult>,
-  importStellarDemSkyline: () =>
-    ipcRenderer.invoke('stellar-skyline-dem:import') as Promise<ImportStellarDemSkylineResult>,
-  importStellarPanoramaSkyline: () =>
-    ipcRenderer.invoke('stellar-skyline-panorama:import') as Promise<ImportStellarPanoramaSkylineResult>,
+  importObservationPhoto: (locale) =>
+    ipcRenderer.invoke('photo:import', locale) as Promise<ImportObservationPhotoResult>,
+  loadObservationPhoto: (source, locale) =>
+    ipcRenderer.invoke('photo:load-saved', source, locale) as Promise<LoadObservationPhotoResult>,
+  importStellarLocalHorizon: (locale) =>
+    ipcRenderer.invoke('stellar-horizon:import', locale) as Promise<ImportStellarLocalHorizonResult>,
+  importStellarMotionSource: (locale) =>
+    ipcRenderer.invoke('stellar-motion:import', locale) as Promise<ImportStellarMotionResult>,
+  importStellarDemSkyline: (locale) =>
+    ipcRenderer.invoke('stellar-skyline-dem:import', locale) as Promise<ImportStellarDemSkylineResult>,
+  importStellarPanoramaSkyline: (locale) =>
+    ipcRenderer.invoke('stellar-skyline-panorama:import', locale) as Promise<ImportStellarPanoramaSkylineResult>,
   generateStellarDemSkyline: (
     requestId: string,
-    settings: StellarDemSkylineGenerationSettings
+    settings: StellarDemSkylineGenerationSettings,
+    locale
   ) => ipcRenderer.invoke(
     'stellar-skyline-dem:generate',
     requestId,
-    settings
+    settings,
+    locale
   ) as Promise<GenerateStellarDemSkylineResult>,
-  importTerrainProfile: (context: TerrainProfileImportContext) =>
-    ipcRenderer.invoke('terrain:import-csv', context) as Promise<ImportTerrainProfileResult>,
+  importTerrainProfile: (context: TerrainProfileImportContext, locale) =>
+    ipcRenderer.invoke('terrain:import-csv', context, locale) as Promise<ImportTerrainProfileResult>,
   importTerrainProfileWithMapping: (
     requestId: string,
     mapping: TerrainProfileColumnMapping,
-    context: TerrainProfileImportContext
+    context: TerrainProfileImportContext,
+    locale
   ) => ipcRenderer.invoke(
     'terrain:import-csv-mapped',
     requestId,
     mapping,
-    context
+    context,
+    locale
   ) as Promise<ImportTerrainProfileResult>,
-  importGeoJsonTerrainProfile: (context: TerrainProfileImportContext) =>
+  importGeoJsonTerrainProfile: (context: TerrainProfileImportContext, locale) =>
     ipcRenderer.invoke(
       'terrain:import-geojson',
-      context
+      context,
+      locale
     ) as Promise<ImportTerrainProfileResult>,
-  importDemTerrainProfile: (context: DemTerrainProfileImportContext) =>
+  importDemTerrainProfile: (context: DemTerrainProfileImportContext, locale) =>
     ipcRenderer.invoke(
       'terrain:import-dem',
-      context
+      context,
+      locale
     ) as Promise<ImportTerrainProfileResult>
 };
 

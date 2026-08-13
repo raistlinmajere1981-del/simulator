@@ -17,6 +17,8 @@ import type {
 import { generateDemSkyline } from '../simulation/dem-skyline';
 import { parseEsriAsciiGrid, type EsriAsciiGrid } from '../simulation/esri-ascii-grid';
 import { savedStellarLocalHorizonSourceFromDemSkyline } from '../simulation/stellar-dem-skyline-source';
+import type { UiLocale } from '../shared/ui-locale';
+import { ipcText, resolveIpcLocale } from './ipc-i18n';
 
 const MAX_DEM_BYTES = 64 * 1024 * 1024;
 const PENDING_DEM_TTL_MS = 10 * 60 * 1_000;
@@ -42,9 +44,9 @@ function purgeExpiredImports(): void {
   }
 }
 
-function validateGenerationSettings(value: unknown): StellarDemSkylineGenerationSettings {
+function validateGenerationSettings(value: unknown, locale: UiLocale): StellarDemSkylineGenerationSettings {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new TypeError('DEM skyline hesap ayarları geçersiz.');
+    throw new TypeError(ipcText(locale, 'DEM skyline hesap ayarları geçersiz.', 'DEM skyline calculation settings are invalid.'));
   }
   const candidate = value as Record<string, unknown>;
   const numericKeys = [
@@ -58,7 +60,7 @@ function validateGenerationSettings(value: unknown): StellarDemSkylineGeneration
   ] as const;
   if (!numericKeys.every((key) => Number.isFinite(candidate[key])) ||
     (candidate.samplingMethod !== 'nearest' && candidate.samplingMethod !== 'bilinear')) {
-    throw new TypeError('DEM skyline hesap ayarları sonlu sayılar ve geçerli örnekleme yöntemi içermeli.');
+    throw new TypeError(ipcText(locale, 'DEM skyline hesap ayarları sonlu sayılar ve geçerli örnekleme yöntemi içermeli.', 'DEM skyline calculation settings must contain finite numbers and a valid sampling method.'));
   }
   return {
     observerLatitudeDeg: candidate.observerLatitudeDeg as number,
@@ -86,15 +88,16 @@ function diagnostics(result: ReturnType<typeof generateDemSkyline>): GenerateSte
 export function registerStellarDemSkylineHandlers(): void {
   ipcMain.handle(
     'stellar-skyline-dem:import',
-    async (event): Promise<ImportStellarDemSkylineResult> => {
+    async (event, requestedLocale?: unknown): Promise<ImportStellarDemSkylineResult> => {
+      const locale = resolveIpcLocale(requestedLocale);
       purgeExpiredImports();
       const owner = parentWindow(event);
       const options: OpenDialogOptions = {
-        title: '360° Skyline için ESRI ASCII DEM Seç',
+        title: ipcText(locale, '360° Skyline için ESRI ASCII DEM Seç', 'Select ESRI ASCII DEM for 360° Skyline'),
         properties: ['openFile'],
         filters: [
           { name: 'ESRI ASCII Grid DEM', extensions: ['asc', 'txt'] },
-          { name: 'Tüm Dosyalar', extensions: ['*'] }
+          { name: ipcText(locale, 'Tüm Dosyalar', 'All Files'), extensions: ['*'] }
         ]
       };
       const selection = owner
@@ -102,13 +105,13 @@ export function registerStellarDemSkylineHandlers(): void {
         : await dialog.showOpenDialog(options);
       const selectedPath = selection.filePaths[0];
       if (selection.canceled || !selectedPath) {
-        return { status: 'cancelled', message: 'DEM skyline kaynak seçimi iptal edildi.' };
+        return { status: 'cancelled', message: ipcText(locale, 'DEM skyline kaynak seçimi iptal edildi.', 'DEM skyline source selection was cancelled.') };
       }
 
       const statistics = await fs.stat(selectedPath);
-      if (!statistics.isFile()) throw new Error('Seçilen DEM yolu normal bir dosya değil.');
+      if (!statistics.isFile()) throw new Error(ipcText(locale, 'Seçilen DEM yolu normal bir dosya değil.', 'The selected DEM path is not a regular file.'));
       if (statistics.size <= 0 || statistics.size > MAX_DEM_BYTES) {
-        throw new Error('ESRI ASCII DEM dosyası boş olamaz ve 64 MB sınırını aşamaz.');
+        throw new Error(ipcText(locale, 'ESRI ASCII DEM dosyası boş olamaz ve 64 MB sınırını aşamaz.', 'The ESRI ASCII DEM file cannot be empty or exceed the 64 MB limit.'));
       }
 
       const bytes = await fs.readFile(selectedPath);
@@ -134,7 +137,9 @@ export function registerStellarDemSkylineHandlers(): void {
 
       return {
         status: 'success',
-        message: `“${draft.fileName}” DEM taslağı hazır: ${draft.columnCount}×${draft.rowCount} hücre. 360° tarama henüz çalıştırılmadı.`,
+        message: locale === 'en'
+          ? `“${draft.fileName}” DEM draft ready: ${draft.columnCount}×${draft.rowCount} cells. The 360° scan has not been run yet.`
+          : `“${draft.fileName}” DEM taslağı hazır: ${draft.columnCount}×${draft.rowCount} hücre. 360° tarama henüz çalıştırılmadı.`,
         filePath: selectedPath,
         draft
       };
@@ -146,17 +151,19 @@ export function registerStellarDemSkylineHandlers(): void {
     async (
       _event,
       rawRequestId: unknown,
-      rawSettings: unknown
+      rawSettings: unknown,
+      requestedLocale?: unknown
     ): Promise<GenerateStellarDemSkylineResult> => {
+      const locale = resolveIpcLocale(requestedLocale);
       purgeExpiredImports();
       if (typeof rawRequestId !== 'string' || rawRequestId.length === 0) {
-        throw new TypeError('DEM skyline taslak kimliği geçersiz.');
+        throw new TypeError(ipcText(locale, 'DEM skyline taslak kimliği geçersiz.', 'The DEM skyline draft id is invalid.'));
       }
       const pending = pendingImports.get(rawRequestId);
       if (!pending) {
-        throw new Error('DEM skyline taslağının süresi doldu. Dosyayı yeniden seçin.');
+        throw new Error(ipcText(locale, 'DEM skyline taslağının süresi doldu. Dosyayı yeniden seçin.', 'The DEM skyline draft expired. Select the file again.'));
       }
-      const settings = validateGenerationSettings(rawSettings);
+      const settings = validateGenerationSettings(rawSettings, locale);
       const result = generateDemSkyline({
         grid: pending.grid,
         observer: {
@@ -175,7 +182,9 @@ export function registerStellarDemSkylineHandlers(): void {
         return {
           status: 'success',
           completeCoverage: false,
-          message: `DEM 360° kapsaması eksik: ${result.completeRayCount}/${result.pointCount} azimut tam. Kaynak yıldız skyline'ına uygulanmadı.`,
+          message: locale === 'en'
+            ? `DEM 360° coverage is incomplete: ${result.completeRayCount}/${result.pointCount} azimuths are complete. The source was not applied to the stellar skyline.`
+            : `DEM 360° kapsaması eksik: ${result.completeRayCount}/${result.pointCount} azimut tam. Kaynak yıldız skyline'ına uygulanmadı.`,
           diagnostics: diagnostics(result)
         };
       }
@@ -189,7 +198,9 @@ export function registerStellarDemSkylineHandlers(): void {
       return {
         status: 'success',
         completeCoverage: true,
-        message: `“${source.fileName}” DEM'den ${source.pointCount} noktalı tam 360° geometrik skyline üretildi.`,
+        message: locale === 'en'
+          ? `A complete 360° geometric skyline with ${source.pointCount} points was generated from “${source.fileName}” DEM.`
+          : `“${source.fileName}” DEM'den ${source.pointCount} noktalı tam 360° geometrik skyline üretildi.`,
         source,
         diagnostics: diagnostics(result)
       };

@@ -164,7 +164,7 @@ export function StellarPanoramaSkylineControl({
     setMessage('');
     setPreparedSha('');
     try {
-      const result = await window.simulatorDesktop.importStellarPanoramaSkyline();
+      const result = await window.simulatorDesktop.importStellarPanoramaSkyline(locale);
       if (result.status === 'cancelled' || !result.draft) {
         if (result.status === 'cancelled') setMessage(result.message);
         return;
