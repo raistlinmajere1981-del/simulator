@@ -2,6 +2,7 @@ import type { LunarPhaseName } from '../../simulation/lunar-position';
 import type { SolarEclipseInstantGeometryClass } from '../../simulation/solar-eclipse-overlap';
 import type { SolarThresholdState } from '../../simulation/solar-day-events';
 import type { SolarSeasonEventKind } from '../../simulation/solar-season-events';
+import type { StellarPanoramaMetadataStatus } from '../../shared/stellar-local-horizon-import';
 import type { StellarLocalHorizonSettingKey, StellarObservationResult } from '../../simulation/stellar-observation';
 import { translate, type AppLocale, type TranslationKey } from './i18n';
 
@@ -106,6 +107,27 @@ export function getStellarLocalHorizonDirectionLabel(
   key: StellarLocalHorizonSettingKey
 ): string {
   return translate(locale, stellarLocalHorizonDirectionKeys[key]);
+}
+
+export function getStellarPanoramaMetadataStatusLabel(
+  locale: AppLocale,
+  status: StellarPanoramaMetadataStatus,
+  metadataScaledToImage: boolean,
+  projectionType?: string
+): string {
+  if (status === 'complete') {
+    return translate(locale, metadataScaledToImage
+      ? 'stellar.panorama.metadata.completeScaled'
+      : 'stellar.panorama.metadata.complete');
+  }
+  if (status === 'incomplete') return translate(locale, 'stellar.panorama.metadata.incomplete');
+  if (status === 'unsupported-projection') {
+    return translate(locale, 'stellar.panorama.metadata.unsupportedProjection', {
+      projection: projectionType ? ` (${projectionType})` : ''
+    });
+  }
+  if (status === 'incompatible-scale') return translate(locale, 'stellar.panorama.metadata.incompatibleScale');
+  return translate(locale, 'stellar.panorama.metadata.absent');
 }
 
 export function getSolarThresholdStateLabel(locale: AppLocale, state: SolarThresholdState): string {
