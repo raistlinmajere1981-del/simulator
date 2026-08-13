@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  HELP_PANELS,
   getHelpPanel,
+  getHelpPanels,
   getHelpTerm,
   searchHelp,
   type HelpPanelId
@@ -68,7 +68,8 @@ function TermChip({
   termId: string;
   onOpen(termId: string): void;
 }): React.JSX.Element | null {
-  const term = getHelpTerm(termId);
+  const { locale } = useI18n();
+  const term = getHelpTerm(termId, locale);
   if (!term) return null;
   return (
     <button className="help-term-chip" type="button" onClick={() => onOpen(termId)}>
@@ -84,8 +85,8 @@ function PanelArticle({
   panelId: HelpPanelId;
   onOpenTerm(termId: string): void;
 }): React.JSX.Element {
-  const { t } = useI18n();
-  const content = getHelpPanel(panelId);
+  const { locale, t } = useI18n();
+  const content = getHelpPanel(panelId, locale);
   return (
     <article className="help-article">
       <div className="help-article-category">{content.category}</div>
@@ -166,7 +167,7 @@ export function HelpOverlay({
   catalogOpen: boolean;
   onClose(): void;
 }): React.JSX.Element | null {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const open = panelId !== undefined || catalogOpen;
   const [query, setQuery] = useState('');
   const [selectedPanelId, setSelectedPanelId] = useState<HelpPanelId | undefined>(panelId);
@@ -220,14 +221,14 @@ export function HelpOverlay({
     if (panelId !== undefined) setQuery('');
   }, [open, panelId]);
 
-  const results = useMemo(() => searchHelp(query), [query]);
+  const results = useMemo(() => searchHelp(query, locale), [locale, query]);
   if (!open) return null;
 
   const showCatalog =
     catalogOpen &&
     selectedPanelId === undefined &&
     selectedTermId === undefined;
-  const selectedTerm = selectedTermId ? getHelpTerm(selectedTermId) : undefined;
+  const selectedTerm = selectedTermId ? getHelpTerm(selectedTermId, locale) : undefined;
 
   return (
     <div
@@ -249,7 +250,7 @@ export function HelpOverlay({
           <div>
             <span className="eyebrow">{t('help.overlay.eyebrow')}</span>
             <strong>
-              {panelId ? getHelpPanel(panelId).title : t('help.overlay.title')}
+              {panelId ? getHelpPanel(panelId, locale).title : t('help.overlay.title')}
             </strong>
           </div>
           <button
@@ -357,7 +358,7 @@ export function HelpOverlay({
               <section>
                 <h2>{t('help.panels')}</h2>
                 <div className="help-catalog-grid">
-                  {HELP_PANELS.map((panel) => (
+                  {getHelpPanels(locale).map((panel) => (
                     <button
                       key={panel.id}
                       type="button"

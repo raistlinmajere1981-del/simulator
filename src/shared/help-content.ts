@@ -18,6 +18,8 @@ export type HelpPanelId =
   | 'calculation-scope'
   | 'data-manager';
 
+export type HelpLocale = 'tr' | 'en';
+
 export type HelpCategory =
   | 'Deney'
   | 'Astronomi'
@@ -27,7 +29,16 @@ export type HelpCategory =
   | 'Su yüzeyi'
   | 'Modeller'
   | 'Belirsizlik'
-  | 'Veri ve izlenebilirlik';
+  | 'Veri ve izlenebilirlik'
+  | 'Experiment'
+  | 'Astronomy'
+  | 'Photography'
+  | 'Atmosphere'
+  | 'Terrain and datum'
+  | 'Water surface'
+  | 'Models'
+  | 'Uncertainty'
+  | 'Data and traceability';
 
 export interface HelpField {
   label: string;
@@ -54,6 +65,8 @@ export interface HelpTermContent {
   definition: string;
   caution?: string;
 }
+
+import { HELP_PANELS_EN, HELP_TERMS_EN } from './help-content-en';
 
 export const HELP_TERMS: readonly HelpTermContent[] = [
   {
@@ -447,30 +460,58 @@ export const HELP_PANELS: readonly HelpPanelContent[] = [
   }
 ] as const;
 
-export function getHelpPanel(id: HelpPanelId): HelpPanelContent {
-  const content = HELP_PANELS.find((panel) => panel.id === id);
-  if (!content) throw new Error(`Bilinmeyen yardım paneli: ${id}`);
+export function getHelpPanels(locale: HelpLocale = 'tr'): readonly HelpPanelContent[] {
+  return locale === 'en' ? HELP_PANELS_EN : HELP_PANELS;
+}
+
+export function getHelpTerms(locale: HelpLocale = 'tr'): readonly HelpTermContent[] {
+  return locale === 'en' ? HELP_TERMS_EN : HELP_TERMS;
+}
+
+export function getHelpPanel(
+  id: HelpPanelId,
+  locale: HelpLocale = 'tr'
+): HelpPanelContent {
+  const content = getHelpPanels(locale).find((panel) => panel.id === id);
+  if (!content) throw new Error(`Unknown help panel / Bilinmeyen yardım paneli: ${id}`);
   return content;
 }
 
-export function getHelpTerm(id: string): HelpTermContent | undefined {
-  return HELP_TERMS.find((term) => term.id === id);
+export function getHelpTerm(
+  id: string,
+  locale: HelpLocale = 'tr'
+): HelpTermContent | undefined {
+  return getHelpTerms(locale).find((term) => term.id === id);
 }
 
-export function searchHelp(query: string): { panels: HelpPanelContent[]; terms: HelpTermContent[] } {
-  const normalized = query.trim().toLocaleLowerCase('tr-TR');
-  if (!normalized) return { panels: [...HELP_PANELS], terms: [...HELP_TERMS] };
-  const includes = (value: string): boolean => value.toLocaleLowerCase('tr-TR').includes(normalized);
+export function searchHelp(
+  query: string,
+  locale: HelpLocale = 'tr'
+): { panels: HelpPanelContent[]; terms: HelpTermContent[] } {
+  const panels = getHelpPanels(locale);
+  const terms = getHelpTerms(locale);
+  const localeTag = locale === 'tr' ? 'tr-TR' : 'en-US';
+  const normalized = query.trim().toLocaleLowerCase(localeTag);
+  if (!normalized) return { panels: [...panels], terms: [...terms] };
+  const includes = (value: string): boolean =>
+    value.toLocaleLowerCase(localeTag).includes(normalized);
   return {
-    panels: HELP_PANELS.filter((panel) => includes([
+    panels: panels.filter((panel) => includes([
       panel.title,
       panel.summary,
       panel.category,
-      ...panel.fields.flatMap((field) => [field.label, field.description, field.unit ?? '', field.calculationEffect ?? '']),
+      ...panel.fields.flatMap((field) => [
+        field.label,
+        field.description,
+        field.unit ?? '',
+        field.calculationEffect ?? ''
+      ]),
       ...panel.assumptions,
       ...panel.commonMistakes,
       panel.example ?? ''
     ].join(' '))),
-    terms: HELP_TERMS.filter((term) => includes(`${term.label} ${term.definition} ${term.caution ?? ''}`))
+    terms: terms.filter((term) =>
+      includes(`${term.label} ${term.definition} ${term.caution ?? ''}`)
+    )
   };
 }
