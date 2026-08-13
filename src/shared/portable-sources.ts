@@ -4,7 +4,11 @@ import { verifiedMotionSubsetFromSavedSource } from '../simulation/stellar-motio
 import type { ModelInputUncertaintySettings, UncertaintyCombination } from './uncertainty';
 import type { CameraCalibrationUncertainty, PhotoCalibrationMarks, PhotoSourceMetadata, SavedPhotoCalibration } from './photo-calibration';
 import type { TextExperimentSetupProvenance } from './text-experiment-setup';
-import { AI_FOLLOW_UP_LINEAGE_VERSION, isSha256Hex } from './ai-lineage';
+import {
+  AI_FOLLOW_UP_LINEAGE_VERSION,
+  isAiAnalysisSnapshotEvidence,
+  isSha256Hex
+} from './ai-lineage';
 import { normalizeStellarLocalHorizonMask } from '../simulation/stellar-local-horizon';
 import { parseSavedStellarPanoramaLocalHorizonSource } from '../simulation/stellar-panorama-skyline-persistence';
 import {
@@ -380,14 +384,29 @@ export function parseTextSetupHistory(value: unknown): TextExperimentSetupProven
         !isNonEmptyString(lineage.sourceExperimentId) || lineage.sourceExperimentId.length > 200 ||
         !isIsoDate(lineage.sourceExperimentUpdatedAtIso) ||
         !isSha256Hex(lineage.analysisSha256) || !isSha256Hex(lineage.canonicalTestSha256)) return null;
+      const analysisPackageVersion = lineage.analysisPackageVersion.trim();
+      const analysisSnapshot = lineage.analysisSnapshot === undefined
+        ? undefined
+        : isAiAnalysisSnapshotEvidence(
+            lineage.analysisSnapshot,
+            analysisPackageVersion,
+            lineage.analysisGeneratedAtIso
+          )
+          ? {
+              format: lineage.analysisSnapshot.format,
+              packageText: lineage.analysisSnapshot.packageText
+            }
+          : null;
+      if (analysisSnapshot === null) return null;
       aiLineage = {
         version: AI_FOLLOW_UP_LINEAGE_VERSION,
-        analysisPackageVersion: lineage.analysisPackageVersion.trim(),
+        analysisPackageVersion,
         analysisGeneratedAtIso: lineage.analysisGeneratedAtIso,
         sourceExperimentId: lineage.sourceExperimentId.trim(),
         sourceExperimentUpdatedAtIso: lineage.sourceExperimentUpdatedAtIso,
         analysisSha256: lineage.analysisSha256,
-        canonicalTestSha256: lineage.canonicalTestSha256
+        canonicalTestSha256: lineage.canonicalTestSha256,
+        ...(analysisSnapshot ? { analysisSnapshot } : {})
       };
     }
     if ((sourceKind === 'ai-follow-up') !== (aiLineage !== undefined)) return null;

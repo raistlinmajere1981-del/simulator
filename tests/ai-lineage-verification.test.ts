@@ -54,6 +54,16 @@ async function provenance(): Promise<TextExperimentSetupProvenance> {
   };
 }
 
+async function provenanceWithSnapshot(): Promise<TextExperimentSetupProvenance> {
+  const entry = await provenance();
+  const source = sourceExperiment();
+  entry.aiLineage!.analysisSnapshot = {
+    format: 'GGL-AI-ANALYSIS',
+    packageText: createAiAnalysisPackage(source, generatedAtIso)
+  };
+  return entry;
+}
+
 describe('AI lineage verification', () => {
   it('fully verifies canonical test and reconstructable source analysis', async () => {
     const result = await verifyAiFollowUpProvenance(await provenance(), [sourceExperiment()]);
@@ -71,11 +81,12 @@ describe('AI lineage verification', () => {
     expect(result.analysis.status).toBe('verified');
   });
 
-  it('reports partial verification when source snapshot is missing or its content changed', async () => {
+  it('reports partial verification for legacy lineage when source snapshot is missing or its content changed', async () => {
     const entry = await provenance();
     const missing = await verifyAiFollowUpProvenance(entry, []);
     expect(missing.status).toBe('partial');
     expect(missing.analysis.status).toBe('source-missing');
+    expect(missing.analysis.verificationMethod).toBe('reconstructed-source');
 
     const changed = sourceExperiment();
     changed.updatedAtIso = '2026-08-12T14:05:00.000Z';
@@ -83,6 +94,31 @@ describe('AI lineage verification', () => {
     const changedResult = await verifyAiFollowUpProvenance(entry, [changed]);
     expect(changedResult.status).toBe('partial');
     expect(changedResult.analysis.status).toBe('source-changed');
+  });
+
+  it('fully verifies immutable analysis snapshot evidence even when source is missing or changed', async () => {
+    const entry = await provenanceWithSnapshot();
+    const missing = await verifyAiFollowUpProvenance(entry, []);
+    expect(missing.status).toBe('verified');
+    expect(missing.analysis.status).toBe('verified');
+    expect(missing.analysis.verificationMethod).toBe('snapshot');
+
+    const changed = sourceExperiment();
+    changed.updatedAtIso = '2026-08-12T14:05:00.000Z';
+    changed.inputs = { ...changed.inputs, surfaceDistanceKm: 41 };
+    const changedResult = await verifyAiFollowUpProvenance(entry, [changed]);
+    expect(changedResult.status).toBe('verified');
+    expect(changedResult.analysis.status).toBe('verified');
+    expect(changedResult.analysis.availableSourceUpdatedAtIso).toBe(changed.updatedAtIso);
+  });
+
+  it('treats tampered stored analysis snapshot evidence as a mismatch', async () => {
+    const entry = await provenanceWithSnapshot();
+    entry.aiLineage!.analysisSnapshot!.packageText += '\ntampered';
+    const result = await verifyAiFollowUpProvenance(entry, [sourceExperiment()]);
+    expect(result.status).toBe('mismatch');
+    expect(result.analysis.status).toBe('mismatch');
+    expect(result.analysis.verificationMethod).toBe('snapshot');
   });
 
   it('detects canonical test or reconstructed analysis mismatch', async () => {

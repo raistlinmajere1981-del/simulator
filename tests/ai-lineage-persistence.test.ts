@@ -45,6 +45,21 @@ function experiment(): SavedExperiment {
   };
 }
 
+function experimentWithSnapshot(): SavedExperiment {
+  const result = experiment();
+  const historicalSource: SavedExperiment = {
+    ...experiment(),
+    id: 'historical-snapshot-source',
+    name: 'HISTORICAL-SNAPSHOT-EVIDENCE-ONLY',
+    textSetupHistory: undefined
+  };
+  result.textSetupHistory![0]!.aiLineage!.analysisSnapshot = {
+    format: 'GGL-AI-ANALYSIS',
+    packageText: createAiAnalysisPackage(historicalSource, '2026-08-12T13:01:00.000Z')
+  };
+  return result;
+}
+
 describe('AI lineage persistence', () => {
   it('round-trips lineage through portable JSON', () => {
     const portable = createPortableExperimentFile(experiment(), '1.34.0', '2026-08-12T13:10:00.000Z');
@@ -52,11 +67,26 @@ describe('AI lineage persistence', () => {
     expect(parsed.textSetupHistory).toEqual(experiment().textSetupHistory);
   });
 
-  it('rejects malformed hashes or AI lineage without ai-follow-up source kind', () => {
+  it('round-trips optional deterministic analysis snapshot evidence through portable JSON', () => {
+    const source = experimentWithSnapshot();
+    const portable = createPortableExperimentFile(source, '1.34.1', '2026-08-12T13:10:00.000Z');
+    const parsed = parsePortableExperimentFile(portable).experiment;
+    expect(parsed.textSetupHistory).toEqual(source.textSetupHistory);
+  });
+
+  it('rejects malformed hashes, malformed snapshot metadata or AI lineage without ai-follow-up source kind', () => {
     const malformed = createPortableExperimentFile(experiment(), '1.34.0');
     const badHash = structuredClone(malformed) as any;
     badHash.experiment.textSetupHistory[0].aiLineage.analysisSha256 = 'bad';
     expect(() => parsePortableExperimentFile(badHash)).toThrow();
+
+    const badSnapshot = createPortableExperimentFile(experimentWithSnapshot(), '1.34.1');
+    (badSnapshot as any).experiment.textSetupHistory[0].aiLineage.analysisSnapshot.packageText = [
+      'GGL-AI-ANALYSIS v1',
+      'generated_at_utc: 2026-08-12T13:09:00.000Z',
+      'END GGL-AI-ANALYSIS'
+    ].join('\n');
+    expect(() => parsePortableExperimentFile(badSnapshot)).toThrow();
 
     const wrongKind = structuredClone(malformed) as any;
     wrongKind.experiment.textSetupHistory[0].sourceKind = 'manual-text';
@@ -72,12 +102,13 @@ describe('AI lineage persistence', () => {
   });
 
   it('exposes hash-only lineage summary in the next AI analysis package', () => {
-    const packageText = createAiAnalysisPackage(experiment(), '2026-08-12T13:10:00.000Z');
+    const packageText = createAiAnalysisPackage(experimentWithSnapshot(), '2026-08-12T13:10:00.000Z');
     expect(packageText).toContain('provenance.ai_follow_up_count: 1');
     expect(packageText).toContain(`provenance.ai_follow_up.1.analysis_sha256: ${analysisSha256}`);
     expect(packageText).toContain(`provenance.ai_follow_up.1.canonical_test_sha256: ${canonicalTestSha256}`);
     expect(packageText).toContain('provenance.ai_follow_up.1.source_experiment_id: ai-lineage-source');
     expect(packageText).not.toContain('GGL-AI-TEST v1');
     expect(packageText).not.toContain('END GGL-AI-TEST');
+    expect(packageText).not.toContain('HISTORICAL-SNAPSHOT-EVIDENCE-ONLY');
   });
 });

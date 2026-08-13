@@ -1,6 +1,6 @@
 # GGL AI takip soy ağacı v1
 
-Aşama 8.7, dış AI ile yapılan kontrollü çalışma döngüsünün hangi deterministik GGL anlık görüntüsünden hangi kanonik test önerisine ve hangi kullanıcı-onaylı alan uygulamasına geçtiğini izler.
+Aşama 8.7, dış AI ile yapılan kontrollü çalışma döngüsünün hangi deterministik GGL anlık görüntüsünden hangi kanonik test önerisine ve hangi kullanıcı-onaylı alan uygulamasına geçtiğini izler. Aşama 8.9 aynı v1 lineage kaydına geriye uyumlu, opsiyonel deterministik analiz snapshot kanıtı ekler.
 
 ## Güven sınırı
 
@@ -25,6 +25,7 @@ Dış AI hesap otoritesi değildir. GGL yalnız kendi deterministik hesapların�
 - `sourceExperimentUpdatedAtIso`: kaynak anlık görüntünün `updatedAtIso` değeri
 - `analysisSha256`: dış AI'ye gönderilen tam analiz paketinin SHA-256 özeti
 - `canonicalTestSha256`: kontrollü önizlemeye aktarılan kanonik test bloğunun SHA-256 özeti
+- `analysisSnapshot` *(Aşama 8.9, opsiyonel)*: dış AI yanıtı değil, GGL'nin kendisinin ürettiği exact `GGL-AI-ANALYSIS` paket metni. Eski v1 kayıtlarında bulunmayabilir.
 
 `sourceKind` yeni kayıtlar için `manual-text` veya `ai-follow-up` olur. Eski kayıtlarda alanın bulunmaması geriye dönük olarak manuel metin davranışıyla uyumludur.
 
@@ -37,7 +38,7 @@ Dış AI hesap otoritesi değildir. GGL yalnız kendi deterministik hesapların�
 
 ## Rapor ve sonraki AI paketi
 
-Çevrimdışı HTML raporu AI takip kaydının kaynak deney kimliğini ve iki SHA-256 özetini gösterir. Sonraki `GGL-AI-ANALYSIS` paketinde yalnız hash tabanlı lineage özeti bulunur; önceki dış AI yanıtı veya kanonik test metni pakete tekrar gömülmez.
+Çevrimdışı HTML raporu AI takip kaydının kaynak deney kimliğini ve iki SHA-256 özetini gösterir. Sonraki `GGL-AI-ANALYSIS` paketinde yalnız hash tabanlı lineage özeti bulunur; tarihsel analiz snapshot metni, önceki dış AI yanıtı veya kanonik test metni pakete tekrar gömülmez. Snapshot yalnız yerel/portable provenance kanıtıdır.
 
 ## Aşama 8.8 · yerel doğrulama
 
@@ -50,3 +51,17 @@ Veri Yöneticisi, kayıtlı bir `ai-follow-up` zincirini ağ veya dış AI çağ
 - Aynı snapshot zamanı korunmasına rağmen yeniden üretilen analiz hash'i eşleşmiyorsa veya kanonik test hash'i farklıysa durum `UYUŞMAZLIK` olur.
 
 Bu denetim AI yorumunun bilimsel olarak doğru olup olmadığını kanıtlamaz. Yalnız kayıtlı provenance zincirinin ve yeniden üretilebilen deterministik GGL paketinin kriptografik olarak tutarlı olup olmadığını kontrol eder.
+
+
+## Aşama 8.9 · immutable deterministik analiz snapshot kanıtı
+
+Yeni `ai-follow-up` kayıtlarında, GGL'nin dış AI'ye kopyalanmak üzere kendisinin ürettiği exact `GGL-AI-ANALYSIS` paketi `analysisSnapshot` içinde saklanır. Aynı exact metnin SHA-256 özeti zaten `analysisSha256` alanındadır. Böylece kaynak deney daha sonra değişse veya silinse bile tarihsel analiz paketi bağımsız olarak doğrulanabilir.
+
+- Snapshot dış AI'nin cevabı değildir ve AI tarafından üretilmiş prose saklanmaz.
+- Snapshot paket header'ı, paket sürümü, `generated_at_utc` zamanı ve kapanış satırı fail-closed persistence parserında doğrulanır.
+- Snapshot boyutu savunmacı olarak sınırlandırılır.
+- Snapshot varsa doğrulayıcı önce onu kullanır; hash veya yapısal bağ uyuşmazsa sonuç `UYUŞMAZLIK` olur.
+- Snapshot bulunmayan eski v1 lineage kayıtları Aşama 8.8 kaynak-deneyi-yeniden-üretme davranışını aynen sürdürür ve kaynak kaybolmuş/değişmişse `KISMİ DOĞRULAMA` gösterebilir.
+- Sonraki AI paketlerine snapshot metni taşınmaz; yalnız mevcut hash/provenans özeti aktarılır.
+
+Bu genişletme lineage `v1` için geriye uyumludur: yeni alan opsiyoneldir ve eski portable/local kayıtlar okunmaya devam eder.

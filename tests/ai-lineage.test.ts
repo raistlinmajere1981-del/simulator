@@ -70,6 +70,10 @@ describe('AI follow-up lineage', () => {
     expect(application.provenance.aiLineage).toEqual(lineage);
     expect(lineage.analysisSha256).toHaveLength(64);
     expect(lineage.canonicalTestSha256).toBe(await sha256Utf8(canonicalTest));
+    expect(lineage.analysisSnapshot).toEqual({
+      format: 'GGL-AI-ANALYSIS',
+      packageText: analysisPackage
+    });
   });
 
   it('marks ordinary text setup as manual text by default', () => {
