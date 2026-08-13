@@ -27,6 +27,7 @@ import {
 import { DraftNumberInput } from './DraftNumberInput';
 import { TerrainImportReviewPanel } from './TerrainImportReviewPanel';
 import { TerrainProfilePointsPanel } from './TerrainProfilePointsPanel';
+import { useI18n } from './I18nProvider';
 import {
   MAX_EDITOR_POINTS,
   findLargestGapPoint,
@@ -83,6 +84,7 @@ export function MultiPointTerrainEditor({
   onChange,
   onApplyImport
 }: MultiPointTerrainEditorProps): React.JSX.Element {
+  const { t } = useI18n();
   const [operationError, setOperationError] = useState('');
   const [pendingImport, setPendingImport] = useState<TerrainProfileImport>();
   const [mappingRequest, setMappingRequest] = useState<TerrainProfileMappingRequest>();
@@ -380,78 +382,78 @@ export function MultiPointTerrainEditor({
     <section className={`multi-terrain-editor ${disabled ? 'disabled' : ''}`}>
       <header className="multi-terrain-editor-heading">
         <div>
-          <strong>Arazi yüksekliği noktaları</strong>
-          <span>{sortedPoints.length} ara nokta · başlangıç ve bitiş otomatik eklenir</span>
+          <strong>{t('terrain.editor.title')}</strong>
+          <span>{t('terrain.editor.pointSummary', { count: sortedPoints.length })}</span>
         </div>
         <div className="terrain-editor-heading-actions">
           <button
             className="terrain-csv-button"
             disabled={disabled || isImporting || routeDistanceKm <= 0}
-            title="Bir CSV veya TSV dosyasındaki rota ve arazi yüksekliği değerlerini kullan"
+            title={t('terrain.editor.csvTitle')}
             type="button"
             onClick={() => void chooseCsvProfile()}
           >
-            {isImporting ? 'CSV okunuyor…' : 'CSV dosyasından al'}
+            {isImporting ? t('terrain.editor.csvReading') : t('terrain.editor.csvImport')}
           </button>
           <button
             className="terrain-csv-button"
             disabled={disabled || isImporting || routeDistanceKm <= 0}
-            title="WGS84 boylam, enlem ve yükseklik taşıyan bir GeoJSON rotasını kullan"
+            title={t('terrain.editor.geoJsonTitle')}
             type="button"
             onClick={() => void chooseGeoJsonProfile()}
           >
-            {isImporting ? 'Dosya okunuyor…' : 'GeoJSON dosyasından al'}
+            {isImporting ? t('terrain.editor.fileReading') : t('terrain.editor.geoJsonImport')}
           </button>
           <button
             className="terrain-csv-button"
             disabled={disabled || isImporting || !allowDemImport}
             title={allowDemImport
-              ? 'Geçerli gözlemci-hedef koordinatları boyunca ESRI ASCII DEM dosyasını iki doğrusal yöntemle örnekle'
-              : 'DEM profili için önce mesafe kaynağını koordinat yapın'}
+              ? t('terrain.editor.demTitle')
+              : t('terrain.editor.demNeedsCoordinatesTitle')}
             type="button"
             onClick={() => void chooseDemProfile()}
           >
-            {isImporting ? 'Dosya okunuyor…' : 'DEM dosyasından al'}
+            {isImporting ? t('terrain.editor.fileReading') : t('terrain.editor.demImport')}
           </button>
           <button
             disabled={disabled || sortedPoints.length >= MAX_EDITOR_POINTS}
             type="button"
             onClick={addPoint}
           >
-            + Nokta ekle
+            + {t('terrain.editor.addPoint')}
           </button>
         </div>
       </header>
 
       {allowDemImport && (
         <div className="terrain-mapping-controls terrain-dem-controls">
-          <label title="DEM hücrelerinden rota yüksekliği üretme yöntemi">
-            <span>DEM örnekleme yöntemi</span>
+          <label title={t('terrain.editor.demSamplingTitle')}>
+            <span>{t('terrain.editor.demSamplingLabel')}</span>
             <select
               value={demSamplingMethod}
               onChange={(event) => setDemSamplingMethod(
                 event.currentTarget.value as DemTerrainSamplingMethod
               )}
             >
-              <option value="bilinear">İki doğrusal</option>
-              <option value="nearest">En yakın hücre</option>
+              <option value="bilinear">{t('terrain.editor.demSamplingBilinear')}</option>
+              <option value="nearest">{t('terrain.editor.demSamplingNearest')}</option>
             </select>
           </label>
-          <label title="Otomatik mod grid çözünürlüğüne göre örnek sayısını belirler">
-            <span>Rota örnek sayısı</span>
+          <label title={t('terrain.editor.demCountTitle')}>
+            <span>{t('terrain.editor.demCountLabel')}</span>
             <select
               value={demSampleCountMode}
               onChange={(event) => setDemSampleCountMode(
                 event.currentTarget.value as DemSampleCountMode
               )}
             >
-              <option value="automatic">Grid çözünürlüğüne göre otomatik</option>
-              <option value="manual">Manuel sayı</option>
+              <option value="automatic">{t('terrain.editor.demCountAutomatic')}</option>
+              <option value="manual">{t('terrain.editor.demCountManual')}</option>
             </select>
           </label>
           {demSampleCountMode === 'manual' && (
-            <label title="Başlangıç ve bitiş dahil 3…2002 rota örneği">
-              <span>Manuel örnek sayısı</span>
+            <label title={t('terrain.editor.demManualCountTitle')}>
+              <span>{t('terrain.editor.demManualCountLabel')}</span>
               <DraftNumberInput
                 max={2_002}
                 min={3}

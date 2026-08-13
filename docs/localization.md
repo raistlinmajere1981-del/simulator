@@ -48,5 +48,6 @@ The localization stage is complete only after both languages cover all user-faci
 - Stellar control slice (part 6): DEM skyline draft/generation controls and diagnostics use TR/EN and active-locale numeric formatting; DEM sampling ids and raw IPC messages remain unchanged.
 - Stellar control slice (part 7a): panorama source, GPano metadata and geometry controls use TR/EN and active-locale formatting; metadata/geometry ids and raw IPC messages remain unchanged. Assisted marking and panorama diagnostics remain follow-up work.
 - Stellar control slice (part 7b): panorama assisted-marking actions, marking-method presentation, mark accessibility/readout, readiness diagnostics and prepared-source messages use TR/EN; stable marking ids and raw imported/algorithm warnings remain unchanged.
+- Terrain editor slice (part 8a): manual terrain-profile editor shell, CSV/GeoJSON/DEM launch controls, DEM sampling settings and the editable profile graph/point list use TR/EN; profile numbers follow the active locale. Detailed import-review cards plus raw IPC/import and engine-validation messages remain follow-up work.
 
-Engine-emitted warnings/assumptions/raw calculation errors and traces, terrain/calibration panels, dialogs, help/AI guidance and reports remain separate follow-up slices.
+Engine-emitted warnings/assumptions/raw calculation errors and traces, remaining terrain/calibration panels, dialogs, help/AI guidance and reports remain separate follow-up slices.

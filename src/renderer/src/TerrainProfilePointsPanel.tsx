@@ -5,7 +5,9 @@ import {
   updateManualTerrainPoint
 } from '../../simulation/manual-terrain-profile';
 import { DraftNumberInput } from './DraftNumberInput';
-import { numberFormatter, type PreviewPoint } from './terrain-editor-view-model';
+import type { PreviewPoint } from './terrain-editor-view-model';
+import { useI18n } from './I18nProvider';
+import { appLocaleTag } from './i18n';
 
 export function TerrainProfilePointsPanel({
   preview,
@@ -34,9 +36,14 @@ export function TerrainProfilePointsPanel({
   onEndTerrainPointDrag(event: PointerEvent<SVGCircleElement>): void;
   onApplyOperation(operation: () => ManualTerrainPoint[]): void;
 }): React.JSX.Element {
+  const { locale, t } = useI18n();
+  const numberFormatter = new Intl.NumberFormat(appLocaleTag(locale), {
+    maximumFractionDigits: 2
+  });
+
   return (
     <>
-      <div className="terrain-profile-preview" aria-label="Arazi yüksekliği grafiği">
+      <div className="terrain-profile-preview" aria-label={t('terrain.points.profileAria')}>
         <svg preserveAspectRatio="none" viewBox="0 0 100 100" role="img">
           <line className="preview-baseline" x1="4" x2="96" y1="92" y2="92" />
           <polyline className="preview-profile-line" points={preview.polyline} />
@@ -46,7 +53,7 @@ export function TerrainProfilePointsPanel({
             const y = 88 - (point.elevationM - preview.minimumElevationM) / range * 72;
             return (
               <circle
-                aria-label={point.endpoint ? undefined : `Arazi noktası: rota yüzde ${numberFormatter.format(point.distancePercent)}, yükseklik ${numberFormatter.format(point.elevationM)} metre`}
+                aria-label={point.endpoint ? undefined : t('terrain.points.pointAria', { percent: numberFormatter.format(point.distancePercent), elevation: numberFormatter.format(point.elevationM) })}
                 className={point.endpoint ? 'preview-endpoint' : 'preview-interior-point draggable'}
                 cx={x}
                 cy={y}
@@ -83,13 +90,13 @@ export function TerrainProfilePointsPanel({
       <div className="terrain-point-list">
         {sortedPoints.length === 0 ? (
           <p className="terrain-point-empty">
-            Ara nokta yok. Grafik başlangıç ve bitiş zemin yüksekliğini düz çizgiyle birleştirir.
+            {t('terrain.points.empty')}
           </p>
         ) : sortedPoints.map((point, index) => (
           <div className="terrain-point-row" key={point.id}>
             <span className="terrain-point-index">{index + 1}</span>
-            <label title="Başlangıçtan bitişe kadar rotanın yüzde kaçında olduğu">
-              <span>Rotadaki yeri</span>
+            <label title={t('terrain.points.positionTitle')}>
+              <span>{t('terrain.points.positionLabel')}</span>
               <div>
                 <DraftNumberInput
                   disabled={disabled}
@@ -104,8 +111,8 @@ export function TerrainProfilePointsPanel({
                 <b>%</b>
               </div>
             </label>
-            <label title="Bu noktadaki zemin veya arazi yüksekliği">
-              <span>Arazi yüksekliği</span>
+            <label title={t('terrain.points.elevationTitle')}>
+              <span>{t('terrain.points.elevationLabel')}</span>
               <div>
                 <DraftNumberInput
                   disabled={disabled}
@@ -126,11 +133,11 @@ export function TerrainProfilePointsPanel({
             <button
               className="terrain-point-delete"
               disabled={disabled}
-              title="Bu arazi noktasını sil"
+              title={t('terrain.points.deleteTitle')}
               type="button"
               onClick={() => onApplyOperation(() => removeManualTerrainPoint(sortedPoints, point.id))}
             >
-              Sil
+              {t('terrain.points.delete')}
             </button>
           </div>
         ))}
